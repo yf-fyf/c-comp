@@ -108,7 +108,7 @@ int main() {
         (add (num 7) (num 1))))))
 ```
 
-![`define_min.c` の AST](figures/ast/15_define_min_ast.pdf)
+![`define_min.c` の AST](figures/ast/15_define_min_ast.svg)
 
 `N` は AST には出てこない。前処理の段階で `7` に置き換えられているためである。
 AST から見ると、最初から `7` と書いてあったのと同じになる。
@@ -150,7 +150,7 @@ python3 mycc.py main.c math_util.c
 また、実際の分割コンパイルのように、変更のあったファイルだけ再コンパイルする仕組みもない。
 しかし、複数ファイルに分割したプログラムを動かすことはできる。
 
-![実際の C コンパイラの分割コンパイルと、今回の一括方式](figures/15_pipeline.pdf)
+![実際の C コンパイラの分割コンパイルと、今回の一括方式](figures/15_pipeline.svg)
 
 ## 関数プロトタイプと定義
 

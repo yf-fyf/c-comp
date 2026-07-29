@@ -1,6 +1,6 @@
 # O6: コピー伝播と死コード除去(2コマ)
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/O6_copyprop/](https://yf-fyf.github.io/c-comp/advanced/O6_copyprop/) にあります。
 
 ## 今日のゴール
 

@@ -1,6 +1,6 @@
 # B2: レジスタ割り当て入門 — スタックマシンを卒業する
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/B2_regalloc/](https://yf-fyf.github.io/c-comp/advanced/B2_regalloc/) にあります。
 
 ## 今日のゴール
 

@@ -69,7 +69,7 @@ int main() {
           (num 1))))))
 ```
 
-![`complex.c` の AST](figures/ast/03_complex_ast.pdf)
+![`complex.c` の AST](figures/ast/03_complex_ast.svg)
 
 この式は、元のCコードでは次の形である。
 
@@ -113,7 +113,7 @@ codegen(node) -> アセンブリを出力する
 | `ND_ADD` なら左右を評価して足す | `ND_ADD` なら左右を計算する命令列を出力して `add` する |
 | 結果は Python の戻り値 | 結果は実行時の `a0` レジスタ |
 
-![`eval_ast`（値を返す）と `codegen`（命令を出力する）の対比](figures/03_eval_vs_codegen.pdf)
+![`eval_ast`（値を返す）と `codegen`（命令を出力する）の対比](figures/03_eval_vs_codegen.svg)
 
 木のたどり方は第02回と同じで、「値を返す」部分が「命令を出力する」に置き換わる。
 
@@ -177,7 +177,7 @@ codegen(node) -> アセンブリを出力する
 5. a1 op a0 を計算し、結果を a0 に入れる
 ```
 
-![`return 10 - 3;` を生成する5ステップと、レジスタ・スタックの変化](figures/03_binop_stack.pdf)
+![`return 10 - 3;` を生成する5ステップと、レジスタ・スタックの変化](figures/03_binop_stack.svg)
 
 この退避のパターンは、この後の代入（コマ4）や関数呼び出し（コマ8）でも繰り返し使う。
 

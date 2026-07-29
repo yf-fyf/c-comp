@@ -1,6 +1,6 @@
 # B3: 末尾呼び出し最適化 — 再帰をループに変える
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/B3_tailcall/](https://yf-fyf.github.io/c-comp/advanced/B3_tailcall/) にあります。
 
 ## 今日のゴール
 

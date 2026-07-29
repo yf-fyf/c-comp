@@ -1,5 +1,7 @@
 # コマ1: 環境構築 + RV64 手書きアセンブリ
 
+この回の資料は [https://yf-fyf.github.io/c-comp/sessions/01_environment/](https://yf-fyf.github.io/c-comp/sessions/01_environment/) にあります。
+
 ## 今日のゴール
 
 qemu 上で手書き RV64 アセンブリを実行し、終了コード `42` を確認する。

@@ -1,6 +1,6 @@
 # コマ8: 関数呼び出し・再帰
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/sessions/08_functions_recursion/](https://yf-fyf.github.io/c-comp/sessions/08_functions_recursion/) にあります。
 
 ## 編集するファイル
 

@@ -59,7 +59,7 @@ int main() {
       (return (num 0)))))
 ```
 
-![`printf_number.c` の AST](figures/ast/11_printf_number_ast.pdf)
+![`printf_number.c` の AST](figures/ast/11_printf_number_ast.svg)
 
 新しく重要になるノードは `(str "...")` である。
 これは `ND_STR` として表され、`node.sval` に文字列の内容が入っている。
@@ -108,7 +108,7 @@ main:
 
 文字列がないプログラムでも `.text` は必要である。
 
-![`.data` に置いた文字列と、`.text` からの参照](figures/11_sections.pdf)
+![`.data` に置いた文字列と、`.text` からの参照](figures/11_sections.svg)
 
 `.text` 側の `la a0, .LC1` が、`.data` に置いた文字列の先頭アドレスを `a0` に入れる。
 

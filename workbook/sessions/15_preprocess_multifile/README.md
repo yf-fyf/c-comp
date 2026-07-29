@@ -1,6 +1,6 @@
 # コマ15: 複数ファイル・前処理の概念
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/sessions/15_preprocess_multifile/](https://yf-fyf.github.io/c-comp/sessions/15_preprocess_multifile/) にあります。
 
 ## 今日のゴール
 

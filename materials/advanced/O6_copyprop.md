@@ -38,7 +38,7 @@ O4 の後、`s = s + i` はこうなっている。
 
 `mv rD, rS` の後で `rD` を読んでいる箇所を、`rS` に置き換える。
 
-![コピー伝播が死コードを作り、死コード除去が消す](figures/O6_copyprop.pdf)
+![コピー伝播が死コードを作り、死コード除去が消す](figures/O6_copyprop.svg)
 
 ::: important
 

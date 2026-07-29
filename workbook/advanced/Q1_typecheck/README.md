@@ -1,6 +1,6 @@
 # Q1: 型検査パス — 実行する前に間違いを見つける
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/Q1_typecheck/](https://yf-fyf.github.io/c-comp/advanced/Q1_typecheck/) にあります。
 
 ## 今日のゴール
 

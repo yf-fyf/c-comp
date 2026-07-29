@@ -1,6 +1,6 @@
 # R2: 自前 printf — 数を文字に変える
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/R2_printf/](https://yf-fyf.github.io/c-comp/advanced/R2_printf/) にあります。
 
 ## 今日のゴール
 

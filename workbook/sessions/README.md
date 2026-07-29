@@ -3,12 +3,13 @@
 各コマの作業内容を置く。
 学生は、その日の `sessions/NN_xxx/` だけを見ればよい。
 
+講義資料は <https://yf-fyf.github.io/c-comp/sessions/> にある。まずこれを読む。
+
 各セッションは次の形に揃える。
 
 ```text
 sessions/NN_xxx/
-├── handout.pdf   # 講義資料（まず読む）
-├── README.md     # 作業指示・テストコマンド（簡易）
+├── README.md     # 資料へのリンク・作業指示・テストコマンド
 ├── mycc.py       # 編集するコンパイラ
 └── tests/
 ```

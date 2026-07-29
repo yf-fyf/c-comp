@@ -64,7 +64,7 @@ def collect_decls(self, node: Node) -> None:
 コマ7 では、C の正確なブロックスコープはまだ実装しない。
 関数内に出てくるすべてのローカル変数を、関数全体のフレームに一律で確保する。
 
-![`collect_decls` の再帰走査と、フレームへの一括割り当て](figures/07_frame_nested.pdf)
+![`collect_decls` の再帰走査と、フレームへの一括割り当て](figures/07_frame_nested.svg)
 
 `if` の中の `decl "y"` も走査で発見し、`x` と同じように関数フレームへ割り当てる。
 

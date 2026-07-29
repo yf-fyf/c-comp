@@ -1,6 +1,6 @@
 # コマ16: Python 版総合演習・mycc.py 統合
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/sessions/16_integrate_mycc/](https://yf-fyf.github.io/c-comp/sessions/16_integrate_mycc/) にあります。
 
 ## 今日のゴール
 

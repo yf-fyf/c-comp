@@ -1,6 +1,6 @@
 # R1: libc なしで動かす — システムコールを直接呼ぶ
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/R1_nolibc/](https://yf-fyf.github.io/c-comp/advanced/R1_nolibc/) にあります。
 
 ## 今日のゴール
 

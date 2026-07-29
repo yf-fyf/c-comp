@@ -38,7 +38,7 @@
 
 ## 何が壊れるのか
 
-![いまの生成と、短絡する生成](figures/S1_shortcircuit.pdf)
+![いまの生成と、短絡する生成](figures/S1_shortcircuit.svg)
 
 いまの実装で次を書くと、実際に落ちる。
 

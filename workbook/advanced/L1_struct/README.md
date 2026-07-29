@@ -1,6 +1,6 @@
 # L1: 構造体の代入 — レジスタに載らないものを運ぶ
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/L1_struct/](https://yf-fyf.github.io/c-comp/advanced/L1_struct/) にあります。
 
 ## 今日のゴール
 

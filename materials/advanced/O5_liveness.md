@@ -111,7 +111,7 @@ def  … ブロックの中で書かれるレジスタ
 
 ## 方程式を解く
 
-![後ろ向きの反復で live_in / live_out を求める](figures/O5_liveness.pdf)
+![後ろ向きの反復で live_in / live_out を求める](figures/O5_liveness.svg)
 
 ```text
 live_out[B] = ∪ live_in[S]              (S は B の後続)

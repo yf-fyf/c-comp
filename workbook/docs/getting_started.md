@@ -43,7 +43,7 @@ bash docker/rv64/run.sh python3 scaffold/test_runner.py
 
 ## 各回の進め方
 
-1. `sessions/NN_xxx/handout.pdf` を読む（**まずこれ**）
+1. [サイトの資料](https://yf-fyf.github.io/c-comp/sessions/) の該当する回を読む（**まずこれ**）
 2. `sessions/NN_xxx/README.md` の作業指示を見る
 3. `sessions/NN_xxx/mycc.py` を編集する
 4. テストを走らせる

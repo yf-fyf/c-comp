@@ -92,11 +92,8 @@ function CodeBlock(el)
 end
 
 function Image(el)
-  local src = el.src
-  if src:match("%.pdf$") then
-    src = src:gsub("%.pdf$", ".svg")
-  end
-  -- 原稿は figures/... の相対参照で書かれている
+  -- 原稿は figures/... の相対参照で書かれている。PDF 時代の綴りも一応拾う。
+  local src = el.src:gsub("%.pdf$", ".svg")
   src = src:gsub("^figures/", figbase .. "/")
   el.src = src
   return el

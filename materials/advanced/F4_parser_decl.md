@@ -29,7 +29,7 @@ x = 1;     /* 式文 */
 そこでパーサは、`typedef` で定義された型名の集合 `typedef_names` を持ち歩き、
 「宣言の開始かどうか」を次の順で判定する。
 
-![宣言か文か — is_type_start と typedef_names](figures/F4_decl_or_stmt.pdf)
+![宣言か文か — is_type_start と typedef_names](figures/F4_decl_or_stmt.svg)
 
 `typedef_names` は**解析の途中で育つ**。
 `typedef` を1つ読むたびに名前が増え、それ以降の行の解釈が変わる。
@@ -179,7 +179,7 @@ python3 golden.py    # 全テスト入力(約100本)で scaffold と突き合わ
 check.py の Step 2 以降は、同じ入力を scaffold にも解析させて構造比較する。
 golden.py が**全ファイル一致になったら、このシリーズの完了**である。
 
-![完成したフロントエンド — 黒箱はもうない](figures/F4_full_pipeline.pdf)
+![完成したフロントエンド — 黒箱はもうない](figures/F4_full_pipeline.svg)
 
 ## 総仕上げ（任意）— mycc.py に差し替えて fixed15 を回す
 

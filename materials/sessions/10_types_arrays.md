@@ -109,7 +109,7 @@ int main() {
       (return (var "sum")))))
 ```
 
-![`array_sum.c` の AST](figures/ast/10_array_sum_ast.pdf)
+![`array_sum.c` の AST](figures/ast/10_array_sum_ast.svg)
 
 `a[i]` は AST 上では `(index (var "a") (var "i"))` になる。
 このノードは、`*(a + i)` とほぼ同じ意味で扱う。
@@ -171,7 +171,7 @@ int main() {
             (add (var "p") (num 3))))))))
 ```
 
-![`ptr_arith.c` の AST](figures/ast/10_ptr_arith_ast.pdf)
+![`ptr_arith.c` の AST](figures/ast/10_ptr_arith_ast.svg)
 
 `p + 2` は、単にアドレスに `2` を足すのではない。
 `p` は `int *` なので、`2 * sizeof(int)`、つまり8バイト進む。
@@ -228,7 +228,7 @@ if node.kind == ND_VAR:
 address(a[i]) = address(a) + i * sizeof(element)
 ```
 
-![`int a[4]` のメモリ配置と `a[i]` / `p + 2` のアドレス計算](figures/10_array_ptr.pdf)
+![`int a[4]` のメモリ配置と `a[i]` / `p + 2` のアドレス計算](figures/10_array_ptr.svg)
 
 要素1つは `sizeof(int)` = 4 バイトなので、`p + 2` はアドレスを 8 バイト進める。
 この倍率を決めるために、要素型のサイズが必要になる。

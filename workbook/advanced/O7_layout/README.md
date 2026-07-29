@@ -1,6 +1,6 @@
 # O7: ブロック整列とループ回転
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/O7_layout/](https://yf-fyf.github.io/c-comp/advanced/O7_layout/) にあります。
 
 ## 今日のゴール
 

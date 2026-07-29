@@ -1,6 +1,6 @@
 # B1: 最適化入門 — 定数畳み込みとピープホール
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/B1_fold_peephole/](https://yf-fyf.github.io/c-comp/advanced/B1_fold_peephole/) にあります。
 
 ## 今日のゴール
 

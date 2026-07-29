@@ -1,6 +1,6 @@
 # O2: 基本ブロックとフローグラフ
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/O2_cfg/](https://yf-fyf.github.io/c-comp/advanced/O2_cfg/) にあります。
 
 ## 今日のゴール
 

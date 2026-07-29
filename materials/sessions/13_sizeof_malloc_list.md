@@ -58,7 +58,7 @@ int main() {
         (add (sizeof-type int) (sizeof-type char))))))
 ```
 
-![`sizeof_test.c` の AST](figures/ast/13_sizeof_test_ast.pdf)
+![`sizeof_test.c` の AST](figures/ast/13_sizeof_test_ast.svg)
 
 `sizeof(int)` は `(sizeof-type int)` になる。
 `sizeof(char)` は `(sizeof-type char)` になる。
@@ -118,7 +118,7 @@ int main() {
         (member "->" "val" (var "n"))))))
 ```
 
-![`list_min.c` の AST](figures/ast/13_list_min_ast.pdf)
+![`list_min.c` の AST](figures/ast/13_list_min_ast.svg)
 
 `malloc(sizeof(Node))` は、`sizeof(Node)` の結果を引数として `malloc` を呼び出すだけである。
 戻り値はポインタ値なので、`Node *n` に代入できる。
@@ -263,7 +263,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 
 :::
 
-![スタック上の `head` とヒープ上に確保された3ノード](figures/13_linked_list.pdf)
+![スタック上の `head` とヒープ上に確保された3ノード](figures/13_linked_list.svg)
 
 `head` はスタック上のローカル変数だが、各ノードは `malloc` で確保したヒープ上にある。
 `head = head->next` は、`head` の指す先を矢印1つぶん右のノードへ進める。

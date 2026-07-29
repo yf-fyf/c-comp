@@ -33,6 +33,7 @@ import sys
 import tempfile
 import threading
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -220,7 +221,7 @@ def section_index_markdown(nav: dict, pages: list[Page], page: Page) -> str:
 
 
 def render_page(nav: dict, pages: list[Page], page: Page, output: Path,
-                links: dict[str, str]) -> None:
+                links: dict[str, str], release: str = "") -> None:
     destination = output / page.out_dir / "index.html"
     blob = f'{nav["repo_url"]}/blob/{nav["repo_branch"]}/'
     variables = {
@@ -231,6 +232,7 @@ def render_page(nav: dict, pages: list[Page], page: Page, output: Path,
         "breadcrumb": breadcrumb_html(nav, page),
         "pager": pager_html(pages, page),
         "source-url": "",
+        "release": release,
     }
     metadata = {
         "figbase": page.base + "figures",
@@ -255,7 +257,30 @@ def render_page(nav: dict, pages: list[Page], page: Page, output: Path,
     print(f"[ OK ] {page.out_dir.as_posix()}/  ({page.title})")
 
 
-def home_markdown(nav: dict, pages: list[Page]) -> str:
+def download_markdown(release: str | None) -> list[str]:
+    """公開物を組み立てるときだけ ZIP へのリンクを出す"""
+    lines = ["## 演習環境", ""]
+    if release:
+        archive = f"downloads/c-comp-workbook-{release}.zip"
+        lines += [
+            "starter・テスト・Docker 環境・参考実装は ZIP で配布しています。",
+            "資料はこのサイトを見てください。",
+            "",
+            '<ul class="cards">',
+            f'<li><a href="{archive}"><span class="card-title">演習環境をダウンロード</span>'
+            f'<span class="card-desc">{html.escape(release)} / workbook 一式</span></a></li>',
+            "</ul>",
+            "",
+        ]
+    else:
+        lines += [
+            "starter・テスト・Docker 環境・参考実装は、公開サイトから ZIP で配布しています。",
+            "",
+        ]
+    return lines
+
+
+def home_markdown(nav: dict, pages: list[Page], release: str | None = None) -> str:
     lines = [f'# {nav["title"]}', "", nav["description"], ""]
     lines += [
         "この演習は、C 言語サブセットのコンパイラを**動く状態を保ちながら**段階的に作り上げます。",
@@ -286,19 +311,16 @@ def home_markdown(nav: dict, pages: list[Page]) -> str:
         '<span class="card-desc">アセンブリを1命令ずつ実行してレジスタとスタックを見る</span></a></li>',
         "</ul>",
         "",
-        "## 演習環境",
-        "",
-        "starter・テスト・Docker 環境・参考実装は ZIP で配布しています。",
-        "資料はこのサイトを見てください。",
-        "",
     ]
+    lines += download_markdown(release)
     return "\n".join(lines)
 
 
-def render_home(nav: dict, pages: list[Page], output: Path) -> None:
+def render_home(nav: dict, pages: list[Page], output: Path,
+                release: str = "", version: str | None = None) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         source = Path(tmp) / "index.md"
-        source.write_text(home_markdown(nav, pages), encoding="utf-8")
+        source.write_text(home_markdown(nav, pages, version), encoding="utf-8")
         run_pandoc(
             source, output / "index.html",
             variables={
@@ -309,6 +331,7 @@ def render_home(nav: dict, pages: list[Page], output: Path) -> None:
                 "breadcrumb": "",
                 "pager": "",
                 "source-url": "",
+                "release": release,
             },
             metadata={"description": nav["description"]},
             extra=["--variable", "toc="],
@@ -633,6 +656,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / ".site")
     parser.add_argument("--only", help="ページ ID の前方一致で絞る")
+    parser.add_argument("--release", help="公開物として組み立てるときの版（例 v0.1.0）。"
+                                          "ZIP へのリンクと版表記を出す")
+    parser.add_argument("--revision", help="--release と一緒に脚注へ出すリビジョン")
     parser.add_argument("--check-links", action="store_true",
                         help="生成せず、既存の出力の内部リンクだけ調べる")
     parser.add_argument("--serve", action="store_true",
@@ -671,12 +697,21 @@ def main() -> int:
             print(f"該当ページがない: {args.only}", file=sys.stderr)
             return 2
 
+    release = ""
+    if args.release:
+        stamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+        parts = [f"Release {args.release}"]
+        if args.revision:
+            parts.append(f"source {args.revision}")
+        parts.append(stamp)
+        release = html.escape(" / ".join(parts))
+
     args.output.mkdir(parents=True, exist_ok=True)
     copy_assets(args.output)
     for page in targets:
-        render_page(nav, pages, page, args.output, links)
+        render_page(nav, pages, page, args.output, links, release)
     if not args.only:
-        render_home(nav, pages, args.output)
+        render_home(nav, pages, args.output, release, args.release)
 
     print(f"\n[DONE] {len(targets)} ページ -> {args.output}")
 

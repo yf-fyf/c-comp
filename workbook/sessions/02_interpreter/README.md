@@ -1,6 +1,6 @@
 # コマ2: AST + インタープリター
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/sessions/02_interpreter/](https://yf-fyf.github.io/c-comp/sessions/02_interpreter/) にあります。
 
 ## 編集するファイル
 

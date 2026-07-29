@@ -1,6 +1,6 @@
 # O4: レジスタ割り当て(2コマ)
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/O4_regalloc/](https://yf-fyf.github.io/c-comp/advanced/O4_regalloc/) にあります。
 
 ## 今日のゴール
 

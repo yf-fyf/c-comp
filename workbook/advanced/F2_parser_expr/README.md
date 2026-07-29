@@ -1,6 +1,6 @@
 # F2: 再帰下降パーサ① — 式を解析する
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/F2_parser_expr/](https://yf-fyf.github.io/c-comp/advanced/F2_parser_expr/) にあります。
 
 ## 今日のゴール
 

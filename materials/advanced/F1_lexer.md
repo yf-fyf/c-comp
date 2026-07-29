@@ -64,7 +64,7 @@ less scaffold/lexer.py
 | `...` → 2文字 → 1文字 | 記号。長い候補から試す |
 | 最後 | `TK_EOF` を追加 |
 
-![メインループのディスパッチ（判定は上から順に試す）](figures/F1_dispatch.pdf)
+![メインループのディスパッチ（判定は上から順に試す）](figures/F1_dispatch.svg)
 
 ## 分岐の順序に意味がある
 

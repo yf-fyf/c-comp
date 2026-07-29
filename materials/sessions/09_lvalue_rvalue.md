@@ -75,7 +75,7 @@ int main() {
       (return (var "a")))))
 ```
 
-![`deref_write.c` の AST](figures/ast/09_deref_write_ast.pdf)
+![`deref_write.c` の AST](figures/ast/09_deref_write_ast.svg)
 
 注目するノードは次の2つである。
 
@@ -108,7 +108,7 @@ return a;
 
 この違いを明確にするために、`codegen()` と `codegen_lval()` を分ける。
 
-![`p = &a;` 実行後のメモリと、rvalue / lvalue の関係](figures/09_ptr_memory.pdf)
+![`p = &a;` 実行後のメモリと、rvalue / lvalue の関係](figures/09_ptr_memory.svg)
 
 `p` のスロットには `a` のアドレスが値として入っている。
 `*p` を lvalue として使うときは、この値（矢印の先）がそのまま書き込み先アドレスになる。

@@ -1,6 +1,6 @@
 # F1: 字句解析器を作る — 黒箱を開ける（前編）
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/F1_lexer/](https://yf-fyf.github.io/c-comp/advanced/F1_lexer/) にあります。
 
 ## 今日のゴール
 

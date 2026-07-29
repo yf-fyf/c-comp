@@ -75,7 +75,7 @@ int main() {
           (member "." "y" (var "p")))))))
 ```
 
-![`dot_access.c` の AST](figures/ast/12_dot_access_ast.pdf)
+![`dot_access.c` の AST](figures/ast/12_dot_access_ast.svg)
 
 `p.x` は AST 上では `(member "." "x" (var "p"))` になる。
 
@@ -141,7 +141,7 @@ int main() {
             (addr (var "p"))))))))
 ```
 
-![`arrow_access.c` の AST](figures/ast/12_arrow_access_ast.pdf)
+![`arrow_access.c` の AST](figures/ast/12_arrow_access_ast.svg)
 
 `p->x` は AST 上では `(member "->" "x" (var "p"))` になる。
 意味としては `(*p).x` と考えればよい。
@@ -165,7 +165,7 @@ p + 0 byte : x
 p + 4 byte : y
 ```
 
-![`Point` のメモリ配置と `.` / `->` のアドレス計算](figures/12_struct_layout.pdf)
+![`Point` のメモリ配置と `.` / `->` のアドレス計算](figures/12_struct_layout.svg)
 
 図の `q` は `Point *q = &p;` としたポインタである（`distance_sq(&p)` の仮引数も同じ状態になる）。
 `.` は構造体変数のアドレスから、`->` はポインタの値から、どちらも「+ フィールドオフセット」で場所が決まる。

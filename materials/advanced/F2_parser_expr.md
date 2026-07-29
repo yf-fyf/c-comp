@@ -33,7 +33,7 @@ mul_expr ::= unary_expr { ('*' | '/' | '%') unary_expr }
 この2行は、そのまま2つの関数 `parse_add` と `parse_mul` になる。
 「`add_expr` の中に `mul_expr` が出てくる」は「`parse_add` が `parse_mul` を呼ぶ」に対応する。
 
-![EBNF の優先順位階層 = 関数の呼び出し階層](figures/F2_prec_ladder.pdf)
+![EBNF の優先順位階層 = 関数の呼び出し階層](figures/F2_prec_ladder.svg)
 
 各関数は**自分のレベルの演算子だけ**を処理し、それより優先順位の高い部分は
 1段下の関数に丸ごと任せる。この構造だけで、`1 + 2 * 3` の `*` が先に結ばれる。
@@ -58,7 +58,7 @@ def parse_add(self):
 
 EBNF の `{ ... }`（0回以上の繰り返し）が `while` に、そのまま対応している。
 
-![左結合ループが `a - b - c` を組み立てる様子](figures/F2_left_assoc.pdf)
+![左結合ループが `a - b - c` を組み立てる様子](figures/F2_left_assoc.svg)
 
 ポイントは `lhs=node` である。**いままでの結果を左の子に入れて、新しい親を作る**。
 これを繰り返すと木は左へ左へ伸び、左結合になる。

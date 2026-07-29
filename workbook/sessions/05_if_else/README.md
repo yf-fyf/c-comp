@@ -1,6 +1,6 @@
 # コマ5: if/else + 比較演算
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/sessions/05_if_else/](https://yf-fyf.github.io/c-comp/sessions/05_if_else/) にあります。
 
 ## 編集するファイル
 

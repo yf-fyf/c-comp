@@ -1,6 +1,6 @@
 # S2: `int` は32ビット — 桁あふれを正しく折り返す
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/S2_int32/](https://yf-fyf.github.io/c-comp/advanced/S2_int32/) にあります。
 
 ## 今日のゴール
 

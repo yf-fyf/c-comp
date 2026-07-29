@@ -1,6 +1,6 @@
 # F0: 字句解析と構文解析 — CYK 法で数式を解く
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/F0_cyk/](https://yf-fyf.github.io/c-comp/advanced/F0_cyk/) にあります。
 
 ## 今日のゴール
 

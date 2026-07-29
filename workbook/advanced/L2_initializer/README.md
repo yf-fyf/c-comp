@@ -1,6 +1,6 @@
 # L2: 初期化子リスト — 宣言と同時に値を入れる
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/L2_initializer/](https://yf-fyf.github.io/c-comp/advanced/L2_initializer/) にあります。
 
 ## 今日のゴール
 

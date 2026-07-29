@@ -1,6 +1,6 @@
 # O3: 命令選択 — 複数の命令を1つに畳む
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/O3_isel/](https://yf-fyf.github.io/c-comp/advanced/O3_isel/) にあります。
 
 ## 今日のゴール
 

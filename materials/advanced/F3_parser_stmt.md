@@ -92,7 +92,7 @@ if self.consume_if('else'):
 ここで、コマ5 の資料にあった「`else` は最も内側の `if` に結合する（最近傍優先）」
 という規則の種明かしができる。
 
-![dangling else — else は最も内側の if に結合する](figures/F3_dangling_else.pdf)
+![dangling else — else は最も内側の if に結合する](figures/F3_dangling_else.svg)
 
 `if (a) if (b) return 1; else return 2;` を読むとき、
 `else` に最初に出会うのは**内側の if を読んでいる最中の `parse_if`** である。

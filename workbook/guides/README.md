@@ -2,10 +2,8 @@
 
 この授業で役立つツールの導入手順と使い方をまとめています。
 
-各 PDF は `pandoc` + `lualatex` で生成されています。
-
 ## ツール一覧
 
 | ガイド | 内容 |
 |--------|------|
-| [opencode.pdf](./opencode.pdf) | AI コーディングアシスタント OpenCode のインストールと使い方 |
+| [OpenCode 導入ガイド](https://yf-fyf.github.io/c-comp/guides/opencode/) | AI コーディングアシスタント OpenCode のインストールと使い方 |

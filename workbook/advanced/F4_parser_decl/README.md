@@ -1,6 +1,6 @@
 # F4: 再帰下降パーサ③ — 宣言・型・プログラム全体（最終回）
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/F4_parser_decl/](https://yf-fyf.github.io/c-comp/advanced/F4_parser_decl/) にあります。
 
 ## 今日のゴール
 

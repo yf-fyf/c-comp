@@ -1,6 +1,6 @@
 # O5: 生存変数解析
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/O5_liveness/](https://yf-fyf.github.io/c-comp/advanced/O5_liveness/) にあります。
 
 ## 今日のゴール
 

@@ -1,6 +1,6 @@
 # R3: 自前 malloc — ヒープを自分で管理する
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/R3_malloc/](https://yf-fyf.github.io/c-comp/advanced/R3_malloc/) にあります。
 
 ## 今日のゴール
 

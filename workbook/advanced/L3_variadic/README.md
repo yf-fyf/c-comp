@@ -1,6 +1,6 @@
 # L3: 可変長引数の定義 — `printf` の側に立つ
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/L3_variadic/](https://yf-fyf.github.io/c-comp/advanced/L3_variadic/) にあります。
 
 ## 今日のゴール
 

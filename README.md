@@ -30,14 +30,14 @@ bash workbook/docker/rv64/run.sh python3 sessions/01_environment/check.py
 読む順序:
 
 1. [`workbook/docs/getting_started.md`](./workbook/docs/getting_started.md) — 進め方ガイド（環境の用意・全24コマ一覧）
-2. `workbook/sessions/01_environment/handout.pdf` — コマ1から順に進める
+2. [コマ1の資料](https://yf-fyf.github.io/c-comp/sessions/01_environment/) — 資料サイトを順に読み進める
 3. [`workbook/docs/language_spec.md`](./workbook/docs/language_spec.md) — 対象言語（Core プロファイル）の仕様
 
 ## リポジトリ構成
 
 | パス | 内容 | 読む人 |
 |------|------|--------|
-| [`workbook/`](./workbook/README.md) | 演習の配布物（handout・starter・テスト・実行環境） | 学習者 |
+| [`workbook/`](./workbook/README.md) | 演習の配布物（starter・テスト・実行環境・参考実装） | 学習者 |
 | [`materials/`](./materials/) | handout の Markdown 原稿と図の TikZ ソース | 教材を書く人 |
 | [`design/`](./design/curriculum.md) | カリキュラム設計書・保守手順・品質管理ガイド | 教える側・改変する人 |
 | [`latex/`](./latex/) / [`tools/`](./tools/) | handout PDF のビルドシステム | 教材を書く人 |

@@ -1,6 +1,6 @@
 # S1: 短絡評価 — `&&` と `||` の本当の意味
 
-この回の資料は `handout.pdf` を参照してください。
+この回の資料は [https://yf-fyf.github.io/c-comp/advanced/S1_shortcircuit/](https://yf-fyf.github.io/c-comp/advanced/S1_shortcircuit/) にあります。
 
 ## 今日のゴール
 
