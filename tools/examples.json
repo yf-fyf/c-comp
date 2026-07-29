@@ -1,0 +1,777 @@
+[
+ {
+  "group": "02_interpreter",
+  "items": [
+   {
+    "label": "add_mul.c",
+    "path": "sessions/02_interpreter/tests/add_mul.c",
+    "source": "int main() {\n    return 1 + 2 * 3;\n}\n"
+   },
+   {
+    "label": "all_ops.c",
+    "path": "sessions/02_interpreter/tests/all_ops.c",
+    "source": "int main() {\n    return 1 + 2 * 3 - 8 / 2;\n}\n"
+   },
+   {
+    "label": "div_mod.c",
+    "path": "sessions/02_interpreter/tests/div_mod.c",
+    "source": "int main() {\n    return 100 / 4 + 17 % 5;\n}\n"
+   },
+   {
+    "label": "expression.c",
+    "path": "sessions/02_interpreter/tests/expression.c",
+    "source": "int main() {\n    return 1 + 2 * 3;\n}\n"
+   },
+   {
+    "label": "neg.c",
+    "path": "sessions/02_interpreter/tests/neg.c",
+    "source": "int main() {\n    return -3 + 10;\n}\n"
+   },
+   {
+    "label": "paren.c",
+    "path": "sessions/02_interpreter/tests/paren.c",
+    "source": "int main() {\n    return (10 - 3) * 2;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "03_arithmetic_codegen",
+  "items": [
+   {
+    "label": "add.c",
+    "path": "sessions/03_arithmetic_codegen/tests/add.c",
+    "source": "int main() {\n    return 1 + 2;\n}\n"
+   },
+   {
+    "label": "complex.c",
+    "path": "sessions/03_arithmetic_codegen/tests/complex.c",
+    "source": "int main() {\n    return (100 - 3 * 7) / 4 + 1;\n}\n"
+   },
+   {
+    "label": "div.c",
+    "path": "sessions/03_arithmetic_codegen/tests/div.c",
+    "source": "int main() {\n    return 17 / 5;\n}\n"
+   },
+   {
+    "label": "mod.c",
+    "path": "sessions/03_arithmetic_codegen/tests/mod.c",
+    "source": "int main() {\n    return 17 % 5;\n}\n"
+   },
+   {
+    "label": "mod_div.c",
+    "path": "sessions/03_arithmetic_codegen/tests/mod_div.c",
+    "source": "int main() {\n    return 100 / 4 + 1;\n}\n"
+   },
+   {
+    "label": "mul.c",
+    "path": "sessions/03_arithmetic_codegen/tests/mul.c",
+    "source": "int main() {\n    return 6 * 7;\n}\n"
+   },
+   {
+    "label": "nested.c",
+    "path": "sessions/03_arithmetic_codegen/tests/nested.c",
+    "source": "int main() {\n    return (1 + 2) * (3 + 4);\n}\n"
+   },
+   {
+    "label": "paren.c",
+    "path": "sessions/03_arithmetic_codegen/tests/paren.c",
+    "source": "int main() {\n    return (2 + 3) * 4;\n}\n"
+   },
+   {
+    "label": "prec.c",
+    "path": "sessions/03_arithmetic_codegen/tests/prec.c",
+    "source": "int main() {\n    return 2 + 3 * 4;\n}\n"
+   },
+   {
+    "label": "prec_div.c",
+    "path": "sessions/03_arithmetic_codegen/tests/prec_div.c",
+    "source": "int main() {\n    return (100 - 3 * 7) / 4 + 1;\n}\n"
+   },
+   {
+    "label": "sub.c",
+    "path": "sessions/03_arithmetic_codegen/tests/sub.c",
+    "source": "int main() {\n    return 100 - 79;\n}\n"
+   },
+   {
+    "label": "target.c",
+    "path": "sessions/03_arithmetic_codegen/tests/target.c",
+    "source": "int main() {\n    return 1 + 2 * 3;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "04_variables",
+  "items": [
+   {
+    "label": "add_vars.c",
+    "path": "sessions/04_variables/tests/add_vars.c",
+    "source": "int main() {\n    int a;\n    int b;\n    int c;\n    a = 3;\n    b = 5;\n    c = a + b;\n    return c;\n}\n"
+   },
+   {
+    "label": "chain_assign.c",
+    "path": "sessions/04_variables/tests/chain_assign.c",
+    "source": "int main() {\n    int a;\n    int b;\n    a = 5;\n    b = a;\n    a = b + 1;\n    return a;\n}\n"
+   },
+   {
+    "label": "expr_chain.c",
+    "path": "sessions/04_variables/tests/expr_chain.c",
+    "source": "int main() {\n    int x;\n    int y;\n    x = 10;\n    y = x * 2 + 3;\n    x = y - x;\n    return x;\n}\n"
+   },
+   {
+    "label": "init.c",
+    "path": "sessions/04_variables/tests/init.c",
+    "source": "int main() {\n    int a = 3;\n    int b = 5;\n    int c = a * b;\n    return c;\n}\n"
+   },
+   {
+    "label": "multi_expr.c",
+    "path": "sessions/04_variables/tests/multi_expr.c",
+    "source": "int main() {\n    int a;\n    int b;\n    int c;\n    int d;\n    a = 2;\n    b = 3;\n    c = a * b + b;\n    d = c * a - 1;\n    return d;\n}\n"
+   },
+   {
+    "label": "reassign.c",
+    "path": "sessions/04_variables/tests/reassign.c",
+    "source": "int main() {\n    int n;\n    n = 5;\n    n = n * n;\n    n = n - 10;\n    return n;\n}\n"
+   },
+   {
+    "label": "single.c",
+    "path": "sessions/04_variables/tests/single.c",
+    "source": "int main() {\n    int a;\n    a = 42;\n    return a;\n}\n"
+   },
+   {
+    "label": "target.c",
+    "path": "sessions/04_variables/tests/target.c",
+    "source": "int main() {\n    int a;\n    int b;\n    int c;\n    a = 3;\n    b = 5;\n    c = a + b;\n    return c;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "05_if_else",
+  "items": [
+   {
+    "label": "compare.c",
+    "path": "sessions/05_if_else/tests/compare.c",
+    "source": "int main() {\n    int a;\n    int b;\n    a = 10;\n    b = 20;\n    if (a == b) {\n        return 0;\n    }\n    if (a >= b) {\n        return 1;\n    }\n    if (a < b) {\n        return 42;\n    }\n    return 0;\n}\n"
+   },
+   {
+    "label": "if_elseif.c",
+    "path": "sessions/05_if_else/tests/if_elseif.c",
+    "source": "int main() {\n    int score;\n    score = 75;\n    if (score >= 90) {\n        return 4;\n    } else if (score >= 70) {\n        return 3;\n    } else if (score >= 50) {\n        return 2;\n    } else {\n        return 1;\n    }\n}\n"
+   },
+   {
+    "label": "if_false.c",
+    "path": "sessions/05_if_else/tests/if_false.c",
+    "source": "int main() {\n    int a;\n    int b;\n    a = 3;\n    b = 10;\n    if (a > b) {\n        return a - b;\n    } else {\n        return b - a;\n    }\n}\n"
+   },
+   {
+    "label": "if_only.c",
+    "path": "sessions/05_if_else/tests/if_only.c",
+    "source": "int main() {\n    int a;\n    a = 10;\n    if (a > 5) {\n        return 1;\n    }\n    return 0;\n}\n"
+   },
+   {
+    "label": "if_true.c",
+    "path": "sessions/05_if_else/tests/if_true.c",
+    "source": "int main() {\n    int a;\n    int b;\n    a = 10;\n    b = 3;\n    if (a > b) {\n        return a - b;\n    } else {\n        return b - a;\n    }\n}\n"
+   },
+   {
+    "label": "nested.c",
+    "path": "sessions/05_if_else/tests/nested.c",
+    "source": "int main() {\n    int a;\n    int b;\n    a = 3;\n    b = 5;\n    if (a > 0) {\n        if (b > 0) {\n            return a + b;\n        }\n    }\n    return 0;\n}\n"
+   },
+   {
+    "label": "nested_if.c",
+    "path": "sessions/05_if_else/tests/nested_if.c",
+    "source": "int main() {\n    int x;\n    int y;\n    x = 5;\n    y = 8;\n    if (x > 3) {\n        if (y > 6) {\n            return x + y;\n        } else {\n            return x;\n        }\n    } else {\n        return y;\n    }\n}\n"
+   },
+   {
+    "label": "target.c",
+    "path": "sessions/05_if_else/tests/target.c",
+    "source": "int main() {\n    int a;\n    int b;\n    a = 10;\n    b = 3;\n    if (a > b) {\n        return a - b;\n    } else {\n        return b - a;\n    }\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "06_loops",
+  "items": [
+   {
+    "label": "break_early.c",
+    "path": "sessions/06_loops/tests/break_early.c",
+    "source": "int main() {\n    int i;\n    int sum;\n    i = 1;\n    sum = 0;\n    while (1) {\n        sum = sum + i;\n        i = i + 1;\n        if (i > 5) {\n            break;\n        }\n    }\n    return sum;\n}\n"
+   },
+   {
+    "label": "break_loop.c",
+    "path": "sessions/06_loops/tests/break_loop.c",
+    "source": "int main() {\n    int i;\n    int sum;\n    i = 1;\n    sum = 0;\n    while (1) {\n        sum = sum + i;\n        if (sum > 20) {\n            break;\n        }\n        i = i + 1;\n    }\n    return i;\n}\n"
+   },
+   {
+    "label": "continue_odd.c",
+    "path": "sessions/06_loops/tests/continue_odd.c",
+    "source": "int main() {\n    int i;\n    int sum;\n    i = 1;\n    sum = 0;\n    for (i = 1; i <= 10; i = i + 1) {\n        if (i % 2 == 0) {\n            continue;\n        }\n        sum = sum + i;\n    }\n    return sum;\n}\n"
+   },
+   {
+    "label": "for_count.c",
+    "path": "sessions/06_loops/tests/for_count.c",
+    "source": "int main() {\n    int i;\n    int sum;\n    sum = 0;\n    for (i = 0; i < 5; i = i + 1) {\n        sum = sum + i;\n    }\n    return sum;\n}\n"
+   },
+   {
+    "label": "for_fib.c",
+    "path": "sessions/06_loops/tests/for_fib.c",
+    "source": "int main() {\n    int i;\n    int fib_a;\n    int fib_b;\n    int tmp;\n    fib_a = 0;\n    fib_b = 1;\n    for (i = 0; i < 10; i = i + 1) {\n        tmp   = fib_b;\n        fib_b = fib_a + fib_b;\n        fib_a = tmp;\n    }\n    return fib_a;\n}\n"
+   },
+   {
+    "label": "nested_loop.c",
+    "path": "sessions/06_loops/tests/nested_loop.c",
+    "source": "int main() {\n    int i;\n    int j;\n    int n;\n    n = 0;\n    i = 0;\n    while (i < 3) {\n        j = 0;\n        while (j < 2) {\n            n = n + 1;\n            j = j + 1;\n        }\n        i = i + 1;\n    }\n    return n;\n}\n"
+   },
+   {
+    "label": "target.c",
+    "path": "sessions/06_loops/tests/target.c",
+    "source": "int main() {\n    int i;\n    int sum;\n    i = 1;\n    sum = 0;\n    while (i <= 10) {\n        sum = sum + i;\n        i = i + 1;\n    }\n    return sum;\n}\n"
+   },
+   {
+    "label": "while_sum.c",
+    "path": "sessions/06_loops/tests/while_sum.c",
+    "source": "int main() {\n    int i;\n    int sum;\n    i = 1;\n    sum = 0;\n    while (i <= 10) {\n        sum = sum + i;\n        i = i + 1;\n    }\n    return sum;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "07_functions_abi",
+  "items": [
+   {
+    "label": "early_return.c",
+    "path": "sessions/07_functions_abi/tests/early_return.c",
+    "source": "int main() {\n    int x;\n    x = 5;\n    if (x > 0) {\n        return x * 2;\n    }\n    return 1;\n}\n"
+   },
+   {
+    "label": "eight_locals.c",
+    "path": "sessions/07_functions_abi/tests/eight_locals.c",
+    "source": "int main() {\n    int a;\n    int b;\n    int c;\n    int d;\n    int e;\n    int f;\n    int g;\n    int h;\n    a = 1;\n    b = 2;\n    c = 3;\n    d = 4;\n    e = 5;\n    f = 6;\n    g = 7;\n    h = 8;\n    return a + b + c + d + e + f + g + h;\n}\n"
+   },
+   {
+    "label": "many_locals.c",
+    "path": "sessions/07_functions_abi/tests/many_locals.c",
+    "source": "int main() {\n    int a;\n    int b;\n    int c;\n    int d;\n    int e;\n    int f;\n    a = 1;\n    b = 2;\n    c = 3;\n    d = 4;\n    e = 5;\n    f = 6;\n    return a + b + c + d + e + f;\n}\n"
+   },
+   {
+    "label": "minimal.c",
+    "path": "sessions/07_functions_abi/tests/minimal.c",
+    "source": "int main() {\n    return 42;\n}\n"
+   },
+   {
+    "label": "nested_block.c",
+    "path": "sessions/07_functions_abi/tests/nested_block.c",
+    "source": "int main() {\n    int x;\n    x = 3;\n    if (x == 3) {\n        int y;\n        y = 4;\n        return x + y;\n    }\n    return 0;\n}\n"
+   },
+   {
+    "label": "nested_decl.c",
+    "path": "sessions/07_functions_abi/tests/nested_decl.c",
+    "source": "int main() {\n    int x;\n    x = 3;\n    if (x == 3) {\n        int y;\n        y = 4;\n        return x + y;\n    }\n    return 0;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "08_functions_recursion",
+  "items": [
+   {
+    "label": "add_mul.c",
+    "path": "sessions/08_functions_recursion/tests/add_mul.c",
+    "source": "int add(int a, int b) {\n    return a + b;\n}\n\nint mul(int a, int b) {\n    int i;\n    int result;\n    result = 0;\n    for (i = 0; i < b; i = i + 1) {\n        result = add(result, a);\n    }\n    return result;\n}\n\nint main() {\n    return mul(6, 7);\n}\n"
+   },
+   {
+    "label": "call_add.c",
+    "path": "sessions/08_functions_recursion/tests/call_add.c",
+    "source": "int add(int a, int b) {\n    return a + b;\n}\n\nint main() {\n    return add(3, 4);\n}\n"
+   },
+   {
+    "label": "call_mul.c",
+    "path": "sessions/08_functions_recursion/tests/call_mul.c",
+    "source": "int add(int a, int b) {\n    return a + b;\n}\n\nint mul(int a, int b) {\n    int i;\n    int result;\n    result = 0;\n    for (i = 0; i < b; i = i + 1) {\n        result = add(result, a);\n    }\n    return result;\n}\n\nint main() {\n    return mul(6, 7);\n}\n"
+   },
+   {
+    "label": "fact.c",
+    "path": "sessions/08_functions_recursion/tests/fact.c",
+    "source": "int fact(int n) {\n    if (n <= 1) {\n        return 1;\n    }\n    return n * fact(n - 1);\n}\n\nint main() {\n    return fact(5);\n}\n"
+   },
+   {
+    "label": "fact_rec.c",
+    "path": "sessions/08_functions_recursion/tests/fact_rec.c",
+    "source": "int fact(int n) {\n    if (n <= 1) {\n        return 1;\n    }\n    return n * fact(n - 1);\n}\n\nint main() {\n    return fact(5);\n}\n"
+   },
+   {
+    "label": "fib_rec.c",
+    "path": "sessions/08_functions_recursion/tests/fib_rec.c",
+    "source": "int fib(int n) {\n    if (n <= 1) {\n        return n;\n    }\n    return fib(n - 1) + fib(n - 2);\n}\n\nint main() {\n    return fib(10);\n}\n"
+   },
+   {
+    "label": "mutual_rec.c",
+    "path": "sessions/08_functions_recursion/tests/mutual_rec.c",
+    "source": "int is_even(int n);\nint is_odd(int n);\n\nint is_even(int n) {\n    if (n == 0) {\n        return 1;\n    }\n    return is_odd(n - 1);\n}\n\nint is_odd(int n) {\n    if (n == 0) {\n        return 0;\n    }\n    return is_even(n - 1);\n}\n\nint main() {\n    return is_even(10) + is_odd(7) * 10;\n}\n"
+   },
+   {
+    "label": "sum_rec.c",
+    "path": "sessions/08_functions_recursion/tests/sum_rec.c",
+    "source": "int sum(int n) {\n    if (n <= 0) {\n        return 0;\n    }\n    return n + sum(n - 1);\n}\n\nint main() {\n    return sum(10);\n}\n"
+   },
+   {
+    "label": "target.c",
+    "path": "sessions/08_functions_recursion/tests/target.c",
+    "source": "int fib(int n) {\n    if (n <= 1) {\n        return n;\n    }\n    return fib(n - 1) + fib(n - 2);\n}\n\nint main() {\n    return fib(10);\n}\n"
+   },
+   {
+    "label": "three_args.c",
+    "path": "sessions/08_functions_recursion/tests/three_args.c",
+    "source": "int clamp(int val, int lo, int hi) {\n    if (val < lo) {\n        return lo;\n    }\n    if (val > hi) {\n        return hi;\n    }\n    return val;\n}\n\nint main() {\n    return clamp(15, 0, 10) + clamp(-3, 0, 10) + clamp(5, 0, 10);\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "09_lvalue_rvalue",
+  "items": [
+   {
+    "label": "deref_read.c",
+    "path": "sessions/09_lvalue_rvalue/tests/deref_read.c",
+    "source": "int main() {\n    int x;\n    int *p;\n    x = 42;\n    p = &x;\n    return *p;\n}\n"
+   },
+   {
+    "label": "deref_write.c",
+    "path": "sessions/09_lvalue_rvalue/tests/deref_write.c",
+    "source": "int main() {\n    int a;\n    int *p;\n    a = 10;\n    p = &a;\n    *p = 20;\n    return a;\n}\n"
+   },
+   {
+    "label": "ptr_ops.c",
+    "path": "sessions/09_lvalue_rvalue/tests/ptr_ops.c",
+    "source": "int main() {\n    int a;\n    int b;\n    int *p;\n    a = 10;\n    b = 20;\n    p = &a;\n    *p = *p + 5;\n    p = &b;\n    *p = *p * 2;\n    return a + b;\n}\n"
+   },
+   {
+    "label": "swap.c",
+    "path": "sessions/09_lvalue_rvalue/tests/swap.c",
+    "source": "int swap(int *a, int *b) {\n    int tmp;\n    tmp = *a;\n    *a = *b;\n    *b = tmp;\n    return 0;\n}\n\nint main() {\n    int x;\n    int y;\n    x = 3;\n    y = 7;\n    swap(&x, &y);\n    return x + y * 10;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "10_types_arrays",
+  "items": [
+   {
+    "label": "array_sum.c",
+    "path": "sessions/10_types_arrays/tests/array_sum.c",
+    "source": "int main() {\n    int a[5];\n    int i;\n    int sum;\n    a[0] = 1;\n    a[1] = 2;\n    a[2] = 3;\n    a[3] = 4;\n    a[4] = 5;\n    sum = 0;\n    for (i = 0; i < 5; i = i + 1) {\n        sum = sum + a[i];\n    }\n    return sum;\n}\n"
+   },
+   {
+    "label": "ptr_arith.c",
+    "path": "sessions/10_types_arrays/tests/ptr_arith.c",
+    "source": "int main() {\n    int a[4];\n    int *p;\n    a[0] = 10;\n    a[1] = 20;\n    a[2] = 30;\n    a[3] = 40;\n    p = a;\n    return *(p + 2) + *(p + 3);\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "11_strings_printf",
+  "items": [
+   {
+    "label": "printf_hello.c",
+    "path": "sessions/11_strings_printf/tests/printf_hello.c",
+    "source": "#include \"lib.h\"\n\nint main() {\n    printf(\"Hello, World!\\n\");\n    return 0;\n}\n"
+   },
+   {
+    "label": "printf_number.c",
+    "path": "sessions/11_strings_printf/tests/printf_number.c",
+    "source": "int printf(char *fmt, ...);\n\nint main() {\n    printf(\"x=%d\\n\", 42);\n    return 0;\n}\n"
+   },
+   {
+    "label": "strlen_literal.c",
+    "path": "sessions/11_strings_printf/tests/strlen_literal.c",
+    "source": "#include \"lib.h\"\n\nint main() {\n    return strlen(\"abc\");\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "12_struct_typedef",
+  "items": [
+   {
+    "label": "arrow_access.c",
+    "path": "sessions/12_struct_typedef/tests/arrow_access.c",
+    "source": "typedef struct {\n    int x;\n    int y;\n} Point;\n\nint distance_sq(Point *p) {\n    return p->x * p->x + p->y * p->y;\n}\n\nint main() {\n    Point p;\n    p.x = 3;\n    p.y = 4;\n    return distance_sq(&p);\n}\n"
+   },
+   {
+    "label": "dot_access.c",
+    "path": "sessions/12_struct_typedef/tests/dot_access.c",
+    "source": "typedef struct {\n    int x;\n    int y;\n} Point;\n\nint main() {\n    Point p;\n    p.x = 3;\n    p.y = 4;\n    return p.x + p.y;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "13_sizeof_malloc_list",
+  "items": [
+   {
+    "label": "list_min.c",
+    "path": "sessions/13_sizeof_malloc_list/tests/list_min.c",
+    "source": "int malloc(int size);\n\ntypedef struct Node {\n    int val;\n    struct Node *next;\n} Node;\n\nint main() {\n    Node *n;\n    n = malloc(sizeof(Node));\n    n->val = 10;\n    n->next = 0;\n    return n->val;\n}\n"
+   },
+   {
+    "label": "list_sum.c",
+    "path": "sessions/13_sizeof_malloc_list/tests/list_sum.c",
+    "source": "#include \"lib.h\"\n\ntypedef struct Node {\n    int val;\n    struct Node *next;\n} Node;\n\nint list_sum(Node *head) {\n    int sum;\n    sum = 0;\n    while (head != 0) {\n        sum = sum + head->val;\n        head = head->next;\n    }\n    return sum;\n}\n\nNode *new_node(int v) {\n    Node *n;\n    n = malloc(sizeof(Node));\n    n->val = v;\n    n->next = 0;\n    return n;\n}\n\nint main() {\n    Node *a;\n    Node *b;\n    Node *c;\n    a = new_node(10);\n    b = new_node(20);\n    c = new_node(30);\n    a->next = b;\n    b->next = c;\n    return list_sum(a);\n}\n"
+   },
+   {
+    "label": "malloc_struct.c",
+    "path": "sessions/13_sizeof_malloc_list/tests/malloc_struct.c",
+    "source": "#include \"lib.h\"\n\ntypedef struct {\n    int val;\n    int doubled;\n} Box;\n\nBox *make_box(int v) {\n    Box *b;\n    b = malloc(sizeof(Box));\n    b->val = v;\n    b->doubled = v * 2;\n    return b;\n}\n\nint main() {\n    Box *b1;\n    Box *b2;\n    b1 = make_box(7);\n    b2 = make_box(3);\n    return b1->doubled + b2->val;\n}\n"
+   },
+   {
+    "label": "sizeof_test.c",
+    "path": "sessions/13_sizeof_malloc_list/tests/sizeof_test.c",
+    "source": "int main() {\n    return sizeof(int) + sizeof(char);\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "14_globals_scope",
+  "items": [
+   {
+    "label": "global_counter.c",
+    "path": "sessions/14_globals_scope/tests/global_counter.c",
+    "source": "#include \"lib.h\"\n\nint call_count;\nint total;\n\nint add_and_count(int x) {\n    total = total + x;\n    call_count = call_count + 1;\n    return total;\n}\n\nint main() {\n    call_count = 0;\n    total = 0;\n    add_and_count(10);\n    add_and_count(20);\n    add_and_count(30);\n    printf(\"%d\\n\", total);\n    return call_count;\n}\n"
+   },
+   {
+    "label": "global_init.c",
+    "path": "sessions/14_globals_scope/tests/global_init.c",
+    "source": "int base = 7;\n\nint main() {\n    return base + 5;\n}\n"
+   },
+   {
+    "label": "global_local_shadow.c",
+    "path": "sessions/14_globals_scope/tests/global_local_shadow.c",
+    "source": "int value;\n\nint read_global() {\n    return value;\n}\n\nint main() {\n    int value;\n    value = 5;\n    return value + read_global();\n}\n"
+   },
+   {
+    "label": "global_min.c",
+    "path": "sessions/14_globals_scope/tests/global_min.c",
+    "source": "int total;\n\nint add(int x) {\n    total = total + x;\n    return total;\n}\n\nint main() {\n    total = 0;\n    add(10);\n    add(20);\n    return total;\n}\n"
+   },
+   {
+    "label": "global_struct.c",
+    "path": "sessions/14_globals_scope/tests/global_struct.c",
+    "source": "typedef struct {\n    int a;\n    int b;\n} Pair;\n\nPair gp;\n\nint sum_pair(Pair *p) {\n    return p->a + p->b;\n}\n\nint main() {\n    gp.a = 10;\n    gp.b = 20;\n    return sum_pair(&gp);\n}\n"
+   },
+   {
+    "label": "shadow_min.c",
+    "path": "sessions/14_globals_scope/tests/shadow_min.c",
+    "source": "int value;\n\nint read_global() {\n    return value;\n}\n\nint main() {\n    int value;\n    value = 5;\n    return value + read_global();\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "15_preprocess_multifile",
+  "items": [
+   {
+    "label": "define_constants.c",
+    "path": "sessions/15_preprocess_multifile/tests/define_constants.c",
+    "source": "#define N 7\n#define FIVE 5\n\nint main() {\n    return N + FIVE;\n}\n"
+   },
+   {
+    "label": "define_min.c",
+    "path": "sessions/15_preprocess_multifile/tests/define_min.c",
+    "source": "#define N 7\n\nint main() {\n    return N + 1;\n}\n"
+   },
+   {
+    "label": "math_util.c",
+    "path": "sessions/15_preprocess_multifile/tests/math_util.c",
+    "source": "int my_abs(int x) {\n    if (x < 0) return -x;\n    return x;\n}\n\nint my_max(int a, int b) {\n    if (a > b) return a;\n    return b;\n}\n\nint my_pow(int base, int exp) {\n    int result;\n    int i;\n    result = 1;\n    for (i = 0; i < exp; i = i + 1) {\n        result = result * base;\n    }\n    return result;\n}\n"
+   },
+   {
+    "label": "multifile_global.c",
+    "path": "sessions/15_preprocess_multifile/tests/multifile_global.c",
+    "source": "#include \"stat_lib.h\"\n\nint main() {\n    reset_stats();\n    add_stat(10);\n    add_stat(20);\n    add_stat(30);\n    return get_count() + get_total();\n}\n"
+   },
+   {
+    "label": "multifile_math.c",
+    "path": "sessions/15_preprocess_multifile/tests/multifile_math.c",
+    "source": "#include \"math_util.h\"\n#define BASE 2\n#define EXP 6\n\nint main() {\n    int a;\n    int b;\n    a = my_abs(-7);\n    b = my_pow(BASE, EXP);\n    return my_max(a, b);\n}\n"
+   },
+   {
+    "label": "stat_lib.c",
+    "path": "sessions/15_preprocess_multifile/tests/stat_lib.c",
+    "source": "int count;\nint total;\n\nvoid reset_stats() {\n    count = 0;\n    total = 0;\n}\n\nvoid add_stat(int val) {\n    total = total + val;\n    count = count + 1;\n}\n\nint get_count() {\n    return count;\n}\n\nint get_total() {\n    return total;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "final",
+  "items": [
+   {
+    "label": "f01_arith.c",
+    "path": "final/tests/f01_arith.c",
+    "source": "/* f01: 算術 — 演算子優先順位と括弧 */\nint main() {\n    return (3 + 4) * 2 - 10 / 5;\n}\n"
+   },
+   {
+    "label": "f02_vars.c",
+    "path": "final/tests/f02_vars.c",
+    "source": "/* f02: 変数 — 複数ローカル変数の宣言・代入・演算 */\nint main() {\n    int a;\n    int b;\n    int c;\n    a = 7;\n    b = 5;\n    c = a * b - a - b;\n    return c;\n}\n"
+   },
+   {
+    "label": "f03_if.c",
+    "path": "final/tests/f03_if.c",
+    "source": "/* f03: 制御(if) — if/else if/else チェーン */\nint grade(int s) {\n    if (s >= 90) {\n        return 1;\n    } else if (s >= 70) {\n        return 2;\n    } else {\n        return 3;\n    }\n}\n\nint main() {\n    return grade(75);\n}\n"
+   },
+   {
+    "label": "f04_while.c",
+    "path": "final/tests/f04_while.c",
+    "source": "/* f04: 制御(while) — while ループで累積和 */\nint main() {\n    int i;\n    int s;\n    i = 1;\n    s = 0;\n    while (i <= 10) {\n        s = s + i;\n        i = i + 1;\n    }\n    return s;\n}\n"
+   },
+   {
+    "label": "f05_for.c",
+    "path": "final/tests/f05_for.c",
+    "source": "/* f05: 制御(for) — for ループで階乗 5! = 120 */\nint main() {\n    int i;\n    int r;\n    r = 1;\n    for (i = 1; i <= 5; i = i + 1) {\n        r = r * i;\n    }\n    return r;\n}\n"
+   },
+   {
+    "label": "f06_break.c",
+    "path": "final/tests/f06_break.c",
+    "source": "/* f06: 制御(break) — i*i > 200 となる最初の i を返す */\nint main() {\n    int i;\n    int found;\n    found = 0;\n    for (i = 1; i <= 100; i = i + 1) {\n        if (i * i > 200) {\n            found = i;\n            break;\n        }\n    }\n    return found;\n}\n"
+   },
+   {
+    "label": "f07_continue.c",
+    "path": "final/tests/f07_continue.c",
+    "source": "/* f07: 制御(continue) — 1..10 の和から 5 を除く */\nint main() {\n    int i;\n    int s;\n    s = 0;\n    for (i = 1; i <= 10; i = i + 1) {\n        if (i == 5) {\n            continue;\n        }\n        s = s + i;\n    }\n    return s;\n}\n"
+   },
+   {
+    "label": "f08_func.c",
+    "path": "final/tests/f08_func.c",
+    "source": "/* f08: 関数 — 多引数関数の合成呼び出し */\nint max(int a, int b) {\n    if (a > b) {\n        return a;\n    }\n    return b;\n}\n\nint max3(int a, int b, int c) {\n    return max(max(a, b), c);\n}\n\nint main() {\n    return max3(10, 42, 7);\n}\n"
+   },
+   {
+    "label": "f09_recur.c",
+    "path": "final/tests/f09_recur.c",
+    "source": "/* f09: 関数(再帰) — フィボナッチ数列 fib(10) = 55 */\nint fib(int n) {\n    if (n <= 1) {\n        return n;\n    }\n    return fib(n - 1) + fib(n - 2);\n}\n\nint main() {\n    return fib(10);\n}\n"
+   },
+   {
+    "label": "f10_ptr.c",
+    "path": "final/tests/f10_ptr.c",
+    "source": "/* f10: ポインタ — swap 関数でポインタ渡し */\nvoid swap(int *a, int *b) {\n    int t;\n    t = *a;\n    *a = *b;\n    *b = t;\n}\n\nint main() {\n    int x;\n    int y;\n    x = 3;\n    y = 42;\n    swap(&x, &y);\n    return x;\n}\n"
+   },
+   {
+    "label": "f11_array.c",
+    "path": "final/tests/f11_array.c",
+    "source": "/* f11: 配列 — ポインタ渡しで配列の総和 */\nint sum(int *a, int n) {\n    int i;\n    int s;\n    s = 0;\n    for (i = 0; i < n; i = i + 1) {\n        s = s + a[i];\n    }\n    return s;\n}\n\nint main() {\n    int a[5];\n    a[0] = 10;\n    a[1] = 20;\n    a[2] = 30;\n    a[3] = 5;\n    a[4] = 7;\n    return sum(a, 5);\n}\n"
+   },
+   {
+    "label": "f12_struct.c",
+    "path": "final/tests/f12_struct.c",
+    "source": "/* f12: 構造体 — ドットとアロー両方を使用 */\ntypedef struct {\n    int val;\n    int mul;\n} Entry;\n\nint compute(Entry *e) {\n    return e->val * e->mul;\n}\n\nint main() {\n    Entry e;\n    e.val = 5;\n    e.mul = 7;\n    return compute(&e);\n}\n"
+   },
+   {
+    "label": "f13_global.c",
+    "path": "final/tests/f13_global.c",
+    "source": "/* f13: グローバル変数 — 複数関数から共有するアキュムレータ */\nint total;\n\nvoid add_to_total(int n) {\n    total = total + n;\n}\n\nint main() {\n    total = 0;\n    add_to_total(15);\n    add_to_total(20);\n    add_to_total(7);\n    return total;\n}\n"
+   },
+   {
+    "label": "f14_string.c",
+    "path": "final/tests/f14_string.c",
+    "source": "/* f14: 文字列 — printf で標準出力に書く */\n#include \"lib.h\"\n\nint main() {\n    printf(\"Hello, World!\\n\");\n    return 0;\n}\n"
+   },
+   {
+    "label": "f15_define.c",
+    "path": "final/tests/f15_define.c",
+    "source": "/* f15: 前処理 — #define 定数マクロをループ条件・更新に使用 */\n#define LIMIT 10\n#define STEP 3\n\nint main() {\n    int i;\n    int count;\n    count = 0;\n    for (i = 0; i < LIMIT; i = i + STEP) {\n        count = count + 1;\n    }\n    return count;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "B3_tailcall",
+  "items": [
+   {
+    "label": "deep_sum.c",
+    "path": "advanced/B3_tailcall/tests/deep_sum.c",
+    "source": "// 末尾再帰で 1..n の総和を求める。\n// 末尾呼び出し最適化がないと、n が大きいときスタックがあふれて落ちる。\nint sum_to(int n, int acc) {\n    if (n == 0) {\n        return acc;\n    }\n    return sum_to(n - 1, acc + n);\n}\n\nint main() {\n    // 1..1000000 の総和は 500000500000。下位 8bit を返す\n    return sum_to(1000000, 0) % 256;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "L1_struct",
+  "items": [
+   {
+    "label": "assign.c",
+    "path": "advanced/L1_struct/tests/assign.c",
+    "source": "// 構造体の代入(まるごとコピー)\ntypedef struct Point { int x; int y; } Point;\n\nint main() {\n    Point p;\n    Point q;\n    p.x = 3;\n    p.y = 4;\n\n    q = p;                 // まるごとコピー\n    if (q.x != 3) { return 1; }\n    if (q.y != 4) { return 2; }\n\n    p.x = 99;              // コピーなので q は影響を受けない\n    if (q.x != 3) { return 3; }\n\n    return q.x + q.y;\n}\n"
+   },
+   {
+    "label": "nested.c",
+    "path": "advanced/L1_struct/tests/nested.c",
+    "source": "// ネストした構造体と、そのメンバへの代入\ntypedef struct Point { int x; int y; } Point;\ntypedef struct Line { Point a; Point b; } Line;\n\nint main() {\n    Point p;\n    Line l;\n    Line m;\n\n    p.x = 1; p.y = 2;\n    l.a = p;               // ネストしたメンバへの構造体代入\n    l.b.x = 10;\n    l.b.y = 20;\n\n    if (l.a.x != 1) { return 1; }\n    if (l.a.y != 2) { return 2; }\n\n    m = l;                 // 16 バイトまるごとコピー\n    if (m.a.x != 1) { return 3; }\n    if (m.b.y != 20) { return 4; }\n\n    return m.a.x + m.a.y + m.b.x + m.b.y;\n}\n"
+   },
+   {
+    "label": "via_ptr.c",
+    "path": "advanced/L1_struct/tests/via_ptr.c",
+    "source": "// ポインタ経由の構造体代入\ntypedef struct Box { int w; int h; int d; } Box;\n\nint fill(Box *dst, Box *src) {\n    *dst = *src;           // ポインタの先どうしをコピー\n    return 0;\n}\n\nint main() {\n    Box a;\n    Box b;\n    a.w = 2; a.h = 3; a.d = 5;\n\n    fill(&b, &a);\n    if (b.w != 2) { return 1; }\n    if (b.h != 3) { return 2; }\n    if (b.d != 5) { return 3; }\n\n    return b.w * b.h * b.d;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "L3_variadic",
+  "items": [
+   {
+    "label": "max.c",
+    "path": "advanced/L3_variadic/tests/max.c",
+    "source": "// 可変長引数で最大値を求める\nint __arg(int i);\n\nint max_of(int n, ...) {\n    int best;\n    int i;\n    int v;\n    best = __arg(1);\n    for (i = 2; i <= n; i = i + 1) {\n        v = __arg(i);\n        if (v > best) { best = v; }\n    }\n    return best;\n}\n\nint main() {\n    if (max_of(3, 5, 9, 2) != 9) { return 1; }\n    if (max_of(2, 40, 8) != 40) { return 2; }\n    if (max_of(1, 7) != 7) { return 3; }\n    return max_of(5, 1, 6, 3, 6, 2);\n}\n"
+   },
+   {
+    "label": "named.c",
+    "path": "advanced/L3_variadic/tests/named.c",
+    "source": "// 名前つき引数も __arg で読めること、通常の関数が壊れていないこと\nint __arg(int i);\n\nint tagged(int tag, int n, ...) {\n    int total;\n    int i;\n    if (__arg(0) != tag) { return 100; }     // 0 番目は第1引数\n    if (__arg(1) != n) { return 101; }       // 1 番目は第2引数\n    total = 0;\n    for (i = 2; i < 2 + n; i = i + 1) {\n        total = total + __arg(i);\n    }\n    return tag * 1000 + total;\n}\n\nint plain(int a, int b) { return a - b; }    // 可変長でない関数\n\nint main() {\n    if (plain(9, 4) != 5) { return 1; }\n    // 終了コードは 0〜255 なので小さくして返す\n    return (tagged(2, 3, 100, 200, 300) - 2000) / 10;\n}\n"
+   },
+   {
+    "label": "sum.c",
+    "path": "advanced/L3_variadic/tests/sum.c",
+    "source": "// 可変長引数の関数を「定義」する\n// __arg(i) は i 番目の引数を返す組み込み関数(0 番目は最初の名前つき引数)\nint __arg(int i);\n\nint sum(int n, ...) {\n    int total;\n    int i;\n    total = 0;\n    for (i = 1; i <= n; i = i + 1) {\n        total = total + __arg(i);\n    }\n    return total;\n}\n\nint main() {\n    if (sum(3, 10, 20, 30) != 60) { return 1; }\n    if (sum(1, 7) != 7) { return 2; }\n    if (sum(0) != 0) { return 3; }\n    return sum(4, 1, 2, 3, 4);\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "Q1_typecheck",
+  "items": [
+   {
+    "label": "arity.c",
+    "path": "advanced/Q1_typecheck/tests/arity.c",
+    "source": "int add(int a, int b) { return a + b; }\nint main() {\n    return add(1) + add(1, 2, 3);\n}\n"
+   },
+   {
+    "label": "bad_assign.c",
+    "path": "advanced/Q1_typecheck/tests/bad_assign.c",
+    "source": "int main() {\n    int a;\n    a = 1;\n    1 + 2 = 3;\n    a + a = 5;\n    return a;\n}\n"
+   },
+   {
+    "label": "ok_complex.c",
+    "path": "advanced/Q1_typecheck/tests/ok_complex.c",
+    "source": "int printf(char *fmt, ...);\nint fib(int n) {\n    if (n <= 1) { return n; }\n    return fib(n - 1) + fib(n - 2);\n}\nint g;\nint main() {\n    int a[5];\n    int i;\n    int *p;\n    g = 0;\n    for (i = 0; i < 5; i = i + 1) { a[i] = i; }\n    p = a;\n    *p = 10;\n    printf(\"%d\\n\", fib(10));\n    return a[0] + g;\n}\n"
+   },
+   {
+    "label": "scope.c",
+    "path": "advanced/Q1_typecheck/tests/scope.c",
+    "source": "int g;\nint helper(int p) {\n    return p + g;\n}\nint main() {\n    int local;\n    local = 1;\n    return helper(local) + p;\n}\n"
+   },
+   {
+    "label": "undefined_func.c",
+    "path": "advanced/Q1_typecheck/tests/undefined_func.c",
+    "source": "int main() {\n    return unknown_func(1);\n}\n"
+   },
+   {
+    "label": "undefined_var.c",
+    "path": "advanced/Q1_typecheck/tests/undefined_var.c",
+    "source": "int main() {\n    int x;\n    x = 1;\n    return x + y;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "R1_nolibc",
+  "items": [
+   {
+    "label": "print_loop.c",
+    "path": "advanced/R1_nolibc/tests/print_loop.c",
+    "source": "// syscall.s とリンクして libc なしで動かす C プログラム。\n// 1文字ずつ書き出して \"abc\\n\" を表示し、終了コード 3 を返す。\nint sys_write(int fd, char *buf, int len);\n\nint main() {\n    char buf[4];\n    int i;\n    i = 0;\n    while (i < 3) {\n        buf[i] = 97 + i;      // 'a' + i\n        i = i + 1;\n    }\n    buf[3] = 10;              // '\\n'\n    sys_write(1, buf, 4);\n    return 3;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "R2_printf",
+  "items": [
+   {
+    "label": "fmt.c",
+    "path": "advanced/R2_printf/tests/fmt.c",
+    "source": "// printf1 の書式指定を確認する\nint print_str(char *s);\nint print_int(int n);\nint print_char(int c);\nint printf1(char *fmt, int iarg, char *sarg);\nint my_strlen(char *s);\n\nint main() {\n    printf1(\"n=%d\\n\", 42, 0);\n    printf1(\"s=%s\\n\", 0, \"hello\");\n    printf1(\"c=%c\\n\", 65, 0);\n    printf1(\"100%%\\n\", 0, 0);\n    printf1(\"no format\\n\", 0, 0);\n    return my_strlen(\"abcd\");\n}\n"
+   },
+   {
+    "label": "numbers.c",
+    "path": "advanced/R2_printf/tests/numbers.c",
+    "source": "// print_int が境界値を正しく出せるか\nint print_int(int n);\nint print_str(char *s);\n\nint main() {\n    print_int(0);      print_str(\"\\n\");\n    print_int(7);      print_str(\"\\n\");\n    print_int(-1234);  print_str(\"\\n\");\n    print_int(1000000); print_str(\"\\n\");\n    return 0;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "R3_malloc",
+  "items": [
+   {
+    "label": "exhaust.c",
+    "path": "advanced/R3_malloc/tests/exhaust.c",
+    "source": "// プールを使い切ったら 0(NULL)を返すことを確かめる\nint heap_init(char *buf, int size);\nchar *my_malloc(int size);\n\nint main() {\n    char pool[512];\n    char *p;\n    int count;\n\n    heap_init(pool, 512);\n    count = 0;\n    p = my_malloc(64);\n    while (p != 0) {\n        count = count + 1;\n        if (count > 100) {\n            return 99;      // 無限に確保できてしまっている\n        }\n        p = my_malloc(64);\n    }\n    return count;           // 確保できた個数(ヘッダのぶん 512/80 = 6 個)\n}\n"
+   },
+   {
+    "label": "list_build.c",
+    "path": "advanced/R3_malloc/tests/list_build.c",
+    "source": "// 自前 malloc で連結リストを作って走査する(コマ13 の再現)\nint heap_init(char *buf, int size);\nchar *my_malloc(int size);\n\ntypedef struct Node {\n    int val;\n    struct Node *next;\n} Node;\n\nint main() {\n    char pool[1024];\n    Node *head;\n    Node *n;\n    int sum;\n    int i;\n\n    heap_init(pool, 1024);\n    head = 0;\n    for (i = 1; i <= 3; i = i + 1) {\n        n = my_malloc(sizeof(Node));\n        n->val = i * 10;\n        n->next = head;\n        head = n;\n    }\n    sum = 0;\n    while (head != 0) {\n        sum = sum + head->val;\n        head = head->next;\n    }\n    return sum;\n}\n"
+   },
+   {
+    "label": "reuse.c",
+    "path": "advanced/R3_malloc/tests/reuse.c",
+    "source": "// 解放したブロックが再利用されることを確かめる\nint heap_init(char *buf, int size);\nchar *my_malloc(int size);\nint my_free(char *p);\nint heap_used();\n\nint main() {\n    char pool[1024];\n    char *a;\n    char *b;\n    char *c;\n\n    heap_init(pool, 1024);\n    a = my_malloc(16);\n    b = my_malloc(16);\n    my_free(b);\n    c = my_malloc(16);      // b の跡地が再利用されるはず\n\n    if (b != c) {\n        return 1;           // 再利用されなかった\n    }\n    if (heap_used() != 32) {\n        return 2;           // 使用量が合わない(16 x 2)\n    }\n    return 0;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "S1_shortcircuit",
+  "items": [
+   {
+    "label": "div_guard.c",
+    "path": "advanced/S1_shortcircuit/tests/div_guard.c",
+    "source": "// 短絡評価がないとゼロ除算になる\nint main() {\n    int x;\n    int count;\n    count = 0;\n\n    x = 0;\n    if (x != 0 && 100 / x > 2) { count = count + 1; }\n\n    x = 10;\n    if (x != 0 && 100 / x > 2) { count = count + 10; }\n\n    x = 0;\n    if (x == 0 || 100 / x > 2) { count = count + 100; }\n\n    return count;\n}\n"
+   },
+   {
+    "label": "null_guard.c",
+    "path": "advanced/S1_shortcircuit/tests/null_guard.c",
+    "source": "// 短絡評価がないと NULL 参照でクラッシュする\ntypedef struct Node { int val; struct Node *next; } Node;\n\nint main() {\n    Node n;\n    Node *p;\n    n.val = 7;\n\n    p = 0;\n    // 短絡すれば p->val は評価されない\n    if (p != 0 && p->val > 0) {\n        return 1;\n    }\n\n    p = &n;\n    if (p != 0 && p->val > 0) {\n        return p->val;\n    }\n    return 2;\n}\n"
+   },
+   {
+    "label": "side_effect.c",
+    "path": "advanced/S1_shortcircuit/tests/side_effect.c",
+    "source": "// 右辺が評価されなかったことを、副作用の有無で確かめる\nint counter;\n\nint bump() {\n    counter = counter + 1;\n    return 1;\n}\n\nint main() {\n    counter = 0;\n    if (0 && bump()) { return 90; }      // bump は呼ばれないはず\n    if (counter != 0) { return 91; }\n\n    if (1 || bump()) { }                 // bump は呼ばれないはず\n    if (counter != 0) { return 92; }\n\n    if (1 && bump()) { }                 // ここでは呼ばれる\n    if (counter != 1) { return 93; }\n\n    return counter;                      // 1\n}\n"
+   },
+   {
+    "label": "value.c",
+    "path": "advanced/S1_shortcircuit/tests/value.c",
+    "source": "// && と || が返す値そのものを確かめる(1 か 0)\nint main() {\n    int a;\n    a = 0;\n    if ((1 && 1) != 1) { return 1; }\n    if ((1 && 0) != 0) { return 2; }\n    if ((0 && 1) != 0) { return 3; }\n    if ((5 && 3) != 1) { return 4; }     // 非0同士は 1\n    if ((0 || 0) != 0) { return 5; }\n    if ((0 || 7) != 1) { return 6; }     // 非0は 1 に正規化\n    if ((2 || 3) != 1) { return 7; }\n    a = 1 && 1 && 0;\n    if (a != 0) { return 8; }\n    a = 0 || 0 || 4;\n    if (a != 1) { return 9; }\n    return 42;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "S2_int32",
+  "items": [
+   {
+    "label": "mul_wrap.c",
+    "path": "advanced/S2_int32/tests/mul_wrap.c",
+    "source": "// 掛け算も32bitで折り返す\nint main() {\n    int x;\n    int y;\n\n    x = 100000;\n    y = x * x;           // 10^10 は int に収まらない → 折り返す\n    if (y == 10000000000) { return 1; }   // 64bit のままならこうなる\n    if (y != 1410065408) { return 2; }    // 32bit で折り返した値\n\n    x = 65536;\n    if (x * x != 0) { return 3; }         // 2^32 は 32bit では 0\n\n    return 7;\n}\n"
+   },
+   {
+    "label": "overflow.c",
+    "path": "advanced/S2_int32/tests/overflow.c",
+    "source": "// int は32bitなので、最大値に1を足すと最小値に折り返す\nint main() {\n    int x;\n    x = 2147483647;      // int の最大値\n    x = x + 1;\n    if (x > 0) { return 1; }        // 折り返していなければ正のまま\n    if (x != -2147483648) { return 2; }\n\n    x = -2147483648;     // int の最小値\n    x = x - 1;\n    if (x < 0) { return 3; }        // 折り返して正になるはず\n    if (x != 2147483647) { return 4; }\n\n    return 42;\n}\n"
+   },
+   {
+    "label": "pointer_ok.c",
+    "path": "advanced/S2_int32/tests/pointer_ok.c",
+    "source": "// ポインタ演算は64bitのまま壊れていないこと(narrow しすぎの検出)\ntypedef struct Node { int val; struct Node *next; } Node;\n\nint main() {\n    int a[8];\n    int *p;\n    int i;\n    Node n;\n    Node *q;\n\n    for (i = 0; i < 8; i = i + 1) { a[i] = i * 10; }\n\n    p = a;\n    p = p + 5;\n    if (*p != 50) { return 1; }\n\n    p = p - 2;\n    if (*p != 30) { return 2; }\n\n    if (a[7] != 70) { return 3; }\n\n    n.val = 9;\n    n.next = 0;\n    q = &n;\n    if (q->val != 9) { return 4; }\n\n    return 55;\n}\n"
+   },
+   {
+    "label": "shift.c",
+    "path": "advanced/S2_int32/tests/shift.c",
+    "source": "// シフトも32bitで扱う\nint main() {\n    int x;\n    x = 1;\n    x = x << 31;         // int の符号ビットに届く\n    if (x > 0) { return 1; }\n    if (x != -2147483648) { return 2; }\n\n    x = -8;\n    if (x >> 1 != -4) { return 3; }      // 算術シフト\n\n    return 3;\n}\n"
+   }
+  ]
+ },
+ {
+  "group": "S3_ptrdiff",
+  "items": [
+   {
+    "label": "char_diff.c",
+    "path": "advanced/S3_ptrdiff/tests/char_diff.c",
+    "source": "// char* の差は 1 バイト単位(要素サイズが 1)\nint my_strlen(char *s) {\n    char *p;\n    p = s;\n    while (*p != 0) {\n        p = p + 1;\n    }\n    return p - s;      // 進んだ要素数 = 文字数\n}\n\nint main() {\n    return my_strlen(\"hello!\");\n}\n"
+   },
+   {
+    "label": "count.c",
+    "path": "advanced/S3_ptrdiff/tests/count.c",
+    "source": "// ポインタの差は「要素いくつ分か」になる\nint main() {\n    int a[10];\n    int *p;\n    int *q;\n\n    p = a;\n    q = &a[7];\n\n    // int は 4 バイトなので、アドレスの差は 28。要素数は 7\n    return q - p;\n}\n"
+   },
+   {
+    "label": "use_result.c",
+    "path": "advanced/S3_ptrdiff/tests/use_result.c",
+    "source": "// 差の結果は int なので、そのまま計算に使える\ntypedef struct Pair { int x; int y; } Pair;\n\nint main() {\n    Pair a[5];\n    Pair *p;\n    Pair *q;\n    int n;\n\n    p = &a[1];\n    q = &a[4];\n\n    n = q - p;              // 3(Pair は 8 バイトだが、要素数は 3)\n    if (n != 3) { return 1; }\n\n    // 結果が int として扱われること(ポインタ演算にならないこと)\n    if ((q - p) * 2 != 6) { return 2; }\n    if ((q - p) + 1 != 4) { return 3; }\n\n    return n * 10;\n}\n"
+   }
+  ]
+ }
+]
