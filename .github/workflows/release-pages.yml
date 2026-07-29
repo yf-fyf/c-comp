@@ -38,7 +38,7 @@ jobs:
           python3 -m compileall -q tools workbook/scaffold
           python3 workbook/scaffold/parse_viewer.py workbook/sessions/02_interpreter/tests/add_mul.c >/dev/null
       - name: Build and test the web application
-        run: make web && make web-test
+        run: opam exec -- make web && opam exec -- make web-test
       - name: Build the allowlisted Pages tree
         run: python3 tools/build_pages.py "$VERSION" --output "$RUNNER_TEMP/pages" --revision "$GITHUB_SHA"
       - name: Verify the release archive

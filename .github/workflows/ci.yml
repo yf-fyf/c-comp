@@ -34,9 +34,9 @@ jobs:
       - name: Install OCaml dependencies
         run: opam install -y dune menhir js_of_ocaml js_of_ocaml-ppx
       - name: Build web application and presets
-        run: make web
+        run: opam exec -- make web
       - name: Type-check web application
         run: npm run typecheck
         working-directory: web/app
       - name: Test web application
-        run: make web-test
+        run: opam exec -- make web-test
