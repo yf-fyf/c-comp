@@ -1,0 +1,16 @@
+---
+documentclass: ltjsarticle
+classoption:
+  - a4paper
+  - 12pt
+mainfont: Noto Sans CJK JP
+sansfont: Noto Sans CJK JP
+monofont: Noto Sans Mono CJK JP
+geometry:
+  - top=25mm
+  - bottom=20mm
+  - left=20mm
+  - right=20mm
+tables: true
+listings: true
+---

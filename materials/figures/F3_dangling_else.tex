@@ -1,0 +1,51 @@
+% F3: dangling else — else は最も内側の if に結合する
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ast/.style={cfgbox, minimum width=17mm, minimum height=7mm,
+                font=\ttfamily\footnotesize},
+    gast/.style={ast, draw=TcGrayText, text=TcGrayText},
+    elbl/.style={annot, font=\footnotesize},
+    gelbl/.style={elbl, text=TcGrayText},
+    gflow/.style={flow, color=TcGrayText}]
+
+  \node[gannot] at (48mm, 13mm)
+      {{\ttfamily if (a) if (b) return 1; else return 2;}　の解釈};
+
+  % ================ 左: 正しい木 ================
+  \node[annot, anchor=south] at (8mm, 4mm) {再帰下降が作る木};
+
+  \node[ast] (Lifa) at (8mm, 0mm) {if (a)};
+  \node[ast] (Lifb) at (8mm, -15mm) {if (b)};
+  \node[ast] (Ls1) at (-4mm, -30mm) {return 1;};
+  \node[ast] (Ls2) at (22mm, -30mm) {return 2;};
+
+  \draw[flow] (Lifa.south) -- node[elbl, right=1mm] {then} (Lifb.north);
+  \draw[flow] (Lifb.south) -- node[elbl, left=1mm, pos=0.6] {then} (Ls1.north);
+  \draw[flow] (Lifb.south) -- node[elbl, right=1mm, pos=0.6, text=TcEmph] {else} (Ls2.north);
+
+  \node[annot, text=TcEmph, anchor=north, align=center] at (8mm, -39mm)
+      {else は内側の if につく\\（a が真で b が偽のとき 2 を返す）};
+
+  % ================ 右: 作られない木 ================
+  \node[gannot, anchor=south] at (88mm, 4mm) {この木にはならない};
+
+  \node[gast] (Rifa) at (88mm, 0mm) {if (a)};
+  \node[gast] (Rifb) at (74mm, -15mm) {if (b)};
+  \node[gast] (Rs2) at (102mm, -15mm) {return 2;};
+  \node[gast] (Rs1) at (74mm, -30mm) {return 1;};
+
+  \draw[gflow] (Rifa.south) -- node[gelbl, left=1mm, pos=0.5] {then} (Rifb.north);
+  \draw[gflow] (Rifa.south) -- node[gelbl, right=1mm, pos=0.5] {else} (Rs2.north);
+  \draw[gflow] (Rifb.south) -- node[gelbl, left=1mm, pos=0.6] {then} (Rs1.north);
+
+  \node[gannot, anchor=north, align=center] at (88mm, -39mm)
+      {外側の if に else をつける解釈\\（文法上はあり得るが、パーサは作らない）};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (48mm, -52mm)
+      {parse\_if は then を読んだ直後に「else があれば取る」。\\
+       内側の if が先に else に出会うため、else は自然に最も内側の if に結合する};
+\end{tikzpicture}
+\end{document}

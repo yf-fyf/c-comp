@@ -1,0 +1,17 @@
+int printf(char *fmt, ...);
+int fib(int n) {
+    if (n <= 1) { return n; }
+    return fib(n - 1) + fib(n - 2);
+}
+int g;
+int main() {
+    int a[5];
+    int i;
+    int *p;
+    g = 0;
+    for (i = 0; i < 5; i = i + 1) { a[i] = i; }
+    p = a;
+    *p = 10;
+    printf("%d\n", fib(10));
+    return a[0] + g;
+}

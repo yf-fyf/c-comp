@@ -1,0 +1,28 @@
+{
+  "name": "mycc-web-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/copy-core.mjs && vite",
+    "build": "node scripts/copy-core.mjs && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:qemu": "vite-node test/qemu-conformance.ts"
+  },
+  "dependencies": {
+    "@codemirror/lang-cpp": "^6.0.2",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.26.0",
+    "codemirror": "^6.0.1",
+    "d3-hierarchy": "^3.1.2"
+  },
+  "devDependencies": {
+    "@types/d3-hierarchy": "^3.1.7",
+    "@types/node": "^26.1.1",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.5.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}

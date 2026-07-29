@@ -1,0 +1,22 @@
+% コマ5: 複数の return が共通エピローグ .Lreturn に合流する
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm]
+  \node[cfgbox, minimum width=34mm] (A) at (0mm, 0mm) {if の中の return a;};
+  \node[cfgbox, minimum width=34mm] (B) at (0mm, -22mm) {関数末尾の return b;};
+
+  \node[cfgbox, minimum width=32mm, align=left, font=\ttfamily\footnotesize]
+      (epi) at (70mm, -11mm)
+      {.Lreturn:\\\ \ ld s0, ...\\\ \ ld ra, ...\\\ \ addi sp, ...\\\ \ ret};
+  \node[gannot, anchor=south] at ($(epi.north)+(0,1mm)$) {共通エピローグ};
+
+  \draw[ptr] (A.east) -- node[annot, text=TcEmph, above=2.5mm, pos=0.55]
+      {a0 に値を入れて j .Lreturn} ($(epi.west)+(0,6mm)$);
+  \draw[ptr] (B.east) -- node[annot, text=TcEmph, below=2.5mm, pos=0.55]
+      {a0 に値を入れて j .Lreturn} ($(epi.west)+(0,-6mm)$);
+
+  \node[gannot, anchor=north] at (35mm, -32mm)
+      {関数内のどこで return しても、必ず共通のエピローグを通って関数を抜ける};
+\end{tikzpicture}
+\end{document}

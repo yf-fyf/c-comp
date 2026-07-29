@@ -1,0 +1,53 @@
+% B2: メモリスタック vs レジスタスタック、および call をまたぐ退避
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    slot/.style={memcell, minimum width=26mm, minimum height=8mm,
+                 font=\ttfamily\footnotesize},
+    reg/.style={slot, fill=TcAccentLighter},
+    ttl/.style={annot, anchor=south, align=center}]
+
+  % ================ 左: これまで(メモリ) ================
+  \node[ttl] at (0mm, 12mm) {これまで: メモリに退避};
+  \node[slot] (m2) at (0mm, 0mm) {深さ2の値};
+  \node[slot, below=0mm of m2] (m1) {深さ1の値};
+  \node[slot, below=0mm of m1] (m0) {深さ0の値};
+  \node[addr, anchor=east] at ($(m0.west)+(-2mm,0)$) {sp};
+  \node[annot, anchor=north, align=center] at (0mm, -22mm)
+      {1段ごとに\\{\ttfamily addi sp} + {\ttfamily sd} / {\ttfamily ld} + {\ttfamily addi sp}\\= 4命令};
+
+  % ================ 右: これから(レジスタ) ================
+  \node[ttl] at (62mm, 12mm) {これから: t レジスタに退避};
+  \node[reg] (r2) at (62mm, 0mm) {t2};
+  \node[reg, below=0mm of r2] (r1) {t1};
+  \node[reg, below=0mm of r1] (r0) {t0};
+  \node[addr, anchor=east] at ($(r0.west)+(-2mm,0)$) {depth};
+  \node[annot, anchor=north, align=center] at (62mm, -22mm)
+      {1段ごとに\\{\ttfamily mv} / {\ttfamily mv}\\= 2命令};
+
+  \draw[flow, color=TcGrayText] (16mm, -4mm) -- (44mm, -4mm);
+
+  % ================ 下: call をまたぐと壊れる ================
+  \node[annot, text=TcEmph, anchor=west] at (-14mm, -38mm)
+      {ただし t0〜t6 は caller-saved（呼ばれた関数が壊してよい）};
+
+  \node[font=\ttfamily\small, anchor=west] (c1) at (-8mm, -46mm)
+      {return fib(n-1) + fib(n-2);};
+
+  \node[annot, anchor=west, align=left] at (-8mm, -55mm)
+      {① {\ttfamily fib(n-1)} の結果を t0 に退避\\
+       ② {\ttfamily fib(n-2)} を呼ぶ　{\color{TcEmph}← この中で t0 が壊される}\\
+       ③ t0 を足す　{\color{TcEmph}← ゴミを足してしまう}};
+
+  \node[annot, text=TcEmph, anchor=west, align=left] at (76mm, -52mm)
+      {対策: call の直前に生きている t を\\
+       メモリへ退避し、直後に戻す\\
+       （spill / reload）};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (48mm, -70mm)
+      {深さが 7 段を超えた分だけメモリを使う。
+       浅い式（ほとんどの式）はレジスタだけで済む};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,35 @@
+% F4: フロントエンドの完全な置き換え — 黒箱はもうない
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    stage/.style={cfgbox, minimum width=30mm, minimum height=11mm, fill=TcAccentLighter},
+    ghost/.style={cfgbox, minimum width=30mm, minimum height=9mm, dashed,
+                  draw=TcGrayText, text=TcGrayText},
+    ftxt/.style={font=\ttfamily\small, inner sep=1.5pt}]
+  % ---- 置き換えられた黒箱 ----
+  \node[ghost] (g1) at (28mm, 20mm) {scaffold/lexer.py};
+  \node[ghost] (g2) at (70mm, 20mm) {scaffold/parser.py};
+  \node[annot, text=TcEmph, anchor=west] at (90mm, 20mm)
+      {黒箱は置き換え済み\\（golden test で同一を確認）};
+  \draw[ptr, dashed] (g1.south) -- ($(g1.south)+(0,-4mm)$);
+  \draw[ptr, dashed] (g2.south) -- ($(g2.south)+(0,-4mm)$);
+
+  % ---- 完成したパイプライン ----
+  \node[ftxt] (src) at (0mm, 0mm) {prog.c};
+  \node[stage] (lex) at (28mm, 0mm) {mylexer.py\\（F1）};
+  \node[stage] (par) at (70mm, 0mm) {myparser.py\\（F2〜F4）};
+  \node[stage, fill=white] (cc) at (114mm, 0mm) {mycc.py の codegen\\（コマ3〜16）};
+  \node[ftxt, align=center] (asm) at (147mm, 0mm) {RV64\\アセンブリ};
+
+  \draw[flow] (src.east) -- (lex.west);
+  \draw[flow] (lex.east) -- node[gannot, above=1.5mm] {トークン列} (par.west);
+  \draw[flow] (par.east) -- node[gannot, above=1.5mm] {AST} (cc.west);
+  \draw[flow] (cc.east) -- (asm.west);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (62mm, -10mm)
+      {前処理（preprocess）だけは scaffold のものを使い続ける（発展課題で自作可）。\\
+       このフロントエンドを C に移植すれば、セルフホストの最難関部分が完成する};
+\end{tikzpicture}
+\end{document}

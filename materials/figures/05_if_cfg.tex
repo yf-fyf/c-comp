@@ -1,0 +1,47 @@
+% コマ5: if / if-else の制御フロー
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm]
+  % ================ if（else なし） ================
+  \node[gannot] at (0mm, 12mm) {{\ttfamily if (cond) \{ ... \}}};
+
+  \node[cfgbox] (Lc) at (0mm, 0mm) {cond を計算\\（結果は a0）};
+  \node[cfgbox, fill=TcAccentLighter] (Lt) at (0mm, -19mm) {then 側の文};
+  \node[cfgbox] (Le) at (0mm, -38mm) {以降の処理};
+  \node[addr, left=1.5mm of Le] {.Lend:};
+
+  \draw[flow] (Lc) -- node[annot, right=1mm] {真（a0 ≠ 0）} (Lt);
+  \draw[flow] (Lt) -- (Le);
+  \draw[ptr] (Lc.east) to[out=0,in=0,looseness=1.5]
+      node[annot, text=TcEmph, right=2mm, pos=0.5] {beqz a0, .Lend\\（偽なら飛ばす）}
+      (Le.east);
+
+  % ================ if / else ================
+  \node[gannot] at (104mm, 12mm)
+      {{\ttfamily if (cond) \{ ... \} else \{ ... \}}};
+
+  \node[cfgbox] (Rc) at (104mm, 0mm) {cond を計算\\（結果は a0）};
+  \node[cfgbox, fill=TcAccentLighter] (Rt) at (85mm, -19mm) {then 側の文};
+  \node[cfgbox, fill=TcAccentLighter] (Re) at (123mm, -19mm) {else 側の文};
+  \node[addr, anchor=south east] at ($(Re.north east)+(0,0.5mm)$) {.Lelse:};
+  \node[cfgbox] (Rend) at (104mm, -38mm) {以降の処理};
+  \node[addr, left=1.5mm of Rend] {.Lend:};
+
+  \draw[flow] (Rc.south) -- node[annot, left=1.5mm, pos=0.4] {真} (Rt.north);
+  \draw[ptr] (Rc.south) -- node[annot, text=TcEmph, right=1.5mm, pos=0.4]
+      {beqz a0, .Lelse（偽）} (Re.north);
+  \draw[ptr] (Rt.south) -- node[annot, text=TcEmph, left=1.5mm, pos=0.45]
+      {j .Lend\\（else を飛び越す）} (Rend.north west);
+  \draw[flow] (Re.south) -- (Rend.north east);
+
+  \node[annot, text=TcEmph, anchor=north, align=center] at (104mm, -47mm)
+      {j .Lend を忘れると、then の実行後に else 側にも突入してしまう};
+
+  % ================ 凡例 ================
+  \draw[flow] (-14mm, -50mm) -- (-6mm, -50mm);
+  \node[annot, anchor=west] at (-5mm, -50mm) {そのまま次の命令へ進む};
+  \draw[ptr] (-14mm, -55mm) -- (-6mm, -55mm);
+  \node[annot, anchor=west] at (-5mm, -55mm) {ジャンプ命令で飛ぶ};
+\end{tikzpicture}
+\end{document}

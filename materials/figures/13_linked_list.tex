@@ -1,0 +1,44 @@
+% コマ13: スタック上の head とヒープ上の連結リスト
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ncell/.style={memcell, minimum width=26mm}]
+  % ---- スタック側 ----
+  \node[memcell, minimum width=22mm] (head) at (0,0) {head};
+
+  % ---- ヒープ上の3ノード ----
+  \node[ncell, fill=TcAccentLighter] (n1v) at ($(head.east)+(26mm,4.25mm)$) {val = 10};
+  \node[ncell, below=0mm of n1v] (n1n) {next};
+
+  \node[ncell, fill=TcAccentLighter, right=13mm of n1v] (n2v) {val = 20};
+  \node[ncell, below=0mm of n2v] (n2n) {next};
+
+  \node[ncell, fill=TcAccentLighter, right=13mm of n2v] (n3v) {val = 30};
+  \node[ncell, below=0mm of n3v] (n3n) {next = 0};
+
+  % ---- 背景領域 ----
+  \begin{scope}[on background layer]
+    \node[fill=TcGrayBg, draw=TcGrayText, line width=0.5pt, rounded corners=2mm,
+          inner sep=4.5mm, fit=(head)] (stackbox) {};
+    \node[fill=TcAccentLighter, draw=TcAccentLight, line width=0.8pt, rounded corners=2mm,
+          inner sep=4.5mm, fit=(n1v)(n1n)(n3v)(n3n)] (heapbox) {};
+  \end{scope}
+  \node[gannot, anchor=south] at (stackbox.north) {スタック};
+  \node[gannot, anchor=south west] at (heapbox.north west) {ヒープ（malloc で確保した領域）};
+
+  % ---- ポインタ ----
+  \draw[ptr] (head.east) -- (n1v.west);
+  \draw[ptr] (n1n.east) -- (n2v.west);
+  \draw[ptr] (n2n.east) -- (n3v.west);
+
+  % ---- NULL ----
+  \node[gannot, anchor=north] (null) at ($(n3n.south)+(0,-9mm)$) {0（NULL）＝ リストの終わり};
+  \draw[flow, color=TcGrayText] (null.north) -- ($(n3n.south)+(0,-1mm)$);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north west, align=left] at ($(stackbox.south west)+(0,-8mm)$)
+      {head = head->next; で、head の指す先が1つ右のノードに進む\\
+       各ノードの中は val が +0（4 バイト）、next が +8（8 バイト）。sizeof(Node) = 16};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,74 @@
+% コマ3: 二項演算の生成パターン(退避 → 計算 → 復元)
+% return 10 - 3; を例に、5ステップでのレジスタとスタックの変化
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    reg/.style={memcell, minimum width=11mm, minimum height=7mm},
+    reghi/.style={reg, fill=TcAccentLight},
+    stk/.style={memcell gray, minimum width=20mm, minimum height=7mm},
+    stkhi/.style={stk, fill=TcAccentLight},
+    stepttl/.style={annot, anchor=south, align=center},
+    insn/.style={font=\ttfamily\footnotesize, text=TcText, align=center, anchor=north}]
+
+  \node[gannot] at (68mm, 14mm) {{\ttfamily return 10 - 3;} のコード生成};
+  \node[addr, anchor=east] at (-14mm, -13mm) {スタック};
+
+  % ---- ① 左辺を計算 ----
+  \node[stepttl] at (0mm, 6.5mm) {① 左辺を計算};
+  \node[reghi] (a10) at (-7mm, 0) {10};
+  \node[addr, above=0.3mm of a10] {a0};
+  \node[reg]   (a11) at (7mm, 0) {?};
+  \node[addr, above=0.3mm of a11] {a1};
+  \node[stk] (st1) at (0mm, -13mm) {（空）};
+  \node[insn] at (0mm, -18.5mm) {li a0, 10};
+
+  % ---- ② a0 を退避 ----
+  \node[stepttl] at (34mm, 6.5mm) {② a0 を退避};
+  \node[reg] (a20) at (27mm, 0) {10};
+  \node[addr, above=0.3mm of a20] {a0};
+  \node[reg] (a21) at (41mm, 0) {?};
+  \node[addr, above=0.3mm of a21] {a1};
+  \node[stkhi] (st2) at (34mm, -13mm) {10};
+  \draw[ptr] (a20.south) to[out=-90,in=90] ($(st2.north)+(-4mm,0)$);
+  \node[insn] at (34mm, -18.5mm) {addi sp, sp, -8\\sd a0, 0(sp)};
+
+  % ---- ③ 右辺を計算 ----
+  \node[stepttl] at (68mm, 6.5mm) {③ 右辺を計算};
+  \node[reghi] (a30) at (61mm, 0) {3};
+  \node[addr, above=0.3mm of a30] {a0};
+  \node[reg]   (a31) at (75mm, 0) {?};
+  \node[addr, above=0.3mm of a31] {a1};
+  \node[stk] (st3) at (68mm, -13mm) {10};
+  \node[insn] at (68mm, -18.5mm) {li a0, 3};
+
+  % ---- ④ a1 へ復元 ----
+  \node[stepttl] at (102mm, 6.5mm) {④ a1 へ復元};
+  \node[reg]   (a40) at (95mm, 0) {3};
+  \node[addr, above=0.3mm of a40] {a0};
+  \node[reghi] (a41) at (109mm, 0) {10};
+  \node[addr, above=0.3mm of a41] {a1};
+  \node[stk] (st4) at (102mm, -13mm) {（空）};
+  \draw[ptr] ($(st4.north)+(4mm,0)$) to[out=90,in=-90] (a41.south);
+  \node[insn] at (102mm, -18.5mm) {ld a1, 0(sp)\\addi sp, sp, 8};
+
+  % ---- ⑤ 演算 ----
+  \node[stepttl] at (136mm, 6.5mm) {⑤ 演算};
+  \node[reghi] (a50) at (129mm, 0) {7};
+  \node[addr, above=0.3mm of a50] {a0};
+  \node[reg]   (a51) at (143mm, 0) {10};
+  \node[addr, above=0.3mm of a51] {a1};
+  \node[stk] (st5) at (136mm, -13mm) {（空）};
+  \node[insn] at (136mm, -18.5mm) {sub a0, a1, a0};
+
+  % ---- パネル間の矢印 ----
+  \foreach \x in {0, 34, 68, 102} {
+    \draw[flow, color=TcGrayText] (\x mm + 14mm, -5mm) -- (\x mm + 20mm, -5mm);
+  }
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north] at (68mm, -27mm)
+      {⑤ の直前は必ず「a1 = 左辺、a0 = 右辺」の形になる。
+       {\ttfamily lhs - rhs} は {\ttfamily sub a0, a1, a0} で計算する};
+\end{tikzpicture}
+\end{document}

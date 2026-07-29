@@ -1,0 +1,66 @@
+% F0: CYK の表 — 1 + 2 * 3(トークン5個)を曖昧文法 G1 で解析した完成形
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    cell/.style={memcell, minimum width=24mm, minimum height=8mm,
+                 font=\ttfamily\footnotesize},
+    cellempty/.style={cell, fill=TcGrayBg, text=TcGrayText},
+    tokcell/.style={memcell hi, minimum width=22mm, minimum height=8mm,
+                    font=\ttfamily\footnotesize}]
+  % ---- 行ラベル ----
+  \node[addr, anchor=east] at (-3mm, 0mm)  {長さ1};
+  \node[addr, anchor=east] at (-3mm, 10mm) {長さ2};
+  \node[addr, anchor=east] at (-3mm, 20mm) {長さ3};
+  \node[addr, anchor=east] at (-3mm, 30mm) {長さ4};
+  \node[addr, anchor=east] at (-3mm, 40mm) {長さ5};
+
+  % ---- 長さ1 ----
+  \node[cell] (r1c0) at (12mm, 0mm)  {E};
+  \node[cell] (r1c1) at (36mm, 0mm)  {PLUS};
+  \node[cell] (r1c2) at (60mm, 0mm)  {E};
+  \node[cell] (r1c3) at (84mm, 0mm)  {MUL};
+  \node[cell] (r1c4) at (108mm, 0mm) {E};
+
+  % ---- 長さ2 ----
+  \node[cellempty] (r2c0) at (24mm, 10mm) {–};
+  \node[cell]      (r2c1) at (48mm, 10mm) {PLUS\_REST};
+  \node[cellempty] (r2c2) at (72mm, 10mm) {–};
+  \node[cell]      (r2c3) at (96mm, 10mm) {MUL\_REST};
+
+  % ---- 長さ3 ----
+  \node[cell]      (r3c0) at (36mm, 20mm) {E};
+  \node[cellempty] (r3c1) at (60mm, 20mm) {–};
+  \node[cell]      (r3c2) at (84mm, 20mm) {E};
+
+  % ---- 長さ4 ----
+  \node[cellempty] (r4c0) at (48mm, 30mm) {–};
+  \node[cell]      (r4c1) at (72mm, 30mm) {PLUS\_REST};
+
+  % ---- 長さ5 ----
+  \node[cell, fill=TcAccentLight] (r5c0) at (60mm, 40mm) {E};
+
+  % ---- トークン ----
+  \node[tokcell] at (12mm, -12mm)  {num 1};
+  \node[tokcell] at (36mm, -12mm)  {+};
+  \node[tokcell] at (60mm, -12mm)  {num 2};
+  \node[tokcell] at (84mm, -12mm)  {*};
+  \node[tokcell] at (108mm, -12mm) {num 3};
+  \node[addr, anchor=east] at (-3mm, -12mm) {トークン};
+
+  % ---- 埋め方の例 ----
+  \draw[ptr] (r1c0.north) to[out=90,in=-135] (r3c0.west);
+  \draw[ptr] (r2c1.west) to[out=180,in=-45] (r3c0.south east);
+  \node[annot, text=TcEmph, anchor=east, align=right] at (4mm, 15mm)
+      {例: 左の E と右の PLUS\_REST を\\E → E PLUS\_REST で組み合わせる};
+
+  % ---- 受理の判定 ----
+  \node[annot, text=TcEmph, anchor=west, align=left] (acc) at (84mm, 40mm)
+      {一番上に E がある = 受理。\\作り方が2通りあるので木は2本};
+  \draw[flow, color=TcEmph] (acc.west) -- (r5c0.east);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north] at (60mm, -20mm)
+      {マス（区間）には「そのトークン列を作れる記号」が入る。短い区間から順に埋める};
+\end{tikzpicture}
+\end{document}

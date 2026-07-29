@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>補助ツール — 実践・Cコンパイラ演習</title>
+  </head>
+  <body class="landing">
+    <header id="topbar">
+      <h1>補助ツール</h1>
+      <p id="subtitle">実践・Cコンパイラ演習</p>
+      <nav id="app-nav"></nav>
+      <span id="font-buttons">
+        文字:
+        <button data-size="m" class="active">標準</button>
+        <button data-size="l">大</button>
+        <button data-size="xl">特大</button>
+      </span>
+    </header>
+    <main id="cards">
+      <a class="card" href="./ast.html">
+        <h2>AST ビジュアライザ</h2>
+        <p>C のソースを入れて、資料と同じ構文木・S 式・トークン列を見る。</p>
+        <p class="card-meta">コマ1・2 と、各回の「AST を確認する」で使う</p>
+      </a>
+      <a class="card" href="./sim.html">
+        <h2>RV64 シミュレータ</h2>
+        <p>
+          自分のコンパイラが出したアセンブリを貼って、1命令ずつ実行する。
+          レジスタ・スタック・標準出力を並べて確かめられる。
+        </p>
+        <p class="card-meta">コマ3 以降。うまく動かないときの切り分けに使う</p>
+      </a>
+    </main>
+    <footer id="landing-foot">
+      <p>
+        ブラウザだけで動く。Docker も qemu も要らない。
+        表示する構文木は配布資料の図と同じもので、
+        シミュレータの実行結果は qemu と突き合わせて検証している。
+      </p>
+    </footer>
+    <script type="module" src="/src/landing.ts"></script>
+  </body>
+</html>

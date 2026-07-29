@@ -1,0 +1,46 @@
+% コマ11: .data に置いた文字列リテラルと .text からの参照
+% printf("x=%d\n", 42) の第1引数
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    bytecell/.style={memcell, minimum width=13mm, minimum height=10mm, align=center,
+                     font=\ttfamily\small}]
+  % ---- .data: 文字列のバイト列 ----
+  \node[addr, anchor=east] (lc1) at (-2mm, 0mm) {.LC1:};
+  \node[bytecell] (b1) at (5mm, 0mm) {x\\120};
+  \node[bytecell, right=0mm of b1] (b2) {=\\61};
+  \node[bytecell, right=0mm of b2] (b3) {\%\\37};
+  \node[bytecell, right=0mm of b3] (b4) {d\\100};
+  \node[bytecell, right=0mm of b4] (b5) {\textbackslash n\\10};
+  \node[bytecell, fill=TcGrayBg, right=0mm of b5] (b6) {\textbackslash 0\\0};
+  \node[gannot, right=3mm of b6] {各1バイト\\（下段は文字コード）};
+
+  \begin{scope}[on background layer]
+    \node[fill=TcAccentLighter, draw=TcAccentLight, line width=0.8pt, rounded corners=2mm,
+          inner sep=4.5mm, fit=(lc1)(b1)(b6)] (databox) {};
+  \end{scope}
+  \node[gannot, anchor=south west] at (databox.north west) {.data セクション（データ）};
+
+  % ---- .text: 参照する命令列 ----
+  \node[font=\ttfamily\small, anchor=west] (i1) at (14mm, -28mm) {la a0, .LC1};
+  \node[font=\ttfamily\small, anchor=west] (i2) at (14mm, -34mm) {li a1, 42};
+  \node[font=\ttfamily\small, anchor=west] (i3) at (14mm, -40mm) {call printf};
+
+  \begin{scope}[on background layer]
+    \node[fill=white, draw=TcAccentDark, line width=0.6pt, rounded corners=2mm,
+          inner sep=4mm, fit=(i1)(i3)] (textbox) {};
+  \end{scope}
+  \node[gannot, anchor=south west] at (textbox.north west) {.text セクション（命令）};
+
+  % ---- 参照矢印 ----
+  \draw[ptr] (i1.west) to[out=180,in=-90] ($(lc1.south)+(0,-5mm)$)
+      -- ($(lc1.south)+(0,-0.5mm)$);
+  \node[annot, text=TcEmph, anchor=west] at ($(i1.east)+(4mm,0)$)
+      {la が .LC1 の先頭アドレスを a0 に入れる};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (44mm, -50mm)
+      {C の文字列は 0（NUL）で終わる。printf は先頭アドレスから NUL まで読んで出力する};
+\end{tikzpicture}
+\end{document}

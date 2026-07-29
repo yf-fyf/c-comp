@@ -1,0 +1,39 @@
+% コマ8: 引数の push とレジスタへの復元(3引数)
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    scell/.style={memcell, minimum width=38mm},
+    reg/.style={memcell, minimum width=13mm, minimum height=8.5mm}]
+  \node[gannot] at (38mm, 12mm)
+      {{\ttfamily f(x, y, z)} — 引数をスタックに積んでからレジスタへ戻す};
+
+  % ---- スタック(上 = 高いアドレス) ----
+  \node[scell, fill=TcAccentLighter] (ax) at (0mm, 0mm) {x の値（第1引数）};
+  \node[addr, left=2.5mm of ax] {sp + 16};
+  \node[scell, fill=TcAccentLighter, below=0mm of ax] (ay) {y の値（第2引数）};
+  \node[addr, left=2.5mm of ay] {sp + 8};
+  \node[scell, fill=TcAccentLighter, below=0mm of ay] (az) {z の値（第3引数）};
+  \node[addr, left=2.5mm of az] {sp + 0};
+
+  \node[annot, font=\ttfamily\bfseries, anchor=east]
+      (spreg) at ($(az.south west)+(-20mm,0)$) {sp};
+  \draw[regptr] (spreg.east) -- (az.south west);
+
+  % ---- レジスタ ----
+  \node[gannot] at (76mm, 5mm) {引数レジスタ};
+  \node[reg] (r0) at (76mm, 0mm |- ax.center) {a0};
+  \node[reg] (r1) at (76mm, 0mm |- ay.center) {a1};
+  \node[reg] (r2) at (76mm, 0mm |- az.center) {a2};
+
+  \draw[ptr] (ax.east) -- node[annot, above=0.5mm] {\ttfamily ld a0, 16(sp)} (r0.west);
+  \draw[ptr] (ay.east) -- node[annot, above=0.5mm] {\ttfamily ld a1, 8(sp)} (r1.west);
+  \draw[ptr] (az.east) -- node[annot, above=0.5mm] {\ttfamily ld a2, 0(sp)} (r2.west);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (38mm, -36mm)
+      {引数は左から順に評価して push するため、最後に push した z が sp + 0 に来る\\
+       レジスタへ戻したら {\ttfamily addi sp, sp, 24} で引数の分を戻す\\
+       そのあと、積んだままの一時値が奇数個なら 8 詰めてから {\ttfamily call f} を出す};
+\end{tikzpicture}
+\end{document}

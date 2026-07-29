@@ -1,0 +1,54 @@
+% コマ14: プロセスのメモリ全体像と変数の置き場所
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    region/.append style={minimum width=58mm}]
+  % ---- 領域(上 = 高いアドレス) ----
+  \node[region, minimum height=15mm] (stack) at (0,0)
+      {スタック\\ローカル変数・引数};
+  \node[region, dashed, text=TcGrayText, minimum height=9mm, below=0mm of stack] (gap)
+      {（空き）};
+  \node[region, minimum height=13mm, below=0mm of gap] (heap)
+      {ヒープ\\{\ttfamily malloc} で確保した領域};
+  \node[region, fill=TcAccentLighter, minimum height=11mm, below=0mm of heap] (bss)
+      {{\ttfamily .bss}　未初期化グローバル変数};
+  \node[region, fill=TcAccentLighter, minimum height=13mm, below=0mm of bss] (data)
+      {{\ttfamily .data}　初期値付きグローバル変数\\文字列リテラル};
+  \node[region, fill=TcGrayBg, minimum height=11mm, below=0mm of data] (text)
+      {{\ttfamily .text}　機械語命令（関数本体）};
+
+  % ---- 伸びる方向 ----
+  \draw[flow, color=TcGrayText] ($(stack.north west)+(4mm,-2.5mm)$)
+      -- ($(stack.south west)+(4mm,1.5mm)$);
+  \draw[flow, color=TcGrayText] ($(heap.south west)+(4mm,1.5mm)$)
+      -- ($(heap.north west)+(4mm,-1.5mm)$);
+
+  % ---- アドレスの方向 ----
+  \node[gannot, anchor=south] (haddr) at ($(stack.north west)+(-18mm,0)$) {高いアドレス};
+  \node[gannot, anchor=north] (laddr) at (haddr.south |- text.south) {低いアドレス};
+  \draw[flow, color=TcGrayText] ($(haddr.south)+(0,-1mm)$) -- ($(laddr.north)+(0,1mm)$);
+
+  % ---- 右側: Cコードとの対応 ----
+  \node[annot, anchor=west] (c1) at ($(stack.east)+(11mm,0)$)
+      {{\ttfamily int a;}（関数の中で宣言）};
+  \draw[flow] (c1.west) -- (stack.east);
+  \node[annot, anchor=west] (c2) at ($(heap.east)+(11mm,0)$)
+      {{\ttfamily malloc(sizeof(Node))} で確保した領域};
+  \draw[flow] (c2.west) -- (heap.east);
+  \node[annot, anchor=west] (c3) at ($(bss.east)+(11mm,0)$)
+      {{\ttfamily int count;}（関数の外で宣言・初期値なし）};
+  \draw[flow] (c3.west) -- (bss.east);
+  \node[annot, anchor=west] (c4) at ($(data.east)+(11mm,0)$)
+      {{\ttfamily int base = 7;}　{\ttfamily "hello"}};
+  \draw[flow] (c4.west) -- (data.east);
+  \node[annot, anchor=west] (c5) at ($(text.east)+(11mm,0)$)
+      {コンパイラが出力した命令列};
+  \draw[flow] (c5.west) -- (text.east);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at ($(text.south)+(10mm,-7mm)$)
+      {グローバル変数はプログラム全体で1つだけ存在し、関数呼び出しが終わっても消えない\\
+       ローカル変数はスタックに置かれ、関数から戻ると消える};
+\end{tikzpicture}
+\end{document}

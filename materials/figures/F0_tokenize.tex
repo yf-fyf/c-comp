@@ -1,0 +1,49 @@
+% F0: 字句解析 — 文字列をトークン列に区切る
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ch/.style={memcell, minimum width=8mm, minimum height=8mm, font=\ttfamily\small},
+    chsp/.style={ch, fill=TcGrayBg, text=TcGrayText},
+    tok/.style={memcell hi, minimum width=17mm, minimum height=8.5mm,
+                font=\ttfamily\footnotesize, align=center}]
+  % ---- 文字列 "12 + 3 * 4" ----
+  \node[addr, anchor=east] at (-6mm, 0mm) {文字列};
+  \node[ch]   (c0) at (4mm, 0mm) {1};
+  \node[ch, right=0mm of c0]   (c1) {2};
+  \node[chsp, right=0mm of c1] (c2) {};
+  \node[ch, right=0mm of c2]   (c3) {+};
+  \node[chsp, right=0mm of c3] (c4) {};
+  \node[ch, right=0mm of c4]   (c5) {3};
+  \node[chsp, right=0mm of c5] (c6) {};
+  \node[ch, right=0mm of c6]   (c7) {*};
+  \node[chsp, right=0mm of c7] (c8) {};
+  \node[ch, right=0mm of c8]   (c9) {4};
+
+  % ---- 最長一致 ----
+  \draw[bracestyle] ($(c0.north west)+(0,1mm)$) -- ($(c1.north east)+(0,1mm)$)
+      node[annot, text=TcEmph, midway, above=2.5mm, align=center]
+      {数字が続く限り読んで\\1つのトークンにする（最長一致）};
+
+  % ---- トークン列 ----
+  \node[addr, anchor=east] at (-6mm, -20mm) {トークン列};
+  \node[tok] (t0) at (8mm, -20mm) {num 12};
+  \node[tok] (t1) at (32mm, -20mm) {+};
+  \node[tok] (t2) at (48mm, -20mm) {num 3};
+  \node[tok] (t3) at (64mm, -20mm) {*};
+  \node[tok] (t4) at (80mm, -20mm) {num 4};
+
+  \draw[flow] ($(c1.south west)+(0,-0.5mm)$) -- (t0.north);
+  \draw[flow] (c3.south) -- (t1.north);
+  \draw[flow] (c5.south) -- (t2.north);
+  \draw[flow] (c7.south) -- (t3.north);
+  \draw[flow] (c9.south) -- (t4.north);
+
+  % ---- 空白 ----
+  \node[gannot, anchor=west] at (88mm, -8mm) {グレーの空白は捨てる};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north] at (44mm, -29mm)
+      {構文解析は、文字ではなくこのトークン列を入力として受け取る};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OCaml / Dune
+_build/
+*.install
+*.cmi
+*.cmo
+*.cmx
+*.o
+
+# C build output
+*.out
+a.out
+
+# 発展教材 O2 が書き出すフローグラフの図
+workbook/advanced/*/cfg_out/
+
+# 補助ウェブアプリの生成物（web/README.md 参照）
+web/app/node_modules/
+web/app/dist/
+web/app/public/core/
+web/app/public/examples.json
+web/app/public/sim-examples.json
+
+# Pages release output
+.pages/
+
+# Local secrets and test reports
+.env
+.env.*
+!.env.example
+coverage/
+.coverage
+
+# Editor / OS
+.claude/
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/

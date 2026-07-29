@@ -1,0 +1,45 @@
+% F2: 左結合ループが a - b - c を (sub (sub a b) c) に組み立てる様子
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ast/.style={cfgbox, minimum width=13mm, minimum height=6.5mm,
+                font=\ttfamily\footnotesize},
+    ttl/.style={annot, anchor=south, align=center}]
+
+  % ---- ① 最初の mul_expr を読む ----
+  \node[ttl] at (0mm, 6mm) {① node = a};
+  \node[ast] (p1a) at (0mm, 0mm) {var a};
+
+  % ---- ② '-' を発見 → node を lhs に ----
+  \node[ttl] at (42mm, 6mm) {② '-' を発見\\node = sub(node, b)};
+  \node[ast] (p2s) at (42mm, 0mm) {sub};
+  \node[ast, fill=TcAccentLighter] (p2a) at (34mm, -12mm) {var a};
+  \node[ast] (p2b) at (50mm, -12mm) {var b};
+  \draw[flow] (p2s.south) -- (p2a.north);
+  \draw[flow] (p2s.south) -- (p2b.north);
+
+  % ---- ③ もう一度 '-' → また lhs に ----
+  \node[ttl] at (96mm, 6mm) {③ もう一度 '-'\\node = sub(node, c)};
+  \node[ast] (p3s) at (96mm, 0mm) {sub};
+  \node[ast, fill=TcAccentLighter] (p3s2) at (86mm, -12mm) {sub};
+  \node[ast] (p3c) at (106mm, -12mm) {var c};
+  \node[ast, fill=TcAccentLighter] (p3a) at (78mm, -24mm) {var a};
+  \node[ast, fill=TcAccentLighter] (p3b) at (94mm, -24mm) {var b};
+  \draw[flow] (p3s.south) -- (p3s2.north);
+  \draw[flow] (p3s.south) -- (p3c.north);
+  \draw[flow] (p3s2.south) -- (p3a.north);
+  \draw[flow] (p3s2.south) -- (p3b.north);
+
+  % ---- パネル間 ----
+  \draw[flow, color=TcGrayText] (10mm, -6mm) -- (20mm, -6mm);
+  \draw[flow, color=TcGrayText] (62mm, -6mm) -- (72mm, -6mm);
+
+  % ---- 補足 ----
+  \node[annot, text=TcEmph, anchor=north west] at (-6mm, -32mm)
+      {いままでの結果(色つき)を lhs に入れるので、木は左へ左へ伸びる = 左結合};
+  \node[gannot, anchor=north west] at (-6mm, -39mm)
+      {(a - b) - c と同じ意味になる。右結合にしたい '=' はループではなく、\\
+       parse\_assign が自分自身を再帰することで右へ伸ばす};
+\end{tikzpicture}
+\end{document}

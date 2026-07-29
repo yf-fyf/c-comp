@@ -1,0 +1,45 @@
+% コマ3: eval_ast（値を返す）と codegen（命令を出力する）の対比
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ast/.style={cfgbox, minimum width=17mm, minimum height=7mm, font=\ttfamily\small},
+    val/.style={annot, text=TcEmph}]
+  % ================ 左: eval_ast ================
+  \node[gannot] at (0mm, 12mm) {コマ2 {\ttfamily eval\_ast} — 値を返す};
+
+  \node[ast] (La) at (0mm, 0mm) {add};
+  \node[ast] (L1) at (-16mm, -16mm) {num 1};
+  \node[ast] (L2) at (16mm, -16mm) {num 2};
+  \draw[flow] (La.south) -- (L1.north);
+  \draw[flow] (La.south) -- (L2.north);
+
+  \node[val, anchor=north] at ($(L1.south)+(0,-1.5mm)$) {① 1 を返す};
+  \node[val, anchor=north] at ($(L2.south)+(0,-1.5mm)$) {② 2 を返す};
+  \node[val, anchor=west] at ($(La.east)+(2mm,0)$) {③ 1 + 2 = 3 を返す};
+
+  \node[gannot] at (0mm, -30mm) {結果: Python の値 3};
+
+  % ================ 右: codegen ================
+  \node[gannot] at (95mm, 12mm) {コマ3 {\ttfamily codegen} — 命令を出力する};
+
+  \node[ast] (Ra) at (95mm, 0mm) {add};
+  \node[ast] (R1) at (79mm, -16mm) {num 1};
+  \node[ast] (R2) at (111mm, -16mm) {num 2};
+  \draw[flow] (Ra.south) -- (R1.north);
+  \draw[flow] (Ra.south) -- (R2.north);
+
+  \node[val, anchor=north] at ($(R1.south)+(0,-1.5mm)$)
+      {① {\ttfamily li a0, 1} を出力};
+  \node[val, anchor=north] at ($(R2.south)+(0,-1.5mm)$)
+      {② {\ttfamily li a0, 2} を出力};
+  \node[val, anchor=west, align=left] at ($(Ra.east)+(2mm,0)$)
+      {③ {\ttfamily add a0, a1, a0} を出力\\（退避・復元の命令も一緒に）};
+
+  \node[gannot] at (95mm, -30mm) {結果: 実行すると a0 が 3 になる命令列};
+
+  % ---- 補足 ----
+  \node[gannot] at (48mm, -40mm)
+      {木のたどり方は同じ。「値を返す」部分を「命令を出力する」に置き換えただけ};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,21 @@
+; wasm_of_ocaml が導入できたら (modes js wasm) に変更する（webapps.md 3.2 案①）。
+; 現状は binaryen-bin.119 のビルド不良により js_of_ocaml のみ（案②）。
+(executable
+ (name api)
+ (modes js)
+ (libraries core_lib str js_of_ocaml)
+ (preprocess
+  (pps js_of_ocaml-ppx)))
+
+; lib.h（シンボリックリンク）を OCaml 文字列に埋め込む。
+; ブラウザでは実ファイルが読めないため、擬似ファイルシステムへ登録する。
+(rule
+ (target lib_h.ml)
+ (deps lib.h)
+ (action
+  (with-stdout-to
+   %{target}
+   (progn
+    (echo "let content = {|")
+    (cat lib.h)
+    (echo "|}\n")))))

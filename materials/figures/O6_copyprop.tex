@@ -1,0 +1,70 @@
+% O6: コピー伝播が死コードを作り、死コード除去が消す
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[
+    code/.style={font=\ttfamily\small, anchor=west, inner sep=1pt},
+    hot/.style={code, text=TcEmph},
+    gone/.style={code, text=TcGrayText},
+    ttl/.style={font=\bfseries\small, text=TcAccentDark, anchor=west},
+    stg/.style={font=\Large, text=TcEmph}]
+
+  % ================= (1) 割り当て直後 =================
+  \node[ttl] at (0mm, 8mm) {① O4 の直後};
+
+  \node[hot]  (a1) at (0mm,   0mm) {mv\ \ \ a0, s2};
+  \node[code] (a2) at (0mm,  -6mm) {addi\ \ sp, sp, -8};
+  \node[code] (a3) at (0mm, -12mm) {sd\ \ \ a0, 0(sp)};
+  \node[hot]  (a4) at (0mm, -18mm) {mv\ \ \ a0, s1};
+  \node[code] (a5) at (0mm, -24mm) {ld\ \ \ a1, 0(sp)};
+  \node[code] (a6) at (0mm, -30mm) {addi\ \ sp, sp, 8};
+  \node[code] (a7) at (0mm, -36mm) {add\ \ a0, a1, a0};
+  \node[code] (a8) at (0mm, -42mm) {sext.w s2, a0};
+
+  \node[annot, anchor=west] at (0mm, -50mm) {8命令};
+
+  \node[stg] at (44mm, -20mm) {$\Rightarrow$};
+  \node[gannot, anchor=south] at (44mm, -18mm) {コピー伝播};
+
+  % ================= (2) コピー伝播後 =================
+  \node[ttl] at (56mm, 8mm) {② コピー伝播の後};
+
+  \node[gone] (c1) at (56mm,   0mm) {mv\ \ \ a0, s2};
+  \node[code] (c2) at (56mm,  -6mm) {addi\ \ sp, sp, -8};
+  \node[hot]  (c3) at (56mm, -12mm) {sd\ \ \ \textbf{s2}, 0(sp)};
+  \node[gone] (c4) at (56mm, -18mm) {mv\ \ \ a0, s1};
+  \node[code] (c5) at (56mm, -24mm) {ld\ \ \ a1, 0(sp)};
+  \node[code] (c6) at (56mm, -30mm) {addi\ \ sp, sp, 8};
+  \node[hot]  (c7) at (56mm, -36mm) {add\ \ a0, a1, \textbf{s1}};
+  \node[code] (c8) at (56mm, -42mm) {sext.w s2, a0};
+
+  \node[annot, anchor=west] at (56mm, -50mm)
+      {まだ8命令。\textbf{命令は減らない}};
+  \node[annot, anchor=west, text=TcEmph, align=left] at (56mm, -58mm)
+      {しかし灰色の \texttt{mv} は\\もう誰にも読まれない};
+
+  \node[stg] at (108mm, -20mm) {$\Rightarrow$};
+  \node[gannot, anchor=south] at (108mm, -18mm) {死コード除去};
+
+  % ================= (3) 死コード除去後 =================
+  \node[ttl] at (120mm, 8mm) {③ 死コード除去の後};
+
+  \node[code] (d2) at (120mm,  -6mm) {addi\ \ sp, sp, -8};
+  \node[code] (d3) at (120mm, -12mm) {sd\ \ \ s2, 0(sp)};
+  \node[code] (d5) at (120mm, -24mm) {ld\ \ \ a1, 0(sp)};
+  \node[code] (d6) at (120mm, -30mm) {addi\ \ sp, sp, 8};
+  \node[code] (d7) at (120mm, -36mm) {add\ \ a0, a1, s1};
+  \node[code] (d8) at (120mm, -42mm) {sext.w s2, a0};
+
+  \node[annot, anchor=west, text=TcEmph] at (120mm, -50mm) {\textbf{6命令}};
+
+  % ================= まとめ =================
+  \node[annot, anchor=north west, align=left, text width=176mm] at (0mm, -70mm)
+      {\textbf{コピー伝播だけでは1命令も減らない。} 死コード除去だけでも、
+       消せる \texttt{mv} が無いので何も起きない。\\
+       2つが揃って初めて効く ---
+       そして\textbf{どちらも O4(レジスタ割り当て)が \texttt{mv} を作った後でなければ}
+       仕事が無い};
+
+\end{tikzpicture}
+\end{document}

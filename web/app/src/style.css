@@ -1,0 +1,388 @@
+:root {
+  --fg: #24292f;
+  --bg: #ffffff;
+  --panel: #f6f8fa;
+  --border: #d0d7de;
+  --accent: #0969da;
+  --ok: #1a7f37;
+  --err: #cf222e;
+  --hl: #fff3c2;
+  font-size: 15px;
+}
+html[data-font="l"] { font-size: 18px; }
+html[data-font="xl"] { font-size: 22px; }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--fg);
+  background: var(--bg);
+  font-family: "Noto Sans CJK JP", "Hiragino Sans", sans-serif;
+  height: 100vh;
+  height: 100dvh; /* モバイルのアドレスバー分。非対応ブラウザは上の 100vh のまま */
+  display: flex;
+  flex-direction: column;
+}
+
+#topbar {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+#topbar h1 { font-size: 1.1rem; margin: 0; }
+#subtitle { margin: 0; color: #57606a; font-size: 0.85rem; }
+#example-select { max-width: 18rem; font-size: 0.9rem; }
+#example-label { margin-left: auto; font-size: 0.85rem; }
+
+#app-nav { display: flex; gap: 0.8rem; font-size: 0.85rem; }
+#app-nav a { color: var(--accent); text-decoration: none; }
+#app-nav a:hover { text-decoration: underline; }
+#app-nav a.current { color: var(--fg); font-weight: bold; text-decoration: none; }
+
+#font-buttons button,
+#toolbar button,
+#btn-reveal,
+.editor-actions button,
+#tabs button {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+  cursor: pointer;
+}
+#font-buttons button.active,
+#tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+#layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(20rem, 2fr) 3fr;
+  min-height: 0;
+}
+
+/* min-height: 0 が無いと、グリッド項目の自動最小サイズ（CodeMirror の全行の高さ）が
+   下限として効き、#layout が viewport をはみ出してページごとスクロールしてしまう */
+#left {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+  min-height: 0;
+}
+#editor { flex: 1; min-height: 0; overflow: auto; }
+.cm-editor { height: 100%; font-size: 0.95rem; }
+.cm-ast-hover { background: var(--hl); }
+.cm-ast-selected {
+  background: #b6ddff;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.cm-ast-error { background: #ffebe9; }
+
+#status {
+  padding: 0.3rem 0.8rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  min-height: 1.7rem;
+}
+#status.ok { color: var(--ok); }
+#status.err { color: var(--err); }
+
+#right { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+#tabs {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+#opt-line-label { margin-left: auto; font-size: 0.85rem; }
+
+.pane { flex: 1; min-height: 0; display: none; overflow: auto; }
+.pane.active { display: flex; flex-direction: column; }
+
+#pane-tree { position: relative; }
+#tree-svg { flex: 1; width: 100%; min-height: 0; cursor: grab; touch-action: none; }
+#tree-svg:active { cursor: grabbing; }
+.hint {
+  margin: 0;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.78rem;
+  color: #57606a;
+  border-top: 1px solid var(--border);
+}
+
+/* AST 木 */
+.tree-edge { stroke: #8c959f; stroke-width: 1.2; }
+.tree-edge-label {
+  font: 11px "Inconsolata", monospace;
+  fill: #57606a;
+  text-anchor: middle;
+}
+.tree-box {
+  fill: #eef4fb;
+  stroke: #6699cc;
+  stroke-width: 1.2;
+}
+.tree-box.no-line { fill: #f3f4f6; stroke: #8c959f; }
+.tree-box.collapsed { stroke-dasharray: 4 2; }
+.tree-node { cursor: pointer; }
+.tree-node.hovered .tree-box { stroke: var(--accent); stroke-width: 2.2; }
+.tree-node.selected .tree-box { stroke: var(--accent); stroke-width: 3; }
+.tree-node:focus-visible .tree-box { stroke-dasharray: 3 2; }
+.tree-fold circle { fill: white; stroke: #6699cc; }
+.tree-fold text { font: bold 12px sans-serif; text-anchor: middle; }
+.tree-fold:focus-visible circle { stroke: var(--accent); stroke-width: 2.5; }
+.tree-kind {
+  font: bold 13px "Inconsolata", monospace;
+  text-anchor: middle;
+}
+.tree-sub {
+  font: 11px "Inconsolata", monospace;
+  fill: #57606a;
+  text-anchor: middle;
+}
+.tree-badge circle { fill: #fff8c5; stroke: #d4a72c; }
+.tree-badge text {
+  font: 11px sans-serif;
+  text-anchor: middle;
+}
+
+/* トークン表・テキストペイン */
+#token-table {
+  border-collapse: collapse;
+  font: 0.9rem "Inconsolata", monospace;
+  margin: 0.5rem;
+}
+#token-table th, #token-table td {
+  border: 1px solid var(--border);
+  padding: 0.15rem 0.7rem;
+  text-align: left;
+}
+#token-table th { background: var(--panel); }
+
+pre {
+  margin: 0;
+  padding: 0.8rem;
+  font: 0.9rem/1.45 "Inconsolata", monospace;
+  white-space: pre;
+  overflow: auto;
+  flex: 1;
+}
+
+/* ================= ランディング ================= */
+
+body.landing { display: block; height: auto; }
+#cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+  max-width: 60rem;
+}
+.card {
+  display: block;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--bg);
+}
+.card:hover { border-color: var(--accent); background: var(--panel); }
+.card h2 { margin: 0 0 0.4rem; font-size: 1.05rem; color: var(--accent); }
+.card p { margin: 0 0 0.3rem; font-size: 0.9rem; line-height: 1.5; }
+.card-meta { color: #57606a; font-size: 0.8rem !important; }
+#landing-foot {
+  padding: 0 1.5rem 1.5rem;
+  max-width: 60rem;
+  color: #57606a;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* ================= シミュレータ ================= */
+
+/* ヘッダ＋操作列。ステップ実行が主操作なので、縮めない・画面上端から動かさない */
+#sim-head {
+  flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+#toolbar .spacer { flex: 1; }
+#counters { font-size: 0.85rem; color: #57606a; }
+#counters b { color: var(--fg); font-family: "Inconsolata", monospace; }
+#toolbar button:disabled { opacity: 0.4; cursor: default; }
+
+/* スクロールは中の2ペインだけで完結させる。列の下限を rem で置くと、
+   文字「特大」＋狭い窓で横にはみ出して状態パネルが画面外へ出るため minmax(0, …) にする */
+#sim-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  /* 極端に低い窓でもペインが潰れきらない高さは残す。
+     ただし 40vh を上限にして、この下限自体がページをはみ出させないようにする */
+  min-height: min(12rem, 40vh);
+}
+
+#asm-pane {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+  min-height: 0; /* グリッド項目の自動最小サイズを切る。無いと縦にはみ出す */
+}
+
+/* 窓が狭いときは横並びをやめて上下に積む（状態パネルを画面外に出さない） */
+@media (max-width: 60rem) {
+  #sim-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+  }
+  #asm-pane {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+.pane-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 0.85rem;
+}
+.pane-head > span:first-child { font-weight: bold; }
+.pane-note { color: #57606a; font-size: 0.78rem; font-weight: normal; }
+.pane-head button { margin-left: auto; }
+
+#asm-view {
+  flex: 1;
+  overflow: auto;
+  /* 行の offsetTop をこの枠基準にする（sim-main.ts の scrollLineIntoPane） */
+  position: relative;
+  /* 端まで送ったスクロールをページへ連鎖させない */
+  overscroll-behavior: contain;
+  font: 0.9rem/1.5 "Inconsolata", monospace;
+  padding: 0.3rem 0;
+}
+.asm-line { display: flex; white-space: pre; }
+.asm-gutter {
+  width: 3.2rem;
+  flex: none;
+  text-align: right;
+  padding-right: 0.6rem;
+  color: #8c959f;
+  cursor: pointer;
+  user-select: none;
+}
+.asm-gutter:hover { background: var(--border); }
+.asm-text { padding-left: 0.4rem; }
+.asm-line.current { background: #ddf4ff; }
+.asm-line.current .asm-text { font-weight: bold; }
+.asm-line.breakpoint .asm-gutter { background: #cf222e; color: #fff; }
+.asm-line.faulted { background: #ffebe9; }
+.asm-line.flash { animation: flash 0.8s; }
+@keyframes flash { from { background: var(--hl); } to { background: transparent; } }
+
+#asm-editor { display: flex; flex-direction: column; flex: none; border-top: 1px solid var(--border); }
+/* 上の display:flex は UA の [hidden] { display: none } に勝つので、明示的に打ち消す */
+#asm-editor[hidden] { display: none; }
+#asm-input {
+  height: 12rem;
+  max-height: 40vh; /* 貼り替え中もコード表示が潰れないように */
+  font: 0.9rem "Inconsolata", monospace;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+  resize: vertical;
+}
+.editor-actions { display: flex; gap: 0.4rem; padding: 0.4rem 0.8rem; }
+#asm-error {
+  padding: 0.5rem 0.8rem;
+  background: #ffebe9;
+  color: var(--err);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--border);
+  white-space: pre-wrap;
+}
+
+#state-pane {
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.6rem 0.8rem;
+  min-width: 0;
+  min-height: 0;
+}
+.state-block { margin-bottom: 1rem; }
+.state-block h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+#state-pane table {
+  border-collapse: collapse;
+  font: 0.85rem "Inconsolata", monospace;
+  width: 100%;
+}
+#state-pane td { padding: 0.05rem 0.4rem; border-bottom: 1px solid #f0f2f4; }
+.reg-name { color: var(--accent); width: 3.5rem; }
+.reg-dec { text-align: right; width: 8rem; }
+.reg-hex { color: #57606a; }
+tr.changed { background: var(--hl); }
+
+.stack-addr { color: #57606a; width: 7rem; }
+.stack-val { text-align: right; }
+.stack-val.uninit { color: #b0b7be; }
+/* 8 バイトのうち下位だけが書かれている場合の幅表示（int は 4B、char は 1B） */
+.stack-width { color: #8a929b; font-size: 0.85em; }
+.stack-mark { color: var(--accent); font-weight: bold; width: 3.5rem; }
+tr.in-frame .stack-addr { color: var(--fg); }
+tr.below-sp { opacity: 0.45; }
+
+.data-name { color: var(--accent); width: 6rem; }
+.data-value { word-break: break-all; }
+
+#stdout-pre {
+  background: #1f2328;
+  color: #e6edf3;
+  padding: 0.5rem;
+  border-radius: 4px;
+  min-height: 2.5rem;
+  font: 0.85rem "Inconsolata", monospace;
+  white-space: pre-wrap;
+  flex: none;
+}
+
+#warnings {
+  border: 1px solid #d4a72c;
+  background: #fff8c5;
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 1rem;
+}
+#warnings h3 { margin: 0 0 0.4rem; font-size: 0.9rem; }
+#warning-list { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; line-height: 1.5; }
+#warning-list li { margin-bottom: 0.5rem; cursor: pointer; }
+.warn-symptom { color: #7d4e00; font-size: 0.8rem; }

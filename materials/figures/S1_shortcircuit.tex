@@ -1,0 +1,57 @@
+% M1: && の短絡評価 — いまの生成と、あるべき生成
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    box/.style={cfgbox, minimum width=32mm, minimum height=8mm},
+    hot/.style={box, fill=TcAccentLighter},
+    ttl/.style={annot, anchor=south, align=center}]
+
+  % ================ 左: いまの生成(短絡しない) ================
+  \node[ttl] at (0mm, 12mm) {いまの生成};
+
+  \node[box] (Ll) at (0mm, 0mm) {左辺を評価};
+  \node[hot] (Lr) at (0mm, -14mm) {右辺を評価};
+  \node[box] (Lc) at (0mm, -28mm) {両方を 0/1 にして and};
+
+  \draw[flow] (Ll) -- (Lr);
+  \draw[flow] (Lr) -- (Lc);
+
+  \node[annot, text=TcEmph, anchor=north, align=center] at (0mm, -38mm)
+      {左辺が偽でも右辺を評価してしまう};
+
+  % ================ 右: あるべき生成(短絡する) ================
+  \node[ttl] at (74mm, 12mm) {短絡する生成};
+
+  \node[box] (Rl) at (74mm, 0mm) {左辺を評価};
+  \node[hot] (Rr) at (74mm, -14mm) {右辺を評価};
+  \node[box] (Rt) at (74mm, -28mm) {a0 = 1};
+  \node[box] (Rf) at (122mm, -28mm) {a0 = 0};
+  \node[box] (Re) at (98mm, -42mm) {以降の処理};
+
+  \draw[flow] (Rl) -- node[annot, right=1mm] {\small 真} (Rr);
+  \draw[flow] (Rr) -- node[annot, right=1mm] {\small 真} (Rt);
+  \draw[ptr] (Rl.east) to[out=0,in=90]
+      node[annot, text=TcEmph, right=1mm, pos=0.35] {beqz（偽なら飛ぶ）} (Rf.north);
+  \draw[ptr] (Rr.east) to[out=0,in=180] (Rf.west);
+  \draw[flow] (Rt.south) -- (Re.west);
+  \draw[flow] (Rf.south) -- (Re.east);
+
+  \node[annot, text=TcEmph, anchor=north, align=center] at (98mm, -50mm)
+      {左辺が偽なら右辺の命令を飛び越す};
+
+  % ---- 実害 ----
+  \node[annot, anchor=west] at (-16mm, -62mm)
+      {{\ttfamily if (p != 0 \&\& p->val > 0)}};
+  \node[annot, text=TcEmph, anchor=west] at (48mm, -62mm)
+      {左が偽（p は NULL）でも p->val を読む → クラッシュ};
+  \node[annot, anchor=west] at (-16mm, -70mm)
+      {{\ttfamily if (x != 0 \&\& 100 / x > 2)}};
+  \node[annot, text=TcEmph, anchor=west] at (48mm, -70mm)
+      {x が 0 でも割ってしまう};
+
+  \node[gannot, anchor=north, align=left] at (44mm, -80mm)
+      {短絡は「速くするための工夫」ではなく、C の言語仕様そのもの。
+       この形の書き方が成立するかどうかが変わる};
+\end{tikzpicture}
+\end{document}

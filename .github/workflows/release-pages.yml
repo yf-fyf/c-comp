@@ -1,0 +1,65 @@
+name: Release Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version used in the ZIP file name, for example v0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/app/package-lock.json
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+      - name: Install build and test dependencies
+        run: |
+          sudo apt-get update
+          opam install -y dune menhir js_of_ocaml js_of_ocaml-ppx
+      - name: Validate the scaffold
+        run: |
+          python3 -m compileall -q tools workbook/scaffold
+          python3 workbook/scaffold/parse_viewer.py workbook/sessions/02_interpreter/tests/add_mul.c >/dev/null
+      - name: Build and test the web application
+        run: make web && make web-test
+      - name: Build the allowlisted Pages tree
+        run: python3 tools/build_pages.py "$VERSION" --output "$RUNNER_TEMP/pages" --revision "$GITHUB_SHA"
+      - name: Verify the release archive
+        run: unzip -t "$RUNNER_TEMP/pages/downloads/c-comp-workbook-$VERSION.zip"
+      - name: Publish main branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PAGES_DIR: ${{ runner.temp }}/pages
+        run: |
+          remote_url="$(git remote get-url origin)"
+          release_dir="$RUNNER_TEMP/pages-branch"
+          git clone "$remote_url" "$release_dir"
+          git -C "$release_dir" remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git -C "$release_dir" ls-remote --exit-code --heads origin main; then
+            git -C "$release_dir" fetch origin main
+            git -C "$release_dir" checkout -B main origin/main
+          else
+            git -C "$release_dir" checkout --orphan main
+          fi
+          git -C "$release_dir" rm -rf --ignore-unmatch .
+          cp -a "$PAGES_DIR/." "$release_dir/"
+          git -C "$release_dir" add --all
+          git -C "$release_dir" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Release $VERSION from ${GITHUB_SHA}"
+          git -C "$release_dir" push origin main

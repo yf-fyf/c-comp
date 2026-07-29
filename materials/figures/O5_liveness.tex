@@ -1,0 +1,51 @@
+% O5: 後ろ向きの反復で live_in / live_out を求める
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[
+    blk/.style={cfgbox, minimum width=44mm, align=left, font=\ttfamily\small,
+                inner sep=3pt},
+    note/.style={font=\ttfamily\footnotesize, text=TcEmph, align=left,
+                 inner sep=1pt},
+    ttl/.style={font=\bfseries\small, text=TcAccentDark, anchor=center}]
+
+  % ================= 左: フローグラフと生存集合 =================
+  \node[ttl] at (30mm, 12mm) {\texttt{for (i=0; i<200; i=i+1) s = s + i;}};
+
+  \node[blk] (b0) at (30mm,   0mm) {main:\\\ \ sext.w s2, a0\ \ \ (s = 0)\\\ \ sext.w s1, a0\ \ \ (i = 0)};
+  \node[blk] (b1) at (30mm, -22mm) {.L2:\ \ mv a0, s1\\\ \ \ \ \ \ slt a0, a1, a0\\\ \ \ \ \ \ beqz a0, .L4};
+  \node[blk] (b2) at (30mm, -44mm) {\ \ \ \ \ \ mv a0, s2\\\ \ \ \ \ \ add a0, a1, a0\\\ \ \ \ \ \ sext.w s2, a0};
+  \node[blk] (b3) at (30mm, -66mm) {.L3:\ \ sext.w s1, a0\\\ \ \ \ \ \ j .L2};
+  \node[blk] (b4) at (108mm, -44mm) {.L4:\ \ mv a0, s2\\\ \ \ \ \ \ rem a0, a1, a0};
+
+  \draw[flow] (b0) -- (b1);
+  \draw[flow] (b1) -- (b2);
+  \draw[flow] (b2) -- (b3);
+  \draw[flow back] (b3.west) -- ++(-9mm,0) |- (b1.west);
+  \draw[flow] (b1.east) -| node[gannot, above=0.5mm, pos=0.25] {偽} (b4.north);
+
+  % 生存集合の注記
+  \node[note, anchor=west] at (56mm,  -3mm) {out: \{s1, s2\}};
+  \node[note, anchor=west] at (56mm, -25mm) {out: \{s1, s2\}};
+  \node[note, anchor=west] at (56mm, -47mm) {out: \{s1, s2\}};
+  \node[note, anchor=west] at (56mm, -69mm) {out: \{s1, s2\}};
+  \node[note, anchor=north] at (108mm, -54mm) {in : \{\textbf{s2}\}\ \ \ s1 はここで死ぬ};
+
+  % ================= 右: 方程式 =================
+  \node[ttl, anchor=west] at (0mm, -84mm) {方程式};
+
+  \node[annot, anchor=north west, align=left, text width=86mm] at (0mm, -89mm)
+      {\ \ \ \ \texttt{live\_out[B] = ∪ live\_in[S]}\ \ \ (S は B の後続)\\[1mm]
+       \ \ \ \ \texttt{live\_in[B]\ = use[B] ∪ (live\_out[B] − def[B])}\\[2mm]
+       \texttt{use} は「\textbf{書かれる前に}読まれる」レジスタ、
+       \texttt{def} は「書かれる」レジスタ};
+
+  \node[annot, anchor=north west, align=left, text width=82mm, text=TcEmph]
+      at (94mm, -89mm)
+      {\textbf{なぜ1回では終わらないか}\\
+       \texttt{.L3} の \texttt{live\_out} は \texttt{.L2} の \texttt{live\_in} から来る。
+       ところが \texttt{.L2} の値は、後方辺をたどって \texttt{.L3} の結果に依存する。
+       だから\textbf{変化がなくなるまで}繰り返す(不動点反復)};
+
+\end{tikzpicture}
+\end{document}

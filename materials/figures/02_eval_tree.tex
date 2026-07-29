@@ -1,0 +1,35 @@
+% コマ2: eval_ast が 1 + 2 * 3 の AST を評価する流れ
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ast/.style={cfgbox, minimum width=17mm, minimum height=7mm, font=\ttfamily\small},
+    val/.style={annot, text=TcEmph}]
+  % ---- AST ----
+  \node[ast] (add) at (0mm, 0mm) {add};
+  \node[ast] (n1)  at (-22mm, -17mm) {num 1};
+  \node[ast] (mul) at (22mm, -17mm) {mul};
+  \node[ast] (n2)  at (6mm, -34mm) {num 2};
+  \node[ast] (n3)  at (38mm, -34mm) {num 3};
+
+  \draw[flow] (add.south) -- (n1.north);
+  \draw[flow] (add.south) -- (mul.north);
+  \draw[flow] (mul.south) -- (n2.north);
+  \draw[flow] (mul.south) -- (n3.north);
+
+  % ---- 返る値 ----
+  \node[val, anchor=east] at ($(n1.west)+(-2mm,0)$) {① 1 を返す};
+  \node[val, anchor=north] at ($(n2.south)+(0,-1.5mm)$) {② 2 を返す};
+  \node[val, anchor=north] at ($(n3.south)+(0,-1.5mm)$) {③ 3 を返す};
+  \node[val, anchor=west] at ($(mul.east)+(2mm,0)$) {④ 2 * 3 = 6 を返す};
+  \node[val, anchor=west, align=left] at ($(add.east)+(2mm,0)$)
+      {⑤ 1 + 6 = 7 を返す\\（式全体の値）};
+
+  % ---- 凡例・補足 ----
+  \draw[flow] (-42mm, -46mm) -- (-34mm, -46mm);
+  \node[annot, anchor=west] at (-33mm, -46mm)
+      {eval\_ast の再帰呼び出し（親から子へたどる）};
+  \node[val, anchor=west] at (-42mm, -52mm)
+      {①〜⑤ は値が確定する順番。子の値が親に返り、根まで上がる};
+\end{tikzpicture}
+\end{document}

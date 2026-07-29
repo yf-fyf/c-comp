@@ -1,0 +1,31 @@
+% コマ1: hello.s が実行されて終了コードになるまでの流れ
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm]
+  % ---- 将来の位置づけ ----
+  \node[cfgbox, dashed, text=TcGrayText, minimum width=34mm] (mycc) at (0mm, 24mm)
+      {（コマ3 から）自作コンパイラ\\mycc.py がここを出力する};
+
+  % ---- ツールチェーンの流れ ----
+  \node[cfgbox, fill=TcAccentLighter, minimum width=30mm] (A) at (0mm, 0mm)
+      {hello.s\\（手書きアセンブリ）};
+  \node[cfgbox, minimum width=30mm] (B) at (62mm, 0mm)
+      {hello\\（RV64 実行ファイル）};
+  \node[cfgbox, minimum width=28mm] (C) at (120mm, 0mm)
+      {終了コード 42};
+  \node[gannot, anchor=north] at ($(C.south)+(0,-1.5mm)$) {echo \$? で表示};
+
+  \draw[ptr, dashed] (mycc.south) -- (A.north);
+
+  \draw[flow] (A.east) -- node[annot, above=1.5mm, align=center]
+      {{\ttfamily riscv64-linux-gnu-gcc -static}\\アセンブル + リンク} (B.west);
+  \draw[flow] (B.east) -- node[annot, above=1.5mm, align=center]
+      {{\ttfamily qemu-riscv64 ./hello}\\エミュレート実行} (C.west);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north] at (60mm, -12mm)
+      {この授業で作るのは「アセンブリを出力する部分」＝ コンパイラ本体。\\
+       アセンブルとリンクは gcc に、実行は qemu に任せる};
+\end{tikzpicture}
+\end{document}

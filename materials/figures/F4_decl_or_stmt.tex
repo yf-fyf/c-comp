@@ -1,0 +1,44 @@
+% F4: 宣言か文か — is_type_start と typedef_names
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    q/.style={cfgbox, minimum width=44mm, minimum height=8mm},
+    code/.style={font=\ttfamily\small, anchor=west, inner sep=1.5pt}]
+  % ================ 左: 判定の段 ================
+  \node[gannot] at (0mm, 11mm) {ブロックの先頭で: これは宣言か?};
+
+  \node[q] (b1) at (0mm, 0mm) {int / char / void / struct ?};
+  \draw[ptr] (b1.east) -- +(4mm,0);
+  \node[annot, anchor=west] at (28mm, 0mm) {宣言として読む};
+
+  \node[q] (b2) at (0mm, -14mm) {名前が typedef\_names にある?};
+  \draw[ptr] (b2.east) -- +(4mm,0);
+  \node[annot, anchor=west] at (28mm, -14mm) {宣言として読む};
+
+  \node[q] (b3) at (0mm, -28mm) {どちらでもない};
+  \draw[ptr] (b3.east) -- +(4mm,0);
+  \node[annot, anchor=west] at (28mm, -28mm) {文として読む（parse\_stmt）};
+
+  \draw[flow] (b1.south) -- node[annot, right=1mm, pos=0.4] {\small いいえ} (b2.north);
+  \draw[flow] (b2.south) -- (b3.north);
+
+  % ================ 右: typedef が表を育てる ================
+  \node[gannot] at (110mm, 11mm) {typedef\_names は解析中に育つ};
+
+  \node[code] (c1) at (78mm, 2mm) {typedef struct \{ ... \} Point;};
+  \node[annot, text=TcEmph, anchor=west] at (80mm, -5mm)
+      {→ 表に "Point" を登録};
+
+  \node[code] (c2) at (78mm, -14mm) {Point p;};
+  \node[annot, anchor=west] at (100mm, -14mm) {→ 宣言（表にあるから）};
+
+  \node[code] (c3) at (78mm, -22mm) {x = 1;};
+  \node[annot, anchor=west] at (100mm, -22mm) {→ 式文（表にないから）};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (55mm, -37mm)
+      {「名前 名前 ;」という同じ形でも、typedef\_names の中身しだいで宣言にも式にもなる。\\
+       トークンの種類だけでは決められない = C の文法の文脈依存性};
+\end{tikzpicture}
+\end{document}

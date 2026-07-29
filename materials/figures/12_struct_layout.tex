@@ -1,0 +1,45 @@
+% コマ12: Point のメモリ配置と . / -> のアドレス計算
+% typedef struct { int x; int y; } Point;  Point p;  Point *q = &p;
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    field/.style={memcell hi, minimum width=30mm}]
+  % ---- 構造体本体 ----
+  \node[field] (X) at (0mm, 0mm) {x（int）};
+  \node[field, right=0mm of X] (Y) {y（int）};
+
+  % ---- 境界オフセット(下側) ----
+  \node[addr, anchor=north] at ($(X.south west)+(0,-0.5mm)$) {+0};
+  \node[addr, anchor=north] at ($(X.south east)+(0,-0.5mm)$) {+4};
+  \node[addr, anchor=north] at ($(Y.south east)+(0,-0.5mm)$) {+8};
+
+  % ---- sizeof ----
+  \draw[bracestyle] ($(X.north west)+(0,1mm)$) -- ($(Y.north east)+(0,1mm)$)
+      node[gannot, midway, above=2.5mm] {sizeof(Point) = 8};
+
+  % ---- 変数 p の先頭アドレス ----
+  \node[annot, anchor=east, align=right] (pbase) at ($(X.west)+(-8mm,0)$)
+      {Point p; の実体\\先頭アドレスは\\codegen\_lval(p) が返す};
+  \draw[regptr] (pbase.east) -- (X.west);
+
+  % ---- p.y のアドレス計算 ----
+  \node[annot, anchor=west] (py) at ($(Y.east)+(8mm,0)$)
+      {p.y の場所\\= 先頭 + offset(y)\\= 先頭 + 4};
+  \draw[flow] (py.west) -- (Y.east);
+
+  % ---- ポインタ経由 ----
+  \node[memcell, minimum width=30mm] (q) at (0mm, -20mm) {q：p のアドレス};
+  \node[annot, anchor=east, align=right] at ($(q.west)+(-4mm,0)$)
+      {Point *q = \&p;\\（構造体ポインタ）};
+  \draw[ptr] (q.north) -- (X.south);
+  \draw[ptr] (q.east) to[out=0,in=-90] (Y.south);
+  \node[annot, text=TcEmph, anchor=west] at ($(q.east)+(16mm,-2mm)$)
+      {q->y の場所 = q の値 + 4};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (15mm, -32mm)
+      {「.」は構造体変数のアドレスから、「->」はポインタの値から。\\
+       どちらも「先頭アドレス + フィールドオフセット」で場所が決まる};
+\end{tikzpicture}
+\end{document}

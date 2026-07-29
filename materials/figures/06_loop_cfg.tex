@@ -1,0 +1,68 @@
+% コマ6: while / for の制御フローと break / continue の飛び先
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    bc/.style={ptr, dashed}]
+  % ================ while ================
+  \node[gannot] at (0mm, 12mm) {{\ttfamily while (cond) \{ body \}}};
+
+  \node[cfgbox] (Wc) at (0mm, 0mm) {cond を計算};
+  \node[addr, left=1.5mm of Wc] {.Lcond:};
+  \node[cfgbox, fill=TcAccentLighter] (Wb) at (0mm, -19mm) {body（本体の文）};
+  \node[cfgbox] (We) at (0mm, -38mm) {以降の処理};
+  \node[addr, left=1.5mm of We] {.Lend:};
+
+  \draw[flow] (Wc) -- node[annot, right=1mm] {真} (Wb);
+  \draw[flow] (Wb.west) to[out=180,in=180,looseness=1.6]
+      node[annot, left=2mm, pos=0.5, align=right] {j .Lcond\\（繰り返す）}
+      ($(Wc.west)+(0,-2mm)$);
+  \draw[ptr] (Wc.east) to[out=0,in=0,looseness=1.6]
+      node[annot, text=TcEmph, right=2mm, pos=0.5] {beqz a0, .Lend（偽）} (We.east);
+  \draw[bc] ($(Wb.east)+(0,1.5mm)$) to[out=0,in=0,looseness=1.1]
+      node[annot, text=TcEmph, right=1mm, pos=0.6] {continue\\（.Lcond へ）}
+      ($(Wc.east)+(0,-2mm)$);
+  \draw[bc] ($(Wb.east)+(0,-1.5mm)$) to[out=0,in=0,looseness=1.1]
+      node[annot, text=TcEmph, right=1mm, pos=0.4] {break\\（.Lend へ）}
+      ($(We.east)+(0,2mm)$);
+
+  % ================ for ================
+  \node[gannot] at (100mm, 12mm) {{\ttfamily for (init; cond; step) \{ body \}}};
+
+  \node[cfgbox] (Fi) at (100mm, 0mm) {init を実行};
+  \node[cfgbox] (Fc) at (100mm, -14mm) {cond を計算};
+  \node[addr, left=1.5mm of Fc] {.Lcond:};
+  \node[cfgbox, fill=TcAccentLighter] (Fb) at (100mm, -28mm) {body（本体の文）};
+  \node[cfgbox] (Fs) at (100mm, -42mm) {step を実行};
+  \node[addr, left=1.5mm of Fs] {.Lstep:};
+  \node[cfgbox] (Fe) at (100mm, -56mm) {以降の処理};
+  \node[addr, left=1.5mm of Fe] {.Lend:};
+
+  \draw[flow] (Fi) -- (Fc);
+  \draw[flow] (Fc) -- node[annot, right=1mm] {真} (Fb);
+  \draw[flow] (Fb) -- (Fs);
+  \draw[flow] ($(Fs.west)+(0,-2mm)$) to[out=180,in=180,looseness=1.2]
+      node[annot, left=2mm, pos=0.5, align=right] {j .Lcond\\（繰り返す）}
+      ($(Fc.west)+(0,-2mm)$);
+  \draw[ptr] (Fc.east) to[out=0,in=0,looseness=1.7]
+      node[annot, text=TcEmph, right=1.5mm, pos=0.85] {beqz a0, .Lend（偽）}
+      (Fe.east);
+  \draw[bc] ($(Fb.east)+(0,1.5mm)$) to[out=0,in=0,looseness=1.4]
+      node[annot, text=TcEmph, right=1mm, pos=0.5] {continue（.Lstep へ！）}
+      ($(Fs.east)+(0,1.5mm)$);
+  \draw[bc] ($(Fb.west)+(0,-1.5mm)$) to[out=180,in=180,looseness=2.2]
+      node[annot, text=TcEmph, left=1mm, pos=0.5, align=right] {break\\（.Lend へ）}
+      ($(Fe.west)+(0,2mm)$);
+
+  \node[annot, text=TcEmph, anchor=north, align=center] at (100mm, -66mm)
+      {continue が .Lcond に飛ぶと、step が実行されず無限ループになる};
+
+  % ================ 凡例 ================
+  \draw[flow] (-16mm, -50mm) -- (-8mm, -50mm);
+  \node[annot, anchor=west] at (-7mm, -50mm) {そのまま次の命令へ進む};
+  \draw[ptr] (-16mm, -55mm) -- (-8mm, -55mm);
+  \node[annot, anchor=west] at (-7mm, -55mm) {ジャンプ命令で飛ぶ};
+  \draw[bc] (-16mm, -60mm) -- (-8mm, -60mm);
+  \node[annot, anchor=west] at (-7mm, -60mm) {break / continue のジャンプ};
+\end{tikzpicture}
+\end{document}

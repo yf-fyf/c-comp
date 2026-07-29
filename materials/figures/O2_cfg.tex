@@ -1,0 +1,61 @@
+% O2: リーダを見つけて基本ブロックに切り、辺を張る
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[
+    code/.style={font=\ttfamily\small, anchor=west, inner sep=1pt},
+    lab/.style={font=\ttfamily\small, anchor=west, inner sep=1pt, text=TcAccentDark},
+    blk/.style={cfgbox, minimum width=34mm, align=left, font=\ttfamily\small,
+                inner sep=3pt},
+    rule/.style={font=\small, text=TcEmph, anchor=west}]
+
+  % ================= 左: アセンブリとリーダ =================
+  \node[gannot, anchor=west] at (0mm, 8mm) {アセンブリ};
+
+  \node[lab]  (l0) at (0mm,  0mm) {main:};
+  \node[code] (i0) at (4mm, -6mm) {li a0, 0};
+  \node[lab]  (l1) at (0mm, -13mm) {.L1:};
+  \node[code] (i1) at (4mm, -19mm) {beqz a0, .L2};
+  \node[code] (i2) at (4mm, -26mm) {addi a0, a0, -1};
+  \node[code] (i3) at (4mm, -32mm) {j .L1};
+  \node[lab]  (l2) at (0mm, -39mm) {.L2:};
+  \node[code] (i4) at (4mm, -45mm) {ret};
+
+  % リーダの印
+  \foreach \n in {i0, i1, i2, i4} {
+    \draw[ptr] ($(\n.west)+(-5mm,0)$) -- ($(\n.west)+(-1mm,0)$);
+  }
+
+  \node[rule] at (36mm,  -6mm) {(a) 最初の命令};
+  \node[rule] at (36mm, -19mm) {(b) ラベルが指す命令};
+  \node[rule] at (36mm, -26mm) {(c) 分岐の次の命令};
+  \node[rule] at (36mm, -45mm) {(b) ラベルが指す命令};
+
+  % ================= 右: フローグラフ =================
+  \node[gannot, anchor=center] at (140mm, 8mm) {フローグラフ};
+
+  \node[blk] (b0) at (140mm,  -2mm) {main:\\li a0, 0};
+  \node[blk] (b1) at (140mm, -19mm) {.L1:\\beqz a0, .L2};
+  \node[blk] (b2) at (122mm, -40mm) {addi a0, a0, -1\\j .L1};
+  \node[blk] (b3) at (168mm, -40mm) {.L2:\\ret};
+
+  \draw[flow] (b0) -- (b1);
+  \draw[flow] (b1.south west) -- node[gannot, left=1mm, pos=0.6] {真} (b2.north);
+  \draw[flow] (b1.south east) -- node[gannot, right=1mm, pos=0.6] {偽} (b3.north);
+  \draw[flow back] (b2.west) -- ++(-8mm,0) |- (b1.west);
+
+  \node[annot, text=TcEmph, anchor=north, align=center] at (122mm, -49mm)
+      {後方辺 = ループの戻り};
+
+  % ================= 下: 説明 =================
+  \node[annot, anchor=north west, align=left, text width=95mm] at (0mm, -58mm)
+      {矢印を付けた4つが\textbf{リーダ}。リーダから次のリーダの手前までが1つの基本ブロック。\\
+       \texttt{call} はリーダを作らない --- 呼び出しから\textbf{戻ってくる}ので、
+       制御はそのまま次の命令へ続く};
+
+  \node[annot, anchor=north west, align=left, text width=72mm] at (105mm, -58mm)
+      {条件分岐は辺が2本(飛ぶ先と、飛ばずに落ちる先)。\\
+       \texttt{ret} は関数から出るので後続なし};
+
+\end{tikzpicture}
+\end{document}

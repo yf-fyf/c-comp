@@ -1,0 +1,44 @@
+% B1: 2つの最適化パスの差し込み位置(コンパイラ本体は触らない)
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    stage/.style={cfgbox, minimum width=24mm, minimum height=10mm},
+    opt/.style={cfgbox, minimum width=26mm, minimum height=10mm,
+                fill=TcAccentLighter, draw=TcEmph},
+    ftxt/.style={font=\ttfamily\small, inner sep=1.5pt}]
+
+  % ---- パイプライン ----
+  \node[ftxt] (src) at (0mm, 0mm) {prog.c};
+  \node[stage] (par) at (34mm, 0mm) {Parser};
+  \node[opt] (fold) at (74mm, 0mm) {① 定数畳み込み\\fold.py};
+  \node[stage] (cg) at (112mm, 0mm) {codegen};
+  \node[opt] (peep) at (152mm, 0mm) {② ピープホール\\peephole.py};
+  \node[ftxt, align=center] (out) at (184mm, 0mm) {最適化済み\\アセンブリ};
+
+  % ---- mycc.py の枠 ----
+  \begin{scope}[on background layer]
+    \node[fill=TcGrayBg, draw=TcGrayText, rounded corners=2mm, inner sep=4.5mm,
+          fit=(par)(cg)] (myccbox) {};
+  \end{scope}
+  \node[gannot, anchor=south] at ($(myccbox.north)+(0,1mm)$)
+      {mycc.py（1行も書き換えない）};
+
+  \draw[flow] (src.east) -- (par.west);
+  \draw[flow] (par.east) -- node[gannot, above=1.5mm] {AST} (fold.west);
+  \draw[flow] (fold.east) -- node[gannot, above=1.5mm] {AST} (cg.west);
+  \draw[flow] (cg.east) -- node[gannot, above=1.5mm] {asm} (peep.west);
+  \draw[flow] (peep.east) -- (out.west);
+
+  % ---- 差し込みの説明 ----
+  \node[annot, text=TcEmph, anchor=north, align=center] at (74mm, -13mm)
+      {木 → 木 の書き換え\\（optcc が Parser の出口に差し込む）};
+  \node[annot, text=TcEmph, anchor=north, align=center] at (152mm, -13mm)
+      {行 → 行 の書き換え\\（出力テキストを濾過する）};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (80mm, -26mm)
+      {どちらのパスも「観測できる振る舞い（終了コード・出力）を変えない」ことが絶対条件。\\
+       fixed15 が全通し続けることで、それをテストとして確認する};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,43 @@
+% F0: 曖昧性 — 同じ文字列 1 + 2 * 3 から作れる2つの木
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ast/.style={cfgbox, minimum width=16mm, minimum height=7mm, font=\ttfamily\small},
+    val/.style={annot, text=TcEmph}]
+  % ================ 木A: 掛け算が先 ================
+  \node[gannot] at (6mm, 10mm) {木A: 掛け算を先にまとめる};
+
+  \node[ast] (La) at (6mm, 0mm) {add};
+  \node[ast] (L1) at (-10mm, -15mm) {num 1};
+  \node[ast] (Lm) at (22mm, -15mm) {mul};
+  \node[ast] (L2) at (10mm, -30mm) {num 2};
+  \node[ast] (L3) at (34mm, -30mm) {num 3};
+  \draw[flow] (La.south) -- (L1.north);
+  \draw[flow] (La.south) -- (Lm.north);
+  \draw[flow] (Lm.south) -- (L2.north);
+  \draw[flow] (Lm.south) -- (L3.north);
+
+  \node[val] at (6mm, -40mm) {評価すると 1 + (2 * 3) = 7};
+
+  % ================ 木B: 足し算が先 ================
+  \node[gannot] at (86mm, 10mm) {木B: 足し算を先にまとめる};
+
+  \node[ast] (Ra) at (86mm, 0mm) {mul};
+  \node[ast] (Rm) at (70mm, -15mm) {add};
+  \node[ast] (R3) at (102mm, -15mm) {num 3};
+  \node[ast] (R1) at (58mm, -30mm) {num 1};
+  \node[ast] (R2) at (82mm, -30mm) {num 2};
+  \draw[flow] (Ra.south) -- (Rm.north);
+  \draw[flow] (Ra.south) -- (R3.north);
+  \draw[flow] (Rm.south) -- (R1.north);
+  \draw[flow] (Rm.south) -- (R2.north);
+
+  \node[val] at (86mm, -40mm) {評価すると (1 + 2) * 3 = 9};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (46mm, -48mm)
+      {同じ文字列から2つの木が作れる文法を「曖昧」という。\\
+       どちらの木を選ぶかで式の意味（値）が変わってしまう};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,44 @@
+% コマ10: 配列のメモリ配置とポインタ演算
+% int a[4]; p = a; のときの a[i] / p + 2 のアドレス計算
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    elem/.style={memcell hi, minimum width=20mm}]
+  % ---- 配列本体 ----
+  \node[elem]                    (a0) at (0,0) {a[0]};
+  \node[elem, right=0mm of a0]   (a1) {a[1]};
+  \node[elem, right=0mm of a1]   (a2) {a[2]};
+  \node[elem, right=0mm of a2]   (a3) {a[3]};
+
+  % ---- 境界オフセット(下側) ----
+  \node[addr, anchor=north] at ($(a0.south west)+(0,-0.5mm)$) {+0};
+  \node[addr, anchor=north] at ($(a1.south west)+(0,-0.5mm)$) {+4};
+  \node[addr, anchor=north] at ($(a2.south west)+(0,-0.5mm)$) {+8};
+  \node[addr, anchor=north] at ($(a3.south west)+(0,-0.5mm)$) {+12};
+  \node[addr, anchor=north] at ($(a3.south east)+(0,-0.5mm)$) {+16};
+
+  % ---- 先頭アドレス ----
+  \node[annot, anchor=east, align=right] (base) at ($(a0.north west)+(-6mm,7mm)$)
+      {a の先頭アドレス\\（base）};
+  \draw[regptr] (base.east) to[out=0,in=135] (a0.north west);
+
+  % ---- 要素サイズ ----
+  \draw[bracestyle] (a3.north west) -- (a3.north east)
+      node[gannot, midway, above=2.5mm] {int 1個 = 4 バイト};
+
+  % ---- p と p + 2 ----
+  \node[memcell, minimum width=26mm] (p) at ($(a0.south)+(0,-17mm)$) {p：base};
+  \draw[ptr] (p.north) -- (a0.south);
+  \draw[ptr] (p.east) to[out=0,in=-90] (a2.south);
+  \node[annot, text=TcEmph, anchor=west] at ($(p.east)+(17mm,-1mm)$)
+      {p + 2 が指す先\\（2 × 4 = 8 バイト先）};
+
+  \node[annot, anchor=east, align=right] at ($(p.west)+(-4mm,0)$)
+      {int *p;\\p = a;};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north] at ($(a1.south east)+(0,-26mm)$)
+      {a[i] のアドレス = base + i × sizeof(int)　　例：a[2] は base + 2 × 4 = base + 8};
+\end{tikzpicture}
+\end{document}

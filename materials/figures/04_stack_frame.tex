@@ -1,0 +1,51 @@
+% コマ4: スタックフレームとローカル変数の配置
+% 3変数 (a, b, c) を宣言したときのプロローグ直後の状態
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm]
+  % ---- セル列(上 = 高いアドレス) ----
+  \node[memcell dashed]                 (caller) {呼び出し元の領域};
+  \node[memcell, below=0mm of caller]   (ra)     {ra（戻り先アドレス）};
+  \node[memcell, below=0mm of ra]       (olds0)  {保存した s0};
+  \node[memcell hi, below=0mm of olds0] (a)      {変数 a};
+  \node[memcell hi, below=0mm of a]     (b)      {変数 b};
+  \node[memcell hi, below=0mm of b]     (c)      {変数 c};
+  \node[memcell gray, below=0mm of c]   (pad)    {（空き）};
+
+  % ---- オフセットラベル ----
+  \node[addr, left=2.5mm of ra]    {s0 - 8};
+  \node[addr, left=2.5mm of olds0] {s0 - 16};
+  \node[addr, left=2.5mm of a]     {s0 - 24};
+  \node[addr, left=2.5mm of b]     {s0 - 32};
+  \node[addr, left=2.5mm of c]     {s0 - 40};
+  \node[addr, left=2.5mm of pad]   {s0 - 48};
+
+  % ---- s0 / sp レジスタ ----
+  \node[annot, font=\ttfamily\bfseries, anchor=east]
+      (s0reg) at ($(ra.north west)+(-24mm,0)$) {s0};
+  \draw[regptr] (s0reg.east) -- (ra.north west);
+  \node[gannot, anchor=north east] at ($(s0reg.south east)+(0,-1mm)$)
+      {関数に入る前の\\sp と同じ位置};
+
+  \node[annot, font=\ttfamily\bfseries, anchor=east]
+      (spreg) at ($(pad.south west)+(-24mm,0)$) {sp};
+  \draw[regptr] (spreg.east) -- (pad.south west);
+
+  % ---- アドレスの方向 ----
+  \node[gannot, anchor=south] (haddr) at ($(caller.north west)+(-52mm,0)$) {高いアドレス};
+  \node[gannot, anchor=north] (laddr) at (haddr.south |- pad.south) {低いアドレス};
+  \draw[flow, color=TcGrayText] ($(haddr.south)+(0,-1mm)$) -- ($(laddr.north)+(0,1mm)$);
+
+  % ---- 右側の領域注釈 ----
+  \draw[bracestyle] ($(ra.north east)+(2.5mm,0)$) -- ($(olds0.south east)+(2.5mm,0)$)
+      node[annot, midway, right=6mm] {ra と s0 の保存\\（16バイト）};
+  \draw[bracestyle] ($(a.north east)+(2.5mm,0)$) -- ($(pad.south east)+(2.5mm,0)$)
+      node[annot, midway, right=6mm]
+      {ローカル変数の領域\\frame\_size = align\_to(24, 16) = 32};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north] at ($(pad.south)+(0,-6mm)$)
+      {変数 a のアドレスは {\ttfamily addi a0, s0, -24} で計算する};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,53 @@
+% F1: 字句解析器のメインループ — 次の1文字で行き先を決める(判定は上から順)
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    q/.style={cfgbox, minimum width=38mm, minimum height=8mm},
+    act/.style={annot, anchor=west}]
+  % ---- 入口 ----
+  \node[gannot] (top) at (0mm, 11mm) {次の1文字 c を見る};
+  \draw[flow] (top.south) -- ($(top.south)+(0,-4mm)$);
+
+  % ---- 判定の段(上から順に試す) ----
+  \node[q] (b1) at (0mm, 0mm) {空白・改行?};
+  \node[act] at (26mm, 0mm) {読み飛ばす。改行なら line + 1};
+
+  \node[q] (b2) at (0mm, -13mm) {{\ttfamily //} か {\ttfamily /*} ?};
+  \node[act] at (26mm, -13mm)
+      {コメントを読み飛ばす　{\color{TcEmph}← 割り算の / より先に判定する}};
+
+  \node[q] (b3) at (0mm, -26mm) {数字?};
+  \node[act] at (26mm, -26mm) {read\_number — 数字が続く限り読む};
+
+  \node[q] (b4) at (0mm, -39mm) {英字か \_ ?};
+  \node[act] at (26mm, -39mm)
+      {read\_ident\_or\_keyword — 読み切ってからキーワード表と照合};
+
+  \node[q] (b5) at (0mm, -52mm) {{\ttfamily '} ?};
+  \node[act] at (26mm, -52mm) {read\_char\_literal — 例: {\ttfamily 'a'} は 97};
+
+  \node[q] (b6) at (0mm, -65mm) {{\ttfamily "} ?};
+  \node[act] at (26mm, -65mm) {read\_string\_literal — エスケープを解決};
+
+  \node[q] (b7) at (0mm, -78mm) {それ以外（記号）};
+  \node[act] at (26mm, -78mm)
+      {read\_punct — {\color{TcEmph}... → 2文字 → 1文字の順（最長一致）}。\\
+       どれでもなければエラー（行番号つき）};
+
+  % ---- 矢印 ----
+  \draw[ptr] (b1.east) -- +(4mm,0) node[annot, above=1.5mm, pos=1.0] {\small はい};
+  \draw[flow] (b1.south) -- node[annot, right=1mm, pos=0.4] {\small いいえ} (b2.north);
+  \foreach \a/\b in {b2/b3, b3/b4, b4/b5, b5/b6, b6/b7} {
+    \draw[flow] (\a.south) -- (\b.north);
+  }
+  \foreach \b in {b2, b3, b4, b5, b6, b7} {
+    \draw[ptr] (\b.east) -- +(4mm,0);
+  }
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (30mm, -87mm)
+      {処理を1つ終えるたびに先頭に戻って次の1文字を見る。\\
+       入力が尽きたら TK\_EOF を追加して終了する};
+\end{tikzpicture}
+\end{document}

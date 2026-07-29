@@ -1,0 +1,6 @@
+; support/ は workbook/ocaml/support へのシンボリックリンク（コピーしない: webapps.md 3.4）
+(include_subdirs unqualified)
+
+(library
+ (name core_lib)
+ (libraries str))

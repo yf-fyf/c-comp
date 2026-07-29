@@ -1,0 +1,49 @@
+% コマ15: 実際の C コンパイラの分割コンパイルと、mycc.py の一括方式
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    stg/.style={cfgbox, minimum width=15mm, minimum height=7mm, font=\small},
+    ftxt/.style={font=\ttfamily\small, inner sep=1.5pt}]
+  % ================ 実際の C コンパイラ ================
+  \node[gannot, anchor=west] at (-4mm, 9mm) {実際の C コンパイラ（分割コンパイル）};
+
+  \node[ftxt] (f1) at (0mm, 0mm) {main.c};
+  \node[stg, right=3.5mm of f1]  (s1) {前処理};
+  \node[ftxt, right=3.5mm of s1] (f2) {main.i};
+  \node[stg, right=3.5mm of f2]  (s2) {コンパイル};
+  \node[ftxt, right=3.5mm of s2] (f3) {main.s};
+  \node[stg, right=3.5mm of f3]  (s3) {アセンブル};
+  \node[ftxt, right=3.5mm of s3] (f4) {main.o};
+  \node[stg, right=3.5mm of f4]  (s4) {リンク};
+  \node[ftxt, right=3.5mm of s4] (f5) {a.out};
+
+  \foreach \a/\b in {f1/s1, s1/f2, f2/s2, s2/f3, f3/s3, s3/f4, f4/s4, s4/f5} {
+    \draw[flow] (\a.east) -- (\b.west);
+  }
+
+  \node[ftxt, anchor=west, text=TcGrayText] (util) at (35mm, -12mm)
+      {util.c → …同じ手順… → util.o};
+  \draw[flow] (util.east) to[out=0,in=-90] (s4.south);
+
+  % ================ 今回の mycc.py ================
+  \node[gannot, anchor=west] at (-4mm, -23mm) {今回の mycc.py（一括方式）};
+
+  \node[ftxt, align=center] (g1) at (2mm, -33mm) {main.c\\util.c};
+  \node[cfgbox, font=\small, right=5mm of g1] (big)
+      {mycc.py\\前処理 → 字句・構文解析 → AST 連結 → コード生成};
+  \node[ftxt, right=5mm of big] (g2) {out.s};
+  \node[stg, font=\footnotesize, right=5mm of g2] (g3) {gcc で\\アセンブル+リンク};
+  \node[ftxt, right=5mm of g3] (g4) {実行ファイル};
+
+  \draw[flow] (g1.east) -- (big.west);
+  \draw[flow] (big.east) -- (g2.west);
+  \draw[flow] (g2.east) -- (g3.west);
+  \draw[flow] (g3.east) -- (g4.west);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (66mm, -44mm)
+      {実際のコンパイラは .c ごとに .o を作り、変更したファイルだけ作り直せる。\\
+       mycc.py は毎回、全ファイルをまとめて 1 本のアセンブリとして出力する};
+\end{tikzpicture}
+\end{document}

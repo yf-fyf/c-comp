@@ -1,0 +1,67 @@
+% O4: 局所変数をレジスタに置くと、代入が5命令から1命令になる
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[
+    code/.style={font=\ttfamily\small, anchor=west, inner sep=1pt},
+    dead/.style={code, text=TcGrayText},
+    ttl/.style={font=\bfseries\small, text=TcAccentDark, anchor=west},
+    slot/.style={memcell, minimum width=26mm, minimum height=7mm,
+                 font=\ttfamily\small}]
+
+  % ================= 左: 昇格前 =================
+  \node[ttl] at (0mm, 8mm) {昇格前: \texttt{s} はメモリにある};
+
+  \node[code] (a1) at (0mm,   0mm) {addi a0, s0, -24};
+  \node[code] (a2) at (0mm,  -6mm) {addi sp, sp, -8};
+  \node[code] (a3) at (0mm, -12mm) {sd\ \ a0, 0(sp)};
+  \node[code] (a4) at (0mm, -18mm) {\textit{\ \ …右辺の計算…}};
+  \node[code] (a5) at (0mm, -24mm) {ld\ \ a1, 0(sp)};
+  \node[code] (a6) at (0mm, -30mm) {addi sp, sp, 8};
+  \node[code] (a7) at (0mm, -36mm) {sw\ \ a0, 0(a1)};
+
+  \draw[bracestyle] ($(a1.north west)+(-2mm,1mm)$) -- ($(a3.south west)+(-2mm,-1mm)$);
+  \node[annot, anchor=east, align=right, text=TcGrayText] at (-4mm, -6mm)
+      {アドレスを\\計算して積む};
+  \draw[bracestyle] ($(a5.north west)+(-2mm,1mm)$) -- ($(a7.south west)+(-2mm,-1mm)$);
+  \node[annot, anchor=east, align=right, text=TcGrayText] at (-4mm, -30mm)
+      {取り出して\\書き込む};
+
+  \node[annot, anchor=west, text=TcEmph] at (0mm, -44mm) {代入1回に \textbf{5命令}};
+
+  % ================= 矢印 =================
+  \node[font=\Large, text=TcEmph] at (62mm, -18mm) {$\Rightarrow$};
+
+  % ================= 右: 昇格後 =================
+  \node[ttl] at (78mm, 8mm) {昇格後: \texttt{s} は s2 にある};
+
+  \node[dead] (b1) at (78mm,   0mm) {addi a0, s0, -24};
+  \node[dead] (b2) at (78mm,  -6mm) {addi sp, sp, -8};
+  \node[dead] (b3) at (78mm, -12mm) {sd\ \ a0, 0(sp)};
+  \node[code] (b4) at (78mm, -18mm) {\textit{\ \ …右辺の計算…}};
+  \node[dead] (b5) at (78mm, -24mm) {ld\ \ a1, 0(sp)};
+  \node[dead] (b6) at (78mm, -30mm) {addi sp, sp, 8};
+  \node[code, text=TcEmph] (b7) at (78mm, -36mm) {sext.w s2, a0};
+
+  % 消える命令に取り消し線を引く
+  \foreach \n in {b1, b2, b3, b5, b6} {
+    \draw[TcEmph, line width=0.6pt] ($(\n.west)+(0.5mm,0)$) -- ($(\n.east)+(-0.5mm,0)$);
+  }
+
+  \node[annot, anchor=west, text=TcEmph] at (78mm, -44mm) {代入1回に \textbf{1命令}};
+
+  % ================= 下: 条件と注意 =================
+  \node[annot, anchor=north west, align=left, text width=62mm] at (0mm, -54mm)
+      {\textbf{レジスタに置ける変数}\\
+       \ \ ・\texttt{\&x} を取られていない\\
+       \ \ ・配列でも構造体でもない(入りきらない)\\
+       \ \ ・\texttt{int} かポインタ};
+
+  \node[annot, anchor=north west, align=left, text width=78mm] at (72mm, -54mm)
+      {\textbf{なぜ \texttt{sext.w} なのか}\\
+       メモリでは \texttt{sw}/\texttt{lw} が \texttt{int} を32ビットに切り詰めていた。
+       レジスタに置くとその切り詰めが消えるので、代入のたびに明示的に行う
+       (M2「\texttt{int} は64ビットで計算される」と直結)};
+
+\end{tikzpicture}
+\end{document}

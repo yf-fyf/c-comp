@@ -1,0 +1,53 @@
+% 講義資料の図(materials/sessions/figures/*.tex)共通プリアンブル
+% 各図の .tex から \input{figure-preamble} で読み込む。
+% 配色・フォントは latex/session-template.tex と揃える。
+
+% 日本語(LuaLaTeX + luatexja)。等幅セル内の日本語も和文フォントで出す
+\usepackage{luatexja}
+\usepackage{luatexja-fontspec}
+\setmainfont{Noto Sans CJK JP}
+\setmainjfont{Noto Sans CJK JP}
+\setmonofont{Inconsolata}[Scale=MatchLowercase]
+\setmonojfont{Noto Sans CJK JP}
+
+\usepackage{xcolor}
+\definecolor{TcAccentDark}{HTML}{583B66}
+\definecolor{TcAccentLight}{HTML}{EEE6F2}
+\definecolor{TcAccentLighter}{HTML}{F7F3F9}
+\definecolor{TcEmph}{HTML}{E64B17}
+\definecolor{TcText}{HTML}{262626}
+\definecolor{TcGrayText}{HTML}{737373}
+\definecolor{TcGrayBg}{HTML}{F2F2F2}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing,fit,backgrounds}
+
+\tikzset{
+  % テキスト
+  every node/.style={text=TcText},
+  annot/.style={font=\small, text=TcText, align=left},
+  gannot/.style={font=\small, text=TcGrayText, align=center},
+  addr/.style={font=\ttfamily\small, text=TcGrayText},
+  % メモリセル
+  memcell/.style={draw=TcAccentDark, line width=0.6pt, fill=white,
+                  minimum height=8.5mm, minimum width=40mm,
+                  font=\ttfamily, inner sep=2pt, outer sep=0pt},
+  memcell gray/.style={memcell, fill=TcGrayBg},
+  memcell hi/.style={memcell, fill=TcAccentLighter},
+  memcell dashed/.style={memcell, dashed, fill=none, text=TcGrayText},
+  % 領域(セクション図など)
+  region/.style={draw=TcAccentDark, line width=0.6pt, fill=white,
+                 minimum width=48mm, align=center, inner sep=3pt, outer sep=0pt},
+  % 制御フロー図のボックス
+  cfgbox/.style={draw=TcAccentDark, line width=0.6pt, fill=white, rounded corners=1.5mm,
+                 minimum width=28mm, minimum height=8mm, font=\small, align=center,
+                 inner sep=2pt},
+  % 矢印
+  ptr/.style={-{Stealth[length=2.8mm]}, line width=1.1pt, color=TcEmph},
+  flow/.style={-{Stealth[length=2.4mm]}, line width=0.8pt, color=TcAccentDark},
+  flow back/.style={flow, dashed},
+  regptr/.style={-{Stealth[length=2.8mm]}, line width=1.1pt, color=TcAccentDark},
+  % 補助
+  bracestyle/.style={decorate, decoration={brace, amplitude=4pt}, line width=0.8pt,
+                     color=TcAccentDark},
+}

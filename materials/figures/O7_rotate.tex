@@ -1,0 +1,54 @@
+% O7: ループ回転 — 1反復あたり j が1つ減る
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[
+    blk/.style={cfgbox, minimum width=36mm, align=left, font=\ttfamily\small,
+                inner sep=3pt},
+    hot/.style={blk, fill=TcAccentLighter, draw=TcEmph},
+    ttl/.style={font=\bfseries\small, text=TcAccentDark, anchor=center}]
+
+  % ================= 左: 回転前 =================
+  \node[ttl] at (26mm, 10mm) {回転前};
+
+  \node[blk] (a1) at (26mm,   0mm) {.L2: 条件\\\ \ \ \ beqz a0, .L4};
+  \node[hot] (a2) at (26mm, -22mm) {\ \ \ \ \ 本体\\.L3: 更新\\\ \ \ \ j .L2};
+  \node[blk] (a3) at (26mm, -44mm) {.L4: 出口};
+
+  \draw[flow] (a1.south) -- node[gannot, right=1mm] {真} (a2.north);
+  \draw[flow back] (a2.east) -- ++(9mm,0) |- (a1.east);
+  \draw[flow] (a1.west) -- ++(-11mm,0) node[gannot, above=0.5mm, pos=0.5] {偽}
+        |- (a3.west);
+
+  \node[annot, anchor=north, align=center, text width=52mm] at (26mm, -52mm)
+      {1反復あたり\\条件 + \texttt{beqz} + 本体 + 更新 + \texttt{\textbf{j}}};
+
+  % ================= 矢印 =================
+  \node[font=\Large, text=TcEmph] at (72mm, -20mm) {$\Rightarrow$};
+
+  % ================= 右: 回転後 =================
+  \node[ttl] at (122mm, 10mm) {回転後};
+
+  \node[blk] (b0) at (122mm,   0mm) {\ \ \ \ \ j .L2};
+  \node[hot] (b1) at (122mm, -20mm) {.LR0: 本体\\.L3:\ \ 更新};
+  \node[blk] (b2) at (122mm, -40mm) {.L2:\ \ 条件\\\ \ \ \ \ \ bnez a0, .LR0};
+  \node[blk] (b3) at (122mm, -60mm) {.L4:\ \ 出口};
+
+  \draw[flow] (b0.west) -- ++(-12mm,0) |- (b2.west);
+  \draw[flow] (b1.south) -- (b2.north);
+  \draw[flow back] (b2.east) -- ++(11mm,0) |- (b1.east);
+  \draw[flow] (b2.south) -- node[gannot, right=1mm] {偽} (b3.north);
+
+  \node[annot, anchor=north, align=center, text width=52mm] at (122mm, -68mm)
+      {1反復あたり\\本体 + 更新 + 条件 + \texttt{bnez}};
+
+  % ================= まとめ =================
+  \node[annot, anchor=north west, align=left, text width=170mm] at (-4mm, -82mm)
+      {\textbf{ループ1回につき \texttt{j} が1つ減る。}
+       入口の \texttt{j .L2} は最初の1回しか実行されない。\\
+       命令の\textbf{個数}は変わらない(1つ増えて1つ減る)。
+       減るのは\textbf{実行される回数}のほうである ---
+       だから静的命令数では効果が見えず、動的命令数でしか測れない};
+
+\end{tikzpicture}
+\end{document}
