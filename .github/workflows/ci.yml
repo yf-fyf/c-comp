@@ -28,12 +28,15 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: web/app/package-lock.json
-      - name: Install web dependencies
-        run: npm ci
-        working-directory: web/app
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+      - name: Install OCaml dependencies
+        run: opam install -y dune menhir js_of_ocaml js_of_ocaml-ppx
+      - name: Build web application and presets
+        run: make web
       - name: Type-check web application
         run: npm run typecheck
         working-directory: web/app
       - name: Test web application
-        run: npm test
-        working-directory: web/app
+        run: make web-test
