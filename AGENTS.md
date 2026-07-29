@@ -95,6 +95,3 @@ make sim-test   # RV64 シミュレータを qemu と突き合わせる
 補助ウェブアプリの AST 表示は `workbook/scaffold/parse_viewer.py` の出力が正である。
 `scaffold/`（lexer・parser・parse_viewer）や `workbook/ocaml/support/` を変更したら
 `make web-test`（パーサの一致）と `make ocaml-test`（コード生成の回帰）の両方で確認する。
-
-`make ocaml-test` はコマ10・11 が失敗する。これは配列の扱いに関する既知の不具合で、
-詳細と現状は `workbook/ocaml/README.md` の「既知の不具合」にある。

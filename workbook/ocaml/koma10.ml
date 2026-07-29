@@ -10,7 +10,9 @@ let error ?(line = 0) msg =
   prerr_endline (Printf.sprintf "[line %d] %s" line msg);
   exit 1
 
-let locals : (string, int) Hashtbl.t = Hashtbl.create 64
+(* 宣言時の型を offset と一緒に覚える。配列は値として使われたとき
+   先頭要素のアドレスへ読み替えるので、型が分からないと判断できない。 *)
+let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
 (* スタックに積んでいる一時値の個数（1個 8 バイト）。
@@ -33,11 +35,11 @@ let align_to n align = ((n + align - 1) / align) * align
 
 let alloc_local name ty =
   stack_offset := !stack_offset + align_to (size_of_ty ty) 8;
-  Hashtbl.replace locals name (-(16 + !stack_offset))
+  Hashtbl.replace locals name (-(16 + !stack_offset), ty)
 
 let lookup_var name line =
   match Hashtbl.find_opt locals name with
-  | Some offset -> offset
+  | Some (offset, _) -> offset
   | None -> error ~line (Printf.sprintf "未定義の変数: '%s'" name)
 
 let rec collect_decls = function
@@ -89,27 +91,43 @@ let rec codegen_lval = function
       emit "  add a0, a1, a0"
   | e -> error ~line:(line_of_expr e) "lvalue でない式です"
 
-and type_of_expr = function
-  | Num _ -> TyInt
-  | Var { name; line; _ } -> (
-      match Hashtbl.find_opt locals name with
-      | Some _ -> TyInt (* all locals are 8-byte in koma10 *)
-      | None -> error ~line "type_of_expr: 未定義の変数です")
-  | Unary { op = Addr; operand; _ } -> TyPtr (type_of_expr operand)
+(* lvalue が指す先の型。codegen_lval が a0 に置いたアドレスを
+   何バイト読み書きすればよいかは、この型で決まる。 *)
+and type_of_lval = function
+  | Var { name; line; _ } -> lookup_local_ty name line
   | Unary { op = Deref; operand; _ } -> (
       match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
-  | Index { base = _; _ } -> TyInt
+  | Index { base; _ } -> (
+      match type_of_expr base with
+      | TyPtr e | TyArray { elem = e; _ } -> e
+      | _ -> TyInt)
+  | _ -> TyInt
+
+and type_of_expr = function
+  | Num _ -> TyInt
+  | Var { name; line; _ } -> lookup_local_ty name line
+  | Unary { op = Addr; operand; _ } -> TyPtr (type_of_lval operand)
+  | Unary { op = Deref; operand; _ } -> (
+      match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
+  | Index _ as e -> type_of_lval e
   | Binary { op = Add; lhs; rhs; _ } ->
       let lt = type_of_expr lhs in
       if is_ptr_ty lt then lt else type_of_expr rhs
   | _ -> TyInt
 
+and lookup_local_ty name line =
+  match Hashtbl.find_opt locals name with
+  | Some (_, ty) -> ty
+  | None -> error ~line (Printf.sprintf "未定義の変数: '%s'" name)
+
 and codegen = function
   | Num { value; _ } ->
       emit (Printf.sprintf "  li a0, %d" value)
   | Var _ as v ->
+      (* 配列名は load が空になるので、先頭要素のアドレスが a0 に残る。 *)
+      let ty = type_of_expr v in
       codegen_lval v;
-      load TyInt
+      load ty
   | Unary { op = Addr; operand; _ } ->
       codegen_lval operand
   | Unary { op = Deref; operand; _ } ->
@@ -120,14 +138,16 @@ and codegen = function
       codegen operand;
       emit "  neg a0, a0"
   | Index _ as e ->
+      let ty = type_of_expr e in
       codegen_lval e;
-      load TyInt
+      load ty
   | Assign { lhs; rhs; _ } ->
+      let ty = type_of_lval lhs in
       codegen_lval lhs;
       push_a0 ();
       codegen rhs;
       pop_into "a1";
-      store TyInt
+      store ty
   | Call { name; args; _ } ->
       let n = List.length args in
       List.iter (fun arg -> codegen arg; push_a0 ()) args;
@@ -271,7 +291,7 @@ let gen_func = function
           match p.name with
           | Some pname when i < 8 ->
               (match Hashtbl.find_opt locals pname with
-              | Some offset -> emit (Printf.sprintf "  sd a%d, %d(s0)" i offset)
+              | Some (offset, _) -> emit (Printf.sprintf "  sd a%d, %d(s0)" i offset)
               | None -> ())
           | _ -> ())
         params;
