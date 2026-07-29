@@ -25,6 +25,9 @@ web/app/public/core/
 web/app/public/examples.json
 web/app/public/sim-examples.json
 
+# サイトの生成物（tools/build_site.py）
+.site/
+
 # Pages release output
 .pages/
 

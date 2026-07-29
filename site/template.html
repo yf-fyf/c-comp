@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$if(title)$$pagetitle$ — $endif$$site-title$</title>
+$if(description)$<meta name="description" content="$description$">$endif$
+<link rel="stylesheet" href="$base$assets/style.css">
+$if(highlighting-css)$<style>
+$highlighting-css$
+</style>$endif$
+$if(math)$$math$$endif$
+$for(header-includes)$$header-includes$$endfor$
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="$base$">$site-title$</a>
+  <nav class="topnav" aria-label="セクション">$topnav$</nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    $if(breadcrumb)$<nav class="breadcrumb" aria-label="パンくず">$breadcrumb$</nav>$endif$
+    $if(title)$<h1 class="page-title">$title$</h1>$endif$
+    $if(toc)$
+    <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      $toc$
+    </nav>
+    $endif$
+
+$body$
+
+    $if(pager)$<nav class="pager" aria-label="前後のページ">$pager$</nav>$endif$
+    $if(source-url)$<p class="source"><a href="$source-url$">この資料の原稿を見る</a></p>$endif$
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>$site-title$ — <a href="$base$LICENSE">MIT License</a> ·
+     <a href="$base$THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="$repo-url$">GitHub</a></p>
+</footer>
+</body>
+</html>

@@ -120,6 +120,50 @@ make clean               # 生成 PDF の削除
 
 ---
 
+## 資料サイト
+
+`materials/` の原稿と `workbook/docs/` を pandoc で HTML にして GitHub Pages へ出す。
+構成は `site/nav.yaml` が単一の出典で、ページのタイトルは原稿の先頭 H1 から取る。
+
+| 依存 | 何に要るか |
+|------|-----------|
+| pandoc、PyYAML | サイトの生成（`make site` / `make serve`） |
+| LuaLaTeX、poppler-utils の `pdftocairo`、Graphviz | 図の生成（`make figures`） |
+
+**図の SVG はコミット対象**なので、図を触らないなら TeX は要らない。
+
+```bash
+make site                # .site/ に全ページを生成
+make serve               # 生成して http://127.0.0.1:8000/ で配信（Ctrl-C で終了）
+make serve PORT=9000
+make serve HOST=tailscale   # 別端末から Tailscale 経由で見る
+make serve HOST=0.0.0.0     # 全インターフェース
+python3 tools/build_site.py --check-links   # 内部リンク切れを検査
+python3 tools/build_site.py --only 03_arith # 1ページだけ作り直す
+```
+
+ページ間のリンクは `sessions/03_arithmetic_codegen/` のディレクトリ形式なので、
+`file://` で開いても辿れない。ローカルで見るときは必ず `make serve` を使う。
+
+既定は `127.0.0.1` だけに開く。別端末から見るときは `HOST` を指定する。
+`HOST=tailscale` は起動のたびに `tailscale ip -4` を引いて `tailscale0` のアドレスだけに
+バインドする。`HOST=0.0.0.0` は全インターフェースなので、**LAN や docker bridge からも見える**。
+認証は無いので、公開したい範囲に合わせて選ぶこと。
+
+`make serve` は原稿を保存すると作り直し、ブラウザを自動で再読み込みする。
+再ビルドの範囲は変更内容で変わる。
+
+| 変えたもの | 作り直す範囲 |
+|------------|--------------|
+| 原稿 `.md` 1本 | そのページだけ（先頭 H1 を変えた場合は全ページ） |
+| `site/style.css` | CSS のコピーのみ |
+| `site/template.html`・`site/boxes.lua`・`site/nav.yaml` | 全ページ |
+
+`web/app/dist/` があれば `/tools/` として一緒に配信するので、
+ヘッダの「補助ツール」からの導線もローカルで確認できる。無い場合は `make web` で作る。
+
+---
+
 ## テスト
 
 ```bash

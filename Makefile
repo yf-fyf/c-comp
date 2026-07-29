@@ -1,6 +1,8 @@
-.PHONY: handouts handout advanced-handouts figures tool-pdfs web web-test sim-test ocaml-test pages clean
+.PHONY: handouts handout advanced-handouts figures tool-pdfs site serve web web-test sim-test ocaml-test pages clean
 
 SESSION ?=
+HOST ?= 127.0.0.1
+PORT ?= 8000
 
 handouts: figures
 	python3 tools/build_session_pdfs.py
@@ -21,6 +23,17 @@ figures:
 
 tool-pdfs:
 	python3 tools/build_tool_pdfs.py
+
+# 資料サイト（依存: pandoc + PyYAML）。図は生成済みの SVG を使う
+site:
+	python3 tools/build_site.py
+
+# ローカル確認用。原稿を保存すると作り直してブラウザを再読み込みする
+# 例: make serve PORT=9000
+#     make serve HOST=tailscale   別端末から Tailscale 経由で見る
+#     make serve HOST=0.0.0.0     全インターフェース（LAN からも見える）
+serve:
+	python3 tools/build_site.py --serve --host $(HOST) --port $(PORT)
 
 # 補助ウェブアプリ（web/README.md 参照。依存: opam の js_of_ocaml 系 + node）
 web:
