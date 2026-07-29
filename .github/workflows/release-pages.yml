@@ -48,10 +48,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PAGES_DIR: ${{ runner.temp }}/pages
         run: |
-          remote_url="$(git remote get-url origin)"
           release_dir="$RUNNER_TEMP/pages-branch"
-          git clone "$remote_url" "$release_dir"
-          git -C "$release_dir" remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$release_dir"
           if git -C "$release_dir" ls-remote --exit-code --heads origin main; then
             git -C "$release_dir" fetch origin main
             git -C "$release_dir" checkout -B main origin/main
