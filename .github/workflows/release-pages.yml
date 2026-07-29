@@ -32,11 +32,14 @@ jobs:
       - name: Install build and test dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install -y pandoc python3-yaml
           opam install -y dune menhir js_of_ocaml js_of_ocaml-ppx
       - name: Validate the scaffold
         run: |
           python3 -m compileall -q tools workbook/scaffold
           python3 workbook/scaffold/parse_viewer.py workbook/sessions/02_interpreter/tests/add_mul.c >/dev/null
+      - name: Check the site for broken internal links
+        run: make site && make check-links
       - name: Build and test the web application
         run: opam exec -- make web && opam exec -- make web-test
       - name: Build the allowlisted Pages tree

@@ -275,10 +275,10 @@ Python 版と OCaml 版で既に同じ規約になっている。
 
 - GitHub Actions で OCaml コア（`dune build --profile release`）→ TypeScript（Vite）の順にビルドし、
   同リポジトリの GitHub Pages へデプロイする
-- [`index.md`](../index.md) の「補助ツール」表にリンクを1行足す。
-  `{{BASE_URL}}` の置換と同じタイミングで行う（手順は [`maintaining.md`](./maintaining.md) の HackMD 用ルートページの節）
-- handout PDF からのリンクは URL 直書きになる。
-  `materials/` 側にプレースホルダ方式を用意するか、`index.md` 経由に一本化するかは実装時に決める
+- 資料サイトと同じ Pages に `/tools/` として同居する。`tools/build_pages.py` が
+  `web/app/dist/` をそこへ置く
+- 資料側からの導線は、サイトの上部メニューの「補助ツール」とトップページのカードで張る。
+  資料が Web ページになったので、原稿から `../../tools/` の相対リンクでも参照できる
 
 ---
 

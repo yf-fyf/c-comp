@@ -157,7 +157,7 @@ AIの指摘をメンテナが確認する。
 簡易レビューでは次だけを行う。
 
 1. 意味と動作が変わらないことを差分で確認する。
-2. 必要なリンク確認またはPDF生成を行う。
+2. 必要なリンク確認またはサイト生成（`make site && make check-links`）を行う。
 3. 実施した確認と状態維持の判断を変更履歴へ1行記録する。
 
 ### 共有ファイルの変更
@@ -186,12 +186,12 @@ advanced教材では、5つの必須品質基準に加えて次を確認する�
 
 | パス | 役割 |
 |------|------|
-| `materials/sessions/` | 通常回handoutのMarkdown原稿 |
-| `materials/advanced/` | advanced handoutのMarkdown原稿 |
-| `materials/figures/` | 図のTikZソースと生成PDF（`ast/` は生成物） |
+| `materials/sessions/` | 通常回の資料のMarkdown原稿 |
+| `materials/advanced/` | advanced教材の資料のMarkdown原稿 |
+| `materials/figures/` | 図のTikZソースと生成SVG（`ast/` は生成物） |
 | `workbook/` | 学習者向け配布物。この範囲だけで演習を実施する |
-| `workbook/sessions/` | 通常回のREADME、starter、テスト、handout |
-| `workbook/advanced/` | advanced教材のREADME、starter、テスト、handout（1トピック=1ディレクトリ） |
+| `workbook/sessions/` | 通常回のREADME、starter、テスト |
+| `workbook/advanced/` | advanced教材のREADME、starter、テスト（1トピック=1ディレクトリ） |
 | `workbook/porting/` | C移植・セルフホストトラック |
 | `workbook/docs/language_spec.md` | Coreプロファイルの言語仕様 |
 | `workbook/docs/getting_started.md` | 学習者向け進め方ガイド |
@@ -210,8 +210,8 @@ Private リポジトリ `../c-comp-design/` だけで管理する。
 リポジトリルートから実行する。
 
 ```bash
-python3 tools/build_session_pdfs.py <session-id>
-python3 tools/build_advanced_pdfs.py <topic-id>
+make site          # 資料サイトを .site/ に生成
+make check-links   # 内部リンク切れを検査
 ```
 
 ### 主なテストコマンド
@@ -274,7 +274,7 @@ Recommendation:
 対象学習者の前提: <prerequisites>
 完了条件: <completion criteria>
 
-参照してよいのは、原則としてworkbook/内の学習者向け配布物だけです。Private リポジトリ `../c-comp-design/`、完成解答、教材別品質記録は参照しないでください。学習者がPDFを読む想定の場合、materials/のMarkdown原稿を学習者向け資料の代わりにしないでください。
+参照してよいのは、原則としてworkbook/内の学習者向け配布物だけです。Private リポジトリ `../c-comp-design/`、完成解答、教材別品質記録は参照しないでください。学習者が資料サイトを読む想定の場合、materials/のMarkdown原稿を学習者向け資料の代わりにしないでください。
 
 次を確認してください。
 - 開始地点が分かるか
@@ -302,7 +302,7 @@ Recommendation:
 
 materials/の原稿、workbook/の配布物、関連仕様、メンテナ用資料を照合してください。次を確認してください。
 - 中心的な技術説明、コード、期待結果が正しいか
-- 原稿、README、starter、テスト、handoutが矛盾していないか
+- 原稿、README、starter、テスト、生成されたページが矛盾していないか
 - READMEに記載されたビルド、テスト、確認手順が動くか
 - SKIPや未実装を成功として扱う経路がないか
 - 完成解答や不要な非公開情報がworkbook/へ混入していないか
@@ -324,7 +324,7 @@ materials/の原稿、workbook/の配布物、関連仕様、メンテナ用資�
 次だけを返してください。
 - Decision: Quick review または Standard review
 - Reason: 判断理由
-- Minimum checks: 必要な差分確認、リンク確認、PDF生成など
+- Minimum checks: 必要な差分確認、リンク確認、サイト生成など
 - Not verified: 確認できなかったこと
 ```
 

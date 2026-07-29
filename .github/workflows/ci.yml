@@ -19,6 +19,22 @@ jobs:
       - name: Parse a representative learner program
         run: python3 workbook/scaffold/parse_viewer.py workbook/sessions/02_interpreter/tests/add_mul.c >/dev/null
 
+  site:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pandoc and PyYAML
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc python3-yaml
+      - name: Show the pandoc version
+        # ディストリの pandoc は手元より古いことがある。差分の切り分け用に出す
+        run: pandoc --version | head -1
+      - name: Build the site
+        run: make site
+      - name: Check internal links
+        run: make check-links
+
   web-app:
     runs-on: ubuntu-24.04
     steps:

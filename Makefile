@@ -1,30 +1,10 @@
-.PHONY: handouts handout advanced-handouts figures tool-pdfs site serve web web-test sim-test ocaml-test pages clean
+.PHONY: site serve check-links figures web web-test sim-test ocaml-test pages clean
 
-SESSION ?=
 HOST ?= 127.0.0.1
 PORT ?= 8000
 
-handouts: figures
-	python3 tools/build_session_pdfs.py
-
-advanced-handouts: figures
-	python3 tools/build_advanced_pdfs.py
-
-handout: figures
-ifdef SESSION
-	python3 tools/build_session_pdfs.py $(SESSION)
-else
-	@echo "使い方: make handout SESSION=04_variables"
-	@exit 1
-endif
-
-figures:
-	python3 tools/build_figure_pdfs.py
-
-tool-pdfs:
-	python3 tools/build_tool_pdfs.py
-
-# 資料サイト（依存: pandoc + PyYAML）。図は生成済みの SVG を使う
+# 資料サイトを .site/ に生成する（依存: pandoc + PyYAML）。
+# 図はコミット済みの SVG を使うので TeX は要らない。
 site:
 	python3 tools/build_site.py
 
@@ -34,6 +14,14 @@ site:
 #     make serve HOST=0.0.0.0     全インターフェース（LAN からも見える）
 serve:
 	python3 tools/build_site.py --serve --host $(HOST) --port $(PORT)
+
+check-links:
+	python3 tools/build_site.py --check-links
+
+# 図を SVG で生成する（依存: lualatex + poppler-utils + Graphviz）。
+# 生成物はコミット対象なので、図を触るときだけ実行する。
+figures:
+	python3 tools/build_figures.py
 
 # 補助ウェブアプリ（web/README.md 参照。依存: opam の js_of_ocaml 系 + node）
 web:
@@ -65,9 +53,7 @@ sim-test:
 ocaml-test:
 	cd workbook/ocaml && dune build && python3 run_tests.py -q
 
+# 生成物のうちコミットしないものだけ消す。
+# 図の SVG はコミット対象なので触らない（作り直すなら make figures）。
 clean:
-	rm -f workbook/sessions/*/handout.pdf
-	rm -f workbook/advanced/*/*/handout.pdf
-	rm -f workbook/guides/*.pdf
-	rm -f materials/figures/*.pdf
-	rm -f materials/figures/ast/*.pdf
+	rm -rf .site .pages

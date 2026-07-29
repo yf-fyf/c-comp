@@ -8,7 +8,8 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 ## 運用ルール
 
 - **git commit はメンテナ（ユーザー）の明示的な許可を得てから行う。** 自動的に add / commit しない。
-- 生成物（`handout.pdf`・図 PDF）はコミット対象。原稿を変更したら対応する PDF を再生成する。
+- 図の生成物（`materials/figures/**/*.svg`）はコミット対象。TikZ ソースを変更したら `make figures` で作り直す。
+  資料の HTML は公開時に生成するのでコミットしない。
 - **学習者・学生の個人情報（授業ログ・進捗記録・氏名等）をこのリポジトリに置かない。** 授業ログは親リポジトリ側（`../logs/`）だけで管理する。
 - 完成解答・品質記録・隠しテストは、兄弟の Private リポジトリ `../c-comp-design/` だけで管理する。公開リポジトリへ置かず、学習者向けの `workbook/` に混入させない。
 
@@ -19,7 +20,7 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 | ファイル | 内容 |
 |----------|------|
 | `README.md` | プロジェクト入口 |
-| `index.md` | HackMD 用ルートページ（公開資料一覧）。手書きなので教材追加時に手で追随させる |
+| `site/nav.yaml` | 資料サイトの章立てとページの並び。教材を追加したらここに1行足す |
 | `design/curriculum.md` | カリキュラム設計書（方針・フェーズ構成・設計原則） |
 | `design/maintaining.md` | メンテナ用実装ガイド（ディレクトリ構成・ビルド手順） |
 | `design/quality_guide.md` | 教材品質管理（制作・AIレビュー・改善ワークフロー） |
@@ -42,13 +43,13 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 |------|------|
 | `workbook/README.md` | 学習者向け配布物の入口 |
 | `workbook/sessions/` | 通常回の配布教材。各回の `README.md` を入口とする |
-| `materials/sessions/` | 通常回 handout の Markdown 原稿 |
+| `materials/sessions/` | 通常回の資料の Markdown 原稿 |
 | `workbook/scaffold/` | 共通のフロントエンド、AST、テスト基盤 |
 | `workbook/final/` | 標準トラックの最終統合物とテスト |
 | `workbook/ocaml/` | OCaml 版参考実装（完成相当の言語横断ヒント） |
 | `workbook/advanced/README.md` | 発展教材の入口 |
-| `materials/advanced/` | 発展教材 handout の Markdown 原稿 |
-| `materials/figures/` | 図の TikZ ソースと生成 PDF（sessions・advanced 共用。`ast/` は生成物） |
+| `materials/advanced/` | 発展教材の資料の Markdown 原稿 |
+| `materials/figures/` | 図の TikZ ソースと生成 SVG（sessions・advanced 共用。`ast/` は生成物） |
 | `workbook/porting/` | C 移植・セルフホストトラック |
 | `workbook/docker/` | 推奨実行環境 |
 | `web/` | 補助ウェブアプリ（A1 AST ビジュアライザ / A2 RV64 シミュレータ）。企画は `design/webapps.md`、構成は `web/README.md` |
@@ -61,7 +62,7 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 - 言語仕様や到達範囲を判断する: `workbook/docs/language_spec.md`、`workbook/docs/getting_started.md`、`workbook/docs/code_example.md` を確認する。
 - 教材をレビューする: `design/quality_guide.md` と `../c-comp-design/teacher/quality/records/` の対象記録を確認する。
 
-`materials/` は handout の原稿、`workbook/` は学習者向け配布物として扱う。
+`materials/` は資料の原稿、`workbook/` は学習者向け配布物として扱う。
 学習者経路を確認するときは、原則として `workbook/` 内だけを参照する。
 
 ---
@@ -69,8 +70,13 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 ## ビルド・テスト
 
 ```bash
-# PDF ビルド（依存: pandoc + LuaLaTeX + Noto Sans CJK JP + Graphviz）
-make figures handouts advanced-handouts tool-pdfs
+# 資料サイト（依存: pandoc + PyYAML）
+make site         # .site/ に全ページを生成
+make serve        # 生成して配信。原稿を保存すると作り直して自動リロード
+make check-links  # 内部リンク切れを検査
+
+# 図の SVG（依存: lualatex + poppler-utils + Graphviz）。図を触ったときだけ
+make figures
 
 # コンパイラのテスト（workbook/ から）
 cd workbook && python3 scaffold/test_runner.py sessions/03_arithmetic_codegen

@@ -9,7 +9,7 @@ C 言語サブセットのコンパイラを、**動く状態を保ちながら*
 
 ## 特徴
 
-- **1コマ1機能**: Ghuloum (2006) のインクリメンタル方式。各コマは handout を読んで実装し、その日のうちに動かして確認する粒度に分割してある
+- **1コマ1機能**: Ghuloum (2006) のインクリメンタル方式。各コマは資料を読んで実装し、その日のうちに動かして確認する粒度に分割してある
 - **常に動く**: どの時点でも実行可能なコンパイラを維持する。生成アセンブリは毎回 qemu で実行して確かめる
 - **Lexer/Parser は最初は黒箱**: 提供スキャフォールドを使い、コード生成から書き始める。フロントエンドの自作は発展課題として用意してある
 - **発展教材**: フロントエンド自作・最適化（CFG・レジスタ割り当て・生存解析）・ランタイム自作（printf / malloc）・型検査など 25 テーマ
@@ -38,30 +38,27 @@ bash workbook/docker/rv64/run.sh python3 sessions/01_environment/check.py
 | パス | 内容 | 読む人 |
 |------|------|--------|
 | [`workbook/`](./workbook/README.md) | 演習の配布物（starter・テスト・実行環境・参考実装） | 学習者 |
-| [`materials/`](./materials/) | handout の Markdown 原稿と図の TikZ ソース | 教材を書く人 |
+| [`materials/`](./materials/) | 資料の Markdown 原稿と図の TikZ ソース | 教材を書く人 |
 | [`design/`](./design/curriculum.md) | カリキュラム設計書・保守手順・品質管理ガイド | 教える側・改変する人 |
-| [`latex/`](./latex/) / [`tools/`](./tools/) | handout PDF のビルドシステム | 教材を書く人 |
-| [`index.md`](./index.md) | 公開資料一覧（HackMD に貼るルートページ） | 教材を配る人 |
+| [`site/`](./site/) / [`tools/`](./tools/) | 資料サイトのビルドシステム | 教材を書く人 |
 | [`AGENTS.md`](./AGENTS.md) | AI コーディングエージェント向けガイド | — |
 
-## PDF を自前でビルドする場合
-
-handout PDF は生成済みのものを同梱しているため、通常はビルド不要。
-原稿を改変する場合は次の依存が必要になる。
-
-- pandoc / LuaLaTeX（TeX Live）
-- フォント: Noto Sans CJK JP、Inconsolata
-- Graphviz（AST 図の生成）
+## 資料サイトを自前でビルドする場合
 
 ```bash
-make figures handouts advanced-handouts tool-pdfs
+make site      # .site/ に生成
+make serve     # 生成して http://127.0.0.1:8000/ で配信（保存すると自動リロード）
 ```
+
+必要なのは pandoc と PyYAML だけ。図の SVG はコミット済みのものを使う。
+図の TikZ ソースを書き換えるときだけ、LuaLaTeX（Noto Sans CJK JP / Inconsolata）、
+poppler-utils、Graphviz を用意して `make figures` を実行する。
 
 ## 公開とリリース
 
 開発は既定ブランチの `dev` で行う。GitHub Pages 用の `main` は手動リリースで
-生成する公開専用ブランチであり、直接編集しない。Pages には PDF、ビルド済み補助ツール、
-`workbook/` 全体の ZIP だけを置く。
+生成する公開専用ブランチであり、直接編集しない。Pages には資料サイト、
+ビルド済み補助ツール、`workbook/` 全体の ZIP を置く。
 
 GitHub Actions の **Release Pages** を `dev` から手動実行し、`v0.1.0` のような
 リリース番号を指定する。ローカルで公開物を確認する場合は次を実行する。

@@ -10,23 +10,27 @@
 ```
 .
 ├── README.md              # プロジェクト入口
-├── index.md               # HackMD 用ルートページ（公開資料一覧。手書き）
 ├── AGENTS.md              # AI エージェント向けガイド
 ├── LICENSE
-├── Makefile               # PDF ビルド
+├── Makefile               # サイト・図・公開物のビルド
 ├── design/                # 設計・運用文書（教える側・改変する側向け）
 │   ├── curriculum.md      # カリキュラム設計書
 │   ├── maintaining.md     # このファイル
 │   ├── quality_guide.md   # 教材品質管理・AIレビュー手順
 │   └── webapps.md         # 補助ウェブアプリの企画書（企画段階）
-├── materials/             # handout の Markdown 原稿
+├── materials/             # 資料の Markdown 原稿
 │   ├── sessions/          # 通常回（コマ1〜16）の原稿 NN_xxx.md
 │   ├── advanced/          # 発展教材の原稿 <回ID>_xxx.md
 │   ├── tools/             # 補助ツールガイドの原稿
-│   └── figures/           # 図の TikZ ソースと生成 PDF（sessions・advanced 共用）
+│   └── figures/           # 図の TikZ ソースと生成 SVG（sessions・advanced 共用）
 │       └── ast/           # AST 図（parse_viewer + graphviz で生成）
-├── latex/                 # Pandoc + LuaLaTeX テンプレート
-├── tools/                 # PDF ビルドスクリプト・ウェブアプリの生成スクリプト
+├── site/                  # 資料サイトの構成・テンプレート・スタイル
+│   ├── nav.yaml           # サイト構成の単一の出典
+│   ├── template.html      # pandoc の HTML テンプレート
+│   ├── boxes.lua          # ::: の変換・図と .md リンクの書き換え
+│   └── style.css          # 配色は latex/figure-preamble.tex と揃える
+├── latex/                 # 図の共通プリアンブル（figure-preamble.tex のみ）
+├── tools/                 # サイト・図・公開物・ウェブアプリの生成スクリプト
 ├── web/                   # 補助ウェブアプリ（企画: design/webapps.md、構成: web/README.md）
 │   ├── core/              # OCaml 言語処理コア（workbook/ocaml/support を流用）
 │   ├── examples/asm/      # RV64 シミュレータの手書きサンプル
@@ -43,7 +47,7 @@
     │   ├── testing.md         # test_runner・テスト形式（引く）
     │   └── code_example.md    # 到達目標コード例（コマ1〜16、引く）
     ├── scaffold/          # 提供スキャフォールド（Lexer/Parser/AST/テストランナー）
-    ├── sessions/          # 通常回 NN_xxx/（資料・starter・テスト）
+    ├── sessions/          # 通常回 NN_xxx/（starter・テスト。資料はサイト）
     ├── final/             # コマ16で作る最終統合版
     ├── ocaml/             # OCaml 版参考実装（コマ2〜16、完成相当）
     ├── advanced/          # 発展教材。1トピック=1ディレクトリのフラット構成
@@ -52,7 +56,7 @@
     │   ├── count_insns.py # B 系列の共有ツール
     │   └── <回ID>_xxx/    # 例: O3_isel/、S1_shortcircuit/
     ├── porting/           # C 移植・セルフホスト（C 実装の規約と移植対応表もここ）
-    ├── guides/            # 補助ツールガイド（PDF）
+    ├── guides/            # 補助ツールガイドへの導線
     └── docker/rv64/       # 推奨実行環境
 ```
 
@@ -63,7 +67,7 @@
 R=ランタイム、S=意味論、L=言語機能、Q=品質）。
 
 原稿 `materials/advanced/O3_isel.md` と配布物 `workbook/advanced/O3_isel/` は
-**一対一で対応する**。`tools/build_advanced_pdfs.py` はこの対応をそのまま使うため、
+**一対一で対応する**。`site/nav.yaml` はこの対応をそのまま使うため、
 新しいトピックを追加するときも写像表の更新は要らない。
 
 トップレベルは役割で6分割している。
@@ -71,9 +75,9 @@ R=ランタイム、S=意味論、L=言語機能、Q=品質）。
 | ディレクトリ | 役割 | 読む人 |
 |--------------|------|--------|
 | `design/` | 設計思想・保守手順・品質管理 | 教える側・教材を改変する人 |
-| `materials/` | handout の原稿（PDF の元） | 教材を書く人 |
+| `materials/` | 資料の原稿（サイトの元） | 教材を書く人 |
 | `workbook/` | 演習の配布物 | 学習者 |
-| `latex/` + `tools/` | PDF ビルドシステム | 教材を書く人 |
+| `site/` + `latex/` + `tools/` | サイトと図のビルドシステム | 教材を書く人 |
 | `web/` | 補助ウェブアプリ（ブラウザで使う学習支援） | 学習者・教える側 |
 | `../c-comp-design/teacher/` | Private リポジトリ内の完成解答・品質記録・隠しテスト | メンテナ |
 
@@ -91,32 +95,12 @@ R=ランタイム、S=意味論、L=言語機能、Q=品質）。
 | RV64 の ABI・アラインメント規則 | `workbook/docs/rv64_reference.md` |
 | Python→C 移植対応表・C 実装の規約 | `workbook/porting/README.md` |
 | 発展課題の一覧と前提 | `workbook/advanced/README.md` |
+| サイトの章立てとページの並び | `site/nav.yaml` |
 
-`index.md`（HackMD 用ルートページ）は単体で読めることを優先するため、
-この原則の例外として一覧を再掲してよい。
-
-`materials/` は handout の原稿、`workbook/` は学習者向け配布物として扱う。
+`materials/` は資料の原稿、`workbook/` は学習者向け配布物として扱う。
 学習者経路を確認するときは、原則として `workbook/` 内だけを参照する。
 
 通常回は `workbook/sessions/NN_xxx/mycc.py` を編集し、コマ16で `workbook/final/mycc.py` に統合する構成である。
-
----
-
-## PDF ビルド
-
-リポジトリルートから実行する。依存: pandoc、LuaLaTeX（Noto Sans CJK JP / Inconsolata フォント）、Graphviz。
-
-```bash
-make figures             # 図 PDF（materials/figures/）
-make handouts            # 通常回 handout（workbook/sessions/NN_xxx/handout.pdf）
-make handout SESSION=04_variables   # 個別生成
-make advanced-handouts   # 発展教材 handout
-make tool-pdfs           # 補助ツールガイド PDF
-make clean               # 生成 PDF の削除
-```
-
-生成物（handout.pdf・図 PDF）はコミット対象とする。
-ビルド環境がなくても教材を利用できるようにするためである。
 
 ---
 
@@ -138,9 +122,16 @@ make serve               # 生成して http://127.0.0.1:8000/ で配信（Ctrl-
 make serve PORT=9000
 make serve HOST=tailscale   # 別端末から Tailscale 経由で見る
 make serve HOST=0.0.0.0     # 全インターフェース
-python3 tools/build_site.py --check-links   # 内部リンク切れを検査
+make check-links         # 内部リンク切れを検査
+make figures             # 図の SVG を作り直す（図を触ったときだけ）
+make clean               # .site/ と .pages/ を消す（コミット済みの SVG は消さない）
 python3 tools/build_site.py --only 03_arith # 1ページだけ作り直す
 ```
+
+CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make check-links` を通す。
+**CI が入れる pandoc はディストリ版なので手元より古いことがある。**
+テンプレートやフィルタで新しい機能を使ったときは、CI の `pandoc --version` の出力と
+突き合わせて切り分ける。
 
 ページ間のリンクは `sessions/03_arithmetic_codegen/` のディレクトリ形式なので、
 `file://` で開いても辿れない。ローカルで見るときは必ず `make serve` を使う。
@@ -209,12 +200,12 @@ python3 golden.py   # README で指定されている場合
 
 **教材はこの形を避けている**ので、現状の教材利用では露出しない。
 `sessions/10_types_arrays/tests/ptr_arith.c` が唯一 `*(p + i)` を含むが `p = a;` を経由し、
-handout（`materials/sessions/10_types_arrays.md` の「配列変数の扱い」）も
+資料（`materials/sessions/10_types_arrays.md` の「配列変数の扱い」）も
 `p = a;` の形だけを例示している。
 
 直す場合は、`+` / `-` の型判定で配列型をポインタ型へ読み替える（`TyArray {elem}` → `TyPtr elem`）。
 影響は OCaml 版 `koma10.ml`〜`koma16.ml` の7ファイルと Python 版参考実装
-`sessions/16_integrate_mycc/mycc.py`、および handout の記述に及ぶ。
+`sessions/16_integrate_mycc/mycc.py`、および資料の記述に及ぶ。
 学習者が書く `codegen_Add` の仕様が変わるため、
 [`quality_guide.md`](./quality_guide.md) の標準ワークフローの対象になる。
 
@@ -223,52 +214,24 @@ handout（`materials/sessions/10_types_arrays.md` の「配列変数の扱い」
 ## 教材追加の手順
 
 1. `materials/sessions/`（または `materials/advanced/`）に Markdown 原稿を書く
-2. 図が必要なら `materials/figures/` に TikZ ソースを追加する（`latex/figure-preamble.tex` を `\input` する）
-3. `workbook/` 側に README・starter・テストを追加する
-4. `make handout SESSION=...` で PDF を生成し、`workbook/` 側に配置されることを確認する
-5. **`index.md` の該当する表に1行足す**（HackMD 用ルートページは手書きなので自動追従しない）
-6. 発展教材なら `workbook/advanced/README.md` の全トピック表にも1行足す
+2. 図が必要なら `materials/figures/` に TikZ ソースを追加し（`latex/figure-preamble.tex` を
+   `\input` する）、`make figures` で SVG を生成してコミットする
+3. `workbook/` 側に README・starter・テストを追加する。README には資料ページへのリンクを入れる
+4. **`site/nav.yaml` の該当セクションに原稿のパスを1行足す**
+5. 発展教材なら `workbook/advanced/README.md` の全トピック表にも1行足す
+6. `make site && make check-links` で生成とリンクを確認する
 7. [`quality_guide.md`](./quality_guide.md) に従いレビューする
 
-教材を改名・削除したときも 5・6 を忘れないこと。掲載漏れは次で検出できる。
-
-```bash
-# disk 上の PDF がすべて index.md に載っているか
-python3 - <<'EOF'
-import pathlib
-t = pathlib.Path("index.md").read_text()
-pdfs = sorted(str(p) for p in pathlib.Path("workbook").rglob("*.pdf"))
-print("未掲載:", [p for p in pdfs if p not in t] or "なし")
-EOF
-```
-
----
-
-## HackMD 用ルートページ（`index.md`）
-
-`index.md` は公開資料の一覧ページで、[HackMD](https://hackmd.io/) に貼って使うことを想定している。
-PDF はリポジトリ側に置いたまま、HackMD 側からは絶対 URL で参照する。
-
-`index.md` 内のリンクは `{{BASE_URL}}` プレースホルダになっている。**公開時に置換が必要**である。
-
-```bash
-# 例: GitHub の blob URL に置換する
-sed -i 's|{{BASE_URL}}|https://github.com/<user>/<repo>/blob/main|g' index.md
-```
-
-blob 形式のベース URL にすると PDF と Markdown の両方が同じベースで開ける。
-GitHub Pages 形式にすると `.md` が HTML にならないので、仕様・参考文書へのリンクが素のテキストで表示される。
-
-置換したら、冒頭の `:::warning`（リンクが未設定であることの注意書き）を削除してから HackMD に貼る。
-
-参照先がすべて実在するかは次で確認できる。
+教材を改名・削除したときも 4・5 を忘れないこと。
+`nav.yaml` に載せ忘れた原稿は次で検出できる。
 
 ```bash
 python3 - <<'EOF'
-import re, pathlib
-t = pathlib.Path("index.md").read_text()
-refs = re.findall(r'\{\{BASE_URL\}\}/([^\s)]+)', t)
-print("実在しない:", [u for u in refs if not pathlib.Path(u).exists()] or "なし")
+import pathlib, yaml
+nav = yaml.safe_load(open("site/nav.yaml", encoding="utf-8"))
+listed = {p for s in nav["sections"] for p in s["pages"]}
+found = {str(p) for p in pathlib.Path("materials").glob("*/*.md")}
+print("未掲載:", sorted(found - listed) or "なし")
 EOF
 ```
 
@@ -285,11 +248,12 @@ GitHub Pages は `main` ブランチのルートを配信する。`main` は開�
 手動リリースで生成した公開物だけを置くブランチである。公開物は次の許可リストに限る。
 
 ```text
-index.html
-handouts/                 # workbook/ 内の handout.pdf と guides の PDF
+index.html                # サイトのトップ
+assets/                   # スタイルシート
+figures/                  # 図の SVG
+sessions/ advanced/ porting/ docs/ guides/   # 資料のページ
 tools/                    # ビルド済みの補助ウェブアプリ
 downloads/*.zip           # workbook/ 全体の配布アーカイブ
-docs/debugging.md
 LICENSE
 THIRD_PARTY_NOTICES.md
 .nojekyll
@@ -299,9 +263,8 @@ THIRD_PARTY_NOTICES.md
 
 1. 学習者・学生の個人情報が含まれていないことを確認する。
    個人情報はそもそもこのリポジトリに置かない運用とし、授業ログは親リポジトリ側（`../logs/`）だけで管理する。
-2. `python3 tools/build_pages.py <version>` で `.pages/` を生成し、PDF、ZIP、補助ツールを確認する。
+2. `make pages VERSION=<version>` で `.pages/` を生成し、資料のページ、ZIP、補助ツールを確認する。
 3. `main` を直接編集せず、`dev` の手動リリース workflow だけで更新する。
-4. HackMD に掲載する場合だけ、`index.md` の `{{BASE_URL}}` を置換する（前節参照）。
 
 ### GitHub の初期設定
 
