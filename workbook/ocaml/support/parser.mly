@@ -111,6 +111,13 @@ top_opt:
 | TYPEDEF non_struct_ctype name_or_type SEMI {
     Typedef_env.register_name $3 $2; None
   }
+(* 宣言子を伴わない struct 定義（`struct S { ... };` と前方宣言 `struct S;`）。
+   型だけ登録して AST には出さない。scaffold/parser.py も同じ扱いにしてある。 *)
+| KW_STRUCT name_or_type struct_def_opt SEMI {
+    let tag = $2 in
+    ignore (build_struct_type (Some tag) (List.rev $3) ("struct " ^ tag));
+    None
+  }
 | ctype name_or_type LPAREN param_clause RPAREN SEMI {
     Some (FuncProto { name = $2; ty = $1; params = $4; line = ln $startpos($2); span = span $startpos $endpos })
   }

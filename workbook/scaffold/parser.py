@@ -128,6 +128,14 @@ class Parser:
                 continue
 
             ty_str = self.parse_type()
+
+            # 宣言子を伴わない struct 定義（`struct S { ... };` と前方宣言 `struct S;`）。
+            # AST には出さない。フィールドの配置はコード生成側が原稿から読むので、
+            # ここでは読み捨てるだけでよい。
+            if self.cur.sval == ';' and ty_str.startswith('struct'):
+                self.pos += 1
+                continue
+
             name = self.expect_ident()
 
             if self.cur.sval == '(':

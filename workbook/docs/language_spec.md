@@ -38,10 +38,10 @@ typedef      型の別名
 優先順位が高い順に示す。
 
 ```
+後置:   p[i]  p->field  p.field
 単項:   - （負号）  ! （論理否定）  ~ （ビット否定）
         * （間接参照）  & （アドレス取得）
         sizeof(型)  sizeof 式
-ポインタ: p[i]  p->field  p.field
 乗除:   *  /  %
 加減:   +  -   （ポインタ ± int を含む）
 シフト: <<  >>
@@ -241,7 +241,11 @@ typedef_decl ::= 'typedef' type IDENT
                | 'typedef' 'struct' [ IDENT ] '{' { field_decl } '}' IDENT
 
 struct_def   ::= 'struct' IDENT '{' { field_decl } '}'
+               | 'struct' IDENT                        /* 前方宣言 */
 ```
+
+`struct_def ';'` の形（`struct S { int v; };`）で定義してから `struct S s;` と使ってもよい。
+教材の例は `typedef struct { ... } Name;` で揃えているが、どちらの書き方も通る。
 
 ### 宣言子
 
