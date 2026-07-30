@@ -1,32 +1,32 @@
 #include "lib.h"
 
-typedef struct Node {
+struct Node {
     int val;
     struct Node *next;
-} Node;
+};
 
-int list_sum(Node *head) {
+int list_sum(struct Node *head) {
     int sum;
     sum = 0;
-    while (head != 0) {
+    while (head != NULL) {
         sum = sum + head->val;
         head = head->next;
     }
     return sum;
 }
 
-Node *new_node(int v) {
-    Node *n;
-    n = malloc(sizeof(Node));
+struct Node *new_node(int v) {
+    struct Node *n;
+    n = malloc(sizeof(struct Node));
     n->val = v;
-    n->next = 0;
+    n->next = NULL;
     return n;
 }
 
 int main() {
-    Node *a;
-    Node *b;
-    Node *c;
+    struct Node *a;
+    struct Node *b;
+    struct Node *c;
     a = new_node(10);
     b = new_node(20);
     c = new_node(30);

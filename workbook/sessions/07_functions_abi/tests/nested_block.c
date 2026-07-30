@@ -1,8 +1,8 @@
 int main() {
     int x;
+    int y;
     x = 3;
     if (x == 3) {
-        int y;
         y = 4;
         return x + y;
     }

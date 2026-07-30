@@ -1,4 +1,4 @@
-/* f15: 前処理 — #define 定数マクロをループ条件・更新に使用 */
+// f15: 前処理 — #define 定数マクロをループ条件・更新に使用
 #define LIMIT 10
 #define STEP 3
 

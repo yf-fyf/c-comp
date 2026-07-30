@@ -1,4 +1,4 @@
-/* f14: 文字列 — printf で標準出力に書く */
+// f14: 文字列 — printf で標準出力に書く
 #include "lib.h"
 
 int main() {

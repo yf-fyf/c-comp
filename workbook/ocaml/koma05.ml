@@ -70,11 +70,20 @@ let rec codegen = function
       | Lt -> emit "  slt a0, a1, a0"
       | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
       | _ -> error "コマ5で未対応の二項演算です")
+  | Cond { cond; then_; else_; _ } ->
+      (* 三項演算子: if/else と同じ分岐で、選ばれた腕の値を a0 に残す *)
+      let label_else = new_label () in
+      let label_end = new_label () in
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_else);
+      codegen then_;
+      emit (Printf.sprintf "  j %s" label_end);
+      emit (label_else ^ ":");
+      codegen else_;
+      emit (label_end ^ ":")
   | e -> error ~line:(line_of_expr e) "コマ5で未対応の式です"
 
 let rec gen_stmt = function
-  | Decl { name; init_expr = Some e; line; _ } ->
-      codegen (Assign { lhs = Var { name; line; span = None }; rhs = e; line; span = None })
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
   | ExprStmt _ -> ()

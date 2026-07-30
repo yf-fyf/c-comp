@@ -1,8 +1,11 @@
 (*
-    コマ 10: 型・ポインタ演算・配列 — TyPtr, TyArray, Index, ポインタ加減算
+    コマ 10: 型・ポインタ演算 — TyPtr, Index, ポインタ加減算のスケーリング
+    （連続領域は malloc で確保し、sizeof(型名) でサイズを求める）
 *)
 
 open Ast_def
+
+let size_of_ty = Struct_env.size_of_ty
 
 let emit line = print_endline line
 
@@ -10,8 +13,8 @@ let error ?(line = 0) msg =
   prerr_endline (Printf.sprintf "[line %d] %s" line msg);
   exit 1
 
-(* 宣言時の型を offset と一緒に覚える。配列は値として使われたとき
-   先頭要素のアドレスへ読み替えるので、型が分からないと判断できない。 *)
+(* 宣言時の型を offset と一緒に覚える。ロード・ストアの幅と
+   ポインタ演算のスケーリングは、この型で決まる。 *)
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
@@ -50,13 +53,10 @@ let rec collect_decls = function
   | _ -> ()
 
 let load ty =
-  match ty with
-  | TyArray _ -> ()
-  | _ -> (
-      match size_of_ty ty with
-      | 1 -> emit "  lb a0, 0(a0)"
-      | 4 -> emit "  lw a0, 0(a0)"
-      | _ -> emit "  ld a0, 0(a0)")
+  match size_of_ty ty with
+  | 1 -> emit "  lb a0, 0(a0)"
+  | 4 -> emit "  lw a0, 0(a0)"
+  | _ -> emit "  ld a0, 0(a0)"
 
 let store ty =
   match size_of_ty ty with
@@ -80,7 +80,7 @@ let rec codegen_lval = function
       codegen operand
   | Index { base; index; _ } ->
       let elem_ty = match type_of_expr base with
-        | TyPtr e | TyArray { elem = e; _ } -> e
+        | TyPtr e -> e
         | _ -> TyInt (* fallback *)
       in
       codegen base;
@@ -99,7 +99,7 @@ and type_of_lval = function
       match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
   | Index { base; _ } -> (
       match type_of_expr base with
-      | TyPtr e | TyArray { elem = e; _ } -> e
+      | TyPtr e -> e
       | _ -> TyInt)
   | _ -> TyInt
 
@@ -109,6 +109,9 @@ and type_of_expr = function
   | Unary { op = Addr; operand; _ } -> TyPtr (type_of_lval operand)
   | Unary { op = Deref; operand; _ } -> (
       match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
+  | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
+      type_of_lval operand
+  | Cond { then_; _ } -> type_of_expr then_
   | Index _ as e -> type_of_lval e
   | Binary { op = Add; lhs; rhs; _ } ->
       let lt = type_of_expr lhs in
@@ -124,10 +127,12 @@ and codegen = function
   | Num { value; _ } ->
       emit (Printf.sprintf "  li a0, %d" value)
   | Var _ as v ->
-      (* 配列名は load が空になるので、先頭要素のアドレスが a0 に残る。 *)
       let ty = type_of_expr v in
       codegen_lval v;
       load ty
+  | SizeofType { ty; _ } ->
+      (* sizeof は翻訳時定数 *)
+      emit (Printf.sprintf "  li a0, %d" (size_of_ty ty))
   | Unary { op = Addr; operand; _ } ->
       codegen_lval operand
   | Unary { op = Deref; operand; _ } ->
@@ -137,6 +142,35 @@ and codegen = function
   | Unary { op = Neg; operand; _ } ->
       codegen operand;
       emit "  neg a0, a0"
+  | Unary { op = PreInc; operand; _ } ->
+      (* 前置 ++: ポインタなら指し先サイズ、int/char なら 1 を足して書き戻す *)
+      let ty = type_of_lval operand in
+      let delta = match ty with TyPtr e -> size_of_ty e | _ -> 1 in
+      codegen_lval operand;
+      push_a0 ();
+      load ty;
+      emit (Printf.sprintf "  addi a0, a0, %d" delta);
+      pop_into "a1";
+      store ty
+  | Unary { op = PreDec; operand; _ } ->
+      let ty = type_of_lval operand in
+      let delta = match ty with TyPtr e -> size_of_ty e | _ -> 1 in
+      codegen_lval operand;
+      push_a0 ();
+      load ty;
+      emit (Printf.sprintf "  addi a0, a0, %d" (-delta));
+      pop_into "a1";
+      store ty
+  | Cond { cond; then_; else_; _ } ->
+      let label_else = new_label () in
+      let label_end = new_label () in
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_else);
+      codegen then_;
+      emit (Printf.sprintf "  j %s" label_end);
+      emit (label_else ^ ":");
+      codegen else_;
+      emit (label_end ^ ":")
   | Index _ as e ->
       let ty = type_of_expr e in
       codegen_lval e;
@@ -215,8 +249,6 @@ and codegen = function
 
 (* gen_stmt — unchanged from koma09 *)
 let rec gen_stmt = function
-  | Decl { name; init_expr = Some e; line; _ } ->
-      codegen (Assign { lhs = Var { name; line; span = None }; rhs = e; line; span = None })
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
   | ExprStmt _ -> ()

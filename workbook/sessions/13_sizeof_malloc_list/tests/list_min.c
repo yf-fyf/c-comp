@@ -1,14 +1,14 @@
 #include "lib.h"
 
-typedef struct Node {
+struct Node {
     int val;
     struct Node *next;
-} Node;
+};
 
 int main() {
-    Node *n;
-    n = malloc(sizeof(Node));
+    struct Node *n;
+    n = malloc(sizeof(struct Node));
     n->val = 10;
-    n->next = 0;
+    n->next = NULL;
     return n->val;
 }

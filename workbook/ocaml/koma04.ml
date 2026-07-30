@@ -63,8 +63,6 @@ let rec codegen = function
   | e -> error ~line:(line_of_expr e) "コマ4で未対応の式です"
 
 let gen_stmt = function
-  | Decl { name; init_expr = Some e; line; _ } ->
-      codegen (Assign { lhs = Var { name; line; span = None }; rhs = e; line; span = None })
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
   | ExprStmt _ -> ()

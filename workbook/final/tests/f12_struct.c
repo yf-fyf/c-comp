@@ -1,15 +1,15 @@
-/* f12: 構造体 — ドットとアロー両方を使用 */
-typedef struct {
+// f12: 構造体 — ドットとアロー両方を使用
+struct Entry {
     int val;
     int mul;
-} Entry;
+};
 
-int compute(Entry *e) {
+int compute(struct Entry *e) {
     return e->val * e->mul;
 }
 
 int main() {
-    Entry e;
+    struct Entry e;
     e.val = 5;
     e.mul = 7;
     return compute(&e);

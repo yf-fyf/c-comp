@@ -1,4 +1,4 @@
-/* f10: ポインタ — swap 関数でポインタ渡し */
+// f10: ポインタ — swap 関数でポインタ渡し
 void swap(int *a, int *b) {
     int t;
     t = *a;

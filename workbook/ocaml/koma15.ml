@@ -4,11 +4,13 @@
 
 open Ast_def
 
+let size_of_ty = Struct_env.size_of_ty
+
 (* ── 変数情報 ── *)
 
 type var_info =
   | Local of { offset : int; ty : ty }
-  | Global of { ty : ty; init : int option }
+  | Global of { ty : ty }
 
 (* ── グローバル mutable 状態 ── *)
 
@@ -42,96 +44,15 @@ let push st x = st := x :: !st
 let pop st = match !st with [] -> () | _ :: xs -> st := xs
 let peek st = match !st with x :: _ -> x | [] -> error "空のラベルスタックです"
 
-(* ── 構造体レイアウトの解決（パーサーが生成した StructDef から） ── *)
-
-(* 最小限の先読み: typedef 名だけを事前登録する。
-   LALR(1) 先読み対策 — パーサーが typedef 文を還元する前に
-   次のトークンが読まれるため、事前に名前を登録しておく。 *)
-let pre_register_typedef_names source =
-  (* typedef を見つけたら、{ } の入れ子を数えて正しい末尾 ; を探し、
-     その直前の単語を型名として登録する *)
-  let typedef_re = Str.regexp "typedef[ \t\n\r]" in
-  let pos = ref 0 in
-  try
-    while true do
-      ignore (Str.search_forward typedef_re source !pos);
-      let start = Str.match_end () in
-      (* { } の深さを数えながら ; を探す *)
-      let brace_depth = ref 0 in
-      let semi_pos = ref start in
-      let found = ref false in
-      let i = ref start in
-      while !i < String.length source && not !found do
-        let c = source.[!i] in
-        (match c with
-        | '{' -> incr brace_depth
-        | '}' -> decr brace_depth
-        | ';' when !brace_depth = 0 -> semi_pos := !i; found := true
-        | _ -> ());
-        incr i
-      done;
-      if not !found then raise Not_found;
-      let text = String.sub source start (!semi_pos - start) in
-      (* 末尾から空白で区切って最後の単語を抽出 *)
-      let rec scan_name i =
-        if i < 0 then ("", 0)
-        else
-          let c = text.[i] in
-          if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c = '_' then
-            scan_name (i - 1)
-          else (String.sub text (i + 1) (String.length text - i - 1), i)
-      in
-      let name, _ = scan_name (String.length text - 1) in
-      let name = String.trim name in
-      if String.length name > 0 then
-        Typedef_env.register_name name (TyUnknown name);
-      pos := !semi_pos + 1
-    done
-  with Not_found -> ()
-
-let resolve_struct_types prog =
-  List.iter (function
-    | StructDef { tag; fields; name; _ } ->
-        let offset, fields_with_offset =
-          List.fold_left (fun (offset, acc) (fname, fty) ->
-              let align = min (size_of_ty fty) 8 in
-              let offset = align_to offset align in
-              let next = offset + size_of_ty fty in
-              (next, ((fname, { offset; ty = fty }) :: acc)))
-            (0, []) fields
-        in
-        let total_size = align_to offset 8 in
-        let fields_with_offset = List.rev fields_with_offset in
-        let struct_ty = TyStruct { name = tag; fields = fields_with_offset; size = total_size } in
-        Typedef_env.set name struct_ty;
-        Option.iter (fun t -> Typedef_env.set ("struct " ^ t) struct_ty) tag
-    | _ -> ())
-    prog
-
-(* ── TyUnknown 解決 ── *)
-
-(* Typedef_env 経由で TyUnknown を解決する *)
-let rec resolve_ty = function
-  | TyUnknown name -> (match Typedef_env.find name with Some ty -> resolve_ty ty | None -> TyUnknown name)
-  | TyPtr t -> TyPtr (resolve_ty t)
-  | TyArray a -> TyArray { a with elem = resolve_ty a.elem }
-  | ty -> ty
-
-(* ── グローバル変数宣言の収集 ── *)
-
-let const_int_expr = function
-  | None -> None
-  | Some (Num { value; _ }) -> Some value
-  | Some (Unary { op = Neg; operand = Num { value; _ }; _ }) -> Some (-value)
-  | Some e -> error ~line:(line_of_expr e) "グローバル変数の初期値は整数定数だけに対応しています"
+(* ── 構造体レイアウト ──
+   struct 定義は support の構文解析時に Struct_env へ登録される。 *)
+(* ── グローバル変数宣言の収集 ──
+   初期化子はない。グローバル変数はすべて .bss に置かれ 0 に初期化される。 *)
 
 let collect_global_decls prog =
   List.iter
     (function
-      | GlobalDecl { name; ty; init_expr; _ } ->
-          let ty = resolve_ty ty in
-          Hashtbl.replace globals name
-            (Global { ty; init = const_int_expr init_expr })
+      | GlobalDecl { name; ty; _ } -> Hashtbl.replace globals name (Global { ty })
       | _ -> ())
     prog
 
@@ -151,8 +72,12 @@ let rec collect_strings_expr = function
   | Assign { lhs; rhs; _ } | Binary { lhs; rhs; _ } | Index { base = lhs; index = rhs; _ } ->
       collect_strings_expr lhs;
       collect_strings_expr rhs
-  | Unary { operand; _ } | SizeofExpr { operand; _ } | Member { base = operand; _ } ->
+  | Unary { operand; _ } | Member { base = operand; _ } ->
       collect_strings_expr operand
+  | Cond { cond; then_; else_; _ } ->
+      collect_strings_expr cond;
+      collect_strings_expr then_;
+      collect_strings_expr else_
   | Call { args; _ } -> List.iter collect_strings_expr args
   | Num _ | Var _ | SizeofType _ -> ()
 
@@ -171,45 +96,29 @@ let rec collect_strings_stmt = function
       Option.iter collect_strings_expr cond;
       Option.iter collect_strings_expr step;
       collect_strings_stmt body
-  | Decl { init_expr; _ } -> Option.iter collect_strings_expr init_expr
+  | Decl _ -> ()
   | Break _ | Continue _ -> ()
 
 let collect_strings_top = function
   | FuncDef { body; _ } -> collect_strings_stmt body
-  | GlobalDecl { init_expr; _ } -> Option.iter collect_strings_expr init_expr
-  | FuncProto _ | StructDef _ -> ()
+  | GlobalDecl _ | FuncProto _ -> ()
 
 (* ── データセクション / BSS セクション出力 ── *)
 
 let emit_data_section () =
-  let has_init = ref false in
-  Hashtbl.iter (fun _ -> function Global { init = Some _; _ } -> has_init := true | _ -> ()) globals;
-  if Hashtbl.length string_literals > 0 || !has_init then emit "  .data";
+  if Hashtbl.length string_literals > 0 then emit "  .data";
   Hashtbl.iter
     (fun s label ->
       emit (label ^ ":");
       String.iter (fun ch -> emit (Printf.sprintf "  .byte %d" (Char.code ch))) s;
       emit "  .byte 0")
-    string_literals;
-  Hashtbl.iter
-    (fun name -> function
-      | Global { ty; init = Some v } ->
-          emit (Printf.sprintf "  .globl %s" name);
-          emit (name ^ ":");
-          let sz = size_of_ty ty in
-          if sz = 1 then emit (Printf.sprintf "  .byte %d" v)
-          else if sz = 4 then emit (Printf.sprintf "  .word %d" v)
-          else emit (Printf.sprintf "  .dword %d" v)
-      | _ -> ())
-    globals
+    string_literals
 
 let emit_bss_section () =
-  let has_uninit = ref false in
-  Hashtbl.iter (fun _ -> function Global { init = None; _ } -> has_uninit := true | _ -> ()) globals;
-  if !has_uninit then emit "  .bss";
+  if Hashtbl.length globals > 0 then emit "  .bss";
   Hashtbl.iter
     (fun name -> function
-      | Global { ty; init = None } ->
+      | Global { ty } ->
           emit (Printf.sprintf "  .globl %s" name);
           emit (name ^ ":");
           emit (Printf.sprintf "  .zero %d" (align_to (size_of_ty ty) 8))
@@ -219,19 +128,14 @@ let emit_bss_section () =
 (* ── 変数管理 ── *)
 
 let lookup_var name line =
-  let resolve = function
-    | Local { offset; ty } -> Local { offset; ty = resolve_ty ty }
-    | Global { ty; init } -> Global { ty = resolve_ty ty; init }
-  in
   match Hashtbl.find_opt locals name with
-  | Some info -> resolve info
+  | Some info -> info
   | None -> (
       match Hashtbl.find_opt globals name with
-      | Some info -> resolve info
+      | Some info -> info
       | None -> error ~line (Printf.sprintf "未定義の変数: '%s'" name))
 
 let alloc_local name ty =
-  let ty = resolve_ty ty in
   stack_offset := !stack_offset + align_to (size_of_ty ty) 8;
   Hashtbl.replace locals name (Local { offset = -(16 + !stack_offset); ty })
 
@@ -244,21 +148,19 @@ let rec collect_decls = function
 
 (* ── 型システム補助関数 ── *)
 
-let field_ty struct_ty name line =
+let field_info struct_ty name line =
   match struct_ty with
-  | TyStruct { fields; _ } -> (
-      match List.assoc_opt name fields with
-      | Some fi -> fi.ty
-      | None -> error ~line (Printf.sprintf "構造体にフィールド '%s' がありません" name))
+  | TyStruct tag -> (
+      match Struct_env.find tag with
+      | None -> error ~line (Printf.sprintf "未定義の構造体: 'struct %s'" tag)
+      | Some info -> (
+          match List.assoc_opt name info.Struct_env.fields with
+          | Some fi -> fi
+          | None -> error ~line (Printf.sprintf "構造体にフィールド '%s' がありません" name)))
   | _ -> error ~line "構造体型ではありません"
 
-let field_offset struct_ty name line =
-  match struct_ty with
-  | TyStruct { fields; _ } -> (
-      match List.assoc_opt name fields with
-      | Some fi -> fi.offset
-      | None -> error ~line (Printf.sprintf "構造体にフィールド '%s' がありません" name))
-  | _ -> error ~line "構造体型ではありません"
+let field_ty struct_ty name line = (field_info struct_ty name line).Struct_env.ty
+let field_offset struct_ty name line = (field_info struct_ty name line).Struct_env.offset
 
 (* ── lvalue の型推論 ── *)
 
@@ -271,8 +173,8 @@ let rec type_of_lval = function
       | _ -> error ~line "* の対象がポインタではありません")
   | Index { base; line; _ } -> (
       match type_of base with
-      | TyPtr base_ty | TyArray { elem = base_ty; _ } -> base_ty
-      | _ -> error ~line "[] の対象が配列またはポインタではありません")
+      | TyPtr base_ty -> base_ty
+      | _ -> error ~line "[] の対象がポインタではありません")
   | Member { base; name; is_arrow; line; _ } ->
       let struct_ty =
         if is_arrow then
@@ -300,8 +202,11 @@ and type_of = function
   | Member _ as e -> type_of_lval e
   | Assign { lhs; _ } -> type_of_lval lhs
   | Call _ -> TyInt
-  | SizeofType _ | SizeofExpr _ -> TyInt
-  | Unary { op = Neg | Not | BitNot; _ } -> TyInt
+  | SizeofType _ -> TyInt
+  | Unary { op = Neg | Not; _ } -> TyInt
+  | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
+      type_of_lval operand
+  | Cond { then_; _ } -> type_of then_
   | Binary { op = Add; lhs; rhs; _ } ->
       let lt = type_of lhs and rt = type_of rhs in
       (match lt, rt with TyPtr _, _ -> lt | _, TyPtr _ -> rt | _ -> TyInt)
@@ -313,13 +218,10 @@ and type_of = function
 (* ── コード生成補助 ── *)
 
 let load ty =
-  match ty with
-  | TyArray _ -> ()
-  | _ -> (
-      match size_of_ty ty with
-      | 1 -> emit "  lb a0, 0(a0)"
-      | 4 -> emit "  lw a0, 0(a0)"
-      | _ -> emit "  ld a0, 0(a0)")
+  match size_of_ty ty with
+  | 1 -> emit "  lb a0, 0(a0)"
+  | 4 -> emit "  lw a0, 0(a0)"
+  | _ -> emit "  ld a0, 0(a0)"
 
 let store ty =
   match size_of_ty ty with
@@ -348,8 +250,8 @@ let rec codegen_lval = function
       let base_ty = type_of base in
       let elem_ty =
         match base_ty with
-        | TyPtr e | TyArray { elem = e; _ } -> e
-        | _ -> error ~line "[] の対象が配列またはポインタではありません"
+        | TyPtr e -> e
+        | _ -> error ~line "[] の対象がポインタではありません"
       in
       codegen base;
       push_a0 ();
@@ -425,9 +327,35 @@ and codegen = function
       store ty
   | Unary { op = Neg; operand; _ } -> codegen operand; emit "  neg a0, a0"
   | Unary { op = Not; operand; _ } -> codegen operand; emit "  seqz a0, a0"
-  | Unary { op = BitNot; operand; _ } -> codegen operand; emit "  not a0, a0"
+  | Unary { op = PreInc; operand; _ } ->
+      let ty = type_of_lval operand in
+      let delta = match ty with TyPtr e -> size_of_ty e | _ -> 1 in
+      codegen_lval operand;
+      push_a0 ();
+      load ty;
+      emit (Printf.sprintf "  addi a0, a0, %d" delta);
+      pop_into "a1";
+      store ty
+  | Unary { op = PreDec; operand; _ } ->
+      let ty = type_of_lval operand in
+      let delta = match ty with TyPtr e -> size_of_ty e | _ -> 1 in
+      codegen_lval operand;
+      push_a0 ();
+      load ty;
+      emit (Printf.sprintf "  addi a0, a0, %d" (-delta));
+      pop_into "a1";
+      store ty
+  | Cond { cond; then_; else_; _ } ->
+      let label_else = new_label () in
+      let label_end = new_label () in
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_else);
+      codegen then_;
+      emit (Printf.sprintf "  j %s" label_end);
+      emit (label_else ^ ":");
+      codegen else_;
+      emit (label_end ^ ":")
   | SizeofType { ty; _ } -> emit (Printf.sprintf "  li a0, %d" (size_of_ty ty))
-  | SizeofExpr { operand; _ } -> emit (Printf.sprintf "  li a0, %d" (size_of_ty (type_of operand)))
   | Call { name; args; line; _ } -> gen_call name args line
   | Binary { op = Add; lhs; rhs; _ } ->
       let lt = type_of lhs and rt = type_of rhs in
@@ -481,17 +409,10 @@ and codegen_binary op lhs rhs =
   | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
   | And -> emit "  snez a1, a1"; emit "  snez a0, a0"; emit "  and a0, a1, a0"
   | Or -> emit "  or a0, a1, a0"; emit "  snez a0, a0"
-  | BitAnd -> emit "  and a0, a1, a0"
-  | BitOr -> emit "  or a0, a1, a0"
-  | BitXor -> emit "  xor a0, a1, a0"
-  | Shl -> emit "  sll a0, a1, a0"
-  | Shr -> emit "  sra a0, a1, a0"
 
 (* ── 文のコード生成 ── *)
 
 let rec gen_stmt = function
-  | Decl { name; init_expr = Some init_expr; line; _ } ->
-      codegen (Assign { lhs = Var { name; line; span = None }; rhs = init_expr; line; span = None })
   | Decl _ -> ()
   | ExprStmt { expr; _ } -> Option.iter codegen expr
   | Return { expr; _ } -> Option.iter codegen expr; emit (Printf.sprintf "  j %s" !ret_label)
@@ -580,13 +501,9 @@ let gen_func = function
 (* ── プログラム全体のビルド ── *)
 
 let parse_file filename =
-  Typedef_env.reset ();
   let source = Utils.read_file filename in
   let preprocessed = Preprocess.preprocess source filename in
-  pre_register_typedef_names preprocessed;
-  let prog = Frontend.parse_source ~already_preprocessed:true ~filename preprocessed in
-  resolve_struct_types prog;
-  prog
+  Frontend.parse_source ~already_preprocessed:true ~filename preprocessed
 
 let gen_program prog =
   collect_global_decls prog;
@@ -600,6 +517,7 @@ let () =
   if Array.length Sys.argv < 2 then (
     prerr_endline "使い方: dune exec ./koma15.exe -- <source.c> [...]";
     exit 1);
+  Struct_env.reset ();
   let prog = ref [] in
   for i = 1 to Array.length Sys.argv - 1 do
     prog := !prog @ parse_file Sys.argv.(i)

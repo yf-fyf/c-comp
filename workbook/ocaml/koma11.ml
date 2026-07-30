@@ -4,6 +4,8 @@
 
 open Ast_def
 
+let size_of_ty = Struct_env.size_of_ty
+
 let emit line = print_endline line
 
 let error ?(line = 0) msg =
@@ -52,13 +54,10 @@ let rec collect_decls = function
   | _ -> ()
 
 let load ty =
-  match ty with
-  | TyArray _ -> ()
-  | _ -> (
-      match size_of_ty ty with
-      | 1 -> emit "  lb a0, 0(a0)"
-      | 4 -> emit "  lw a0, 0(a0)"
-      | _ -> emit "  ld a0, 0(a0)")
+  match size_of_ty ty with
+  | 1 -> emit "  lb a0, 0(a0)"
+  | 4 -> emit "  lw a0, 0(a0)"
+  | _ -> emit "  ld a0, 0(a0)"
 
 let store ty =
   match size_of_ty ty with
@@ -88,7 +87,9 @@ let rec collect_strings_expr = function
   | StrLit { value; _ } -> ignore (intern_string value)
   | Assign { lhs; rhs; _ } | Binary { lhs; rhs; _ } | Index { base = lhs; index = rhs; _ } ->
       collect_strings_expr lhs; collect_strings_expr rhs
-  | Unary { operand; _ } | SizeofExpr { operand; _ } -> collect_strings_expr operand
+  | Unary { operand; _ } -> collect_strings_expr operand
+  | Cond { cond; then_; else_; _ } ->
+      collect_strings_expr cond; collect_strings_expr then_; collect_strings_expr else_
   | Call { args; _ } -> List.iter collect_strings_expr args
   | Num _ | Var _ | SizeofType _ | Member _ -> ()
 
@@ -98,7 +99,7 @@ let rec collect_strings_stmt = function
   | If { cond; then_; else_; _ } -> collect_strings_expr cond; collect_strings_stmt then_; Option.iter collect_strings_stmt else_
   | While { cond; body; _ } -> collect_strings_expr cond; collect_strings_stmt body
   | For { init; cond; step; body; _ } -> Option.iter collect_strings_expr init; Option.iter collect_strings_expr cond; Option.iter collect_strings_expr step; collect_strings_stmt body
-  | Decl { init_expr; _ } -> Option.iter collect_strings_expr init_expr
+  | Decl _ -> ()
   | Break _ | Continue _ -> ()
 
 let emit_data_section () =
@@ -117,7 +118,7 @@ let rec codegen_lval = function
       codegen operand
   | Index { base; index; _ } ->
       let elem_ty = match type_of_expr base with
-        | TyPtr e | TyArray { elem = e; _ } -> e
+        | TyPtr e -> e
         | _ -> TyInt
       in
       codegen base;
@@ -136,7 +137,7 @@ and type_of_lval = function
       match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
   | Index { base; _ } -> (
       match type_of_expr base with
-      | TyPtr e | TyArray { elem = e; _ } -> e
+      | TyPtr e -> e
       | _ -> TyInt)
   | _ -> TyInt
 
@@ -147,6 +148,9 @@ and type_of_expr = function
   | Unary { op = Addr; operand; _ } -> TyPtr (type_of_lval operand)
   | Unary { op = Deref; operand; _ } -> (
       match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
+  | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
+      type_of_lval operand
+  | Cond { then_; _ } -> type_of_expr then_
   | Index _ as e -> type_of_lval e
   | Binary { op = Add; lhs; rhs; _ } ->
       let lt = type_of_expr lhs in
@@ -177,6 +181,26 @@ and codegen = function
   | Unary { op = Neg; operand; _ } ->
       codegen operand;
       emit "  neg a0, a0"
+  | Unary { op = PreInc; operand; _ } ->
+      let ty = type_of_lval operand in
+      let delta = match ty with TyPtr e -> size_of_ty e | _ -> 1 in
+      codegen_lval operand;
+      push_a0 ();
+      load ty;
+      emit (Printf.sprintf "  addi a0, a0, %d" delta);
+      pop_into "a1";
+      store ty
+  | Unary { op = PreDec; operand; _ } ->
+      let ty = type_of_lval operand in
+      let delta = match ty with TyPtr e -> size_of_ty e | _ -> 1 in
+      codegen_lval operand;
+      push_a0 ();
+      load ty;
+      emit (Printf.sprintf "  addi a0, a0, %d" (-delta));
+      pop_into "a1";
+      store ty
+  | SizeofType { ty; _ } ->
+      emit (Printf.sprintf "  li a0, %d" (size_of_ty ty))
   | Index _ as e ->
       let ty = type_of_expr e in
       codegen_lval e;
@@ -251,12 +275,20 @@ and codegen = function
       | Lt -> emit "  slt a0, a1, a0"
       | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
       | _ -> error "コマ11で未対応の二項演算です")
+  | Cond { cond; then_; else_; _ } ->
+      let label_else = new_label () in
+      let label_end = new_label () in
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_else);
+      codegen then_;
+      emit (Printf.sprintf "  j %s" label_end);
+      emit (label_else ^ ":");
+      codegen else_;
+      emit (label_end ^ ":")
   | e -> error ~line:(line_of_expr e) "コマ11で未対応の式です"
 
 (* gen_stmt — unchanged *)
 let rec gen_stmt = function
-  | Decl { name; init_expr = Some e; line; _ } ->
-      codegen (Assign { lhs = Var { name; line; span = None }; rhs = e; line; span = None })
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
   | ExprStmt _ -> ()

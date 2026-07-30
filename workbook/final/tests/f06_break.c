@@ -1,4 +1,4 @@
-/* f06: 制御(break) — i*i > 200 となる最初の i を返す */
+// f06: 制御(break) — i*i > 200 となる最初の i を返す
 int main() {
     int i;
     int found;

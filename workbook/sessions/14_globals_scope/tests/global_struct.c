@@ -1,11 +1,11 @@
-typedef struct {
+struct Pair {
     int a;
     int b;
-} Pair;
+};
 
-Pair gp;
+struct Pair gp;
 
-int sum_pair(Pair *p) {
+int sum_pair(struct Pair *p) {
     return p->a + p->b;
 }
 

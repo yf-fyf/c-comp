@@ -1,4 +1,4 @@
-/* f05: 制御(for) — for ループで階乗 5! = 120 */
+// f05: 制御(for) — for ループで階乗 5! = 120
 int main() {
     int i;
     int r;

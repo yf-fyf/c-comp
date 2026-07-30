@@ -1,4 +1,4 @@
-/* f03: 制御(if) — if/else if/else チェーン */
+// f03: 制御(if) — if/else if/else チェーン
 int grade(int s) {
     if (s >= 90) {
         return 1;
