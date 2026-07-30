@@ -1,4 +1,4 @@
-"""コマ 12: struct / typedef / メンバアクセス（学生用スケルトン）。"""
+"""コマ 12: 構造体（struct 定義・メンバアクセス。学生用スケルトン）。"""
 
 import importlib.util
 import re
@@ -11,7 +11,6 @@ prev = importlib.util.module_from_spec(_SPEC)
 assert _SPEC.loader is not None
 _SPEC.loader.exec_module(prev)
 
-from parser import Parser
 
 Node = prev.Node
 preprocess = prev.preprocess
@@ -25,47 +24,9 @@ class Codegen12(prev.Codegen11):
         self._struct_defs = struct_defs
 
     @classmethod
-    def register_typedef_names(cls, source: str) -> set[str]:
-        names: set[str] = set()
-        pattern = re.compile(r'\btypedef\b')
-        pos = 0
-        while True:
-            m = pattern.search(source, pos)
-            if not m:
-                break
-            start = m.end()
-            brace = 0
-            found = False
-            i = start
-            semi = start
-            while i < len(source) and not found:
-                c = source[i]
-                if c == '{':
-                    brace += 1
-                elif c == '}':
-                    brace -= 1
-                elif c == ';' and brace == 0:
-                    semi = i
-                    found = True
-                i += 1
-            if not found:
-                break
-            words = re.findall(r'[a-zA-Z_]\w*|\*', source[start:semi])
-            if words:
-                name = ''
-                for w in reversed(words):
-                    if w != '*':
-                        name = w
-                        break
-                if name and name not in ('struct', 'int', 'char', 'void', 'unsigned', 'long', 'short'):
-                    names.add(name)
-            pos = semi + 1
-        return names
-
-    @classmethod
     def parse_struct_defs(cls, source: str) -> dict[str, dict]:
         defs: dict[str, dict] = {}
-        pattern = re.compile(r'(?:typedef\s+)?struct\s+([a-zA-Z_]\w*)?\s*\{')
+        pattern = re.compile(r'struct\s+([a-zA-Z_]\w*)\s*\{')
         pos = 0
         while True:
             m = pattern.search(source, pos)
@@ -87,47 +48,40 @@ class Codegen12(prev.Codegen11):
                 i += 1
             if i >= len(source):
                 break
-            after = source[body_end + 1:]
-            name_match = re.search(r'([a-zA-Z_]\w*)\s*;', after)
-            typedef_name = name_match.group(1) if name_match else None
-            if typedef_name:
-                struct_name = typedef_name
-            elif tag:
-                struct_name = f'struct {tag}'
-            else:
-                pos = body_end + 1
-                continue
+            struct_name = f'struct {tag}'
             fields = cls.parse_field_decls(source[body_start + 1:body_end])
             if not fields:
                 pos = body_end + 1
                 continue
+            # 自然整列: 各フィールドは自身の整列へ切り上げ、
+            # struct 全体のサイズは最大フィールド整列の倍数へ切り上げ
             field_map: dict[str, tuple[int, str]] = {}
             offset = 0
+            struct_align = 1
             for fname, fty in fields:
                 fsz = cls.size_of_ty_str(fty, defs)
-                align = min(fsz, 8)
+                align = cls.align_of_ty_str(fty)
+                struct_align = max(struct_align, align)
                 offset = ((offset + align - 1) // align) * align
                 field_map[fname] = (offset, fty)
                 offset += fsz
-            total_size = ((offset + 7) // 8) * 8
-            defs[struct_name] = {'size': total_size, 'fields': field_map}
-            if typedef_name and tag:
-                defs.setdefault(f'struct {tag}', defs[struct_name])
+            total_size = ((offset + struct_align - 1) // struct_align) * struct_align
+            defs[f'struct {tag}'] = {'size': total_size, 'align': struct_align, 'fields': field_map}
             pos = body_end + 1
         return defs
 
     @staticmethod
     def parse_field_decls(body: str) -> list[tuple[str, str]]:
         fields: list[tuple[str, str]] = []
-        type_keywords = {'int', 'char', 'void', 'struct', 'unsigned', 'long', 'short'}
+        type_keywords = {'int', 'char', 'void', 'struct'}
         for part in body.split(';'):
             part = part.strip()
             if not part:
                 continue
-            part = part.split('//')[0].strip().split('/*')[0].strip()
+            part = part.split('//')[0].strip()
             if not part:
                 continue
-            tokens = re.findall(r'[a-zA-Z_]\w*|\[[^\]]+\]|\*', part)
+            tokens = re.findall(r'[a-zA-Z_]\w*|\*', part)
             if len(tokens) < 2:
                 continue
             name_idx = -1
@@ -138,38 +92,33 @@ class Codegen12(prev.Codegen11):
                     break
             if name_idx < 0:
                 continue
-            name_str = tokens[name_idx]
-            idx = name_idx + 1
-            while idx < len(tokens) and re.match(r'^\[', tokens[idx]):
-                name_str += tokens[idx]
-                idx += 1
-            fields.append((name_str, ' '.join(tokens[:name_idx])))
+            fields.append((tokens[name_idx], ' '.join(tokens[:name_idx])))
         return fields
 
     @classmethod
     def size_of_ty_str(cls, ty_str: str, struct_defs: dict[str, dict] | None = None) -> int:
         if ty_str.endswith('*'):
             return 8
-        m = re.match(r'(.+)\[(\d+)\]', ty_str)
-        if m:
-            return cls.size_of_ty_str(m.group(1), struct_defs) * int(m.group(2))
         if ty_str == 'char':
             return 1
         if ty_str == 'void':
             return 1
-        if ty_str.startswith('struct ') and struct_defs:
-            tag = ty_str[7:]
-            if tag in struct_defs:
-                return struct_defs[tag]['size']
-        if struct_defs and ty_str in struct_defs:
+        if ty_str.startswith('struct ') and struct_defs and ty_str in struct_defs:
             return struct_defs[ty_str]['size']
         return 4
 
     @staticmethod
+    def align_of_ty_str(ty_str: str) -> int:
+        # フィールドは int / char / ポインタのみ（struct 値のフィールドはない）
+        if ty_str.endswith('*'):
+            return 8
+        if ty_str == 'char':
+            return 1
+        return 4
+
+    @staticmethod
     def is_struct_ty_str(ty_str: str, struct_defs: dict[str, dict]) -> bool:
-        if ty_str.startswith('struct '):
-            return ty_str[7:] in struct_defs or ty_str in struct_defs
-        return ty_str in struct_defs
+        return ty_str.startswith('struct ') and not ty_str.endswith('*') and ty_str in struct_defs
 
     @staticmethod
     def field_ty(struct_name: str, field_name: str, struct_defs: dict[str, dict], line: int) -> str:
@@ -200,16 +149,14 @@ class Codegen12(prev.Codegen11):
         self._locals[name] = (-(16 + self._stack_offset), ty_str)
 
     def _scale_index(self, elem_ty: str) -> None:
-        # TODO: struct 要素配列では self._struct_defs を渡して要素サイズを計算する。
+        # TODO: struct へのポインタでは self._struct_defs を渡して要素サイズを計算する。
         sz = self.size_of_ty_str(elem_ty)
         if sz != 1:
             self.emit(f'  li a1, {sz}')
             self.emit('  mul a0, a0, a1')
 
     def _load_ty(self, ty_str: str) -> None:
-        # TODO: struct 型はロードせず、アドレスのまま扱う。
-        if self.is_array_ty_str(ty_str):
-            return
+        # TODO: struct 型はロードせず、アドレスのまま扱う（is_struct_ty_str で判定）。
         sz = self.size_of_ty_str(ty_str)
         if sz == 1:
             self.emit('  lb a0, 0(a0)')
@@ -219,7 +166,7 @@ class Codegen12(prev.Codegen11):
             self.emit('  ld a0, 0(a0)')
 
     def _store_ty(self, ty_str: str) -> None:
-        # TODO: struct 型の代入に必要なコピー処理、または struct サイズ対応を検討する。
+        # TODO: struct のサイズを引けるよう self._struct_defs を渡す。
         sz = self.size_of_ty_str(ty_str)
         if sz == 1:
             self.emit('  sb a0, 0(a1)')
@@ -256,6 +203,10 @@ class Codegen12(prev.Codegen11):
                 return self.type_of_expr_Add(node)
             case 'Sub':
                 return self.type_of_expr_Sub(node)
+            case 'PreInc' | 'PreDec':
+                return self._type_of_lval(node.operand)
+            case 'Cond':
+                return self._type_of_expr(node.then)
             case _:
                 return 'int'
 
@@ -337,6 +288,14 @@ class Codegen12(prev.Codegen11):
                 self.codegen_Str(node)
             case 'Member':
                 self.codegen_Member(node)
+            case 'Cond':
+                self.codegen_Cond(node)
+            case 'PreInc':
+                self.codegen_PreInc(node)
+            case 'PreDec':
+                self.codegen_PreDec(node)
+            case 'SizeofType':
+                self.codegen_SizeofType(node)
             case _:
                 raise RuntimeError(f'codegen: コマ12で未対応の式です (kind={node.kind!r})')
 
@@ -391,19 +350,14 @@ Codegen = Codegen12
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("使い方: python3 sessions/12_struct_typedef/mycc.py <source.c>", file=sys.stderr)
+        print("使い方: python3 sessions/12_struct/mycc.py <source.c>", file=sys.stderr)
         sys.exit(1)
     filename = sys.argv[1]
     with open(filename, 'r', encoding='utf-8') as f:
         source = f.read()
     source = preprocess(source, filename)
-    # TODO: typedef_names = Codegen12.register_typedef_names(source)
     # TODO: struct_defs = Codegen12.parse_struct_defs(source)
     tokens = tokenize(source, filename)
-    # TODO: Parser(tokens) を使い、typedef_names を登録して parse_program() する。
-    # p = Parser(tokens)
-    # p.typedef_names.update(typedef_names)
-    # prog = p.parse_program()
     prog = parse(tokens)
     cg = Codegen12({})
     # TODO: 収集した struct_defs を Codegen12 に渡す。

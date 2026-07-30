@@ -1,7 +1,7 @@
 """
 コマ 13: コード生成⑪ — sizeof（学生用スケルトン）
 
-目標: sizeof(type) と sizeof expr をコンパイル時に評価し、
+目標: sizeof(型名) をコンパイル時に評価し、
       アセンブリ上では即値 (li) として埋め込む。
 
 実行方法:
@@ -14,7 +14,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-_PREV = Path(__file__).resolve().parents[1] / '12_struct_typedef' / 'mycc.py'
+_PREV = Path(__file__).resolve().parents[1] / '12_struct' / 'mycc.py'
 _SPEC = importlib.util.spec_from_file_location('_session12_mycc', _PREV)
 prev = importlib.util.module_from_spec(_SPEC)
 assert _SPEC.loader is not None
@@ -23,17 +23,13 @@ _SPEC.loader.exec_module(prev)
 Node = prev.Node
 preprocess = prev.preprocess
 tokenize = prev.tokenize
-Parser = prev.Parser
+parse = prev.parse
 
 
 class Codegen13(prev.Codegen):
     def type_of_expr_SizeofType(self, node: Node) -> str:
         # TODO: sizeof(type) の型は int。
         raise NotImplementedError("type_of_expr_SizeofType を実装してください")
-
-    def type_of_expr_SizeofExpr(self, node: Node) -> str:
-        # TODO: sizeof expr の型は int。
-        raise NotImplementedError("type_of_expr_SizeofExpr を実装してください")
 
     def type_of_expr_Neg(self, node: Node) -> str:
         return 'int'
@@ -66,8 +62,10 @@ class Codegen13(prev.Codegen):
                 return 'int'
             case 'SizeofType':
                 return self.type_of_expr_SizeofType(node)
-            case 'SizeofExpr':
-                return self.type_of_expr_SizeofExpr(node)
+            case 'PreInc' | 'PreDec':
+                return self._type_of_lval(node.operand)
+            case 'Cond':
+                return self._type_of_expr(node.then)
             case 'Neg':
                 return self.type_of_expr_Neg(node)
             case _:
@@ -76,10 +74,6 @@ class Codegen13(prev.Codegen):
     def codegen_SizeofType(self, node: Node) -> None:
         # TODO: node.ty_str のサイズを計算し、li a0, <size> を出力する。
         raise NotImplementedError("codegen_SizeofType を実装してください")
-
-    def codegen_SizeofExpr(self, node: Node) -> None:
-        # TODO: operand の型を _type_of_expr で求め、サイズを li で出力する。
-        raise NotImplementedError("codegen_SizeofExpr を実装してください")
 
     def codegen(self, node: Node) -> None:
         match node.kind:
@@ -123,8 +117,12 @@ class Codegen13(prev.Codegen):
                 self.codegen_Member(node)
             case 'SizeofType':
                 self.codegen_SizeofType(node)
-            case 'SizeofExpr':
-                self.codegen_SizeofExpr(node)
+            case 'Cond':
+                self.codegen_Cond(node)
+            case 'PreInc':
+                self.codegen_PreInc(node)
+            case 'PreDec':
+                self.codegen_PreDec(node)
             case _:
                 raise RuntimeError(f'codegen: コマ13で未対応の式です (kind={node.kind!r})')
 
@@ -142,12 +140,9 @@ def main() -> None:
         source = f.read()
 
     source = preprocess(source, filename)
-    typedef_names = Codegen13.register_typedef_names(source)
     struct_defs = Codegen13.parse_struct_defs(source)
     tokens = tokenize(source, filename)
-    p = Parser(tokens)
-    p.typedef_names.update(typedef_names)
-    prog = p.parse_program()
+    prog = parse(tokens)
 
     cg = Codegen13(struct_defs)
     for node in prog:

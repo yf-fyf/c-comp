@@ -108,10 +108,10 @@ int main() {
 
 ---
 
-## コマ 5（Phase 1）: 制御構文①：if / else
+## コマ 5（Phase 1）: 制御構文①：if / else + 三項演算子
 
 **フロントエンド**: `mycc.py`
-**新機能**: if / else if / else、比較演算子（`==` `!=` `<` `>` `<=` `>=`）
+**新機能**: if / else if / else、比較演算子（`==` `!=` `<` `>` `<=` `>=`）、三項演算子 `?:`
 
 ```c
 int main() {
@@ -145,12 +145,28 @@ int main() {
 ```
 期待する終了コード: `3`
 
+```c
+int main() {
+    int a;
+    int b;
+    a = 3;
+    b = 8;
+    return a > b ? a : b;
+}
+```
+期待する終了コード: `8`
+
+> **式と文の違い**: `if` は「実行する文」を選ぶ文であり、それ自体は値を持たない。
+> 三項演算子 `?:` は「値」を選ぶ式であり、式の中に書ける。
+> コード生成はどちらも同じ分岐（`beqz` + ラベル）だが、`?:` は選ばれた腕の値が
+> レジスタに残る点だけが異なる。
+
 ---
 
-## コマ 6（Phase 1）: 制御構文②：while / for
+## コマ 6（Phase 1）: 制御構文②：while / for + 前置 `++`/`--`
 
 **フロントエンド**: `mycc.py`
-**新機能**: while、for、break、continue
+**新機能**: while、for、break、continue、前置 `++`/`--`
 
 ```c
 int main() {
@@ -175,7 +191,7 @@ int main() {
     int tmp;
     fib_a = 0;
     fib_b = 1;
-    for (i = 0; i < 10; i = i + 1) {
+    for (i = 0; i < 10; ++i) {
         tmp   = fib_b;
         fib_b = fib_a + fib_b;
         fib_a = tmp;
@@ -184,6 +200,10 @@ int main() {
 }
 ```
 期待する終了コード: `55`（フィボナッチ数列の第10項）
+
+> **前置 `++`**: `++i` は `i` の値を 1 増やし、増やした後の値を式の値とする。
+> for の更新式の慣用形として使う。実装は「左辺値のアドレスを 1 回だけ求め、
+> ロード → +1 → ストア」であり、代入のコード生成の応用で書ける。
 
 ---
 
@@ -304,10 +324,10 @@ int main() {
 
 ---
 
-## コマ 10（Phase 1）: Type + ポインタ演算 + 配列
+## コマ 10（Phase 1）: Type + ポインタ演算
 
 **フロントエンド**: `mycc.py`
-**新機能**: `ty_str` 文字列による型サイズ管理、固定長配列（`int a[N]`）、ポインタ演算（`p + n`）
+**新機能**: `ty_str` 文字列による型サイズ管理、ポインタ演算（`p + n`）、`sizeof(型名)`、`malloc` による連続領域の確保、添字 `p[i]`
 
 > **実装ポイント**: このコマから型サイズの管理をコード生成器に導入する。
 > スキャフォールドでは `Type` クラスは使わず、`ty_str` 文字列と
@@ -320,20 +340,26 @@ int main() {
 > | `int a;` | `int` | 4 |
 > | `char c;` | `char` | 1 |
 > | `int *p;` | `int*` | 8 |
-> | `int a[5];` | `int[5]` | 20 |
+>
+> 連続した int の並びは、配列ではなく `malloc(sizeof(int) * N)` で確保した
+> 領域として作る。`p[i]` は `*(p + i)` の略記であり、どちらも同じコードになる。
+> `sizeof(型名)` は翻訳時に値が決まる定数で、`li` 1 命令に落ちる。
 
 ```c
+#include "lib.h"
+
 int main() {
-    int a[5];
+    int *a;
     int i;
     int sum;
+    a = malloc(sizeof(int) * 5);
     a[0] = 1;
     a[1] = 2;
     a[2] = 3;
     a[3] = 4;
     a[4] = 5;
     sum = 0;
-    for (i = 0; i < 5; i = i + 1) {
+    for (i = 0; i < 5; ++i) {
         sum = sum + a[i];
     }
     return sum;
@@ -342,9 +368,12 @@ int main() {
 期待する終了コード: `15`
 
 ```c
+#include "lib.h"
+
 int main() {
-    int a[4];
+    int *a;
     int *p;
+    a = malloc(sizeof(int) * 4);
     a[0] = 10;
     a[1] = 20;
     a[2] = 30;
@@ -379,23 +408,23 @@ Hello, World!
 
 ---
 
-## コマ 12（Phase 2）: struct / typedef / `.` / `->`
+## コマ 12（Phase 2）: 構造体（struct / `.` / `->`）
 
 **フロントエンド**: `mycc.py`
-**新機能**: `struct`、`typedef`、メンバアクセス（`.`）、`->` 演算子
+**新機能**: `struct` 定義（タグ必須）、メンバアクセス（`.`）、`->` 演算子
 
 ```c
-typedef struct {
+struct Point {
     int x;
     int y;
-} Point;
+};
 
-int distance_sq(Point *p) {
+int distance_sq(struct Point *p) {
     return p->x * p->x + p->y * p->y;
 }
 
 int main() {
-    Point p;
+    struct Point p;
     p.x = 3;
     p.y = 4;
     return distance_sq(&p);
@@ -408,38 +437,38 @@ int main() {
 ## コマ 13（Phase 2）: `sizeof` + `malloc` + 連結リスト
 
 **フロントエンド**: `mycc.py`
-**新機能**: `sizeof` 演算子、`malloc`、連結リストの構築・走査
+**新機能**: 構造体を組み合わせた `sizeof(struct Tag)` + `malloc` による連結リストの構築・走査
 
 ```c
 #include "lib.h"
 
-typedef struct Node {
+struct Node {
     int val;
     struct Node *next;
-} Node;
+};
 
-int list_sum(Node *head) {
+int list_sum(struct Node *head) {
     int sum;
     sum = 0;
-    while (head != 0) {
+    while (head != NULL) {
         sum = sum + head->val;
         head = head->next;
     }
     return sum;
 }
 
-Node *new_node(int v) {
-    Node *n;
-    n = malloc(sizeof(Node));   /* sizeof 初登場 */
+struct Node *new_node(int v) {
+    struct Node *n;
+    n = malloc(sizeof(struct Node));   // struct のサイズを sizeof で求める
     n->val = v;
-    n->next = 0;
+    n->next = NULL;
     return n;
 }
 
 int main() {
-    Node *a;
-    Node *b;
-    Node *c;
+    struct Node *a;
+    struct Node *b;
+    struct Node *c;
     a = new_node(10);
     b = new_node(20);
     c = new_node(30);
@@ -455,7 +484,7 @@ int main() {
 ## コマ 14（Phase 2）: グローバル変数・スコープ管理
 
 **フロントエンド**: `mycc.py`
-**新機能**: グローバル変数（`.data` / `.bss` セクション）
+**新機能**: グローバル変数（`.bss` セクション。0 初期化が保証される）
 
 ```c
 #include "lib.h"
@@ -470,8 +499,6 @@ int add_and_count(int x) {
 }
 
 int main() {
-    call_count = 0;
-    total = 0;
     add_and_count(10);
     add_and_count(20);
     add_and_count(30);
@@ -479,6 +506,10 @@ int main() {
     return call_count;
 }
 ```
+
+> **0 初期化の保証**: グローバル変数は明示的に代入しなくても 0 で始まる
+> （ポインタなら null）。`.bss` セクションに `.zero` で配置することで、
+> OS がプログラム開始時に 0 埋めしてくれる仕組みをそのまま使っている。
 期待する標準出力: `60`
 期待する終了コード: `3`
 
@@ -540,9 +571,9 @@ int main() {
 ## コマ 16（Phase 2）: Python 版総合演習・`mycc.py` 統合 ← **標準トラック達成**
 
 **フロントエンド**: `mycc.py`
-**確認**: コマ 16 時点で `python3 scaffold/test_runner.py`（`final/mycc.py` + `final/tests/`）を実行し、`fixed15` 全15問の通過を標準トラック完成の目安とする。
+**確認**: コマ 16 時点で `python3 scaffold/test_runner.py`（`final/mycc.py` + `final/tests/`）を実行し、`fixed17` 全17問の通過を標準トラック完成の目安とする。
 
-### fixed15 テスト一覧（全15問）
+### fixed17 テスト一覧（全17問）
 
 | # | ファイル | 出題意図 | 使用機能 |
 |---|----------|---------|---------|
@@ -556,30 +587,35 @@ int main() {
 | 8 | f08_func.c | 多引数関数の合成呼び出し | 関数定義・引数・戻り値 |
 | 9 | f09_recur.c | 再帰呼び出し（フィボナッチ） | 再帰・スタックフレーム |
 | 10 | f10_ptr.c | ポインタ渡し swap | &・*・間接代入・void 関数 |
-| 11 | f11_array.c | 配列アクセス + ポインタ渡し | 固定長配列・添字・ポインタ引数 |
-| 12 | f12_struct.c | 構造体 + ドット・アロー両方 | struct・typedef・. / -> 演算子 |
-| 13 | f13_global.c | グローバル変数 | .data/.bss セクション・スコープ |
+| 11 | f11_ptr_arith.c | malloc 領域の添字・ポインタ走査 | malloc・sizeof・添字・ポインタ引数 |
+| 12 | f12_struct.c | 構造体 + ドット・アロー両方 | struct 定義・. / -> 演算子 |
+| 13 | f13_global.c | グローバル変数 | .bss セクション・0 初期化・スコープ |
 | 14 | f14_string.c | printf 文字列出力 | 文字列リテラル・可変長引数関数呼出 |
 | 15 | f15_define.c | #define マクロ + for ループ | #define・for |
+| 16 | f16_ternary.c | 三項演算子（値を持つ分岐） | `?:`・入れ子・関数引数 |
+| 17 | f17_incr.c | 前置インクリメント | 前置 `++`（int とポインタ） |
 
 > 標準判定用テストは `final/tests/` に配置されている。`python3 scaffold/test_runner.py` で一括実行できる。
 
-固定テストセットの代表例（配列 + ポインタ + 関数の複合）:
+固定テストセットの代表例（malloc + ポインタ + 関数の複合）:
 
 ```c
-/* f11: 配列 — ポインタ渡しで配列の総和 */
+// f11: ポインタ演算 — malloc した領域を sizeof と添字・ポインタ走査で使う
+#include "lib.h"
+
 int sum(int *a, int n) {
     int i;
     int s;
     s = 0;
-    for (i = 0; i < n; i = i + 1) {
-        s = s + a[i];
+    for (i = 0; i < n; ++i) {
+        s = s + *(a + i);
     }
     return s;
 }
 
 int main() {
-    int a[5];
+    int *a;
+    a = malloc(sizeof(int) * 5);
     a[0] = 10;
     a[1] = 20;
     a[2] = 30;
@@ -598,17 +634,17 @@ int main() {
 |------|---------|----------------|
 | 3 | 算術式 | `1 + 2 * 3` |
 | 4 | ローカル変数 | `int a; a = 3;` |
-| 5 | 条件分岐 | `if (a > b) { ... } else { ... }` |
-| 6 | ループ | `while (i < 10) { ... }` / `for (...)` |
+| 5 | 条件分岐・三項演算子 | `if (a > b) { ... } else { ... }` / `a > b ? a : b` |
+| 6 | ループ・前置 `++` | `while (i < 10) { ... }` / `for (i = 0; i < n; ++i)` |
 | 7 | スタックフレーム整備 | 多変数プログラムの安定動作 |
 | 8 | 関数定義・再帰 | `int fib(int n) { return fib(n-1) + ...; }` |
 | 9 | lvalue/rvalue 設計 | `int *p; p = &x; return *p;` |
-| 10 | ポインタ操作 + Type クラス + 配列 | `*p = *p + 5;` / `a[i]` / `TY_VOID_PTR` 導入 |
+| 10 | ポインタ操作 + 型サイズ管理 | `*p = *p + 5;` / `p[i]` / `malloc(sizeof(int) * 5)` |
 | 11 | 文字列リテラル・printf | `printf("hello\n")` / `#include "lib.h"` |
-| 12 | 構造体・typedef | `typedef struct Point { ... } Point;` |
-| 13 | sizeof + malloc + 連結リスト | `n = malloc(sizeof(Node));` |
+| 12 | 構造体 | `struct Point { ... }; struct Point p;` |
+| 13 | sizeof + malloc + 連結リスト | `n = malloc(sizeof(struct Node));` |
 | 14 | グローバル変数 | `int count;`（関数外） |
 | 15 | 複数ファイル・前処理 | `#include "f.h"` / `#define N 10` |
-| 16 | 統合確認 | 標準トラック完成（`fixed15` 全通が目安） |
+| 16 | 統合確認 | 標準トラック完成（`fixed17` 全通が目安） |
 
 コマ17 以降（C 版への移植）のコード例は [`../porting/code_example.md`](../porting/code_example.md) にある。

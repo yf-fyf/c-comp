@@ -18,7 +18,7 @@ python3 scaffold/test_runner.py
 | 作業 | 内容 |
 |------|------|
 | 統合 | 第15回までの完成版を `final/mycc.py` に反映する |
-| 総合テスト | `final/tests/` の15本を実行する |
+| 総合テスト | `final/tests/` の17本を実行する |
 | バグ修正 | 落ちたテストを小さい入力に分解して直す |
 | コードレビュー | 関数の責務、変数名、コメント、重複を確認する |
 | 仕上げ | 動作確認方法と実装上の工夫を説明できる状態にする |
@@ -29,11 +29,11 @@ python3 scaffold/test_runner.py
 
 | 範囲 | 機能 |
 |------|------|
-| 式 | 整数、四則演算、比較、論理、ビット演算 |
+| 式 | 整数、四則演算・剰余、比較、論理、三項演算子、前置 `++`/`--`、`sizeof(型名)` |
 | 変数 | ローカル変数、代入、スコープ、グローバル変数 |
 | 制御 | `if`、`while`、`for`、`break`、`continue` |
 | 関数 | 関数定義、関数呼び出し、再帰、引数、戻り値 |
-| 型 | `int`、`char`、ポインタ、配列、構造体 |
+| 型 | `int`、`char`、ポインタ、構造体 |
 | メモリ | lvalue / rvalue、`&`、`*`、`sizeof`、`malloc` |
 | 入出力 | 文字列リテラル、`printf` |
 | 分割 | `#include`、`#define`、複数 `.c` ファイル |
@@ -68,7 +68,7 @@ python3 scaffold/test_runner.py --compiler final/mycc.py --tests final/tests
 
 ## final/tests の位置づけ
 
-`final/tests/` には、標準トラック到達の参考指標となる15本のテストが入っている。
+`final/tests/` には、標準トラック到達の参考指標となる17本のテストが入っている。
 
 | # | テスト | 主な確認内容 |
 |---|--------|--------------|
@@ -82,13 +82,15 @@ python3 scaffold/test_runner.py --compiler final/mycc.py --tests final/tests
 | 8 | `f08_func.c` | 関数呼び出し |
 | 9 | `f09_recur.c` | 再帰 |
 | 10 | `f10_ptr.c` | ポインタ |
-| 11 | `f11_array.c` | 配列 |
+| 11 | `f11_ptr_arith.c` | malloc + ポインタ演算 |
 | 12 | `f12_struct.c` | 構造体 |
 | 13 | `f13_global.c` | グローバル変数 |
 | 14 | `f14_string.c` | 文字列と `printf` |
 | 15 | `f15_define.c` | `#define` |
+| 16 | `f16_ternary.c` | 三項演算子 |
+| 17 | `f17_incr.c` | 前置 `++` |
 
-この15本が全通することを標準トラック完成の強い目安とする。
+この17本（fixed17）が全通することを標準トラック完成の強い目安とする。
 
 ## テストが落ちたときの切り分け
 

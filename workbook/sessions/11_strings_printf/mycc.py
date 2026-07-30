@@ -4,7 +4,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-_PREV = Path(__file__).resolve().parents[1] / '10_types_arrays' / 'mycc.py'
+_PREV = Path(__file__).resolve().parents[1] / '10_types_pointers' / 'mycc.py'
 _SPEC = importlib.util.spec_from_file_location('_session10', _PREV)
 prev = importlib.util.module_from_spec(_SPEC)
 assert _SPEC.loader is not None
@@ -109,12 +109,20 @@ class Codegen11(prev.Codegen10):
                 self.collect_strings_expr_Index(node)
             case 'Call':
                 self.collect_strings_expr_Call(node)
+            case 'PreInc' | 'PreDec':
+                self.collect_strings_expr_Neg(node)
+            case 'Cond':
+                self.collect_strings_expr_Cond(node)
             case _:
                 pass
 
     def collect_strings_expr_Str(self, node: Node) -> None:
         # TODO: node.sval を _intern する。
         raise NotImplementedError("collect_strings_expr_Str を実装してください")
+
+    def collect_strings_expr_Cond(self, node: Node) -> None:
+        # TODO: 三項演算子の cond / then / else_ を再帰的に走査する。
+        raise NotImplementedError("collect_strings_expr_Cond を実装してください")
 
     def collect_strings_expr_Neg(self, node: Node) -> None:
         # TODO: 単項式の operand を再帰的に走査する。
@@ -206,6 +214,10 @@ class Codegen11(prev.Codegen10):
                 return self.type_of_expr_Assign(node)
             case 'Call':
                 return self.type_of_expr_Call(node)
+            case 'PreInc' | 'PreDec':
+                return self._type_of_lval(node.operand)
+            case 'Cond':
+                return self._type_of_expr(node.then)
             case _:
                 return 'int'
 
@@ -251,6 +263,14 @@ class Codegen11(prev.Codegen10):
                 self.codegen_Index(node)
             case 'Str':
                 self.codegen_Str(node)
+            case 'Cond':
+                self.codegen_Cond(node)
+            case 'PreInc':
+                self.codegen_PreInc(node)
+            case 'PreDec':
+                self.codegen_PreDec(node)
+            case 'SizeofType':
+                self.codegen_SizeofType(node)
             case _:
                 raise RuntimeError(f'codegen: コマ11で未対応の式です (kind={node.kind!r})')
 

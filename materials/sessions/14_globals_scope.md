@@ -25,14 +25,13 @@ int add(int x) {
 
 | 種類 | 例 |
 |------|----|
-| 未初期化グローバル変数 | `int count;` |
-| 初期値付きグローバル変数 | `int base = 7;` |
-| グローバル構造体変数 | `Pair gp;` |
+| グローバル変数 | `int count;` |
+| グローバル構造体変数 | `struct Pair gp;` |
 | ローカルによる隠蔽 | グローバル `x` とローカル `x` |
 | スコープ探索 | local scopes → globals |
 
-この回では、グローバル変数の初期値は整数定数だけに限定する。
-配列や構造体の初期化リスト、文字列による初期化は扱わない。
+言語仕様に初期化子はない。グローバル変数は**すべて 0 に初期化される**ことが
+保証されており（ポインタなら null）、初期値が必要なら代入文で設定する。
 
 ## AST を確認する: グローバル変数
 
@@ -144,32 +143,28 @@ int main() {
 
 | セクション | 用途 |
 |------------|------|
-| `.bss` | 未初期化、またはゼロ初期化のグローバル変数 |
-| `.data` | 初期値を持つグローバル変数、文字列リテラル |
+| `.bss` | グローバル変数（0 初期化された領域） |
+| `.data` | 文字列リテラル |
 
 たとえば、次の宣言を考える。
 
 ```c
 int count;
-int base = 7;
 ```
 
 この回の実装では、おおよそ次のように出力する。
 
 ```asm
-  .data
-  .globl base
-base:
-  .word 7
-
   .bss
   .globl count
 count:
-  .zero 8
+  .zero 4
 ```
 
-`.zero 8` は8バイトぶんのゼロ領域を確保する指定である。
-`int` は4バイトだが、この教材では単純化のためグローバル領域も8バイト境界に揃えて確保する。
+`.zero 4` は 4 バイトぶんのゼロ領域を確保する指定である。
+`.bss` セクションは OS がプログラム開始時に 0 埋めするため、
+「グローバル変数は 0 で始まる」という言語仕様の保証が
+追加のコードなしでそのまま実現できる。
 
 ![プログラム実行時のメモリ全体像と変数の置き場所](figures/14_memory_map.svg)
 
@@ -260,12 +255,11 @@ int main() {
 
 1. 第13回の実装を `sessions/14_globals_scope/mycc.py` に反映する<br>（スケルトンの `importlib` 継承により、前回の `Codegen` クラスを継承する。新機能の handler だけを実装すればよい。）
 2. `self._globals` と `self._locals` を追加する（スケルトンにあらかじめ書かれている）
-3. トップレベルの `'Decl'` ノードを `self.collect_globals()` で集める
-4. 未初期化グローバル変数を `.bss` に出力する
-5. 初期値付きグローバル変数を `.data` に出力する
-6. `self.lookup_var()` を `self._locals` → `self._globals` の順にする
-7. `self.codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
-8. `global_counter.c`、`global_local_shadow.c`、`global_struct.c` を通す
+3. トップレベルの `'Decl'` ノードを `self.collect_globals()` で集める（覚えるのは名前と型だけでよい）
+4. グローバル変数を `.bss` に出力する（全て 0 初期化）
+5. `self.lookup_var()` を `self._locals` → `self._globals` の順にする
+6. `self.codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
+7. `global_counter.c`、`global_init.c`、`global_local_shadow.c`、`global_struct.c` を通す
 
 ## 編集するファイル
 
@@ -287,6 +281,6 @@ python3 scaffold/test_runner.py sessions/14_globals_scope
 | テスト | 内容 | 期待値 |
 |--------|------|--------|
 | `global_counter.c` | グローバル `call_count` / `total` と `printf` | stdout `60`, exit `3` |
-| `global_init.c` | 初期値付きグローバル変数 | `12` |
+| `global_init.c` | 0 初期化保証（代入せず読み始められる） | `12` |
 | `global_local_shadow.c` | ローカル変数がグローバル変数を隠す | `5` |
 | `global_struct.c` | グローバル構造体変数と `.` / `&` | `30` |

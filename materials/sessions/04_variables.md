@@ -47,7 +47,7 @@ int main() {
 この回では、すべての変数を 8 バイト整数として扱う。
 `int` は本来 4 バイトだが、前半では実装を単純にするため、スタック上では各変数に 8 バイトを割り当てる。
 
-if、while、関数呼び出し、ポインタ、配列はまだ扱わない。
+if、while、関数呼び出し、ポインタはまだ扱わない。
 
 ## AST を確認する
 
@@ -323,7 +323,7 @@ a = b + 1;
 | `self.codegen_lval(node)` | 代入先のアドレスを計算し、結果を `a0` に置く |
 
 この回の `codegen_lval()` は、`'Var'` だけ対応すればよい。
-ポインタや配列に対する lvalue は後の回で扱う。
+ポインタに対する lvalue は後の回で扱う。
 
 ## 変数参照の生成
 
@@ -372,7 +372,7 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 
 | ノード種別 | 呼ばれる handler | 処理 |
 |------------|-----------------|------|
-| `'Decl'` | `gen_stmt_Decl` | 変数宣言。初期化子があれば代入として処理する |
+| `'Decl'` | `gen_stmt_Decl` | 変数宣言。領域確保は宣言収集で済んでいるため、ここでは何もしない |
 | `'ExprStmt'` | `gen_stmt_ExprStmt` | `node.operand` を `self.codegen()` する |
 | `'Return'` | `gen_stmt_Return` | `node.operand` を `self.codegen()` し、戻り値を `a0` に置く |
 
@@ -395,7 +395,7 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 | `_codegen_binary_value(node, op)` | コマ3 の TODO を埋める（二項演算共通処理） |
 | `codegen_Neg(node)` | コマ3 の TODO を埋める |
 | `codegen_Add` 〜 `codegen_Mod` | コマ3 の TODO を埋める |
-| `gen_stmt_Decl(node)` | 初期化子があれば代入文として処理 |
+| `gen_stmt_Decl(node)` | 何もしない（初期化子はなく、領域確保は宣言収集で行う） |
 | `gen_stmt_ExprStmt(node)` | 式文を処理 |
 | `gen_stmt_Return(node)` | コマ3 の TODO を埋める |
 | `collect_decls_Decl(node)` | `alloc_local` を呼ぶ |
@@ -410,7 +410,7 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 |----------|------|--------|
 | `target.c` | `a = 3; b = 5; c = a + b; return c;` | 8 |
 | `reassign.c` | `x = 10; y = x * 2 + 3; x = y - x; return x;` | 13 |
-| `init.c` | `int a = 3; int b = 5; int c = a * b; return c;` | 15 |
+| `init.c` | `int a; int b; int c; a = 3; b = 5; c = a * b; return c;` | 15 |
 | `chain_assign.c` | `a = 5; b = a; a = b + 1; return a;` | 6 |
 | `single.c` | 1変数への代入と参照 | 対応する `.ans` を参照 |
 | `add_vars.c` | 複数変数の加算 | 対応する `.ans` を参照 |

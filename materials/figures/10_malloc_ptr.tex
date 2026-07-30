@@ -1,11 +1,11 @@
-% コマ10: 配列のメモリ配置とポインタ演算
-% int a[4]; p = a; のときの a[i] / p + 2 のアドレス計算
+% コマ10: malloc した領域のメモリ配置とポインタ演算
+% a = malloc(sizeof(int) * 4); p = a; のときの a[i] / p + 2 のアドレス計算
 \documentclass[border=8pt]{standalone}
 \input{figure-preamble}
 \begin{document}
 \begin{tikzpicture}[node distance=0mm,
     elem/.style={memcell hi, minimum width=20mm}]
-  % ---- 配列本体 ----
+  % ---- malloc で確保した領域（ヒープ） ----
   \node[elem]                    (a0) at (0,0) {a[0]};
   \node[elem, right=0mm of a0]   (a1) {a[1]};
   \node[elem, right=0mm of a1]   (a2) {a[2]};
@@ -20,7 +20,7 @@
 
   % ---- 先頭アドレス ----
   \node[annot, anchor=east, align=right] (base) at ($(a0.north west)+(-6mm,7mm)$)
-      {a の先頭アドレス\\（base）};
+      {malloc が返した\\先頭アドレス（base）};
   \draw[regptr] (base.east) to[out=0,in=135] (a0.north west);
 
   % ---- 要素サイズ ----
@@ -35,7 +35,7 @@
       {p + 2 が指す先\\（2 × 4 = 8 バイト先）};
 
   \node[annot, anchor=east, align=right] at ($(p.west)+(-4mm,0)$)
-      {int *p;\\p = a;};
+      {int *a; int *p;\\a = malloc(sizeof(int) * 4);\\p = a;};
 
   % ---- 補足 ----
   \node[gannot, anchor=north] at ($(a1.south east)+(0,-26mm)$)

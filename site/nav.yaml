@@ -29,9 +29,9 @@ sections:
       - materials/sessions/07_functions_abi.md
       - materials/sessions/08_functions_recursion.md
       - materials/sessions/09_lvalue_rvalue.md
-      - materials/sessions/10_types_arrays.md
+      - materials/sessions/10_types_pointers.md
       - materials/sessions/11_strings_printf.md
-      - materials/sessions/12_struct_typedef.md
+      - materials/sessions/12_struct.md
       - materials/sessions/13_sizeof_malloc_list.md
       - materials/sessions/14_globals_scope.md
       - materials/sessions/15_preprocess_multifile.md

@@ -1,7 +1,6 @@
-"""コマ 10: 型・配列・ポインタ演算（学生用スケルトン）。"""
+"""コマ 10: 型・ポインタ演算（学生用スケルトン）。連続領域は malloc + sizeof で確保する。"""
 
 import importlib.util
-import re
 import sys
 from pathlib import Path
 
@@ -22,9 +21,6 @@ class Codegen10(prev.Codegen09):
     def size_of_ty_str(cls, ty_str: str) -> int:
         if ty_str.endswith('*'):
             return 8
-        m = re.match(r'(.+)\[(\d+)\]', ty_str)
-        if m:
-            return cls.size_of_ty_str(m.group(1)) * int(m.group(2))
         if ty_str == 'char':
             return 1
         if ty_str == 'void':
@@ -36,16 +32,9 @@ class Codegen10(prev.Codegen09):
         return ty_str.endswith('*')
 
     @staticmethod
-    def is_array_ty_str(ty_str: str) -> bool:
-        return '[' in ty_str
-
-    @staticmethod
     def elem_ty_str(ty_str: str) -> str:
         if ty_str.endswith('*'):
             return ty_str[:-1]
-        m = re.match(r'(.+)\[(\d+)\]', ty_str)
-        if m:
-            return m.group(1)
         return ty_str
 
     def __init__(self) -> None:
@@ -87,6 +76,10 @@ class Codegen10(prev.Codegen09):
                 return self.type_of_expr_Assign(node)
             case 'Call':
                 return self.type_of_expr_Call(node)
+            case 'PreInc' | 'PreDec':
+                return self._type_of_lval(node.operand)
+            case 'Cond':
+                return self._type_of_expr(node.then)
             case _:
                 return 'int'
 
@@ -145,11 +138,11 @@ class Codegen10(prev.Codegen09):
         raise NotImplementedError("type_of_lval_Deref を実装してください")
 
     def type_of_lval_Index(self, node: Node) -> str:
-        # TODO: 配列またはポインタの要素型を返す。
+        # TODO: ポインタの要素型（指し先型）を返す。
         raise NotImplementedError("type_of_lval_Index を実装してください")
 
     def _load_ty(self, ty_str: str) -> None:
-        # TODO: 配列はロードせず、char/int/pointer のサイズに応じて lb/lw/ld を emit する。
+        # TODO: char/int/pointer のサイズに応じて lb/lw/ld を emit する。
         raise NotImplementedError("_load_ty を実装してください")
 
     def _store_ty(self, ty_str: str) -> None:
@@ -207,6 +200,19 @@ class Codegen10(prev.Codegen09):
         # TODO: ポインタ - 整数のとき整数側を要素サイズでスケールする。
         raise NotImplementedError("codegen_Sub を実装してください")
 
+    def codegen_SizeofType(self, node: Node) -> None:
+        # TODO: sizeof(型名) は翻訳時定数。size_of_ty_str の値を li で a0 に置く。
+        raise NotImplementedError("codegen_SizeofType を実装してください")
+
+    def codegen_PreInc(self, node: Node) -> None:
+        # TODO: コマ 6 の前置 ++ を型対応にする。ポインタは指し先サイズ、
+        #       int/char は 1 を加算し、_load_ty/_store_ty で読み書きする。
+        raise NotImplementedError("codegen_PreInc（型対応版）を実装してください")
+
+    def codegen_PreDec(self, node: Node) -> None:
+        # TODO: PreInc と同様に、型に応じた幅で減算する。
+        raise NotImplementedError("codegen_PreDec（型対応版）を実装してください")
+
     def codegen(self, node: Node) -> None:
         match node.kind:
             case 'Num':
@@ -243,6 +249,14 @@ class Codegen10(prev.Codegen09):
                 self.codegen_Deref(node)
             case 'Index':
                 self.codegen_Index(node)
+            case 'Cond':
+                self.codegen_Cond(node)
+            case 'PreInc':
+                self.codegen_PreInc(node)
+            case 'PreDec':
+                self.codegen_PreDec(node)
+            case 'SizeofType':
+                self.codegen_SizeofType(node)
             case _:
                 raise RuntimeError(f'codegen: コマ10で未対応の式です (kind={node.kind!r})')
 
@@ -294,7 +308,7 @@ Codegen = Codegen10
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("使い方: python3 sessions/10_types_arrays/mycc.py <source.c>", file=sys.stderr)
+        print("使い方: python3 sessions/10_types_pointers/mycc.py <source.c>", file=sys.stderr)
         sys.exit(1)
     filename = sys.argv[1]
     with open(filename, 'r', encoding='utf-8') as f:

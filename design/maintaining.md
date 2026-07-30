@@ -201,8 +201,8 @@ python3 golden.py   # README で指定されている場合
 コマ14〜16 は `* の対象がポインタではありません` で拒否する。
 
 **教材はこの形を避けている**ので、現状の教材利用では露出しない。
-`sessions/10_types_arrays/tests/ptr_arith.c` が唯一 `*(p + i)` を含むが `p = a;` を経由し、
-資料（`materials/sessions/10_types_arrays.md` の「配列変数の扱い」）も
+`sessions/10_types_pointers/tests/ptr_arith.c` が唯一 `*(p + i)` を含むが `p = a;` を経由し、
+資料（`materials/sessions/10_types_pointers.md` の「配列変数の扱い」）も
 `p = a;` の形だけを例示している。
 
 直す場合は、`+` / `-` の型判定で配列型をポインタ型へ読み替える（`TyArray {elem}` → `TyPtr elem`）。

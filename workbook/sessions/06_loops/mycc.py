@@ -26,6 +26,24 @@ class Codegen06(prev.Codegen05):
         self._break_stack: list[str] = []
         self._cont_stack: list[str] = []
 
+    def codegen_PreInc(self, node: Node) -> None:
+        # TODO: 前置 ++。codegen_lval で左辺値のアドレスを 1 回だけ求め、
+        #       ld → +1 → sd で書き戻し、増やした後の値を a0 に残す。
+        raise NotImplementedError("PreInc（前置 ++）を実装してください")
+
+    def codegen_PreDec(self, node: Node) -> None:
+        # TODO: 前置 --。PreInc と同様に -1 する。
+        raise NotImplementedError("PreDec（前置 --）を実装してください")
+
+    def codegen(self, node: Node) -> None:
+        match node.kind:
+            case 'PreInc':
+                self.codegen_PreInc(node)
+            case 'PreDec':
+                self.codegen_PreDec(node)
+            case _:
+                super().codegen(node)
+
     def gen_stmt_While(self, node: Node) -> None:
         # TODO: 条件ラベルと終了ラベルを作り、cond が 0 なら終了へ分岐するループを生成する。
         # break 用に終了ラベル、continue 用に条件ラベルをそれぞれスタックへ積む。

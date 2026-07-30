@@ -1,20 +1,20 @@
-# コマ12: struct / typedef / . / ->
+# コマ12: 構造体（struct / . / ->）
 
 ## 今日のゴール
 
-`typedef struct { ... } Name;`、構造体変数、`.`、`->` を実装する。
+`struct タグ { ... };` の定義、構造体変数、`.`、`->` を実装する。
 
-第10回までに、型サイズと配列・ポインタを扱えるようになった。
+第10回までに、型サイズとポインタ演算を扱えるようになった。
 この回では、複数のフィールドをまとめた構造体を扱う。
 
 ```c
-typedef struct {
+struct Point {
     int x;
     int y;
-} Point;
+};
 ```
 
-`Point` は、`x` と `y` という2つのフィールドを持つ型である。
+`struct Point` は、`x` と `y` という2つのフィールドを持つ型である。
 
 ## この回で扱う範囲
 
@@ -22,32 +22,33 @@ typedef struct {
 
 | 種類 | 例 |
 |------|----|
-| typedef struct | `typedef struct { int x; int y; } Point;` |
+| struct 定義 | `struct Point { int x; int y; };` |
 | 直接メンバアクセス | `p.x` |
 | ポインタ経由メンバアクセス | `p->x` |
-| 構造体ポインタ引数 | `int f(Point *p)` |
+| 構造体ポインタ引数 | `int f(struct Point *p)` |
 
-この回では、構造体のフィールドは `int`、`char`、ポインタ程度に限定する。
-構造体のネスト、構造体代入、グローバル構造体変数は扱わない。
+言語仕様どおり、構造体のフィールドは `int`、`char`、ポインタに限られる
+（struct 値の入れ子はない）。構造体代入は言語仕様にないため扱わず、
+グローバル構造体変数は第14回で扱う。
 
 ## AST を確認する: `.`
 
 まず、`.` を使うプログラムがどのような AST になるか確認する。
 
 ```bash
-python3 scaffold/parse_viewer.py sessions/12_struct_typedef/tests/dot_access.c
+python3 scaffold/parse_viewer.py sessions/12_struct/tests/dot_access.c
 ```
 
 このプログラムの内容は次の通り。
 
 ```c
-typedef struct {
+struct Point {
     int x;
     int y;
-} Point;
+};
 
 int main() {
-    Point p;
+    struct Point p;
     p.x = 3;
     p.y = 4;
     return p.x + p.y;
@@ -60,7 +61,7 @@ int main() {
 (program
   (funcdef "main" :type int (params)
     (block
-      (decl "p" :type (type "Point"))
+      (decl "p" :type (struct "Point"))
       (exprstmt
         (assign
           (member "." "x" (var "p"))
@@ -84,23 +85,23 @@ int main() {
 次に、構造体ポインタを使うプログラムを確認する。
 
 ```bash
-python3 scaffold/parse_viewer.py sessions/12_struct_typedef/tests/arrow_access.c
+python3 scaffold/parse_viewer.py sessions/12_struct/tests/arrow_access.c
 ```
 
 このプログラムの内容は次の通り。
 
 ```c
-typedef struct {
+struct Point {
     int x;
     int y;
-} Point;
+};
 
-int distance_sq(Point *p) {
+int distance_sq(struct Point *p) {
     return p->x * p->x + p->y * p->y;
 }
 
 int main() {
-    Point p;
+    struct Point p;
     p.x = 3;
     p.y = 4;
     return distance_sq(&p);
@@ -114,7 +115,7 @@ int main() {
   (funcdef "distance_sq" :type int
     (params
       (param "p" :type
-        (ptr (type "Point"))))
+        (ptr (struct "Point"))))
     (block
       (return
         (add
@@ -126,7 +127,7 @@ int main() {
             (member "->" "y" (var "p")))))))
   (funcdef "main" :type int (params)
     (block
-      (decl "p" :type (type "Point"))
+      (decl "p" :type (struct "Point"))
       (exprstmt
         (assign
           (member "." "x" (var "p"))
@@ -148,7 +149,7 @@ int main() {
 
 ## 構造体のメモリレイアウト
 
-`Point` は `int x; int y;` を持つ。
+`struct Point` は `int x; int y;` を持つ。
 この講義では `int` を4バイトとして扱うため、次のように配置する。
 
 | フィールド | オフセット | サイズ |
@@ -156,10 +157,10 @@ int main() {
 | `x` | 0 | 4 |
 | `y` | 4 | 4 |
 
-したがって `Point` 全体のサイズは8バイトである。
+したがって `struct Point` 全体のサイズは8バイトである。
 
 ```text
-Point p;
+struct Point p;
 
 p + 0 byte : x
 p + 4 byte : y
@@ -167,12 +168,12 @@ p + 4 byte : y
 
 ![`Point` のメモリ配置と `.` / `->` のアドレス計算](figures/12_struct_layout.svg)
 
-図の `q` は `Point *q = &p;` としたポインタである（`distance_sq(&p)` の仮引数も同じ状態になる）。
+図の `q` は `&p` を代入した `struct Point *q` である（`distance_sq(&p)` の仮引数も同じ状態になる）。
 `.` は構造体変数のアドレスから、`->` はポインタの値から、どちらも「+ フィールドオフセット」で場所が決まる。
 
-## typedef struct を読む
+## struct 定義を読む
 
-Parser は `typedef struct { ... } Point;` のフィールド一覧を AST には残さない。
+Parser は `struct Point { ... };` のフィールド一覧を AST には残さない。
 そのため、この回ではソース文字列を走査して構造体情報を集める。
 
 ```python
@@ -180,8 +181,8 @@ Parser は `typedef struct { ... } Point;` のフィールド一覧を AST に�
 # self._struct_defs としてコンストラクタに渡す設計
 ```
 
-`self._struct_defs` は構造体名をキーとする辞書である。
-たとえば `Point` のエントリは次の形をとる。
+`self._struct_defs` は `"struct Point"` の形の型名をキーとする辞書である。
+たとえば `struct Point` のエントリは次の形をとる。
 
 ```python
 {
@@ -197,23 +198,18 @@ Parser は `typedef struct { ... } Point;` のフィールド一覧を AST に�
 
 ```python
 @classmethod
-def register_typedef_names(cls, source: str) -> set[str]:
-    """typedef 名を収集する"""
-    ...
-
-@classmethod
 def parse_struct_defs(cls, source: str) -> dict[str, dict]:
     """構造体定義をパースしてフィールド情報を返す"""
     ...
 ```
 
-これらの関数は、次の形だけを対象にすればよい。
+この関数は、次の形だけを対象にすればよい（タグは必須）。
 
 ```c
-typedef struct {
+struct Point {
     int x;
     int y;
-} Point;
+};
 ```
 
 ## `.` のコード生成
@@ -257,16 +253,15 @@ if node.kind == ND_MEMBER and node.is_arrow:
 ## 実装手順
 
 1. スケルトンの `importlib` 継承により第11回の Codegen クラスを引き継ぐ（あらかじめ書かれている）
-2. `CodegenNN.register_typedef_names(source)` で typedef 名を収集する
-3. `CodegenNN.parse_struct_defs(source)` で構造体定義をパースし `self._struct_defs` に渡す
-4. `self._type_of_lval()` で typedef 名→ty_str を解決し、`ND_MEMBER` を追加する
+2. `CodegenNN.parse_struct_defs(source)` で構造体定義をパースし `self._struct_defs` に渡す
+3. `self._type_of_lval()` に `ND_MEMBER` を追加する（フィールドの型は `self._struct_defs` から引く）
 5. `self.codegen_lval()` に `ND_MEMBER` ハンドラを追加する（`self._struct_defs` からフィールドオフセットを引く）
 6. `load()` / `store()` はフィールド型に応じて既存のものを使う
 
 ## テスト
 
 ```bash
-python3 scaffold/test_runner.py sessions/12_struct_typedef
+python3 scaffold/test_runner.py sessions/12_struct
 ```
 
 この回の主要テストは次の通り。
@@ -274,4 +269,4 @@ python3 scaffold/test_runner.py sessions/12_struct_typedef
 | テスト | 内容 | 期待値 |
 |--------|------|--------|
 | `dot_access.c` | `p.x`, `p.y` の読み書き | `7` |
-| `arrow_access.c` | `Point *p` に対する `p->x` | `25` |
+| `arrow_access.c` | `struct Point *p` に対する `p->x` | `25` |

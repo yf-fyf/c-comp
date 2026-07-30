@@ -1,9 +1,9 @@
 """
 コマ 14: コード生成⑫ — グローバル変数・追加演算子（学生用スケルトン）
 
-目標: グローバル変数宣言を .data/.bss に配置し、全ての単項/二項演算子をサポートする。
+目標: グローバル変数宣言を .bss に配置し（0 初期化保証）、残りの演算子をサポートする。
 
-追加演算子:  !  ~  &&  ||  &  |  ^  <<  >>
+追加演算子:  !  &&  ||
 
 実行方法:
     python3 sessions/14_globals_scope/mycc.py input.c \
@@ -24,32 +24,25 @@ _SPEC.loader.exec_module(prev)
 Node = prev.Node
 preprocess = prev.preprocess
 tokenize = prev.tokenize
-Parser = prev.Parser
+parse = prev.parse
 
 
 class Codegen14(prev.Codegen13):
     def __init__(self, struct_defs: dict[str, dict]) -> None:
         super().__init__(struct_defs)
-        self._globals: dict[str, tuple[str, int | None]] = {}
+        self._globals: dict[str, str] = {}
 
     @classmethod
     def parse_file(cls, filename: str) -> tuple[list[Node], dict[str, dict]]:
         with open(filename, 'r', encoding='utf-8') as f:
             source = f.read()
         source = preprocess(source, filename)
-        typedef_names = cls.register_typedef_names(source)
         struct_defs = cls.parse_struct_defs(source)
         tokens = tokenize(source, filename)
-        p = Parser(tokens)
-        p.typedef_names.update(typedef_names)
-        return p.parse_program(), struct_defs
+        return parse(tokens), struct_defs
 
     def _is_local(self, name: str) -> bool:
         return name in self._locals
-
-    def _const_int_value(self, node: Node) -> int | None:
-        # TODO: Num と単項 - だけを定数初期化子として評価する。
-        raise NotImplementedError("_const_int_value を実装してください")
 
     def lookup_var_ty(self, name: str, line: int) -> str:
         if name in self._locals:
@@ -63,14 +56,8 @@ class Codegen14(prev.Codegen13):
     def type_of_expr_Not(self, node: Node) -> str:
         return 'int'
 
-    type_of_expr_BitNot = type_of_expr_Not
     type_of_expr_And = type_of_expr_Not
     type_of_expr_Or = type_of_expr_Not
-    type_of_expr_BitAnd = type_of_expr_Not
-    type_of_expr_BitOr = type_of_expr_Not
-    type_of_expr_BitXor = type_of_expr_Not
-    type_of_expr_Shl = type_of_expr_Not
-    type_of_expr_Shr = type_of_expr_Not
 
     def _type_of_expr(self, node: Node) -> str:
         match node.kind:
@@ -100,28 +87,18 @@ class Codegen14(prev.Codegen13):
                 return 'int'
             case 'SizeofType':
                 return self.type_of_expr_SizeofType(node)
-            case 'SizeofExpr':
-                return self.type_of_expr_SizeofExpr(node)
             case 'Neg':
                 return self.type_of_expr_Neg(node)
             case 'Not':
                 return self.type_of_expr_Not(node)
-            case 'BitNot':
-                return self.type_of_expr_BitNot(node)
             case 'And':
                 return self.type_of_expr_And(node)
             case 'Or':
                 return self.type_of_expr_Or(node)
-            case 'BitAnd':
-                return self.type_of_expr_BitAnd(node)
-            case 'BitOr':
-                return self.type_of_expr_BitOr(node)
-            case 'BitXor':
-                return self.type_of_expr_BitXor(node)
-            case 'Shl':
-                return self.type_of_expr_Shl(node)
-            case 'Shr':
-                return self.type_of_expr_Shr(node)
+            case 'PreInc' | 'PreDec':
+                return self._type_of_lval(node.operand)
+            case 'Cond':
+                return self._type_of_expr(node.then)
             case _:
                 raise RuntimeError(f'type_of_expr: コマ14で未対応の式です (kind={node.kind!r})')
 
@@ -161,38 +138,6 @@ class Codegen14(prev.Codegen13):
     def codegen_Not(self, node: Node) -> None:
         # TODO: operand を生成し、seqz で論理否定を作る。
         raise NotImplementedError("codegen_Not を実装してください")
-
-    def codegen_BitNot(self, node: Node) -> None:
-        # TODO: operand を生成し、not でビット反転する。
-        raise NotImplementedError("codegen_BitNot を実装してください")
-
-    def codegen_And(self, node: Node) -> None:
-        # TODO: lhs/rhs を評価し、0/1 化して and する。
-        raise NotImplementedError("codegen_And を実装してください")
-
-    def codegen_Or(self, node: Node) -> None:
-        # TODO: lhs/rhs を評価し、or 後に 0/1 化する。
-        raise NotImplementedError("codegen_Or を実装してください")
-
-    def codegen_BitAnd(self, node: Node) -> None:
-        # TODO: ビット AND を生成する。
-        raise NotImplementedError("codegen_BitAnd を実装してください")
-
-    def codegen_BitOr(self, node: Node) -> None:
-        # TODO: ビット OR を生成する。
-        raise NotImplementedError("codegen_BitOr を実装してください")
-
-    def codegen_BitXor(self, node: Node) -> None:
-        # TODO: ビット XOR を生成する。
-        raise NotImplementedError("codegen_BitXor を実装してください")
-
-    def codegen_Shl(self, node: Node) -> None:
-        # TODO: 左シフトを生成する。
-        raise NotImplementedError("codegen_Shl を実装してください")
-
-    def codegen_Shr(self, node: Node) -> None:
-        # TODO: 右シフトを生成する。
-        raise NotImplementedError("codegen_Shr を実装してください")
 
     def codegen(self, node: Node) -> None:
         match node.kind:
@@ -236,52 +181,37 @@ class Codegen14(prev.Codegen13):
                 self.codegen_Member(node)
             case 'SizeofType':
                 self.codegen_SizeofType(node)
-            case 'SizeofExpr':
-                self.codegen_SizeofExpr(node)
             case 'Not':
                 self.codegen_Not(node)
-            case 'BitNot':
-                self.codegen_BitNot(node)
             case 'And':
                 self.codegen_And(node)
             case 'Or':
                 self.codegen_Or(node)
-            case 'BitAnd':
-                self.codegen_BitAnd(node)
-            case 'BitOr':
-                self.codegen_BitOr(node)
-            case 'BitXor':
-                self.codegen_BitXor(node)
-            case 'Shl':
-                self.codegen_Shl(node)
-            case 'Shr':
-                self.codegen_Shr(node)
+            case 'Cond':
+                self.codegen_Cond(node)
+            case 'PreInc':
+                self.codegen_PreInc(node)
+            case 'PreDec':
+                self.codegen_PreDec(node)
             case _:
                 raise RuntimeError(f'codegen: コマ14で未対応の式です (kind={node.kind!r})')
 
     def collect_globals(self, prog: list[Node]) -> None:
-        # TODO: トップレベル Decl を self._globals に登録する。
+        # TODO: トップレベル Decl の名前と型を self._globals に登録する
+        #       （初期化子はないので覚えるのは型だけでよい）。
         raise NotImplementedError("collect_globals を実装してください")
 
     def collect_all_strings(self, prog: list[Node]) -> None:
-        # TODO: 関数本体とグローバル初期化式の文字列を収集する。
+        # TODO: 各 FuncDef の本体から文字列を収集する。
         raise NotImplementedError("collect_all_strings を実装してください")
 
     def collect_strings_expr_Not(self, node: Node) -> None:
         self.collect_strings_expr(node.operand)
 
-    collect_strings_expr_BitNot = collect_strings_expr_Not
-    collect_strings_expr_SizeofExpr = collect_strings_expr_Not
-
     def collect_strings_expr_And(self, node: Node) -> None:
         self._collect_strings_binary_expr(node)
 
     collect_strings_expr_Or = collect_strings_expr_And
-    collect_strings_expr_BitAnd = collect_strings_expr_And
-    collect_strings_expr_BitOr = collect_strings_expr_And
-    collect_strings_expr_BitXor = collect_strings_expr_And
-    collect_strings_expr_Shl = collect_strings_expr_And
-    collect_strings_expr_Shr = collect_strings_expr_And
 
     def collect_strings_expr(self, node: Node) -> None:
         match node.kind:
@@ -289,41 +219,29 @@ class Codegen14(prev.Codegen13):
                 self.collect_strings_expr_Str(node)
             case 'Num' | 'Var' | 'SizeofType':
                 return
-            case 'Neg' | 'Addr' | 'Deref' | 'Member':
+            case 'Neg' | 'Addr' | 'Deref' | 'Member' | 'PreInc' | 'PreDec':
                 self.collect_strings_expr_Neg(node)
             case 'Not':
                 self.collect_strings_expr_Not(node)
-            case 'BitNot':
-                self.collect_strings_expr_BitNot(node)
-            case 'SizeofExpr':
-                self.collect_strings_expr_SizeofExpr(node)
             case 'Assign' | 'Add' | 'Sub' | 'Mul' | 'Div' | 'Mod' | 'Eq' | 'Ne' | 'Lt' | 'Le' | 'Index':
                 self._collect_strings_binary_expr(node)
             case 'And':
                 self.collect_strings_expr_And(node)
             case 'Or':
                 self.collect_strings_expr_Or(node)
-            case 'BitAnd':
-                self.collect_strings_expr_BitAnd(node)
-            case 'BitOr':
-                self.collect_strings_expr_BitOr(node)
-            case 'BitXor':
-                self.collect_strings_expr_BitXor(node)
-            case 'Shl':
-                self.collect_strings_expr_Shl(node)
-            case 'Shr':
-                self.collect_strings_expr_Shr(node)
+            case 'Cond':
+                self.collect_strings_expr_Cond(node)
             case 'Call':
                 self.collect_strings_expr_Call(node)
             case _:
                 raise RuntimeError(f'collect_strings_expr: コマ14で未対応の式です (kind={node.kind!r})')
 
     def emit_data_section(self) -> None:
-        # TODO: 文字列リテラルと初期値ありグローバルを .data に出力する。
+        # TODO: 文字列リテラルを .data に出力する。
         raise NotImplementedError("emit_data_section を実装してください")
 
     def emit_bss_section(self) -> None:
-        # TODO: 初期値なしグローバルを .bss に出力する。
+        # TODO: すべてのグローバル変数を .bss に出力する（.zero で 0 初期化）。
         raise NotImplementedError("emit_bss_section を実装してください")
 
     def gen_program(self, prog: list[Node]) -> None:

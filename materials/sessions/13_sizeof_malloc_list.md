@@ -8,13 +8,13 @@
 この回では、構造体を `malloc` で動的に確保し、ポインタでつないだデータ構造を作る。
 
 ```c
-typedef struct Node {
+struct Node {
     int val;
     struct Node *next;
-} Node;
+};
 ```
 
-`Node` は、自分と同じ型へのポインタ `next` を持つ。
+`struct Node` は、自分と同じ型へのポインタ `next` を持つ。
 このような構造体を自己参照構造体と呼ぶ。
 
 ## この回で扱う範囲
@@ -23,9 +23,8 @@ typedef struct Node {
 
 | 種類 | 例 |
 |------|----|
-| `sizeof(type)` | `sizeof(int)`, `sizeof(Node)` |
-| `sizeof expr` | `sizeof *p` |
-| `malloc` | `malloc(sizeof(Node))` |
+| `sizeof(型名)` | `sizeof(int)`, `sizeof(struct Node)` |
+| `malloc` | `malloc(sizeof(struct Node))` |
 | 自己参照構造体 | `struct Node *next` |
 | 連結リスト | `head = head->next` |
 
@@ -77,35 +76,35 @@ python3 scaffold/parse_viewer.py sessions/13_sizeof_malloc_list/tests/list_min.c
 ```c
 #include "lib.h"
 
-typedef struct Node {
+struct Node {
     int val;
     struct Node *next;
-} Node;
+};
 
 int main() {
-    Node *n;
-    n = malloc(sizeof(Node));
+    struct Node *n;
+    n = malloc(sizeof(struct Node));
     n->val = 10;
-    n->next = 0;
+    n->next = NULL;
     return n->val;
 }
 ```
 
 実行すると、次のようなS式が表示される。
 
+先頭には `lib.h` の関数プロトタイプが並び（`#include` がファイル結合であることが
+そのまま見える）、その後に `main` が続く。`main` の部分は次のようになる。
+
 ```lisp
-(program
-  (funcproto "malloc" :type int
-    (params (param "size" :type int)))
   (funcdef "main" :type int (params)
     (block
       (decl "n" :type
-        (ptr (type "Node")))
+        (ptr (struct "Node")))
       (exprstmt
         (assign (var "n")
           (call "malloc"
             (args
-              (sizeof-type (type "Node"))))))
+              (sizeof-type (struct "Node"))))))
       (exprstmt
         (assign
           (member "->" "val" (var "n"))
@@ -120,9 +119,9 @@ int main() {
 
 ![`list_min.c` の AST](figures/ast/13_list_min_ast.svg)
 
-`malloc(sizeof(Node))` は、`sizeof(Node)` の結果を引数として `malloc` を呼び出すだけである。
+`malloc(sizeof(struct Node))` は、`sizeof(struct Node)` の結果を引数として `malloc` を呼び出すだけである。
 `lib.h` の宣言は `void *malloc(int size);` である。`void *` は任意の `T *` へ暗黙変換されるので、
-そのまま `Node *n` に代入できる。
+そのまま `struct Node *n` に代入できる。
 
 ## sizeof のコード生成
 
@@ -162,16 +161,16 @@ n = malloc(sizeof(Node));
 n = malloc(sizeof(Node));
 ```
 
-この例では、まず `sizeof(Node)` によって `Node` 1個ぶんに必要なバイト数を求める。
+この例では、まず `sizeof(struct Node)` によって `struct Node` 1個ぶんに必要なバイト数を求める。
 その値を第1引数として `malloc` に渡す。
 `malloc` は実行時に、そのサイズ以上の連続したメモリ領域をヒープから確保し、その先頭アドレスを返す。
 
 返ってきた値は、構造体そのものではなく、確保されたメモリ領域の先頭アドレスである。
-そのアドレスを `Node *n` に代入することで、以後その領域を `Node` として扱える。
+そのアドレスを `struct Node *n` に代入することで、以後その領域を `struct Node` として扱える。
 
 ```c
 n->val = 10;
-n->next = 0;
+n->next = NULL;
 ```
 
 この代入によって、確保した領域の中に実際のフィールド値を書き込んでいる。
@@ -189,16 +188,16 @@ n->next = 0;
 
 ## 自己参照構造体
 
-`Node` の定義には `struct Node *next` が含まれている。
+`struct Node` の定義には `struct Node *next` が含まれている。
 
 ```c
-typedef struct Node {
+struct Node {
     int val;
     struct Node *next;
-} Node;
+};
 ```
 
-`next` は `Node` そのものではなく、`Node` へのポインタである。
+`next` は `struct Node` そのものではなく、`struct Node` へのポインタである。
 ポインタのサイズは常に8バイトなので、構造体の中に自分自身へのポインタを持てる。
 
 レイアウトは次のようになる。
@@ -211,39 +210,28 @@ typedef struct Node {
 `next` は8バイト境界に置くため、`val` の後に4バイトの余白が入る。
 この簡易実装では、各フィールドをその型サイズに応じて自然な境界に揃える。
 
-## struct tag と typedef 名
+## struct のタグ名
 
-第12回では、主に `typedef struct { ... } Point;` を扱った。
-第13回では tag 名付きの構造体を扱う。
-
-```c
-typedef struct Node { ... } Node;
-```
-
-この場合、次の2つの名前で同じ構造体型を参照できるようにする。
-
-| 名前 | 使われ方 |
-|------|----------|
-| `Node` | typedef 名 |
-| `struct Node` | struct tag 名 |
-
-つまり、次の2つの呼び出しが同じサイズを返すようにする。
+構造体の型は常に `struct タグ名` の形で参照する。この言語に `typedef` は
+ないため、構造体型の名前はタグ名の 1 種類だけである。
 
 ```python
-# typedef 名でも struct tag 名でも同じサイズが返る
-self.size_of_ty_str("Node", self._struct_defs)
+# タグ名でサイズを引く
 self.size_of_ty_str("struct Node", self._struct_defs)
 ```
+
+`self._struct_defs` のキーも `"struct Node"` の形で持てば、
+型文字列（`ty_str`）をそのままキーとして使える。
 
 ## 連結リストの走査
 
 連結リストは、各ノードが次のノードへのポインタを持つ構造である。
 
 ```c
-int list_sum(Node *head) {
+int list_sum(struct Node *head) {
     int sum;
     sum = 0;
-    while (head != 0) {
+    while (head != NULL) {
         sum = sum + head->val;
         head = head->next;
     }
@@ -272,10 +260,9 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 ## 実装手順
 
 1. スケルトンの `importlib` 継承により第12回の Codegen クラスを引き継ぐ（あらかじめ書かれている）
-2. `CodegenNN.register_typedef_names()` / `parse_struct_defs()` を tag 名付き struct に対応させる
-3. 自己参照用に、フィールド走査前に仮のエントリを `self._struct_defs` に登録する
-4. `self.size_of_ty_str()` で `struct Node` と `Node` を同じサイズへ解決する
-5. `sizeof(type)` と `sizeof expr` が構造体サイズを返すことを確認する
+2. `parse_struct_defs()` が自己参照フィールド（`struct Node *next`）を扱えることを確認する（ポインタは中身を知らなくてもサイズ 8 で確定する）
+3. `self.size_of_ty_str("struct Node", self._struct_defs)` が構造体サイズを返すことを確認する
+4. `sizeof(struct Node)` が `malloc` の引数として使えることを確認する
 6. `malloc(sizeof(Node))` が通常の関数呼び出しとして動くことを確認する
 7. `list_sum.c` まで通す
 

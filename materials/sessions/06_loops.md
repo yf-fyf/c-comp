@@ -2,7 +2,7 @@
 
 ## 今日のゴール
 
-ループとジャンプ制御を実装する。
+ループとジャンプ制御、そして前置 `++`/`--` を実装する。
 
 第05回までは、プログラムは常に先頭から末尾へ1回だけ実行された。
 この回では、条件が成り立つ間、同じ処理を繰り返す `while` と `for` を扱う。
@@ -35,10 +35,11 @@ int main() {
 | continue 文 | `continue;` |
 | 入れ子ループ | `while` の中に `while` など |
 | ループ内の if | `while (cond) { if (...) break; }` |
+| 前置 `++`/`--` | `for (i = 0; i < n; ++i)` |
 
 これまでに扱った変数宣言・代入・算術・比較・if/else は、ループの内部でも使用できる。
 
-関数呼び出し、ポインタ、配列はまだ扱わない。
+関数呼び出しとポインタはまだ扱わない。
 
 ## AST を確認する
 
@@ -320,6 +321,33 @@ emit(f"  j {_cont_stack[-1]}")
 `while` では continue先が `Lcond`、`for` では continue先が `Lstep` になる。
 ループ本体の生成中に、内側の `break` / `continue` が正しく動作するようになる。
 
+## 前置 `++`/`--`: ループの更新式の慣用形
+
+for 文の更新式には `i = i + 1` の代わりに前置インクリメント `++i` を書くのが
+C の慣用である。この回で実装する。
+
+```c
+for (i = 0; i < 10; ++i) {
+    sum = sum + i;
+}
+```
+
+`++i` は「`i` を 1 増やし、増やした後の値を式の値とする」式である。
+実装の要点は、**左辺値のアドレスを 1 回だけ求める**ことである。
+
+```python
+def codegen_PreInc(self, node):
+    self.codegen_lval(node.operand)   # アドレスを a0 に
+    self.emit('  ld a1, 0(a0)')       # 値を読む
+    self.emit('  addi a1, a1, 1')     # +1
+    self.emit('  sd a1, 0(a0)')       # 書き戻す
+    self.emit('  mv a0, a1')          # 増やした後の値が式の値
+```
+
+`--i` は `-1` するだけで同じ形である。AST 上は `(preinc (var "i"))` /
+`(predec (var "i"))` というノードになる。
+コマ10 で型を導入すると、この実装は「ポインタなら要素サイズぶん進む」形に拡張される。
+
 ## gen_stmt に追加する処理
 
 | `node.kind` | 呼ばれる handler | 処理 |
@@ -341,6 +369,7 @@ emit(f"  j {_cont_stack[-1]}")
 | `gen_stmt_For(node)` | for ループのコード生成 |
 | `gen_stmt_Break(node)` | break 文のコード生成 |
 | `gen_stmt_Continue(node)` | continue 文のコード生成 |
+| `codegen_PreInc(node)` / `codegen_PreDec(node)` | 前置 `++`/`--` のコード生成 |
 | `self._break_stack` / `self._continue_stack` | インスタンス変数を `__init__` で追加する |
 
 ## tests/
@@ -355,6 +384,7 @@ emit(f"  j {_cont_stack[-1]}")
 | `for_fib.c` | for によるフィボナッチ計算 | 対応する `.ans` を参照 |
 | `break_loop.c` | break を含むループ | 対応する `.ans` を参照 |
 | `continue_odd.c` | continue を含むループ | 対応する `.ans` を参照 |
+| `incr_loop.c` | `++i` を更新式に使うループと `--s` | 44 |
 
 ## テスト
 

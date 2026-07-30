@@ -54,6 +54,11 @@ class Codegen05(prev.Codegen04):
         # TODO: b < a を slt で調べ、xori で反転して <= の結果を作る。
         raise NotImplementedError("Le を実装してください")
 
+    def codegen_Cond(self, node: Node) -> None:
+        # TODO: 三項演算子 a ? b : c。if/else と同じ分岐を作り、
+        #       選ばれた腕の値を a0 に残す（式なので値が残るのがポイント）。
+        raise NotImplementedError("Cond（三項演算子）を実装してください")
+
     def codegen(self, node: Node) -> None:
         match node.kind:
             case 'Num':
@@ -82,6 +87,8 @@ class Codegen05(prev.Codegen04):
                 self.codegen_Lt(node)
             case 'Le':
                 self.codegen_Le(node)
+            case 'Cond':
+                self.codegen_Cond(node)
             case _:
                 raise RuntimeError(f'codegen: コマ5で未対応の式です (kind={node.kind!r})')
 

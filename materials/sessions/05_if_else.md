@@ -2,7 +2,7 @@
 
 ## 今日のゴール
 
-条件分岐と比較演算を実装する。
+条件分岐と比較演算、そして三項演算子を実装する。
 
 第04回までは、関数内の文は常に先頭から順に実行された。
 この回では、条件によって実行する文を変える `if` / `else` を扱う。
@@ -36,9 +36,10 @@ int main() {
 | 入れ子の if | `if (cond1) { if (cond2) { ... } }` |
 | ブロック | `{ ... }` |
 | return 文 | `return 式;` |
+| 三項演算子 | `a > b ? a : b` |
 | 変数宣言・代入・算術式 | 第04回までに扱ったもの |
 
-while、for、関数呼び出し、ポインタ、配列はまだ扱わない。
+while、for、関数呼び出し、ポインタはまだ扱わない。
 
 ## AST を確認する
 
@@ -310,6 +311,48 @@ j Lreturn
 
 ![複数の `return` が共通エピローグに合流する](figures/05_ret_label.svg)
 
+## 三項演算子: 値を持つ分岐（式と文の違い）
+
+if/else と同じ回で、三項演算子 `?:` も実装する。
+
+```c
+int main() {
+    int a;
+    int b;
+    a = 3;
+    b = 8;
+    return a > b ? a : b;
+}
+```
+
+ここで「式と文の違い」がはっきり見える。
+
+| | if / else | `?:` |
+|--|-----------|------|
+| 種類 | 文 | 式 |
+| 役割 | 実行する**文**を選ぶ | 選ばれた腕の**値**が式の値になる |
+| 書ける場所 | 文の位置 | 式の中（`return` の右、代入の右辺、関数の引数など） |
+
+コード生成はどちらも同じ分岐で書ける。違いは、`?:` では選ばれた腕の
+評価結果が `a0` に残ることだけである。
+
+```python
+def codegen_Cond(self, node):
+    label_else = self.new_label()
+    label_end = self.new_label()
+    self.codegen(node.cond)
+    self.emit(f'  beqz a0, {label_else}')
+    self.codegen(node.then)      # 値が a0 に残る
+    self.emit(f'  j {label_end}')
+    self.emit(f'{label_else}:')
+    self.codegen(node.else_)     # 値が a0 に残る
+    self.emit(f'{label_end}:')
+```
+
+`gen_stmt_If` とほぼ同じ形だが、`gen_stmt` ではなく `codegen`
+（式のコード生成）の一員である点に注意する。AST 上は
+`(ternary cond then else)` というノードになる。
+
 ## gen_stmt に追加する処理
 
 コマ4 で実装した `gen_stmt()` に、さらに文の種類を追加する。
@@ -333,7 +376,8 @@ j Lreturn
 | `gen_stmt_If(node)` | 条件分岐 (`beqz` / `j`) を生成。`else_` も処理する |
 | `gen_stmt_Block(node)` | `stmts` を順に `gen_stmt` する |
 | `codegen_Eq(node)` / `codegen_Ne(node)` / `codegen_Lt(node)` / `codegen_Le(node)` | 比較演算。handler を追加する |
-| （dispatcher 対応） | `codegen` に `'Eq'` `'Ne'` `'Lt'` `'Le'` の case を追加する |
+| `codegen_Cond(node)` | 三項演算子。分岐して選ばれた腕の値を `a0` に残す |
+| （dispatcher 対応） | `codegen` に `'Eq'` `'Ne'` `'Lt'` `'Le'` `'Cond'` の case を追加する |
 
 ## tests/
 
@@ -347,6 +391,7 @@ j Lreturn
 | `if_false.c` | if の条件が偽になる場合 | 対応する `.ans` を参照 |
 | `if_elseif.c` | else if の連なり | 対応する `.ans` を参照 |
 | `nested_if.c` | if の入れ子 | 対応する `.ans` を参照 |
+| `ternary.c` | 三項演算子 `a > b ? a : b` | 8 |
 
 ## テスト
 
