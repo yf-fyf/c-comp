@@ -46,7 +46,7 @@
 字句解析器（`tokenize`）の2つからなる。この回で読むのは `tokenize` 側である。
 
 ```bash
-less scaffold/lexer.py
+less ../../scaffold/lexer.py
 ```
 
 読解の手がかりとして、`tokenize()` の構造を対応表にしておく。
@@ -161,7 +161,7 @@ scaffold との違いは1点だけ: エラーは `exit` ではなく `SyntaxErro
 途中経過は `main()` で目視できる。
 
 ```bash
-python3 mylexer.py ../../../sessions/03_arithmetic_codegen/tests/add.c
+python3 mylexer.py ../../sessions/03_arithmetic_codegen/tests/add.c
 ```
 
 ## テスト

@@ -110,8 +110,8 @@ spill も同じ理由で、16 の倍数に切り上げて確保する。
 ### 動かし方
 
 ```bash
-python3 regcc.py ../../../final/tests/f09_recur.c
-python3 regcc.py ../../../final/tests/f09_recur.c | python3 ../count_insns.py
+python3 regcc.py ../../final/tests/f09_recur.c
+python3 regcc.py ../../final/tests/f09_recur.c | python3 ../count_insns.py
 ```
 
 `regcc.py` は `mycc.py` の `_push_a0` / `_pop_into` / `_gen_call` を

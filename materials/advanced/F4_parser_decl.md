@@ -166,7 +166,7 @@ program ::= { typedef | グローバル変数宣言 | 関数宣言/定義 }
 入口 `parse()` は完成済み。
 
 ```bash
-python3 myparser.py ../../../sessions/13_sizeof_malloc_list/tests/list_min.c
+python3 myparser.py ../../sessions/13_sizeof_malloc_list/tests/list_min.c
 ```
 
 ## テスト

@@ -106,8 +106,8 @@ libc の中で起きていたことである。**書式文字列は、実行時�
 
 ```bash
 # 手で動かす場合
-python3 ../../../final/mycc.py myprintf.c > impl.s
-python3 ../../../final/mycc.py tests/fmt.c > main.s
+python3 ../../final/mycc.py myprintf.c > impl.s
+python3 ../../final/mycc.py tests/fmt.c > main.s
 riscv64-linux-gnu-gcc -nostdlib -static main.s impl.s syscall.s -o prog
 qemu-riscv64 ./prog
 ```

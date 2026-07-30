@@ -139,7 +139,7 @@ int main() {
 ```
 
 ```bash
-python3 ../../../final/mycc.py tests/print_loop.c > prog.s
+python3 ../../final/mycc.py tests/print_loop.c > prog.s
 riscv64-linux-gnu-gcc -nostdlib -static prog.s syscall.s -o prog
 qemu-riscv64 ./prog; echo $?
 ```

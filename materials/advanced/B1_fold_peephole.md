@@ -10,7 +10,7 @@
 - バックエンド発展シリーズの第1回（選択制）。前提はコマ8（関数呼び出し）まで。
   コマ16 まで終えていれば `fixed15` で効果を測れる
 - **`mycc.py` は1行も書き換えない**。最適化は独立した2つのパスとして書き、
-  ラッパー `optcc.py`（配布済み・完成品）が差し込む
+  ラッパー `foldcc.py`（配布済み・完成品）が差し込む
 - 編集するのは `fold.py` と `peephole.py` の2ファイル
 
 ## 最適化とは何か — 「速くする」の前に「壊さない」
@@ -171,25 +171,25 @@ Python の整数は無限精度なので、`to_i64()`（配布済み）で毎回
 
 ### 動かし方
 
-`optcc.py` は、自分の `final/mycc.py` に2つのパスを差し込んで実行するラッパーである
+`foldcc.py` は、自分の `final/mycc.py` に2つのパスを差し込んで実行するラッパーである
 （完成品。編集しない）。
 
 ```bash
 # 最適化ありでコンパイル
-python3 optcc.py ../../../final/tests/f05_for.c
+python3 foldcc.py ../../final/tests/f05_for.c
 
 # パスを個別に外して比べる
-python3 optcc.py --no-fold ../../../final/tests/f05_for.c
-python3 optcc.py --no-peephole ../../../final/tests/f05_for.c
+python3 foldcc.py --no-fold ../../final/tests/f05_for.c
+python3 foldcc.py --no-peephole ../../final/tests/f05_for.c
 
 # 命令数を数える
-python3 optcc.py ../../../final/tests/f05_for.c | python3 ../count_insns.py
+python3 foldcc.py ../../final/tests/f05_for.c | python3 ../count_insns.py
 ```
 
 `peephole.py` は単体のフィルタとしても使える。
 
 ```bash
-python3 ../../../final/mycc.py foo.c | python3 peephole.py
+python3 ../../final/mycc.py foo.c | python3 peephole.py
 ```
 
 ## テスト

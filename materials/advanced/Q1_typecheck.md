@@ -129,7 +129,7 @@ locals（いまの関数）→ globals（プログラム全体）→ 見つか�
 python3 checkcc.py --check-only tests/undefined_var.c
 
 # 検査してから、問題なければコンパイルする
-python3 checkcc.py ../../../final/tests/f09_recur.c
+python3 checkcc.py ../../final/tests/f09_recur.c
 ```
 
 ## テスト
