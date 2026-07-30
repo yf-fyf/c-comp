@@ -1,35 +1,74 @@
 # Core プロファイル — 言語仕様
 
-C サブセットコンパイラが対象とする言語仕様。この教材では凍結された仕様として扱う。
+C サブセットコンパイラが対象とする言語仕様(第 2 版、2026 年改訂)。
+この教材では凍結された仕様として扱う。
 
-設計原則: **C の核だけ残し、曖昧さと実装コストの高い機能を除外する。**
-この仕様で書かれたコンパイラが、この仕様自体をコンパイルできる（セルフホスト可能）。
+設計原則:
+
+- **ISO C11(N1570)の真部分集合。** この仕様で受理されるプログラムは、
+  2 件の例外(後述)を除き、そのまま ISO C としても正しく、意味も一致する。
+  gcc 等の通常の C コンパイラでもコンパイルできる。
+- **セルフホスト可能。** この仕様で書かれたコンパイラが、この仕様自体を
+  コンパイルできる(malloc したノードの連結リスト+再帰下降+テキスト出力)。
+- **C の核だけを残す。** 配列・typedef・ビット演算などを除外する代わりに、
+  `for`・三項演算子・前置 `++`/`--` など C の慣用は保つ。
+
+---
+
+## 字句
+
+- 文字集合は ASCII、行終端は LF。空白(スペース・タブ・改行)はトークンの区切り。
+- コメントは `//` から行末まで。**ブロックコメント `/* */` はない。**
+- キーワードは次の **12 語のみ**:
+
+  ```
+  int  char  void  struct  if  else  while  for  break  continue  return  sizeof
+  ```
+
+  これ以外の C のキーワード(`typedef`、`switch`、`unsigned` など)は予約されず、
+  識別子として使える(例外 E2。ただし「移行上の注意」の命名規約を参照)。
+- 識別子: `(英字 | _)(英字 | 数字 | _)*`。先頭 `_` 可。キーワード 12 語を除く。
+- 字句解析は最長一致。例: `a+++b` は `a` `++` `+` `b` と切り出され、
+  後置 `++` がないため構文エラーになる。
 
 ---
 
 ## 型
 
 ```
-int          4 バイト符号付き整数（LP64）
-char         1 バイト文字 / 整数
-T *          ポインタ（任意の T、多段ポインタ含む）。サイズ = 8 バイト
-void *       汎用ポインタ。任意の T * へ暗黙変換可（キャスト不要）
+int          4 バイト符号付き整数（32 ビット 2 の補数）
+char         1 バイト文字 / 整数（signed）
+T *          ポインタ（多段可: int **pp）。サイズ = 8 バイト
+void *       汎用ポインタ。任意の T * と相互に暗黙変換（キャスト不要）
 void         関数の戻り値型としてのみ使用
-struct       複合型（ネスト・自己参照ポインタ含む）
-typedef      型の別名
+struct Tag   複合型（タグ必須）
 ```
 
-除外: `float`, `double`, `long`, `short`, `unsigned`, `union`, `enum`
+- struct の定義・前方宣言は**ファイルスコープのみ**。フィールドは
+  int・char・ポインタに限り(struct 値の入れ子なし)、1 フィールド 1 宣言子。
+- 自己参照・相互参照は前方宣言+ポインタで書ける:
+
+  ```c
+  struct Node;                      // 前方宣言（なくてもよい: 定義中の自己参照は可）
+  struct Node { int val; struct Node *next; };
+  ```
+
+- **struct 変数は宣言できるが、struct 値の代入・実引数・戻り値は不可**
+  (`.` によるフィールドアクセスと `&s` は可)。struct の受け渡しはポインタで行う。
+- 除外: `float` `double` `long` `short` `unsigned` `union` `enum`、配列、`typedef`
 
 ---
 
 ## リテラル
 
 ```
-42           整数リテラル
-'a'          文字リテラル（int として扱う）
-"hello"      文字列リテラル（.data セクションに配置、char * として参照）
+42           整数リテラル（10 進のみ。上限 2147483647、超過はコンパイルエラー）
+'a'          文字リテラル（int として扱う。1 文字ちょうど）
+"hello"     文字列リテラル（静的領域に配置、char * として参照。内容の変更は未定義）
 ```
+
+- 整数リテラルは `0` または先頭が非 0 の数字列。8 進・16 進・2 進表記、接尾辞はない。
+- エスケープは 6 種のみ: `\n` `\t` `\\` `\'` `\"` `\0`
 
 ---
 
@@ -38,35 +77,48 @@ typedef      型の別名
 優先順位が高い順に示す。
 
 ```
-後置:   p[i]  p->field  p.field
-単項:   - （負号）  ! （論理否定）  ~ （ビット否定）
-        * （間接参照）  & （アドレス取得）
-        sizeof(型)  sizeof 式
+一次:   リテラル  識別子  ( 式 )
+後置:   p[i]  s.field  p->field  f(args)
+単項:   - （負号）  ! （論理否定）  * （間接参照）  & （アドレス取得）
+        ++ -- （前置のみ）  sizeof(型名)
 乗除:   *  /  %
-加減:   +  -   （ポインタ ± int を含む）
-シフト: <<  >>
-比較:   <  >  <=  >=
-等値:   ==  !=
-ビット: &  ^  |  （この順に優先順位）
-論理:   &&  ||
-代入:   =           （右辺値を左辺の lvalue に書き込む）
+加減:   +  -   （ポインタ ± int を含む。尺度は指し先型のサイズ）
+関係:   <  >  <=  >=   （int/char のみ。ポインタの関係比較はない）
+等値:   ==  !=  （int/char 同士、ポインタ同士、ポインタと 0）
+論理積: &&   （短絡評価）
+論理和: ||   （短絡評価）
+条件:   a ? b : c   （右結合）
+代入:   =  +=  -=  *=  /=  %=   （右結合。左辺は単項式で lvalue）
 ```
 
-除外: `+=` `-=` 等の複合代入、`++`/`--`、`(type)expr` キャスト、三項 `a?b:c`、カンマ演算子
+- 算術は int で行われ、char は int へ昇格される(値保存)。int から char への
+  縮小は代入時のみ(下位 8 ビット)。
+- `p[i]` は `*(p + i)` の略記。`sizeof` は型名形式のみで、結果型は int(例外 E1)。
+- ポインタ演算は「ポインタ ± int」のみ。ポインタ同士の減算と `void *` への
+  算術はない。
+- 複合代入と前置 `++`/`--` の左辺は 1 回だけ評価される
+  (`++e` は `e += 1` と同値)。
+- 除外: ビット演算・シフト(`~` `&` `^` `|` `<<` `>>`)、後置 `++`/`--`、
+  `(type)expr` キャスト、カンマ演算子、`sizeof 式`、関数ポインタ経由の呼出し
 
 ---
 
 ## 宣言
 
 ```c
-int x;                  // ローカル変数（未初期化）
-int x = 42;             // ローカル変数（初期化子付き）
-int *p = malloc(N);     // ポインタ変数（void* の暗黙変換）
-int a[10];              // 固定長配列（定数サイズのみ）
-int g;                  // グローバル変数（関数外）
+int x;              // 局所変数。初期化子は書けない（値は不定）
+int *p;             // ポインタ変数
+struct Node *q;     // struct へのポインタ
+struct Point pt;    // struct 変数
+int g;              // グローバル変数（0 に初期化される）
 ```
 
-宣言は文の先頭で行う（C89 スタイル）。スコープは宣言した関数内。
+- **1 宣言 1 宣言子。初期化子はない**(`int x = 42;` は書けない)。
+  初期値は代入文で設定する。グローバル変数は 0 初期化が保証される
+  (ポインタは null になる)。
+- 宣言位置は**ファイルスコープと関数本体の先頭のみ**(2 層スコープ)。
+  入れ子ブロックには文だけを書く。`for` 内の宣言もない。
+- `static` / `extern` / `const` などの記憶クラス・修飾子はない。
 
 ---
 
@@ -74,26 +126,28 @@ int g;                  // グローバル変数（関数外）
 
 ```c
 if (cond) { ... }
-if (cond) { ... } else { ... }
+if (cond) { ... } else { ... }   // else は最も内側の if に結合
 
 while (cond) { ... }
 
-for (init; cond; step) { ... }   // init は式のみ（宣言不可）
+for (init; cond; step) { ... }   // 3 式は各省略可。宣言は不可
 
 return expr;
 return;            // void 関数
-break;
-continue;
+break;             // ループ内のみ
+continue;          // ループ内のみ。step へ合流
 ```
 
-除外: `switch`, `goto`, `do-while`
+- 条件式はスカラー型(int・char・ポインタ)。真偽は「0(ポインタなら null)と
+  等しくないこと」。
+- 除外: `switch`, `goto`, `do-while`, ラベル文
 
 ---
 
 ## 関数
 
 ```c
-// 宣言
+// プロトタイプ（引数名必須）
 int add(int a, int b);
 
 // 定義
@@ -101,86 +155,190 @@ int add(int a, int b) {
     return a + b;
 }
 
-// 呼び出し
-int r = add(1, 2);
+// 可変長引数（外部プロトタイプ限定。固定引数 1 個以上の後にのみ書ける）
+int printf(char *fmt, ...);
 ```
 
-- ユーザー定義関数（`func_def`）の引数は固定個数のみ（可変長定義は不可）
-- 外部関数宣言（`func_proto`）に限り `...` を許可する（例: `int printf(char *fmt, ...);`）
-- 可変長宣言関数の呼び出しは、宣言の存在のみ確認し、引数個数・型の厳密検査は行わない
-- 戻り値型は任意の型（`void` 含む）
-- 再帰呼び出し可
+- 引数なしは `()` と書く(`(void)` は受理しない)。`()` は「0 引数」の意味で、
+  個数・型が合わない呼出しはコンパイルエラー。
+- 呼出しには事前の宣言(プロトタイプまたは定義)が必要。再帰可。
+- 引数型は int / char / ポインタ。戻り値型はそれに `void` を加えた 4 種
+  (struct 値の引数・戻り値はない)。
+- 可変長 `...` の定義は書けない(宣言のみ)。可変部の実引数はスカラー型に限り、
+  char は int へ昇格して渡される。
+- エントリポイントは `int main()` または `int main(int argc, char **argv)`。
 
 ---
 
 ## プリプロセッサ
 
 ```c
-#include "file.h"      // ファイル結合のみ。<...> 形式は不要
+#include "file.h"      // "..." 形式のみ。<...> はない
 #define NAME value     // オブジェクト形式マクロのみ（定数置換）
 ```
 
-除外: 関数形式マクロ `#define F(x) ...`、条件コンパイル `#ifdef` 等
-
-`#include "file.h"` を自前実装する。
-Fullセルフホストを目指す上位トラックでは、仕上げとして `#define` を自前実装へ移行する。
+- 指令は行単位(行頭の `#` から改行まで)で、この 2 種のみ。
+- `#include` は入れ子可。**循環取込みはエラー**。同一ファイルの(非循環な)
+  再取込みは特別扱いせず、通常の再宣言・再定義規則に従う
+  (struct タグの再定義はエラーになるため、共有ヘッダはルートから 1 回だけ
+  取り込む構成を推奨)。
+- `#define` の**置換は 1 段のみ**。置換結果にマクロ名が含まれる場合はエラー
+  (マクロからマクロを参照する書き方は使えない)。実装はこのエラーの診断で
+  「マクロの多段参照は使えない」ことを利用者に示すことが望ましい。
+- マクロの再定義は、本体のトークン列が同一の場合に限り許す。
+- 除外: 関数形式マクロ `#define F(x)`、条件コンパイル `#ifdef` など
 
 ---
 
 ## 標準ライブラリ（`lib.h`）
 
-宣言のみ提供。実体はリンク時に libc から解決する。
+宣言のみ提供する。Linux/RV64(LP64)では全シンボルをそのまま libc に
+リンクして解決できる(追加実装なしで動く)。
 
 ```c
-/* 出力 */
-int printf(char *fmt, ...);
-int fprintf(FILE *f, char *fmt, ...);
+struct FILE;                                    // 不透明型。前方宣言のみで完全化しない
 
-/* ファイル入力 */
-typedef struct _IO_FILE FILE;   /* 不完全型。FILE * としてのみ使用 */
-FILE *fopen(char *path, char *mode);
-int   fread(void *buf, int size, int n, FILE *f);
-int   fclose(FILE *f);
-
-/* メモリ */
-void *malloc(int size);         /* 戻り値は任意の T * へ暗黙変換 */
-
-/* プロセス */
+int  printf(char *fmt, ...);                    // stdout へ書式出力
+int  fprintf(struct FILE *f, char *fmt, ...);   // ストリームへ書式出力
+struct FILE *fdopen(int fd, char *mode);        // fd をストリーム化（fd 2 = 標準エラー）
+struct FILE *fopen(char *path, char *mode);     // ファイルを開く。失敗時 NULL
+int  fread(void *buf, int size, int n, struct FILE *f);
+int  fclose(struct FILE *f);
+void *malloc(int size);                         // 失敗時 NULL
 void exit(int code);
 
-/* 文字列 */
-int   strcmp(char *a, char *b);
-int   strlen(char *s);
-char *strchr(char *s, int c);
+#define NULL 0
 ```
 
-`NULL` は `#define NULL 0` として `lib.h` に定義する。
+- タグ `FILE` はこの仕様の名前であり(リンクは関数シンボル名だけで行われる)、
+  libc 内部の型名には依存しない。
+- 標準エラーへの出力は `fdopen(2, "w")` で得たストリームへの `fprintf` で行う。
+- `strcmp` / `strlen` 相当は提供しない(純粋な文字列走査は言語内で書けるため、
+  必要なら自作する)。
+- 書式文字列の意味は ISO C(7.21.6)に従う。
+
+---
+
+## 到達範囲（標準トラックと発展）
+
+本仕様の機能は、演習のどの段階で実装するかによって 2 つに区分される。
+
+| 区分 | 範囲 |
+|------|------|
+| 標準トラック(コマ 1〜16、final テストの判定範囲) | 本仕様の全機能から**複合代入 `+= -= *= /= %=` を除いたもの** |
+| 発展トピック(L2) | 複合代入の実装 |
+
+- 複合代入は仕様の一部だが、標準トラックのコンパイラは実装しない
+  (発展トピック L2 で追加実装する)。
+- セルフホスト(porting トラック)の自己記述ソースは標準トラックの機能だけで
+  書く。L2 を実装した場合は自分のソースで複合代入を使ってもよい。
 
 ---
 
 ## 除外機能の一覧
 
-| 機能 | 除外理由 |
-|------|---------|
-| `float`, `double` | 実装コスト大・教育目的外 |
-| `long`, `short`, `unsigned` | `int` 4B で十分 |
-| `union`, `enum` | 不要（`#define` で代替） |
-| `switch` | 除外（`if/else` で代替） |
-| `goto`, `do-while` | 不要 |
-| `++` / `--` | 除外（`i = i + 1` スタイルで統一） |
-| `+=` `-=` 等の複合代入 | 除外（`=` のみで統一） |
-| `(type)expr` キャスト | 不要（`void *` 暗黙変換で代替） |
-| `a ? b : c` 三項演算子 | 除外（`if/else` で代替） |
-| カンマ演算子 | 不要 |
-| ユーザー定義の可変長引数関数（定義） | 実装コスト大 |
-| 関数形式マクロ / `#ifdef` | 不要 |
-| VLA（可変長配列） | 不要 |
+| 機能 | 代替 |
+|------|------|
+| 配列(VLA 含む) | `malloc` +ポインタ・添字 `p[i]`、連結リスト |
+| `typedef` | `struct Tag` 直書き |
+| `enum` | `#define` 定数 |
+| `union` | なし |
+| `float` `double` `long` `short` `unsigned` | なし(int / char で完結) |
+| `switch` | `if/else` 連鎖 |
+| `do-while` / `goto` | `while` / なし |
+| 後置 `++` / `--` | 前置形 |
+| ビット演算・シフト | 整列は `/` と `*`、ハッシュは `%`、フラグは個別の int フィールド |
+| `(type)expr` キャスト | `void *` 暗黙変換 |
+| カンマ演算子 | 文の列 |
+| `sizeof 式` | `sizeof(型名)` |
+| 関数ポインタ | 直接呼出し+分岐 |
+| 可変長引数関数の定義 | 外部プロトタイプのみ許可 |
+| 初期化子(大域・局所) | 代入文(大域は 0 初期化) |
+| 複数宣言子(`int a, b;`) | 分割宣言 |
+| `(void)` 引数表記 | `()` |
+| 関数形式マクロ / `#ifdef` | なし |
+
+---
+
+## ISO C との関係と移行上の注意
+
+基準は ISO C11(N1570)。本仕様の受理するプログラムは、次の 2 件を除き
+ISO C の真部分集合である(C23 を基準にしても採用・除外の判断は変わらない)。
+
+**例外 E1 — `sizeof` の結果型は int。**
+ISO では符号なしの `size_t`。本仕様は符号なし整数型を持たないため int とする。
+このサブセットの範囲では観測できる差はないが、通常の C では比較や
+書式指定(`%zu`)で差が出る。
+
+**例外 E2 — 予約語は使用 12 語のみ。**
+ISO では全キーワードが識別子として使えないが、本仕様では `typedef` や
+`switch` を識別子に使える。ただし次の命名規約に従うこと:
+
+> **命名規約: C のキーワードを識別子に使わない。**
+> 予約されていない C キーワード(C23 の `bool` `true` `false` `nullptr` を含む)を
+> 識別子に使ったプログラムは、本仕様では合法でも通常の C コンパイラでは
+> コンパイルできない。セルフホストでは第 1 段(Stage 0)を gcc でビルドするため、
+> この規約を破るとビルドが壊れる。
+
+このほか、通常の C から見ると次の点が狭い(いずれも「ISO で合法な書き方の
+一部だけを受理する」制限であり、例外ではない):
+
+- マクロからマクロを参照する `#define` は書けない(1 段置換)。
+- include guard(`#ifdef`)がないため、共有ヘッダはルートから 1 回だけ取り込む。
+- 文字列リテラルは `char *` として型付けされる(配列型がないため。
+  観測できる差はない)。
+
+---
+
+## 実行時の意味
+
+### サイズ・整列・レイアウト
+
+| 型 | サイズ | 整列 |
+|----|--------|------|
+| `char` | 1 | 1 |
+| `int` | 4 | 4 |
+| ポインタ | 8 | 8 |
+| `struct` | 下記 | 最大フィールドの整列 |
+
+struct のフィールドは宣言順に配置し、各フィールドのオフセットはその整列へ
+切り上げる。struct 全体のサイズは struct の整列の倍数へ切り上げる。
+`sizeof` はこの規則で定まる値を返す。null ポインタの表現は全ビット 0。
+
+### 初期化と記憶域
+
+- グローバル変数は 0 に初期化される(ポインタは null)。
+- 局所変数・仮引数は自動記憶域。局所変数の初期値は不定。
+- 文字列リテラルは静的記憶域に置かれ、内容の変更は未定義。
+
+### 評価順序
+
+- `&&` `||` は左から評価し短絡する。`?:` は条件を評価してから選ばれた腕だけを
+  評価する。
+- 代入・複合代入は右辺の評価と左辺の lvalue 決定の後に格納する。
+- それ以外の二項演算のオペランド間、および実引数間の評価順序は未規定。
+
+### 未定義動作
+
+次はコンパイルエラーにならず、実行時の動作が未定義である:
+
+1. 符号付き整数のオーバーフロー
+2. 0 による除算・剰余、`INT_MIN / -1`、`INT_MIN % -1`
+3. 不正なポインタ参照(null・未確保領域・確保領域外、ポインタ演算の範囲逸脱)
+4. 文字列リテラルの内容の変更
+5. 未初期化の局所変数の値の使用
+6. 非 void 関数が `return` なしで終端に達した後、呼出し側が戻り値を使うこと
+7. 可変長部の実引数と `printf` 系書式の不一致
+
+これに対し、型規則違反・構文違反・整数リテラルの範囲超過・`#define` の
+置換規則違反・循環取込みはコンパイル時エラー(診断必須)である。
 
 ---
 
 ## 形式文法（EBNF）
 
-再帰下降パーサー・パーサージェネレーター実装の参照用。
+再帰下降パーサー実装の参照用。文法は文脈自由であり(`typedef` がないため)、
+字句解析がシンボルテーブルを参照する必要はない。
 
 ```
 記法:
@@ -191,181 +349,187 @@ char *strchr(char *s, int c);
   ( A )           グループ化
   'token'         終端記号（キーワード・記号）
   UPPER           字句トークン（下部に定義）
-  /* ... */       注釈
 ```
+
+反復 `{ ... }` で表した二項演算子列の構文木は左結合として構成する。
+右結合の規則は再帰で直接表している。
+
+### 前処理
+
+指令行(行頭の `#` から改行まで)は構文解析より前に処理され、
+以下の構文には現れない。
+
+```ebnf
+include_dir ::= '#' 'include' '"' FILENAME '"' NEWLINE
+define_dir  ::= '#' 'define' IDENT { TOKEN } NEWLINE
+```
+
+`FILENAME` は `"` と改行を除く 1 文字以上の文字列。`{ TOKEN }` は改行までの
+トークン列(0 個以上)。
+
+### 型
+
+型は、書ける位置ごとに 4 つの非終端記号で表す。
+
+```ebnf
+stars       ::= '*' { '*' }
+
+scalar_type ::= 'int'  [ stars ]
+              | 'char' [ stars ]
+              | 'void' stars
+              | 'struct' IDENT stars
+
+obj_type    ::= scalar_type
+              | 'struct' IDENT
+
+ret_type    ::= scalar_type
+              | 'void'
+
+type_name   ::= obj_type
+```
+
+この構成により次の制約が構文レベルで決まる:
+`void` 単独の変数・引数・フィールドは書けない(`void` は `*` を伴うか
+戻り値型のみ)、struct 値の引数・戻り値・フィールドは書けない、
+`sizeof(void)` は書けない。
 
 ### トップレベル
 
 ```ebnf
-program     ::= { top_decl }
+program       ::= external_decl { external_decl }
 
-top_decl    ::= prep_dir
-              | typedef_decl ';'
-              | struct_def ';'
-              | func_proto ';'
-              | func_def
-              | var_decl
+external_decl ::= struct_decl
+                | var_decl
+                | func_proto
+                | func_def
+
+struct_decl   ::= 'struct' IDENT '{' field_decl { field_decl } '}' ';'
+                | 'struct' IDENT ';'                /* 前方宣言 */
+
+field_decl    ::= scalar_type IDENT ';'
+
+var_decl      ::= obj_type IDENT ';'
 ```
 
-### プリプロセッサ
-
-```ebnf
-prep_dir    ::= '#include' '"' FILENAME '"'
-              | '#define'  IDENT { TOKEN } NEWLINE
-```
-
-`{ TOKEN }` は改行までの任意のトークン列（オブジェクト形式マクロの値）。
-
-### 型
-
-```ebnf
-type        ::= base_type { '*' }
-
-base_type   ::= 'int'
-              | 'char'
-              | 'void'
-              | 'struct' IDENT
-              | 'struct' [ IDENT ] '{' { field_decl } '}'
-              | TYPEDEF_NAME               /* シンボルテーブルで解決 */
-
-field_decl  ::= type declarator ';'
-```
-
-`TYPEDEF_NAME` は `typedef` で登録済みの識別子。字句解析時にシンボルテーブルを参照して
-`IDENT` と区別する（文脈依存トークン分類）。
-
-### typedef / struct 定義
-
-```ebnf
-typedef_decl ::= 'typedef' type IDENT
-               | 'typedef' 'struct' [ IDENT ] '{' { field_decl } '}' IDENT
-
-struct_def   ::= 'struct' IDENT '{' { field_decl } '}'
-               | 'struct' IDENT                        /* 前方宣言 */
-```
-
-`struct_def ';'` の形（`struct S { int v; };`）で定義してから `struct S s;` と使ってもよい。
-教材の例は `typedef struct { ... } Name;` で揃えているが、どちらの書き方も通る。
-
-### 宣言子
-
-```ebnf
-declarator  ::= IDENT [ '[' INT_LITERAL ']' ]
-```
-
-ポインタの `*` は `type` 側に含める（`int *p` は型 `int *`、宣言子 `p`）。
-
-### グローバル変数宣言
-
-```ebnf
-var_decl    ::= type declarator [ '=' expr ] ';'
-```
+プログラムは 1 個以上の外部宣言からなる(空プログラムは不可)。
+struct 定義はファイルスコープのみ、タグ必須、フィールドは 1 個以上。
+初期化子は存在しない。
 
 ### 関数
 
 ```ebnf
-param       ::= type declarator
+param       ::= scalar_type IDENT
 param_list  ::= param { ',' param }
 
-func_proto  ::= type declarator '(' ')'
-              | type declarator '(' param_list ')'
-              | type declarator '(' param_list ',' '...' ')'
-              | type declarator '(' '...' ')'
-func_def    ::= type declarator '(' [ param_list ] ')' block
+func_proto  ::= ret_type IDENT '(' [ param_list [ ',' '...' ] ] ')' ';'
+func_def    ::= ret_type IDENT '(' [ param_list ] ')' func_body
+
+func_body   ::= '{' { var_decl } { stmt } '}'
 ```
 
-引数なし関数は `( )` または `( void )` と記述できる（意味は同じ）。
-`...` は `func_proto` のみ許可し、`func_def` では禁止する。
+引数なしは `()`(`(void)` は受理しない)。仮引数は名前必須。
+`...` はプロトタイプ限定で、1 個以上の固定引数の後にのみ書ける
+(`(...)` 単独形は導出できない)。局所変数の宣言は関数本体の先頭のみで、
+入れ子ブロックは宣言を含まない。
 
-### ブロックと文
+### 文
 
 ```ebnf
-block       ::= '{' { local_decl } { stmt } '}'
-                /* C89 スタイル: 宣言は文より前 */
-
-local_decl  ::= type declarator [ '=' expr ] ';'
-
 stmt        ::= expr_stmt
+              | block
               | if_stmt
               | while_stmt
               | for_stmt
-              | 'return' [ expr ] ';'
               | 'break' ';'
               | 'continue' ';'
-              | block
+              | 'return' [ expr ] ';'
 
 expr_stmt   ::= [ expr ] ';'
+
+block       ::= '{' { stmt } '}'
 
 if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
 
 while_stmt  ::= 'while' '(' expr ')' stmt
 
 for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
-                /* init は式のみ。宣言不可 */
 ```
 
-`else` は最も内側の `if` に結合する（dangling-else は最近傍優先）。
+`else` は最も内側の未対応 `if` へ結合する(dangling-else は最近傍優先)。
 
-### 式（優先順位：低い順に列挙）
+### 式（優先順位: 低い順に列挙）
 
 ```ebnf
-expr        ::= assign_expr
+expr        ::= assign_expr     /* カンマ演算子はない */
 
-assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
-              | lor_expr
-              /* lvalue 制約は意味解析フェーズで検査 */
+assign_expr ::= unary_expr assign_op assign_expr   /* 右結合 */
+              | cond_expr
+assign_op   ::= '=' | '+=' | '-=' | '*=' | '/=' | '%='
 
-lor_expr    ::= land_expr    { '||' land_expr }
-land_expr   ::= bitor_expr   { '&&' bitor_expr }
-bitor_expr  ::= bitxor_expr  { '|'  bitxor_expr }
-bitxor_expr ::= bitand_expr  { '^'  bitand_expr }
-bitand_expr ::= eq_expr      { '&'  eq_expr }
-eq_expr     ::= rel_expr     { ( '==' | '!=' ) rel_expr }
-rel_expr    ::= shift_expr   { ( '<' | '>' | '<=' | '>=' ) shift_expr }
-shift_expr  ::= add_expr     { ( '<<' | '>>' ) add_expr }
-add_expr    ::= mul_expr     { ( '+' | '-' ) mul_expr }
-mul_expr    ::= unary_expr   { ( '*' | '/' | '%' ) unary_expr }
+cond_expr   ::= lor_expr [ '?' expr ':' cond_expr ]   /* 右結合 */
 
-unary_expr  ::= '-'      unary_expr          /* 単項負号 */
-              | '!'      unary_expr          /* 論理否定 */
-              | '~'      unary_expr          /* ビット否定 */
-              | '*'      unary_expr          /* 間接参照 */
-              | '&'      unary_expr          /* アドレス取得 */
-              | 'sizeof' '(' type ')'        /* 型サイズ */
-              | 'sizeof' unary_expr          /* 式サイズ */
-              | postfix_expr
+lor_expr    ::= land_expr { '||' land_expr }
+land_expr   ::= eq_expr   { '&&' eq_expr }
+eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
+rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
 
-postfix_expr ::= primary_expr { '[' expr ']'  /* 添字 */
-                              | '->' IDENT    /* ポインタ経由フィールドアクセス */
-                              | '.'  IDENT    /* 直接フィールドアクセス */
-                              }
+unary_expr  ::= postfix_expr
+              | '-'  unary_expr          /* 負号 */
+              | '!'  unary_expr          /* 論理否定 */
+              | '*'  unary_expr          /* 間接参照 */
+              | '&'  unary_expr          /* アドレス取得 */
+              | '++' unary_expr          /* 前置インクリメント */
+              | '--' unary_expr          /* 前置デクリメント */
+              | 'sizeof' '(' type_name ')'
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= '[' expr ']'          /* 添字 */
+                 | '.'  IDENT            /* フィールドアクセス */
+                 | '->' IDENT            /* ポインタ経由フィールドアクセス */
 
 primary_expr ::= INT_LITERAL
                | CHAR_LITERAL
                | STRING_LITERAL
-               | IDENT '(' [ arg_list ] ')'  /* 関数呼び出し */
+               | IDENT '(' [ arg_list ] ')'   /* 関数呼び出し（識別子直呼びのみ） */
                | IDENT
                | '(' expr ')'
 
-arg_list    ::= expr { ',' expr }
+arg_list    ::= assign_expr { ',' assign_expr }
 ```
 
-`'&'` と `'*'` の単項／二項の区別はパーサーレベルで解決済み
-（単項は `unary_expr`、二項は `mul_expr` / `bitand_expr`）。
+- 代入の左辺の文法カテゴリは `unary_expr`(N1570 6.5.16 と同じ)。
+  lvalue 制約は意味解析で検査する。
+- `++`/`--` は前置のみ。後置形は `postfix_suffix` に含まれない。
+- `sizeof` は型名形式のみ。`type_name` は型キーワード(`int` `char` `void`
+  `struct`)で始まるため `sizeof(式)` との構文衝突はなく、`sizeof(x)` は
+  構文エラーになる。
+- キャストは導出できない(`( expr )` の中に型は書けない)。
 
 ### 字句トークン
 
 ```ebnf
-INT_LITERAL    ::= DIGIT { DIGIT }
-CHAR_LITERAL   ::= "'" ( char_ch | escape_seq ) "'"
-STRING_LITERAL ::= '"' { str_ch | escape_seq } '"'
-escape_seq     ::= '\n' | '\t' | '\\' | "\'" | '\"' | '\0'
+INT_LITERAL    ::= '0' | NONZERO { DIGIT }
+CHAR_LITERAL   ::= "'" ( char_ch | escape ) "'"
+STRING_LITERAL ::= '"' { str_ch | escape } '"'
+escape         ::= '\n' | '\t' | '\\' | "\'" | '\"' | '\0'
 
 IDENT          ::= ( ALPHA | '_' ) { ALPHA | DIGIT | '_' }
-                   /* ただしキーワードを除く */
+                   /* ただしキーワード 12 語を除く */
 
-ALPHA  = [a-zA-Z]
-DIGIT  = [0-9]
+ALPHA   = [a-zA-Z]
+DIGIT   = [0-9]
+NONZERO = [1-9]
 ```
 
-キーワード一覧: `int char void struct typedef if else while for return break continue sizeof`
+`char_ch` は `'`・`\`・改行を除く任意の文字、`str_ch` は `"`・`\`・改行を
+除く任意の文字。
+
+### 実装の注記（再帰下降）
+
+- `external_decl` の判別: 先頭が `struct` のとき、識別子の次のトークン
+  (`{` / `;` / `*` / 識別子)で分岐する。それ以外は `ret_type` を読み、
+  識別子の次が `(` なら関数、`;` なら変数。
+- `assign_expr` は、まず `cond_expr` として読み、直後が `assign_op` の
+  ときに左辺が `unary_expr` 由来であることを検査する方式でよい。
