@@ -44,6 +44,9 @@ jobs:
         run: opam exec -- make web && opam exec -- make web-test
       - name: Build the allowlisted Pages tree
         run: python3 tools/build_pages.py "$VERSION" --output "$RUNNER_TEMP/pages" --revision "$GITHUB_SHA"
+      - name: Check the assembled tree for broken links
+        # 組み立て後は tools/ が実体になるので、資料とツールの間のリンクもここで初めて検査できる
+        run: python3 tools/build_site.py --check-links --output "$RUNNER_TEMP/pages"
       - name: Verify the release archive
         run: unzip -t "$RUNNER_TEMP/pages/downloads/c-comp-workbook-$VERSION.zip"
       - name: Publish main branch

@@ -25,6 +25,7 @@ import argparse
 import html
 import http.server
 import json
+import os
 import re
 import shutil
 import socket
@@ -211,13 +212,30 @@ def card_list(pages: list[Page], section_slug: str, base: str) -> list[str]:
     return lines
 
 
-def section_index_markdown(nav: dict, pages: list[Page], page: Page) -> str:
+def section_index_markdown(nav: dict, page: Page) -> str:
+    """README を持たないセクションの入口。ページ一覧はテンプレート側が足す。"""
     section = next(s for s in nav["sections"] if s["slug"] == page.section_slug)
     lines = [f'# {section["title"]}', ""]
     if section.get("summary"):
         lines += [section["summary"], ""]
-    lines += card_list(pages, page.section_slug, page.base)
     return "\n".join(lines) + "\n"
+
+
+def needs_child_list(page: Page, members: list[Page]) -> bool:
+    """セクション入口から子ページへ辿れるか。
+
+    README をそのまま入口にしているセクションでは、README が一覧を持っているとは
+    限らない（発展課題の一覧表はディレクトリ名をコードスパンで書いていてリンクではない）。
+    全部リンクしているセクションだけ、重複を避けて一覧を足さない。
+    """
+    if page.source is None:
+        return True
+    text = page.source.read_text(encoding="utf-8")
+    return any(
+        member.source is not None and member.source.name not in text
+        for member in members
+        if not member.is_index
+    )
 
 
 def render_page(nav: dict, pages: list[Page], page: Page, output: Path,
@@ -233,7 +251,15 @@ def render_page(nav: dict, pages: list[Page], page: Page, output: Path,
         "pager": pager_html(pages, page),
         "source-url": "",
         "release": release,
+        "childlist": "",
     }
+    if page.is_index:
+        members = [p for p in pages if p.section_slug == page.section_slug]
+        if needs_child_list(page, members):
+            variables["childlist"] = (
+                '<h2>このセクションのページ</h2>'
+                + "".join(card_list(pages, page.section_slug, page.base))
+            )
     metadata = {
         "figbase": page.base + "figures",
         "blobbase": blob,
@@ -249,8 +275,7 @@ def render_page(nav: dict, pages: list[Page], page: Page, output: Path,
         # 生成したセクション入口。目次だけなので本文の目次は出さない
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "index.md"
-            source.write_text(section_index_markdown(nav, pages, page),
-                              encoding="utf-8")
+            source.write_text(section_index_markdown(nav, page), encoding="utf-8")
             run_pandoc(source, destination, variables=variables, metadata=metadata,
                        extra=["--variable", "toc="])
 
@@ -627,22 +652,25 @@ def check_links(output: Path) -> int:
     """生成された HTML の内部リンクが実在するか調べる"""
     broken: list[str] = []
     root = output.resolve()
-    for page in sorted(output.rglob("*.html")):
+    for page in sorted(root.rglob("*.html")):
         for target in HREF_RE.findall(page.read_text(encoding="utf-8")):
             if re.match(r"^(?:[a-z]+:|//|#)", target):
                 continue
-            resolved = (page.parent / target.split("#")[0]).resolve()
+            # resolve() はシンボリックリンクを辿るので使わない。
+            # make serve が張る .site/tools は web/app/dist を指しており、
+            # 辿るとサイト外に出て ASSEMBLED の除外が効かなくなる。
+            resolved = Path(os.path.normpath(page.parent / target.split("#")[0]))
             try:
                 relative = resolved.relative_to(root)
             except ValueError:
-                broken.append(f"{page.relative_to(output)} -> {target} (サイト外)")
+                broken.append(f"{page.relative_to(root)} -> {target} (サイト外)")
                 continue
             if relative.parts and relative.parts[0] in ASSEMBLED:
                 continue
             if resolved.is_dir():
                 resolved = resolved / "index.html"
             if not resolved.exists():
-                broken.append(f"{page.relative_to(output)} -> {target}")
+                broken.append(f"{page.relative_to(root)} -> {target}")
     if broken:
         print(f"\n内部リンク切れ {len(broken)} 件:")
         for item in broken:

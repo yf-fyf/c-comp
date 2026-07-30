@@ -33,6 +33,7 @@ $for(header-includes)$$header-includes$$endfor$
 
 $body$
 
+    $if(childlist)$$childlist$$endif$
     $if(pager)$<nav class="pager" aria-label="前後のページ">$pager$</nav>$endif$
     $if(source-url)$<p class="source"><a href="$source-url$">この資料の原稿を見る</a></p>$endif$
   </main>
