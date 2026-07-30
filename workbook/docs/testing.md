@@ -20,9 +20,12 @@ python3 scaffold/test_runner.py
 出力例:
 
 ```text
-[PASS] if_basic.c       (expected: 1, got: 1)
-[FAIL] for_nested.c     (expected: 45, got: 0)
-Score: 29/30
+[PASS] sessions/06_loops/tests/for_count.c
+[FAIL: exit code expected=55 got=0] sessions/06_loops/tests/while_sum.c
+
+=============================
+  PASS: 7  FAIL: 1  SKIP: 0
+=============================
 ```
 
 ## コンパイラとテストを個別に指定する
@@ -53,7 +56,7 @@ foo.stdout  # 期待する標準出力（必要な場合のみ）
 ```text
 sessions/06_loops/tests/while_sum.c
 sessions/06_loops/tests/while_sum.ans
-sessions/11_strings_printf/tests/hello.stdout
+sessions/11_strings_printf/tests/printf_hello.stdout
 final/tests/f01_arith.c
 final/tests/f01_arith.ans
 ```

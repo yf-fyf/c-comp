@@ -164,9 +164,11 @@ def main():
         raise SystemExit(2)
 
     compiler = Path(os.environ.get("OPT_COMPILER", WORKBOOK / "final" / "mycc.py"))
-    if not compiler.is_file():
-        print(f"ベースのコンパイラが見つからない: {compiler}", file=sys.stderr)
-        raise SystemExit(2)
+    # コマ16 前は final/mycc.py が統合先のプレースホルダなので、
+    # ここで弾かないと「最適化で壊れた」ように見える失敗になる。
+    sys.path.insert(0, str(DIR))
+    from basecc import ensure_base  # noqa: E402
+    ensure_base(compiler, "OPT_COMPILER")
 
     asm = compile_to_asm(compiler, srcs, regalloc=regalloc)
     sys.stdout.write(apply_passes(asm, parse_passes(passes_spec)))

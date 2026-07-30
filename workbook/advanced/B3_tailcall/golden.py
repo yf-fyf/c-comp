@@ -14,9 +14,12 @@ from pathlib import Path
 DIR = Path(__file__).resolve().parent
 WORKBOOK = DIR.parents[1]
 RUNNER = WORKBOOK / "scaffold" / "test_runner.py"
+sys.path.insert(0, str(DIR.parent))
 compiler = Path(os.environ.get("TCCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
 
 
+from basecc import ensure_base  # noqa: E402
+ensure_base(compiler, "TCCC_COMPILER")
 def run_tests(comp, tests):
     r = subprocess.run(
         [sys.executable, str(RUNNER), "--compiler", str(comp), "--tests", str(tests)],

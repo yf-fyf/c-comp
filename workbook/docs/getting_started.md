@@ -52,6 +52,11 @@ bash docker/rv64/run.sh python3 scaffold/test_runner.py
 python3 scaffold/test_runner.py sessions/03_arithmetic_codegen
 ```
 
+**コマ4 以降は前の回の `mycc.py` を継承する。** 各回の `Codegen<NN>` は
+`Codegen<NN-1>` を継承して差分だけを書く形になっているので、**順番に進め、
+その回のテストを通してから次へ行く**こと。前の回に未実装が残っていると、
+先の回では原因の分かりにくい失敗になる。
+
 コマ16 の総合演習で、それまでの成果を `final/mycc.py` に統合する。
 以降は引数なしの `python3 scaffold/test_runner.py` が最終成果物のテストになる。
 

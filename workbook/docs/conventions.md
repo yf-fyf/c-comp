@@ -58,10 +58,15 @@ Python 版では素直に `dict` を使う。C 版へ移植するときに連結
 |------|-----|
 | コード生成メソッド | `codegen`、`codegen_lval`、`gen_func` |
 | 型の問い合わせ | `_type_of_expr`、`_type_of_lval` |
+| 一時値の退避 | `_push_a0`、`_pop_into` |
 | 関数ごとの状態 | `_locals`、`_stack_offset`、`_reset_func_state` |
 | グローバルな状態 | `_globals`、`_struct_defs`、`_strings` |
 
 先頭の `_` は「その回の実装の内部状態」を表す目印として使っている。
+
+`_push_a0` / `_pop_into` は**名前を変えないこと**。
+発展課題（B・O・S・L 系列）のラッパーは、この名前でコード生成クラスを探す。
+別の名前にすると、発展課題に進んだ時点で「コード生成クラスが見つからない」と拒否される。
 
 ## コメント
 

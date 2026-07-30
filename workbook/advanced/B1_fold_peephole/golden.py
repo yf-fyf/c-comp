@@ -26,6 +26,8 @@ from count_insns import count  # noqa: E402
 compiler = Path(os.environ.get("OPTCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
 
 
+from basecc import ensure_base  # noqa: E402
+ensure_base(compiler, "OPTCC_COMPILER")
 def compile_with(args, src):
     result = subprocess.run(
         [sys.executable, *args, str(src)],

@@ -44,6 +44,18 @@ def which(name: str) -> Path | None:
     return Path(resolved) if resolved else None
 
 
+def last_error_line(stderr: str | None) -> str:
+    """エラー出力の要点だけを1行で返す。
+
+    Python のトレースバックは最後の行に例外が出るので、そこを拾う。
+    全文が要るときは mycc.py を直接実行する。
+    """
+    lines = [line.strip() for line in (stderr or "").splitlines() if line.strip()]
+    if not lines:
+        return "エラー出力なし（mycc.py を直接実行して確かめる）"
+    return lines[-1][:160]
+
+
 def run_compiler(compiler: Path, src: Path, extra_srcs: list = None) -> str:
     args = [sys.executable, str(compiler), str(src)] if compiler.suffix == ".py" else [str(compiler), str(src)]
     if extra_srcs:
@@ -80,8 +92,9 @@ def run_test(src: Path, compiler: Path, gcc_bin: Path, qemu_bin: Path) -> str:
 
     try:
         asm = run_compiler(compiler, src, extra_srcs)
-    except subprocess.CalledProcessError:
-        return "FAIL: compile"
+    except subprocess.CalledProcessError as error:
+        # 理由を落とすと最初の失敗が無情報になる。未実装なのか例外なのかを出す。
+        return f"FAIL: compile — {last_error_line(error.stderr)}"
 
     with tempfile.NamedTemporaryFile(suffix=".out", delete=False) as tmp:
         bin_path = Path(tmp.name)
@@ -92,7 +105,7 @@ def run_test(src: Path, compiler: Path, gcc_bin: Path, qemu_bin: Path) -> str:
             input=asm, capture_output=True, text=True,
         )
         if result.returncode != 0:
-            return "FAIL: assemble"
+            return f"FAIL: assemble — {last_error_line(result.stderr)}"
 
         result = subprocess.run(
             [str(qemu_bin), str(bin_path)],

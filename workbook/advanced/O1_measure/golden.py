@@ -32,6 +32,9 @@ me = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(me)
 
 COMPILER = Path(os.environ.get("OPT_COMPILER", WORKBOOK / "final" / "mycc.py"))
+sys.path.insert(0, str(DIR.parent))
+from basecc import ensure_base  # noqa: E402
+ensure_base(COMPILER, "OPT_COMPILER")
 GCC = os.environ.get("GCC", "riscv64-linux-gnu-gcc")
 
 

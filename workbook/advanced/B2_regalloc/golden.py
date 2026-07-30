@@ -21,6 +21,8 @@ from count_insns import count  # noqa: E402
 compiler = Path(os.environ.get("REGCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
 
 
+from basecc import ensure_base  # noqa: E402
+ensure_base(compiler, "REGCC_COMPILER")
 def compile_with(prog, src):
     r = subprocess.run([sys.executable, str(prog), str(src)],
                        capture_output=True, text=True, env=os.environ)
