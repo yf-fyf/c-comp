@@ -23,7 +23,6 @@ type pnode = {
   step : pnode option;
   body : pnode option;
   operand : pnode option;
-  init_expr : pnode option;
   stmts : pnode list;
   args : pnode list;
   params : pnode list;
@@ -38,7 +37,7 @@ type pnode = {
 
 let empty =
   { kind = ""; lhs = None; rhs = None; cond = None; then_ = None; else_ = None;
-    init = None; step = None; body = None; operand = None; init_expr = None;
+    init = None; step = None; body = None; operand = None;
     stmts = []; args = []; params = []; pval = None; sval = None; name = "";
     pty = None; is_arrow = None; line = 0; span = None }
 
@@ -46,12 +45,11 @@ let binop_kind = function
   | Add -> "Add" | Sub -> "Sub" | Mul -> "Mul" | Div -> "Div" | Mod -> "Mod"
   | Eq -> "Eq" | Ne -> "Ne" | Lt -> "Lt" | Le -> "Le"
   | And -> "And" | Or -> "Or"
-  | BitAnd -> "BitAnd" | BitOr -> "BitOr" | BitXor -> "BitXor"
-  | Shl -> "Shl" | Shr -> "Shr"
 
 let unop_kind = function
-  | Neg -> "Neg" | Not -> "Not" | BitNot -> "BitNot"
+  | Neg -> "Neg" | Not -> "Not"
   | Addr -> "Addr" | Deref -> "Deref"
+  | PreInc -> "PreInc" | PreDec -> "PreDec"
 
 let rec of_expr (e : expr) : pnode =
   match e with
@@ -60,6 +58,9 @@ let rec of_expr (e : expr) : pnode =
   | Var { name; line; span } -> { empty with kind = "Var"; name; line; span }
   | Assign { lhs; rhs; line; span } ->
       { empty with kind = "Assign"; lhs = Some (of_expr lhs); rhs = Some (of_expr rhs); line; span }
+  | Cond { cond; then_; else_; line; span } ->
+      { empty with kind = "Cond"; cond = Some (of_expr cond);
+        then_ = Some (of_expr then_); else_ = Some (of_expr else_); line; span }
   | Binary { op; lhs; rhs; line; span } ->
       { empty with kind = binop_kind op;
         lhs = Some (of_expr lhs); rhs = Some (of_expr rhs); line; span }
@@ -72,15 +73,12 @@ let rec of_expr (e : expr) : pnode =
       { empty with kind = "Member"; operand = Some (of_expr base); name;
         is_arrow = Some is_arrow; line; span }
   | SizeofType { ty; line; span } -> { empty with kind = "SizeofType"; pty = Some ty; line; span }
-  | SizeofExpr { operand; line; span } ->
-      { empty with kind = "SizeofExpr"; operand = Some (of_expr operand); line; span }
   | Call { name; args; line; span } ->
       { empty with kind = "Call"; name; args = List.map of_expr args; line; span }
 
 let of_decl ?(line_override = None) (d : decl) : pnode =
   let line = match line_override with Some l -> l | None -> d.line in
-  { empty with kind = "Decl"; name = d.name; pty = Some d.ty;
-    init_expr = Option.map of_expr d.init_expr; line; span = d.span }
+  { empty with kind = "Decl"; name = d.name; pty = Some d.ty; line; span = d.span }
 
 let rec of_stmt (s : stmt) : pnode =
   match s with
@@ -107,20 +105,19 @@ let of_param (p : param) : pnode =
   { empty with kind = "Decl"; name = Option.value p.name ~default:""; pty = Some p.ty;
     span = p.span }
 
-(* Python 版はトップレベルノードに行番号を付けず、typedef（StructDef 相当）の
-   ノードを作らない。同じ木にするため line = 0 とし StructDef は落とす。 *)
-let of_top (t : top) : pnode option =
+(* Python 版はトップレベルノードに行番号を付けない。同じ木にするため line = 0 とする
+   （struct 宣言は構文解析の段階で AST に出ない）。 *)
+let of_top (t : top) : pnode =
   match t with
   | FuncDef { name; ty; params; body; span; _ } ->
-      Some { empty with kind = "FuncDef"; name; pty = Some ty;
-             params = List.map of_param params; body = Some (of_stmt body); span }
+      { empty with kind = "FuncDef"; name; pty = Some ty;
+        params = List.map of_param params; body = Some (of_stmt body); span }
   | FuncProto { name; ty; params; span; _ } ->
-      Some { empty with kind = "FuncProto"; name; pty = Some ty;
-             params = List.map of_param params; span }
-  | GlobalDecl d -> Some (of_decl ~line_override:(Some 0) d)
-  | StructDef _ -> None
+      { empty with kind = "FuncProto"; name; pty = Some ty;
+        params = List.map of_param params; span }
+  | GlobalDecl d -> of_decl ~line_override:(Some 0) d
 
-let of_program (prog : program) : pnode list = List.filter_map of_top prog
+let of_program (prog : program) : pnode list = List.map of_top prog
 
 (* ── S 式（parse_viewer.py の Sym / render_sexp の移植） ── *)
 
@@ -202,25 +199,6 @@ let starts_with_s prefix s =
   String.length s >= String.length prefix
   && String.sub s 0 (String.length prefix) = prefix
 
-(* Python 版は使用箇所の表層の綴りを ty_str に残す（`Node *p` → "Node*"）が、
-   OCaml 版は構文解析時に typedef を解決してしまい綴りが残らない。
-   教材テストは宣言・引数・返り値で `struct X` を直接綴らず常に typedef 別名を
-   使うため、TyStruct の物理等値で別名を逆引きすれば Python の表示と一致する。
-   `struct X` を直接綴った宣言では一致しない（黄金テストが検出する）。 *)
-let struct_alias (t : ty) : string option =
-  match t with
-  | TyStruct _ ->
-      let cands =
-        Typedef_env.fold
-          (fun name ty2 acc ->
-            if ty2 == t && not (starts_with_s "struct " name) && name <> "struct" then
-              name :: acc
-            else acc)
-          []
-      in
-      (match List.sort compare cands with [] -> None | name :: _ -> Some name)
-  | _ -> None
-
 (* Python format_type(ty_str) と同じ構造の S 式を、構造化された ty から作る *)
 let rec type_sexp (ty : ty) : sexp =
   match ty with
@@ -228,19 +206,7 @@ let rec type_sexp (ty : ty) : sexp =
   | TyChar -> SSym "char"
   | TyVoid -> SSym "void"
   | TyPtr t -> SList [ SSym "ptr"; type_sexp t ]
-  | TyArray { elem; length } -> SList [ SSym "array"; type_sexp elem; SInt length ]
-  | TyStruct { name; _ } -> (
-      match struct_alias ty with
-      | Some alias -> SList [ SSym "type"; SStr alias ]
-      | None -> (
-          match name with
-          | Some tag -> SList [ SSym "struct"; SStr tag ]
-          | None -> SList [ SSym "struct" ]))
-  | TyUnknown s ->
-      if s = "struct" then SList [ SSym "struct" ]
-      else if starts_with_s "struct " s then
-        SList [ SSym "struct"; SStr (String.trim (String.sub s 7 (String.length s - 7))) ]
-      else SList [ SSym "type"; SStr s ]
+  | TyStruct tag -> SList [ SSym "struct"; SStr tag ]
 
 (* Python の ty_str 文字列表現（JSON 表示用。バイト一致の対象外） *)
 let rec ty_str_of (ty : ty) : string =
@@ -249,26 +215,19 @@ let rec ty_str_of (ty : ty) : string =
   | TyChar -> "char"
   | TyVoid -> "void"
   | TyPtr t -> ty_str_of t ^ "*"
-  | TyArray { elem; length } -> ty_str_of elem ^ Printf.sprintf "[%d]" length
-  | TyStruct { name; _ } -> (
-      match struct_alias ty with
-      | Some alias -> alias
-      | None -> (
-          match name with Some tag -> "struct " ^ tag | None -> "struct"))
-  | TyUnknown s -> s
+  | TyStruct tag -> "struct " ^ tag
 
 let binary_sexp_name = function
   | "Add" -> Some "add" | "Sub" -> Some "sub" | "Mul" -> Some "mul"
   | "Div" -> Some "div" | "Mod" -> Some "mod"
   | "Eq" -> Some "eq" | "Ne" -> Some "ne" | "Lt" -> Some "lt" | "Le" -> Some "le"
   | "And" -> Some "and" | "Or" -> Some "or"
-  | "BitAnd" -> Some "bitand" | "BitOr" -> Some "bitor" | "BitXor" -> Some "bitxor"
-  | "Shl" -> Some "shl" | "Shr" -> Some "shr"
   | _ -> None
 
 let unary_sexp_name = function
-  | "Neg" -> Some "neg" | "Not" -> Some "not" | "BitNot" -> Some "bitnot"
+  | "Neg" -> Some "neg" | "Not" -> Some "not"
   | "Addr" -> Some "addr" | "Deref" -> Some "deref"
+  | "PreInc" -> Some "preinc" | "PreDec" -> Some "predec"
   | _ -> None
 
 let line_attr (n : pnode) show_line =
@@ -294,6 +253,10 @@ let rec node_to_sexp ?(show_line = false) (n : pnode) : sexp =
         @ [ SList (SSym "args" :: List.map sub n.args) ])
   | "Assign" ->
       SList ([ SSym "assign" ] @ la @ [ sub (Option.get n.lhs); sub (Option.get n.rhs) ])
+  | "Cond" ->
+      SList
+        ([ SSym "ternary" ] @ la
+        @ [ sub (Option.get n.cond); sub (Option.get n.then_); sub (Option.get n.else_) ])
   | k when binary_sexp_name k <> None ->
       SList
         ([ SSym (Option.get (binary_sexp_name k)) ] @ la
@@ -307,7 +270,6 @@ let rec node_to_sexp ?(show_line = false) (n : pnode) : sexp =
       SList
         ([ SSym "member"; SStr op; SStr n.name ] @ la @ [ sub (Option.get n.operand) ])
   | "SizeofType" -> SList ([ SSym "sizeof-type"; type_sexp (Option.get n.pty) ] @ la)
-  | "SizeofExpr" -> SList ([ SSym "sizeof-expr" ] @ la @ [ sub (Option.get n.operand) ])
   | "Block" -> SList ([ SSym "block" ] @ la @ List.map sub n.stmts)
   | "ExprStmt" ->
       SList ([ SSym "exprstmt" ] @ la @ Option.to_list (Option.map sub n.operand))
@@ -340,13 +302,7 @@ let rec node_to_sexp ?(show_line = false) (n : pnode) : sexp =
         ([ SSym "for" ] @ la
         @ [ slot "init" n.init; slot "cond" n.cond; slot "step" n.step;
             SList [ SSym "body"; sub (Option.get n.body) ] ])
-  | "Decl" ->
-      let ini =
-        match n.init_expr with
-        | Some e -> [ SList [ SSym "init"; sub e ] ]
-        | None -> []
-      in
-      SList ([ SSym "decl"; SStr n.name ] @ type_attr n @ la @ ini)
+  | "Decl" -> SList ([ SSym "decl"; SStr n.name ] @ type_attr n @ la)
   | "FuncDef" ->
       SList
         ([ SSym "funcdef"; SStr n.name ] @ type_attr n @ la
@@ -401,7 +357,7 @@ let program_dot ?(show_line = false) (prog : program) : string =
         match fval with Some child -> walk nid fname child (-1) | None -> ())
       [ ("lhs", n.lhs); ("rhs", n.rhs); ("cond", n.cond); ("then", n.then_);
         ("else", n.else_); ("init", n.init); ("step", n.step); ("body", n.body);
-        ("operand", n.operand); ("init_expr", n.init_expr) ];
+        ("operand", n.operand) ];
     List.iter
       (fun (fname, children) ->
         List.iteri (fun i child -> walk nid fname child i) children)
@@ -471,7 +427,6 @@ let rec node_to_json ?(show_line = true) ?(map_span = fun _ -> []) (n : pnode) :
           [ ("ty_str", JStr (ty_str_of ty));
             ("type_sexp", JStr (render_sexp (type_sexp ty))) ]
       | None -> [])
-    @ opt "init_expr" n.init_expr
     @ (match (n.kind, n.is_arrow) with
       | "Member", Some b -> [ ("is_arrow", JBool b) ]
       | _ -> [])
@@ -543,12 +498,11 @@ let token_info (t : Parser.token) : string * string * int option =
   | Parser.NUM n -> ("TK_NUM", string_of_int n, Some n)
   | Parser.CHAR_LIT n -> ("TK_CHAR", string_of_int n, Some n)
   | Parser.STR s -> ("TK_STR", s, None)
-  | Parser.IDENT s | Parser.TYPE_NAME s -> ("TK_IDENT", s, None)
+  | Parser.IDENT s -> ("TK_IDENT", s, None)
   | Parser.KW_INT -> ("TK_KW", "int", None)
   | Parser.KW_CHAR -> ("TK_KW", "char", None)
   | Parser.KW_VOID -> ("TK_KW", "void", None)
   | Parser.KW_STRUCT -> ("TK_KW", "struct", None)
-  | Parser.TYPEDEF -> ("TK_KW", "typedef", None)
   | Parser.IF -> ("TK_KW", "if", None)
   | Parser.ELSE -> ("TK_KW", "else", None)
   | Parser.WHILE -> ("TK_KW", "while", None)
@@ -564,22 +518,21 @@ let token_info (t : Parser.token) : string * string * int option =
   | Parser.GE -> ("TK_PUNCT", ">=", None)
   | Parser.ANDAND -> ("TK_PUNCT", "&&", None)
   | Parser.OROR -> ("TK_PUNCT", "||", None)
-  | Parser.SHL -> ("TK_PUNCT", "<<", None)
-  | Parser.SHR -> ("TK_PUNCT", ">>", None)
   | Parser.ARROW -> ("TK_PUNCT", "->", None)
+  | Parser.PLUSPLUS -> ("TK_PUNCT", "++", None)
+  | Parser.MINUSMINUS -> ("TK_PUNCT", "--", None)
   | Parser.PLUS -> ("TK_PUNCT", "+", None)
   | Parser.MINUS -> ("TK_PUNCT", "-", None)
   | Parser.STAR -> ("TK_PUNCT", "*", None)
   | Parser.SLASH -> ("TK_PUNCT", "/", None)
   | Parser.PERCENT -> ("TK_PUNCT", "%", None)
   | Parser.AMP -> ("TK_PUNCT", "&", None)
-  | Parser.PIPE -> ("TK_PUNCT", "|", None)
-  | Parser.CARET -> ("TK_PUNCT", "^", None)
-  | Parser.TILDE -> ("TK_PUNCT", "~", None)
   | Parser.BANG -> ("TK_PUNCT", "!", None)
   | Parser.LT -> ("TK_PUNCT", "<", None)
   | Parser.GT -> ("TK_PUNCT", ">", None)
   | Parser.ASSIGN -> ("TK_PUNCT", "=", None)
+  | Parser.QUESTION -> ("TK_PUNCT", "?", None)
+  | Parser.COLON -> ("TK_PUNCT", ":", None)
   | Parser.SEMI -> ("TK_PUNCT", ";", None)
   | Parser.COMMA -> ("TK_PUNCT", ",", None)
   | Parser.DOT -> ("TK_PUNCT", ".", None)

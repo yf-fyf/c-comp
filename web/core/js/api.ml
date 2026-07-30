@@ -35,9 +35,9 @@ let error_json e =
 (* 前処理 + 構文解析を行い、成功時は f を呼ぶ。失敗はエラー JSON に変換する *)
 let with_parse source f =
   try
-    C.Typedef_env.reset ();
+    C.Struct_env.reset ();
     let mapped = C.Preprocess.preprocess_with_map ~include_dirs source filename in
-    C.Typedef_env.reset ();
+    C.Struct_env.reset ();
     let prog = C.Frontend.parse_source ~already_preprocessed:true ~filename mapped.text in
     f mapped prog
   with e -> JObj [ ("ok", JBool false); ("errors", JList [ error_json e ]) ]

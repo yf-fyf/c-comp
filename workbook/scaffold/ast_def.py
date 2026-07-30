@@ -27,9 +27,10 @@ ND_MOD = 'Mod'          # %
 # 単項
 ND_NEG    = 'Neg'       # 単項 -         operand
 ND_NOT    = 'Not'       # !              operand
-ND_BITNOT = 'BitNot'    # ~              operand
 ND_ADDR   = 'Addr'      # & アドレス取得  operand
 ND_DEREF  = 'Deref'     # * 間接参照      operand
+ND_PREINC = 'PreInc'    # 前置 ++        operand
+ND_PREDEC = 'PreDec'    # 前置 --        operand
 
 # 比較（> / >= は lhs・rhs を swap して LT / LE に正規化）
 ND_EQ = 'Eq'            # ==
@@ -41,20 +42,15 @@ ND_LE = 'Le'            # <=  （a >= b は Node(LE, lhs=b, rhs=a) で表現）
 ND_AND = 'And'          # &&
 ND_OR  = 'Or'           # ||
 
-# ビット演算
-ND_BITAND = 'BitAnd'    # &
-ND_BITOR  = 'BitOr'     # |
-ND_BITXOR = 'BitXor'    # ^
-ND_SHL    = 'Shl'       # <<
-ND_SHR    = 'Shr'       # >>
+# 条件（三項）
+ND_COND = 'Cond'        # a ? b : c      cond, then, else_
 
 # ポインタ・複合
-ND_INDEX  = 'Index'     # a[i]           lhs=配列, rhs=添字
-ND_MEMBER = 'Member'    # x.f / x->f     operand, name, is_arrow: bool
+ND_INDEX  = 'Index'     # p[i]           lhs=ポインタ, rhs=添字
+ND_MEMBER = 'Member'    # x.f / p->f     operand, name, is_arrow: bool
 
-# sizeof
+# sizeof（型名形式のみ）
 ND_SIZEOF_TYPE = 'SizeofType'   # sizeof(type)  ty_str
-ND_SIZEOF_EXPR = 'SizeofExpr'   # sizeof expr   operand
 
 # 関数呼び出し
 ND_CALL = 'Call'        # f(args)        name, args: List[Node]
@@ -68,7 +64,7 @@ ND_CONTINUE = 'Continue'    # continue;
 ND_IF       = 'If'          # if/else             cond, then, else_
 ND_WHILE    = 'While'       # while               cond, body
 ND_FOR      = 'For'         # for                 init, cond, step, body
-ND_DECL     = 'Decl'        # 変数宣言             name, ty_str, init_expr
+ND_DECL     = 'Decl'        # 変数宣言（初期化子なし）  name, ty_str
 
 # トップレベル
 ND_FUNCDEF   = 'FuncDef'    # 関数定義  name, ty_str, params, body
@@ -79,7 +75,7 @@ ND_FUNCPROTO = 'FuncProto'  # 関数宣言  name, ty_str, params
 class Node:
     kind: str
 
-    # 二項演算 / if の各枝
+    # 二項演算 / if・三項の各枝
     lhs:   Optional['Node'] = None
     rhs:   Optional['Node'] = None
     cond:  Optional['Node'] = None
@@ -91,7 +87,7 @@ class Node:
     step: Optional['Node'] = None
     body: Optional['Node'] = None
 
-    # 単項演算・return・sizeof(expr) のオペランド
+    # 単項演算・return のオペランド
     operand: Optional['Node'] = None
 
     # リスト形フィールド
@@ -107,9 +103,6 @@ class Node:
     # 型情報（文字列表現: 'int', 'char', 'int*', 'struct Node*', ...）
     # コード生成器が付与してもよいし、Parser が付与してもよい
     ty_str: str = ''
-
-    # Decl: 初期化子
-    init_expr: Optional['Node'] = None
 
     # Member: -> か . か
     is_arrow: bool = False

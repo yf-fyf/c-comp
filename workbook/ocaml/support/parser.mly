@@ -10,51 +10,45 @@ let span (start_pos : Lexing.position) (end_pos : Lexing.position) =
 let rec wrap_ptrs base n =
   if n <= 0 then base else TyPtr (wrap_ptrs base (n - 1))
 
-let combine_array base arr_opt =
-  match arr_opt with None -> base | Some n -> TyArray { elem = base; length = n }
+(* 言語仕様の型文法（scalar_type / obj_type / ret_type）を、
+   base + '*' の個数を読んでから位置ごとに検証する形で実現する。 *)
 
-let lookup_type name =
-  match Typedef_env.find name with
-  | Some ty -> ty
-  | None -> TyUnknown name
+(* 変数宣言・sizeof の型名（obj_type）: void 単独は不可 *)
+let mk_obj_ty (base, n) =
+  if n = 0 && base = TyVoid then failwith "構文解析エラー: void 型の変数は宣言できない"
+  else wrap_ptrs base n
 
-let lookup_struct tag =
-  let key = "struct " ^ tag in
-  match Typedef_env.find key with
-  | Some ty -> ty
-  | None -> TyUnknown key
+(* 引数・struct フィールド（scalar_type）: void 単独・struct 値は不可 *)
+let mk_scalar_ty (base, n) =
+  if n = 0 then (
+    match base with
+    | TyVoid -> failwith "構文解析エラー: void 型は使えない（void * は可）"
+    | TyStruct _ -> failwith "構文解析エラー: struct 値はここでは使えない（ポインタにする）"
+    | t -> t)
+  else wrap_ptrs base n
 
-let align_to n align = ((n + align - 1) / align) * align
-
-let build_struct_type tag fields name =
-  let offset, fields_with_offset =
-    List.fold_left (fun (offset, acc) (fname, fty) ->
-        let a = min (size_of_ty fty) 8 in
-        let offset = align_to offset a in
-        let next = offset + size_of_ty fty in
-        (next, ((fname, { offset; ty = fty }) :: acc)))
-      (0, []) fields
-  in
-  let total_size = align_to offset 8 in
-  let fields_with_offset = List.rev fields_with_offset in
-  let struct_ty = TyStruct { name = tag; fields = fields_with_offset; size = total_size } in
-  Typedef_env.set name struct_ty;
-  Option.iter (fun t -> Typedef_env.set ("struct " ^ t) struct_ty) tag;
-  struct_ty
+(* 戻り値型（ret_type）: struct 値は不可。void 単独は可 *)
+let mk_ret_ty (base, n) =
+  if n = 0 then (
+    match base with
+    | TyStruct _ -> failwith "構文解析エラー: struct 値の戻り値は使えない（ポインタにする）"
+    | t -> t)
+  else wrap_ptrs base n
 %}
 
 %token <int> NUM CHAR_LIT
-%token <string> STR IDENT TYPE_NAME
+%token <string> STR IDENT
 
-%token KW_INT KW_CHAR KW_VOID KW_STRUCT TYPEDEF
+%token KW_INT KW_CHAR KW_VOID KW_STRUCT
 %token IF ELSE WHILE FOR RETURN BREAK CONTINUE SIZEOF
 
 %token PLUS MINUS STAR SLASH PERCENT
-%token AMP PIPE CARET TILDE BANG
+%token AMP BANG
+%token PLUSPLUS MINUSMINUS QUESTION COLON
 %token LT GT ASSIGN
 %token SEMI COMMA DOT
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
-%token EQEQ NE LE GE ANDAND OROR SHL SHR ARROW
+%token EQEQ NE LE GE ANDAND OROR ARROW
 %token ELLIPSIS
 %token EOF
 
@@ -65,20 +59,6 @@ let build_struct_type tag fields name =
 %type <Ast_def.program> program
 
 %%
-
-(* 宣言位置での名前 — typedef 直後の先読みや struct タグでは TYPE_NAME になる *)
-name_or_type:
-| IDENT { $1 }
-| TYPE_NAME { $1 }
-;
-
-(* typedef で導入する別名。SEMI の次のトークンが字句解析される前に登録する。
-   LR の先読みが規則の還元より先に走ると、`typedef struct {...} Pair; Pair x;`
-   の2つ目の Pair が IDENT のまま届いて構文エラーになるため（字句フィードバック）。
-   型そのものは還元時の build_struct_type が set で上書きする。 *)
-typedef_alias:
-| name_or_type { Typedef_env.register_forward $1; $1 }
-;
 
 program:
 | top_list EOF { List.rev $1 }
@@ -94,55 +74,37 @@ top_list:
 ;
 
 top_opt:
-(* anonymous struct typedef — LBRACE after KW_STRUCT で決定 *)
-| TYPEDEF KW_STRUCT LBRACE struct_members RBRACE typedef_alias SEMI {
-    let fields = List.rev $4 in
-    ignore (build_struct_type None fields $6);
-    Some (StructDef { tag = None; fields; name = $6; line = ln $startpos($2); span = span $startpos $endpos })
-  }
-(* struct typedef with tag — 自己参照の前方登録は build_struct_type 内で行う *)
-| TYPEDEF KW_STRUCT name_or_type struct_def_opt typedef_alias SEMI {
-    let tag = $3 in
-    let fields = List.rev $4 in
-    ignore (build_struct_type (Some tag) fields $5);
-    Some (StructDef { tag = Some tag; fields; name = $5; line = ln $startpos($2); span = span $startpos $endpos })
-  }
-(* non-struct typedef — ctype の代わりに KW_STRUCT を含まない型規則を使う *)
-| TYPEDEF non_struct_ctype name_or_type SEMI {
-    Typedef_env.register_name $3 $2; None
-  }
-(* 宣言子を伴わない struct 定義（`struct S { ... };` と前方宣言 `struct S;`）。
-   型だけ登録して AST には出さない。scaffold/parser.py も同じ扱いにしてある。 *)
-| KW_STRUCT name_or_type struct_def_opt SEMI {
-    let tag = $2 in
-    ignore (build_struct_type (Some tag) (List.rev $3) ("struct " ^ tag));
+(* struct 定義。AST には出さず、レイアウトだけ Struct_env に登録する
+   （scaffold/parser.py も struct 宣言を AST に出さない）。 *)
+| KW_STRUCT IDENT LBRACE field_list RBRACE SEMI {
+    Struct_env.define $2 (List.rev $4);
     None
   }
-| ctype name_or_type LPAREN param_clause RPAREN SEMI {
-    Some (FuncProto { name = $2; ty = $1; params = $4; line = ln $startpos($2); span = span $startpos $endpos })
+(* struct 前方宣言 *)
+| KW_STRUCT IDENT SEMI { None }
+| decl_type IDENT LPAREN param_clause RPAREN SEMI {
+    let params, _variadic = $4 in
+    Some (FuncProto { name = $2; ty = mk_ret_ty $1; params; line = ln $startpos($2); span = span $startpos $endpos })
   }
-| ctype name_or_type LPAREN param_clause RPAREN block {
-    Some (FuncDef { name = $2; ty = $1; params = $4; body = $6; line = ln $startpos($2); span = span $startpos $endpos })
+| decl_type IDENT LPAREN param_clause RPAREN func_body {
+    let params, variadic = $4 in
+    if variadic then failwith "構文解析エラー: 可変長 '...' はプロトタイプ宣言でのみ使える";
+    Some (FuncDef { name = $2; ty = mk_ret_ty $1; params; body = $6; line = ln $startpos($2); span = span $startpos $endpos })
   }
-| ctype name_or_type array_opt init_opt SEMI {
-    Some (GlobalDecl { name = $2; ty = combine_array $1 $3; init_expr = $4; line = ln $startpos($2); span = span $startpos $endpos })
+| decl_type IDENT SEMI {
+    Some (GlobalDecl { name = $2; ty = mk_obj_ty $1; line = ln $startpos($2); span = span $startpos $endpos })
   }
 ;
 
-ctype:
-| type_base ptrs { wrap_ptrs $1 $2 }
+decl_type:
+| type_base ptrs { ($1, $2) }
 ;
 
-(* 非構造体の typedef 用: ctype から KW_STRUCT を除いたバージョン *)
-non_struct_type_base:
+type_base:
 | KW_INT { TyInt }
 | KW_CHAR { TyChar }
 | KW_VOID { TyVoid }
-| TYPE_NAME { lookup_type $1 }
-;
-
-non_struct_ctype:
-| non_struct_type_base ptrs { wrap_ptrs $1 $2 }
+| KW_STRUCT IDENT { TyStruct $2 }
 ;
 
 ptrs:
@@ -150,54 +112,37 @@ ptrs:
 | ptrs STAR { $1 + 1 }
 ;
 
-type_base:
-| KW_INT { TyInt }
-| KW_CHAR { TyChar }
-| KW_VOID { TyVoid }
-| TYPE_NAME { lookup_type $1 }
-| KW_STRUCT name_or_type struct_def_opt { lookup_struct $2 }
-| KW_STRUCT LBRACE struct_members RBRACE { TyUnknown "struct" }
+(* フィールドは 1 個以上（言語仕様「トップレベル」参照） *)
+field_list:
+| field { [$1] }
+| field_list field { $2 :: $1 }
 ;
 
-struct_def_opt:
-| /* empty */ { [] }
-| LBRACE struct_members RBRACE { List.rev $2 }
+field:
+| decl_type IDENT SEMI { ($2, mk_scalar_ty $1) }
 ;
 
-struct_members:
-| /* empty */ { [] }
-| struct_members struct_member { $2 :: $1 }
-;
-
-struct_member:
-| ctype name_or_type array_opt SEMI { ($2, combine_array $1 $3) }
-;
-
+(* 可変長 '...' はプロトタイプ限定・固定引数 1 個以上の後のみ。
+   仮引数は名前必須。引数なしは () と書く（(void) は受理しない）。 *)
 param_clause:
-| /* empty */ { [] }
-| param_list {
-    match ($1 : param list) with
-    | [({ name = None; ty = TyVoid; _ } : param)] -> []
-    | params -> params
-  }
+| /* empty */ { ([], false) }
+| param_list { (List.rev $1, false) }
+| param_list COMMA ELLIPSIS { (List.rev $1, true) }
 ;
 
 param_list:
 | parameter { [$1] }
-| param_list COMMA parameter { $1 @ [$3] }
-| param_list COMMA ELLIPSIS { $1 }
+| param_list COMMA parameter { $3 :: $1 }
 ;
 
 parameter:
-| ctype {
-    ({ name = None; ty = $1; line = ln $symbolstartpos; span = span $startpos $endpos } : param)
-  }
-| ctype name_or_type {
-    ({ name = Some $2; ty = $1; line = ln $startpos($2); span = span $startpos $endpos } : param)
+| decl_type IDENT {
+    ({ name = Some $2; ty = mk_scalar_ty $1; line = ln $startpos($2); span = span $startpos $endpos } : param)
   }
 ;
 
-block:
+(* 関数本体。局所宣言は先頭にのみ置ける *)
+func_body:
 | LBRACE local_decls stmt_list RBRACE {
     Block { stmts = $2 @ $3; line = ln $startpos($1); span = span $startpos $endpos }
   }
@@ -209,8 +154,15 @@ local_decls:
 ;
 
 local_decl:
-| ctype name_or_type array_opt init_opt SEMI {
-    Decl { name = $2; ty = combine_array $1 $3; init_expr = $4; line = ln $startpos($2); span = span $startpos $endpos }
+| decl_type IDENT SEMI {
+    Decl { name = $2; ty = mk_obj_ty $1; line = ln $startpos($2); span = span $startpos $endpos }
+  }
+;
+
+(* 入れ子ブロックは文のみを含む（宣言は関数本体の先頭のみ） *)
+block:
+| LBRACE stmt_list RBRACE {
+    Block { stmts = $2; line = ln $startpos($1); span = span $startpos $endpos }
   }
 ;
 
@@ -258,13 +210,22 @@ expr_opt:
 | expr { Some $1 }
 ;
 
+(* カンマ演算子はないため expr は assign そのもの *)
 expr:
 | assign { $1 }
 ;
 
 assign:
-| e_or ASSIGN assign {
+| cond_e ASSIGN assign {
     Assign { lhs = $1; rhs = $3; line = line_of_expr $1; span = span $startpos $endpos }
+  }
+| cond_e { $1 }
+;
+
+(* 条件演算子（右結合） *)
+cond_e:
+| e_or QUESTION expr COLON cond_e {
+    Cond { cond = $1; then_ = $3; else_ = $5; line = line_of_expr $1; span = span $startpos $endpos }
   }
 | e_or { $1 }
 ;
@@ -277,29 +238,8 @@ e_or:
 ;
 
 e_and:
-| e_and ANDAND bitor {
+| e_and ANDAND eq {
     Binary { op = And; lhs = $1; rhs = $3; line = ln $startpos($2); span = span $startpos $endpos }
-  }
-| bitor { $1 }
-;
-
-bitor:
-| bitor PIPE bitxor {
-    Binary { op = BitOr; lhs = $1; rhs = $3; line = ln $startpos($2); span = span $startpos $endpos }
-  }
-| bitxor { $1 }
-;
-
-bitxor:
-| bitxor CARET bitand {
-    Binary { op = BitXor; lhs = $1; rhs = $3; line = ln $startpos($2); span = span $startpos $endpos }
-  }
-| bitand { $1 }
-;
-
-bitand:
-| bitand AMP eq {
-    Binary { op = BitAnd; lhs = $1; rhs = $3; line = ln $startpos($2); span = span $startpos $endpos }
   }
 | eq { $1 }
 ;
@@ -315,27 +255,17 @@ eq:
 ;
 
 rel:
-| rel LT shift {
+| rel LT add {
     Binary { op = Lt; lhs = $1; rhs = $3; line = ln $startpos($2); span = span $startpos $endpos }
   }
-| rel GT shift {
+| rel GT add {
     Binary { op = Lt; lhs = $3; rhs = $1; line = ln $startpos($2); span = span $startpos $endpos }
   }
-| rel LE shift {
+| rel LE add {
     Binary { op = Le; lhs = $1; rhs = $3; line = ln $startpos($2); span = span $startpos $endpos }
   }
-| rel GE shift {
+| rel GE add {
     Binary { op = Le; lhs = $3; rhs = $1; line = ln $startpos($2); span = span $startpos $endpos }
-  }
-| shift { $1 }
-;
-
-shift:
-| shift SHL add {
-    Binary { op = Shl; lhs = $1; rhs = $3; line = ln $startpos($2); span = span $startpos $endpos }
-  }
-| shift SHR add {
-    Binary { op = Shr; lhs = $1; rhs = $3; line = ln $startpos($2); span = span $startpos $endpos }
   }
 | add { $1 }
 ;
@@ -370,22 +300,27 @@ unary:
 | BANG unary {
     Unary { op = Not; operand = $2; line = ln $startpos($1); span = span $startpos $endpos }
   }
-| TILDE unary {
-    Unary { op = BitNot; operand = $2; line = ln $startpos($1); span = span $startpos $endpos }
-  }
 | STAR unary {
     Unary { op = Deref; operand = $2; line = ln $startpos($1); span = span $startpos $endpos }
   }
 | AMP unary {
     Unary { op = Addr; operand = $2; line = ln $startpos($1); span = span $startpos $endpos }
   }
-| SIZEOF LPAREN ctype RPAREN {
+| PLUSPLUS unary {
+    Unary { op = PreInc; operand = $2; line = ln $startpos($1); span = span $startpos $endpos }
+  }
+| MINUSMINUS unary {
+    Unary { op = PreDec; operand = $2; line = ln $startpos($1); span = span $startpos $endpos }
+  }
+(* sizeof は型名形式のみ（sizeof 式 は言語仕様外。sizeof(x) は構文エラー） *)
+| SIZEOF LPAREN sizeof_type RPAREN {
     SizeofType { ty = $3; line = ln $startpos($1); span = span $startpos $endpos }
   }
-| SIZEOF unary {
-    SizeofExpr { operand = $2; line = ln $startpos($1); span = span $startpos $endpos }
-  }
 | postfix { $1 }
+;
+
+sizeof_type:
+| decl_type { mk_obj_ty $1 }
 ;
 
 postfix:
@@ -428,14 +363,4 @@ arg_list_opt:
 arg_list:
 | expr { [$1] }
 | arg_list COMMA expr { $1 @ [$3] }
-;
-
-array_opt:
-| /* empty */ { None }
-| LBRACKET NUM RBRACKET { Some $2 }
-;
-
-init_opt:
-| /* empty */ { None }
-| ASSIGN expr { Some $2 }
 ;

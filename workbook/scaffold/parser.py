@@ -3,13 +3,18 @@
 
 Core プロファイル言語仕様の EBNF に基づく再帰下降パーサ。
 トークン列を受け取り、トップレベル宣言の Node リストを返す。
+
+注意: 標準トラックの受理範囲は「仕様の全機能 − 複合代入」である
+（複合代入 += -= *= /= %= は発展トピック L2 で追加実装する）。
 """
 
 import sys
-from typing import List, Optional, Set
+from typing import List, Tuple
 
 from ast_def import *
 from lexer import Token, TK_NUM, TK_CHAR, TK_STR, TK_IDENT, TK_KW, TK_PUNCT, TK_EOF
+
+TYPE_KEYWORDS = ('int', 'char', 'void', 'struct')
 
 
 def _parse_error(msg: str, line: int = 0) -> None:
@@ -22,8 +27,6 @@ class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
         self.pos = 0
-        # typedef で定義された型名を追跡（is_type_start で利用）
-        self.typedef_names: Set[str] = set()
 
     # ---- トークン操作 ----
 
@@ -52,7 +55,7 @@ class Parser:
         self.pos += 1
 
     def expect_ident(self) -> str:
-        if self.cur.kind not in (TK_IDENT, TK_KW):
+        if self.cur.kind != TK_IDENT:
             _parse_error(f"識別子が期待されましたが '{self.cur.sval}' がありました", self.cur.line)
         name = self.cur.sval
         self.pos += 1
@@ -61,167 +64,141 @@ class Parser:
     # ---- 型判定 ----
 
     def is_type_start(self) -> bool:
-        """現在のトークンが型宣言の開始か判定する"""
-        if self.cur.kind == TK_KW and self.cur.sval in ('int', 'char', 'void', 'struct'):
-            return True
-        if self.cur.kind == TK_IDENT and self.cur.sval in self.typedef_names:
-            return True
-        return False
+        """現在のトークンが型の開始か判定する"""
+        return self.cur.kind == TK_KW and self.cur.sval in TYPE_KEYWORDS
 
     # ---- 型のパース ----
+    #
+    # 言語仕様の型文法は、型を書ける位置ごとに 4 つに分かれる:
+    #   scalar_type … 引数・struct フィールド（void 単独・struct 値は不可）
+    #   obj_type    … 変数宣言・sizeof の型名（void 単独は不可）
+    #   ret_type    … 関数の戻り値型（struct 値は不可。void 単独は可）
+    # ここでは base と '*' の並びを読んでから位置ごとに検証する。
 
-    def parse_type(self) -> str:
-        """
-        型を文字列として返す（例: 'int', 'char*', 'struct Node*', 'void'）
-        ポインタの * は型文字列に含める。
-        """
+    def _parse_base_and_stars(self) -> Tuple[str, str]:
+        """型の基底と '*' の並びを読み、('int', '**') のような組で返す"""
         if self.cur.kind == TK_KW and self.cur.sval in ('int', 'char', 'void'):
             base = self.cur.sval
             self.pos += 1
-        elif self.cur.sval == 'struct':
+        elif self.cur.kind == TK_KW and self.cur.sval == 'struct':
             self.pos += 1
-            tag = ''
-            if self.cur.kind == TK_IDENT:
-                tag = self.cur.sval
-                self.pos += 1
-            base = f'struct {tag}' if tag else 'struct'
-            # インライン struct 定義 { ... } はスキップ
-            if self.cur.sval == '{':
-                self._skip_braces()
-        elif self.cur.kind == TK_IDENT and self.cur.sval in self.typedef_names:
-            base = self.cur.sval
-            self.pos += 1
+            tag = self.expect_ident()
+            base = f'struct {tag}'
         else:
             _parse_error(f"型が期待されましたが '{self.cur.sval}' がありました", self.cur.line)
-            base = ''  # unreachable
 
-        # ポインタ *
         stars = ''
         while self.cur.sval == '*':
             stars += '*'
             self.pos += 1
+        return base, stars
 
+    def parse_obj_type(self) -> str:
+        """変数宣言・sizeof で使える型（obj_type）"""
+        line = self.cur.line
+        base, stars = self._parse_base_and_stars()
+        if base == 'void' and not stars:
+            _parse_error("void 型の変数は宣言できません", line)
         return base + stars
 
-    def _skip_braces(self) -> None:
-        """{ ... } ブロックを読み飛ばす（ネスト対応）"""
-        self.expect('{')
-        depth = 1
-        while depth > 0:
-            if self.cur.kind == TK_EOF:
-                _parse_error("'}' が見つかりません")
-            if self.cur.sval == '{':
-                depth += 1
-            elif self.cur.sval == '}':
-                depth -= 1
-            self.pos += 1
+    def parse_scalar_type(self) -> str:
+        """引数・struct フィールドで使える型（scalar_type）"""
+        line = self.cur.line
+        base, stars = self._parse_base_and_stars()
+        if base == 'void' and not stars:
+            _parse_error("void 型は使えません（void * は可）", line)
+        if base.startswith('struct') and not stars:
+            _parse_error("struct 値はここでは使えません（ポインタにする）", line)
+        return base + stars
 
     # ---- トップレベル ----
 
     def parse_program(self) -> List[Node]:
         nodes: List[Node] = []
+        if self.cur.kind == TK_EOF:
+            _parse_error("プログラムには 1 個以上の外部宣言が必要です")
         while self.cur.kind != TK_EOF:
-            # typedef
-            if self.cur.sval == 'typedef':
-                self.pos += 1
-                self._parse_typedef()
+            # struct 定義・前方宣言（AST には出さない。scaffold はレイアウトを扱わない）
+            if self.cur.sval == 'struct' and self.peek(2).sval in ('{', ';'):
+                self._parse_struct_decl()
                 continue
 
-            ty_str = self.parse_type()
-
-            # 宣言子を伴わない struct 定義（`struct S { ... };` と前方宣言 `struct S;`）。
-            # AST には出さない。フィールドの配置はコード生成側が原稿から読むので、
-            # ここでは読み捨てるだけでよい。
-            if self.cur.sval == ';' and ty_str.startswith('struct'):
-                self.pos += 1
-                continue
-
+            line = self.cur.line
+            base, stars = self._parse_base_and_stars()
             name = self.expect_ident()
 
             if self.cur.sval == '(':
-                # 関数宣言 or 定義
-                nodes.append(self._parse_func(ty_str, name))
+                # 関数宣言 or 定義（ret_type: struct 値の戻り値は不可）
+                if base.startswith('struct') and not stars:
+                    _parse_error("struct 値の戻り値は使えません（ポインタにする）", line)
+                nodes.append(self._parse_func(base + stars, name))
             else:
-                # グローバル変数宣言
-                arr = self._parse_array_suffix()
-                init_expr = None
-                if self.consume_if('='):
-                    init_expr = self.parse_expr()
+                # グローバル変数宣言（obj_type・初期化子なし）
+                if base == 'void' and not stars:
+                    _parse_error("void 型の変数は宣言できません", line)
                 self.expect(';')
-                nodes.append(Node(ND_DECL, name=name, ty_str=ty_str + arr, init_expr=init_expr))
+                nodes.append(Node(ND_DECL, name=name, ty_str=base + stars))
 
         return nodes
 
-    def _parse_typedef(self) -> None:
-        """typedef を処理して型名を typedef_names に登録する"""
-        if self.cur.sval == 'struct':
-            self.pos += 1
-            if self.cur.kind == TK_IDENT:
-                self.pos += 1  # struct タグ名
-            if self.cur.sval == '{':
-                self._skip_braces()
-        elif self.cur.kind in (TK_KW, TK_IDENT):
-            self.pos += 1
-        # ポインタ
-        while self.cur.sval == '*':
-            self.pos += 1
-        # 新しい typedef 名
-        if self.cur.kind == TK_IDENT:
-            self.typedef_names.add(self.cur.sval)
-            self.pos += 1
+    def _parse_struct_decl(self) -> None:
+        """`struct S { fields };`（定義）と `struct S;`（前方宣言）を処理する"""
+        self.expect('struct')
+        self.expect_ident()  # タグ名
+        if self.consume_if(';'):
+            return  # 前方宣言
+        self.expect('{')
+        self._parse_field()  # フィールドは 1 個以上
+        while not self.consume_if('}'):
+            if self.cur.kind == TK_EOF:
+                _parse_error("'}' が見つかりません")
+            self._parse_field()
+        self.expect(';')
+
+    def _parse_field(self) -> None:
+        """field_decl ::= scalar_type IDENT ';'"""
+        self.parse_scalar_type()
+        self.expect_ident()
         self.expect(';')
 
     def _parse_func(self, ty_str: str, name: str) -> Node:
         self.expect('(')
         params: List[Node] = []
+        variadic = False
 
         if not self.consume_if(')'):
-            # void のみの場合: int f(void)
-            if self.cur.sval == 'void' and self.peek().sval == ')':
-                self.pos += 2
-            else:
-                while True:
-                    # '...' は可変長引数マーカー（lib.h の宣言でのみ使用）
-                    if self.cur.sval == '...':
-                        self.pos += 1
-                        break
-                    p_ty = self.parse_type()
-                    p_name = ''
-                    if self.cur.kind == TK_IDENT:
-                        p_name = self.cur.sval
-                        self.pos += 1
-                    params.append(Node(ND_DECL, name=p_name, ty_str=p_ty))
-                    if not self.consume_if(','):
-                        break
-                self.expect(')')
+            while True:
+                if self.cur.sval == '...':
+                    if not params:
+                        _parse_error("可変長 '...' は 1 個以上の固定引数の後にのみ書けます",
+                                     self.cur.line)
+                    self.pos += 1
+                    variadic = True
+                    break
+                p_ty = self.parse_scalar_type()
+                p_name = self.expect_ident()  # 仮引数は名前必須
+                params.append(Node(ND_DECL, name=p_name, ty_str=p_ty))
+                if not self.consume_if(','):
+                    break
+            self.expect(')')
 
         # 関数宣言（; で終わり）
         if self.consume_if(';'):
             return Node(ND_FUNCPROTO, name=name, ty_str=ty_str, params=params)
 
         # 関数定義
-        body = self.parse_block()
+        if variadic:
+            _parse_error("可変長 '...' はプロトタイプ宣言でのみ使えます", self.cur.line)
+        body = self.parse_func_body()
         return Node(ND_FUNCDEF, name=name, ty_str=ty_str, params=params, body=body)
-
-    def _parse_array_suffix(self) -> str:
-        """'[' INT_LITERAL ']' があれば '[N]' を返す。なければ空文字列"""
-        if self.cur.sval != '[':
-            return ''
-        self.pos += 1
-        if self.cur.kind != TK_NUM:
-            _parse_error("配列サイズに整数定数が必要です", self.cur.line)
-        size = self.cur.val
-        self.pos += 1
-        self.expect(']')
-        return f'[{size}]'
 
     # ---- ブロックと文 ----
 
-    def parse_block(self) -> Node:
+    def parse_func_body(self) -> Node:
+        """関数本体。局所宣言は先頭にのみ置ける"""
         line = self.cur.line
         self.expect('{')
         stmts: List[Node] = []
-        # C89 スタイル: 宣言を先頭に
         while self.is_type_start():
             stmts.append(self._parse_local_decl())
         while not self.consume_if('}'):
@@ -230,16 +207,23 @@ class Parser:
             stmts.append(self.parse_stmt())
         return Node(ND_BLOCK, stmts=stmts, line=line)
 
+    def parse_block(self) -> Node:
+        """入れ子ブロック。文のみを含む（宣言は関数本体の先頭のみ）"""
+        line = self.cur.line
+        self.expect('{')
+        stmts: List[Node] = []
+        while not self.consume_if('}'):
+            if self.cur.kind == TK_EOF:
+                _parse_error("'}' が見つかりません", line)
+            stmts.append(self.parse_stmt())
+        return Node(ND_BLOCK, stmts=stmts, line=line)
+
     def _parse_local_decl(self) -> Node:
         line = self.cur.line
-        ty_str = self.parse_type()
+        ty_str = self.parse_obj_type()
         name = self.expect_ident()
-        arr = self._parse_array_suffix()
-        init_expr = None
-        if self.consume_if('='):
-            init_expr = self.parse_expr()
         self.expect(';')
-        return Node(ND_DECL, name=name, ty_str=ty_str + arr, init_expr=init_expr, line=line)
+        return Node(ND_DECL, name=name, ty_str=ty_str, line=line)
 
     def parse_stmt(self) -> Node:
         tok = self.cur
@@ -324,12 +308,22 @@ class Parser:
         return self._parse_assign()
 
     def _parse_assign(self) -> Node:
-        # assign_expr ::= unary_expr '=' assign_expr | lor_expr
-        # lor_expr まで読んでから '=' を確認する（lor_expr も unary_expr を含む）
-        node = self._parse_lor()
+        # assign_expr ::= unary_expr '=' assign_expr | cond_expr
+        # cond_expr まで読んでから '=' を確認する（cond_expr も unary_expr を含む）
+        node = self._parse_cond()
         if self.consume_if('='):
             rhs = self._parse_assign()  # 右結合
             return Node(ND_ASSIGN, lhs=node, rhs=rhs, line=node.line)
+        return node
+
+    def _parse_cond(self) -> Node:
+        # cond_expr ::= lor_expr [ '?' expr ':' cond_expr ]（右結合）
+        node = self._parse_lor()
+        if self.consume_if('?'):
+            then = self.parse_expr()
+            self.expect(':')
+            else_ = self._parse_cond()
+            return Node(ND_COND, cond=node, then=then, else_=else_, line=node.line)
         return node
 
     def _parse_binary(self, op_map: dict, next_fn) -> Node:
@@ -342,21 +336,18 @@ class Parser:
             node = Node(kind, lhs=node, rhs=next_fn(), line=line)
         return node
 
-    def _parse_lor(self)    -> Node: return self._parse_binary({'||': ND_OR},     self._parse_land)
-    def _parse_land(self)   -> Node: return self._parse_binary({'&&': ND_AND},    self._parse_bitor)
-    def _parse_bitor(self)  -> Node: return self._parse_binary({'|':  ND_BITOR},  self._parse_bitxor)
-    def _parse_bitxor(self) -> Node: return self._parse_binary({'^':  ND_BITXOR}, self._parse_bitand)
-    def _parse_bitand(self) -> Node: return self._parse_binary({'&':  ND_BITAND}, self._parse_eq)
-    def _parse_eq(self)     -> Node: return self._parse_binary({'==': ND_EQ, '!=': ND_NE}, self._parse_rel)
+    def _parse_lor(self)  -> Node: return self._parse_binary({'||': ND_OR},  self._parse_land)
+    def _parse_land(self) -> Node: return self._parse_binary({'&&': ND_AND}, self._parse_eq)
+    def _parse_eq(self)   -> Node: return self._parse_binary({'==': ND_EQ, '!=': ND_NE}, self._parse_rel)
 
     def _parse_rel(self) -> Node:
         """比較演算子。> / >= は lhs・rhs を swap して LT / LE に正規化する"""
-        node = self._parse_shift()
+        node = self._parse_add()
         while self.cur.sval in ('<', '>', '<=', '>='):
             op   = self.cur.sval
             line = self.cur.line
             self.pos += 1
-            rhs  = self._parse_shift()
+            rhs  = self._parse_add()
             if op == '<':
                 node = Node(ND_LT, lhs=node, rhs=rhs, line=line)
             elif op == '>':
@@ -367,9 +358,8 @@ class Parser:
                 node = Node(ND_LE, lhs=rhs,  rhs=node, line=line)  # swap
         return node
 
-    def _parse_shift(self) -> Node: return self._parse_binary({'<<': ND_SHL, '>>': ND_SHR}, self._parse_add)
-    def _parse_add(self)   -> Node: return self._parse_binary({'+': ND_ADD, '-': ND_SUB},   self._parse_mul)
-    def _parse_mul(self)   -> Node: return self._parse_binary({'*': ND_MUL, '/': ND_DIV, '%': ND_MOD}, self._parse_unary)
+    def _parse_add(self) -> Node: return self._parse_binary({'+': ND_ADD, '-': ND_SUB}, self._parse_mul)
+    def _parse_mul(self) -> Node: return self._parse_binary({'*': ND_MUL, '/': ND_DIV, '%': ND_MOD}, self._parse_unary)
 
     def _parse_unary(self) -> Node:
         tok = self.cur
@@ -377,12 +367,14 @@ class Parser:
             return Node(ND_NEG,    operand=self._parse_unary(), line=tok.line)
         if self.consume_if('!'):
             return Node(ND_NOT,    operand=self._parse_unary(), line=tok.line)
-        if self.consume_if('~'):
-            return Node(ND_BITNOT, operand=self._parse_unary(), line=tok.line)
         if self.consume_if('*'):
             return Node(ND_DEREF,  operand=self._parse_unary(), line=tok.line)
         if self.consume_if('&'):
             return Node(ND_ADDR,   operand=self._parse_unary(), line=tok.line)
+        if self.consume_if('++'):
+            return Node(ND_PREINC, operand=self._parse_unary(), line=tok.line)
+        if self.consume_if('--'):
+            return Node(ND_PREDEC, operand=self._parse_unary(), line=tok.line)
         if self.cur.sval == 'sizeof':
             return self._parse_sizeof()
         return self._parse_postfix()
@@ -390,22 +382,18 @@ class Parser:
     def _parse_sizeof(self) -> Node:
         line = self.cur.line
         self.pos += 1  # 'sizeof'
-        # sizeof '(' type ')' か sizeof expr か
-        if self.cur.sval == '(' and self._peek_is_type():
-            self.expect('(')
-            ty = self.parse_type()
-            self.expect(')')
-            return Node(ND_SIZEOF_TYPE, ty_str=ty, line=line)
-        return Node(ND_SIZEOF_EXPR, operand=self._parse_unary(), line=line)
+        # sizeof は型名形式のみ（sizeof 式 は言語仕様外）
+        if not (self.cur.sval == '(' and self._peek_is_type()):
+            _parse_error("sizeof は sizeof(型名) 形式のみ使えます", line)
+        self.expect('(')
+        ty = self.parse_obj_type()
+        self.expect(')')
+        return Node(ND_SIZEOF_TYPE, ty_str=ty, line=line)
 
     def _peek_is_type(self) -> bool:
         """'(' の次のトークンが型の開始か"""
         tok = self.peek(1)
-        if tok.kind == TK_KW and tok.sval in ('int', 'char', 'void', 'struct'):
-            return True
-        if tok.kind == TK_IDENT and tok.sval in self.typedef_names:
-            return True
-        return False
+        return tok.kind == TK_KW and tok.sval in TYPE_KEYWORDS
 
     def _parse_postfix(self) -> Node:
         node = self._parse_primary()
@@ -417,7 +405,7 @@ class Parser:
             elif self.consume_if('->'):
                 name = self.expect_ident()
                 node = Node(ND_MEMBER, operand=node, name=name, is_arrow=True, line=node.line)
-            elif self.cur.sval == '.' and self.peek().kind in (TK_IDENT, TK_KW):
+            elif self.cur.sval == '.':
                 self.pos += 1
                 name = self.expect_ident()
                 node = Node(ND_MEMBER, operand=node, name=name, is_arrow=False, line=node.line)

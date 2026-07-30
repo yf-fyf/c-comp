@@ -8,11 +8,14 @@ let starts_with s prefix =
   let n = String.length s and m = String.length prefix in
   n >= m && String.sub s 0 m = prefix
 
-let dirname_realpath path =
-  let abs_path =
-    if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path else path
-  in
-  Filename.dirname abs_path
+let abs_path path =
+  if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path else path
+
+let dirname_realpath path = Filename.dirname (abs_path path)
+
+let keywords =
+  [ "int"; "char"; "void"; "struct"; "if"; "else"; "while"; "for";
+    "break"; "continue"; "return"; "sizeof" ]
 
 let pp_error msg filename line =
   eprintf "%s:%d: 前処理エラー: %s\n" filename line msg;
@@ -38,33 +41,58 @@ let mapped_line ~map_source ~source_start value =
   in
   { value; origins }
 
-(* 現在の置換結果に対して1つのobject-like macroを適用する。
-   挿入された展開文字列は元ソース上に同じ文字範囲を持たないため未対応にする。 *)
-let replace_macro name replacement mapped =
-  let re = Str.regexp ("\\b" ^ Str.quote name ^ "\\b") in
-  let value_buf = Buffer.create (String.length mapped.value) in
-  let origins_rev = ref [] in
-  let append_original from_pos to_pos =
-    if to_pos > from_pos then Buffer.add_substring value_buf mapped.value from_pos (to_pos - from_pos);
-    for i = from_pos to to_pos - 1 do
-      origins_rev := mapped.origins.(i) :: !origins_rev
-    done
-  in
-  let append_replacement () =
-    Buffer.add_string value_buf replacement;
-    for _ = 1 to String.length replacement do origins_rev := None :: !origins_rev done
-  in
-  let rec loop pos =
-    try
-      ignore (Str.search_forward re mapped.value pos);
-      let first = Str.match_beginning () and last = Str.match_end () in
-      append_original pos first;
-      append_replacement ();
-      loop last
-    with Not_found -> append_original pos (String.length mapped.value)
-  in
-  loop 0;
-  { value = Buffer.contents value_buf; origins = Array.of_list (List.rev !origins_rev) }
+(* オブジェクト形式マクロを 1 段だけ適用する。置換結果にマクロ名が残る場合は
+   エラー（多段参照は言語仕様外）。挿入された展開文字列は元ソース上に
+   同じ文字範囲を持たないため未対応にする。 *)
+let apply_defines defines_tbl (mapped : mapped_text) filename lineno =
+  if Hashtbl.length defines_tbl = 0 then mapped
+  else begin
+    let names = Hashtbl.fold (fun k _ acc -> k :: acc) defines_tbl [] in
+    let re =
+      Str.regexp ("\\b\\(" ^ String.concat "\\|" (List.map Str.quote names) ^ "\\)\\b")
+    in
+    let value_buf = Buffer.create (String.length mapped.value) in
+    let origins_rev = ref [] in
+    let replaced = ref false in
+    let append_original from_pos to_pos =
+      if to_pos > from_pos then
+        Buffer.add_substring value_buf mapped.value from_pos (to_pos - from_pos);
+      for i = from_pos to to_pos - 1 do
+        origins_rev := mapped.origins.(i) :: !origins_rev
+      done
+    in
+    let append_replacement body =
+      Buffer.add_string value_buf body;
+      for _ = 1 to String.length body do origins_rev := None :: !origins_rev done
+    in
+    let rec loop pos =
+      match
+        try Some (Str.search_forward re mapped.value pos) with Not_found -> None
+      with
+      | None -> append_original pos (String.length mapped.value)
+      | Some _ ->
+          let first = Str.match_beginning () and last = Str.match_end () in
+          let name = Str.matched_group 1 mapped.value in
+          append_original pos first;
+          append_replacement (Hashtbl.find defines_tbl name);
+          replaced := true;
+          loop last
+    in
+    loop 0;
+    let result =
+      { value = Buffer.contents value_buf; origins = Array.of_list (List.rev !origins_rev) }
+    in
+    if !replaced then (
+      match
+        try Some (Str.search_forward re result.value 0) with Not_found -> None
+      with
+      | Some _ ->
+          pp_error
+            ("マクロの多段参照は使えない: " ^ Str.matched_group 1 result.value)
+            filename lineno
+      | None -> ());
+    result
+  end
 
 let segments_of_origins origins =
   let n = Array.length origins in
@@ -92,7 +120,8 @@ let segments_of_origins origins =
   in
   loop 0 None 0 []
 
-let rec preprocess_internal ?defines ?include_dirs ~map_source source filename =
+let rec preprocess_internal ?defines ?include_dirs ?(active = []) ~map_source source
+    filename =
   let defines_tbl =
     match defines with
     | Some d -> d
@@ -114,8 +143,10 @@ let rec preprocess_internal ?defines ?include_dirs ~map_source source filename =
       let stripped = String.trim line in
       let output =
       if starts_with stripped "#include" then (
-        let re = Str.regexp "^#include[ \t]+\"\\([^\"]+\\)\"" in
-        if Str.string_match re stripped 0 then (
+        let re = Str.regexp "^#include[ \t]+\"\\([^\"]+\\)\"[ \t]*$" in
+        if not (Str.string_match re stripped 0) then
+          pp_error "#include は #include \"file\" 形式のみ使える" filename lineno
+        else
           let fname = Str.matched_group 1 stripped in
           let rec find_path = function
             | [] -> None
@@ -126,26 +157,43 @@ let rec preprocess_internal ?defines ?include_dirs ~map_source source filename =
           match find_path include_dirs_list with
           | None -> pp_error ("ファイルが見つからない: " ^ fname) filename lineno
           | Some path ->
-              let included_src = Utils.read_file path in
-              let included =
-                preprocess_internal ~defines:defines_tbl ~include_dirs:include_dirs_list
-                  ~map_source:false included_src path
-              in
-              Some (unmapped included.value))
-        else None)
+              let apath = abs_path path in
+              if List.mem apath active then
+                pp_error ("循環取込み: " ^ fname) filename lineno
+              else
+                let included_src = Utils.read_file path in
+                let included =
+                  preprocess_internal ~defines:defines_tbl
+                    ~include_dirs:include_dirs_list ~active:(apath :: active)
+                    ~map_source:false included_src path
+                in
+                Some (unmapped included.value))
       else if starts_with stripped "#define" then (
-        let re = Str.regexp "^#define[ \t]+\\([A-Za-z_][A-Za-z0-9_]*\\)[ \t]+\\(.*\\)$" in
-        if Str.string_match re stripped 0 then (
+        let re =
+          Str.regexp
+            "^#define[ \t]+\\([A-Za-z_][A-Za-z0-9_]*\\)\\([ \t]+\\(.*\\)\\)?[ \t]*$"
+        in
+        if not (Str.string_match re stripped 0) then
+          pp_error "#define はオブジェクト形式 #define NAME value のみ使える" filename
+            lineno
+        else begin
           let name = Str.matched_group 1 stripped in
-          let value = String.trim (Str.matched_group 2 stripped) in
-          Hashtbl.replace defines_tbl name value);
-        None)
+          let body =
+            try String.trim (Str.matched_group 3 stripped) with Not_found -> ""
+          in
+          if List.mem name keywords then
+            pp_error ("キーワードはマクロ名にできない: " ^ name) filename lineno;
+          (match Hashtbl.find_opt defines_tbl name with
+          | Some old when old <> body ->
+              pp_error ("マクロの再定義（本体が異なる）: " ^ name) filename lineno
+          | _ -> Hashtbl.replace defines_tbl name body);
+          None
+        end)
+      else if starts_with stripped "#" then
+        pp_error ("対応しない前処理指令: " ^ stripped) filename lineno
       else
         let original = mapped_line ~map_source ~source_start:!source_offset line in
-        Some
-          (Hashtbl.fold
-             (fun name value acc -> replace_macro name value acc)
-             defines_tbl original)
+        Some (apply_defines defines_tbl original filename lineno)
       in
       Option.iter (fun mapped -> result_rev := mapped :: !result_rev) output;
       source_offset := !source_offset + String.length line;
@@ -171,7 +219,10 @@ let rec preprocess_internal ?defines ?include_dirs ~map_source source filename =
   { value = Buffer.contents text_buf; origins }
 
 let preprocess_with_map ?defines ?include_dirs source filename =
-  let mapped = preprocess_internal ?defines ?include_dirs ~map_source:true source filename in
+  let active = if Sys.file_exists filename then [ abs_path filename ] else [] in
+  let mapped =
+    preprocess_internal ?defines ?include_dirs ~active ~map_source:true source filename
+  in
   { text = mapped.value; segments = segments_of_origins mapped.origins }
 
 let preprocess ?defines ?include_dirs source filename =

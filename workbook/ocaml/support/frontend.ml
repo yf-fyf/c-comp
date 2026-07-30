@@ -26,6 +26,6 @@ let parse_source ?(already_preprocessed = false) ~filename source =
       failwith (Printf.sprintf "構文解析エラー: line %d" line)
 
 let parse_file filename =
-  Typedef_env.reset ();
+  Struct_env.reset ();
   let source = Utils.read_file filename in
   parse_source ~filename source

@@ -10,7 +10,7 @@ import re
 import os
 import sys
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Set
 
 # ---- トークン種別 ----
 TK_NUM   = 'TK_NUM'    # 整数リテラル
@@ -21,19 +21,25 @@ TK_KW    = 'TK_KW'     # キーワード
 TK_PUNCT = 'TK_PUNCT'  # 演算子・区切り文字
 TK_EOF   = 'TK_EOF'    # 入力終端
 
+# 予約語は使用する 12 語のみ（言語仕様「字句」参照）
 KEYWORDS = {
-    'int', 'char', 'void', 'struct', 'typedef',
+    'int', 'char', 'void', 'struct',
     'if', 'else', 'while', 'for',
-    'return', 'break', 'continue',
+    'break', 'continue', 'return',
     'sizeof',
 }
 
 # 2文字演算子（長いものを先に並べる）
 TWO_CHAR_PUNCTS = [
-    '==', '!=', '<=', '>=', '&&', '||', '<<', '>>', '->',
+    '==', '!=', '<=', '>=', '&&', '||', '->', '++', '--',
 ]
 
-ONE_CHAR_PUNCTS = set('+-*/%&|^~!<>=;:,.(){}[]')
+ONE_CHAR_PUNCTS = set('+-*/%&!<>=;:,.?(){}[]')
+
+INT_MAX = 2147483647
+
+# エスケープは 6 種のみ（言語仕様「リテラル」参照）
+ESCAPES = {'n': 10, 't': 9, '\\': 92, "'": 39, '"': 34, '0': 0}
 
 
 @dataclass
@@ -49,20 +55,44 @@ def _lex_error(msg: str, filename: str, line: int) -> None:
     sys.exit(1)
 
 
-def _escape_char(c: str) -> int:
-    """バックスラッシュエスケープ文字を文字コードに変換"""
-    return {'n': 10, 't': 9, '\\': 92, "'": 39, '"': 34, '0': 0, 'r': 13}.get(c, ord(c))
+def _pp_error(msg: str, filename: str, line: int) -> None:
+    print(f"{filename}:{line}: 前処理エラー: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def _escape_char(c: str, filename: str, line: int) -> int:
+    """バックスラッシュエスケープ文字を文字コードに変換（6 種のみ）"""
+    if c not in ESCAPES:
+        _lex_error(f"不正なエスケープ: \\{c}", filename, line)
+    return ESCAPES[c]
 
 
 # ---- 前処理器 ----
 
+def _apply_defines(line: str, defines: Dict[str, str],
+                   filename: str, lineno: int) -> str:
+    """オブジェクト形式マクロを 1 段だけ置換する。
+    置換結果にマクロ名が残る場合はエラー（多段参照は言語仕様外）。"""
+    if not defines:
+        return line
+    pattern = re.compile(r'\b(' + '|'.join(re.escape(n) for n in defines) + r')\b')
+    if not pattern.search(line):
+        return line
+    replaced = pattern.sub(lambda m: defines[m.group(1)], line)
+    m = pattern.search(replaced)
+    if m:
+        _pp_error(f"マクロの多段参照は使えない: {m.group(1)}", filename, lineno)
+    return replaced
+
+
 def preprocess(source: str,
                filename: str = '<input>',
                defines: Dict[str, str] = None,
-               include_dirs: List[str] = None) -> str:
+               include_dirs: List[str] = None,
+               _active: Set[str] = None) -> str:
     """
     #include "file.h" と #define NAME value を処理する。
-    関数形式マクロ・条件コンパイルは対象外（Core プロファイル外）。
+    指令はこの 2 種のみ。循環取込みと、置換結果にマクロ名が残る #define はエラー。
     """
     if defines is None:
         defines = {}
@@ -71,40 +101,56 @@ def preprocess(source: str,
         file_dir = os.path.dirname(os.path.abspath(filename))
         scaffold_dir = os.path.dirname(os.path.abspath(__file__))
         include_dirs = [file_dir, scaffold_dir, '.']
+    if _active is None:
+        _active = set()
+        if os.path.exists(filename):
+            _active.add(os.path.realpath(filename))
 
     result_lines = []
     for lineno, line in enumerate(source.split('\n'), 1):
         stripped = line.strip()
 
-        # #include "file.h"
-        if stripped.startswith('#include'):
-            m = re.match(r'#include\s+"([^"]+)"', stripped)
-            if m:
+        if stripped.startswith('#'):
+            # #include "file.h"
+            if stripped.startswith('#include'):
+                m = re.match(r'#include\s+"([^"]+)"\s*$', stripped)
+                if not m:
+                    _pp_error('#include は #include "file" 形式のみ使える', filename, lineno)
                 fname = m.group(1)
-                found = False
                 for d in include_dirs:
                     path = os.path.join(d, fname)
                     if os.path.exists(path):
+                        real = os.path.realpath(path)
+                        if real in _active:
+                            _pp_error(f"循環取込み: {fname}", filename, lineno)
                         with open(path, 'r', encoding='utf-8') as f:
-                            included = preprocess(f.read(), path, defines, include_dirs)
+                            included = preprocess(f.read(), path, defines,
+                                                  include_dirs, _active | {real})
                         result_lines.append(included)
-                        found = True
                         break
-                if not found:
-                    _lex_error(f"ファイルが見つからない: {fname}", filename, lineno)
-            continue
+                else:
+                    _pp_error(f"ファイルが見つからない: {fname}", filename, lineno)
+                continue
 
-        # #define NAME value
-        if stripped.startswith('#define'):
-            m = re.match(r'#define\s+(\w+)\s+(.*)', stripped)
-            if m:
-                defines[m.group(1)] = m.group(2).strip()
-            continue
+            # #define NAME [value]
+            if stripped.startswith('#define'):
+                m = re.match(r'#define\s+([A-Za-z_]\w*)(?:\s+(.*))?$', stripped)
+                if not m:
+                    _pp_error('#define はオブジェクト形式 #define NAME value のみ使える',
+                              filename, lineno)
+                name = m.group(1)
+                if name in KEYWORDS:
+                    _pp_error(f"キーワードはマクロ名にできない: {name}", filename, lineno)
+                body = (m.group(2) or '').strip()
+                if name in defines and defines[name] != body:
+                    _pp_error(f"マクロの再定義（本体が異なる）: {name}", filename, lineno)
+                defines[name] = body
+                continue
+
+            _pp_error(f"対応しない前処理指令: {stripped.split()[0]}", filename, lineno)
 
         # それ以外: 定義済みマクロを置換してから追加
-        for name, val in defines.items():
-            line = re.sub(r'\b' + re.escape(name) + r'\b', val, line)
-        result_lines.append(line)
+        result_lines.append(_apply_defines(line, defines, filename, lineno))
 
     return '\n'.join(result_lines)
 
@@ -130,30 +176,26 @@ def tokenize(source: str, filename: str = '<input>') -> List[Token]:
             i += 1
             continue
 
-        # 行コメント //
+        # 行コメント //（ブロックコメント /* */ は言語仕様外）
         if source[i:i+2] == '//':
             while i < n and source[i] != '\n':
                 i += 1
             continue
 
-        # ブロックコメント /* */
-        if source[i:i+2] == '/*':
-            i += 2
-            while i < n - 1:
-                if source[i] == '\n':
-                    line += 1
-                if source[i:i+2] == '*/':
-                    i += 2
-                    break
-                i += 1
-            continue
-
-        # 整数リテラル
+        # 整数リテラル（10 進のみ。先頭 0 は '0' 単独のみ）
         if c.isdigit():
             j = i
             while i < n and source[i].isdigit():
                 i += 1
-            tokens.append(Token(TK_NUM, val=int(source[j:i]), line=line))
+            text = source[j:i]
+            if len(text) > 1 and text[0] == '0':
+                _lex_error(f"整数リテラルの先頭を 0 にはできない（8進表記はない）: {text}",
+                           filename, line)
+            val = int(text)
+            if val > INT_MAX:
+                _lex_error(f"整数リテラルが上限 {INT_MAX} を超えている: {text}",
+                           filename, line)
+            tokens.append(Token(TK_NUM, val=val, line=line))
             continue
 
         # 文字リテラル 'x'
@@ -163,7 +205,7 @@ def tokenize(source: str, filename: str = '<input>') -> List[Token]:
                 _lex_error("文字リテラルが終端していない", filename, line)
             if source[i] == '\\' and i + 1 < n:
                 i += 1
-                ch = _escape_char(source[i])
+                ch = _escape_char(source[i], filename, line)
             else:
                 ch = ord(source[i])
             i += 1
@@ -180,7 +222,7 @@ def tokenize(source: str, filename: str = '<input>') -> List[Token]:
             while i < n and source[i] != '"':
                 if source[i] == '\\' and i + 1 < n:
                     i += 1
-                    buf.append(chr(_escape_char(source[i])))
+                    buf.append(chr(_escape_char(source[i], filename, line)))
                 else:
                     if source[i] == '\n':
                         line += 1
@@ -202,13 +244,13 @@ def tokenize(source: str, filename: str = '<input>') -> List[Token]:
             tokens.append(Token(kind, sval=word, line=line))
             continue
 
-        # 3文字: ...（可変長引数、lib.h の宣言でのみ出現）
+        # 3文字: ...（可変長引数、プロトタイプ宣言でのみ出現）
         if source[i:i+3] == '...':
             tokens.append(Token(TK_PUNCT, sval='...', line=line))
             i += 3
             continue
 
-        # 2文字演算子
+        # 2文字演算子（最長一致）
         matched = False
         for op in TWO_CHAR_PUNCTS:
             if source[i:i+len(op)] == op:

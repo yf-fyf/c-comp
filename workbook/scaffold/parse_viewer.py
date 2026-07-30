@@ -35,19 +35,15 @@ BINARY_NAMES = {
     ND_LE: "le",
     ND_AND: "and",
     ND_OR: "or",
-    ND_BITAND: "bitand",
-    ND_BITOR: "bitor",
-    ND_BITXOR: "bitxor",
-    ND_SHL: "shl",
-    ND_SHR: "shr",
 }
 
 UNARY_NAMES = {
     ND_NEG: "neg",
     ND_NOT: "not",
-    ND_BITNOT: "bitnot",
     ND_ADDR: "addr",
     ND_DEREF: "deref",
+    ND_PREINC: "preinc",
+    ND_PREDEC: "predec",
 }
 
 
@@ -64,14 +60,6 @@ def format_type(ty_str: str) -> Any:
     ty = ty_str.strip()
     if not ty:
         return [sym("type"), ""]
-
-    arrays: List[int] = []
-    while True:
-        m = re.search(r"\[(\d+)\]$", ty)
-        if not m:
-            break
-        arrays.append(int(m.group(1)))
-        ty = ty[: m.start()].strip()
 
     ptr_count = 0
     while ty.endswith("*"):
@@ -90,8 +78,6 @@ def format_type(ty_str: str) -> Any:
 
     for _ in range(ptr_count):
         expr = [sym("ptr"), expr]
-    for size in reversed(arrays):
-        expr = [sym("array"), expr, size]
     return expr
 
 
@@ -164,14 +150,16 @@ def node_to_sexp(node: Node, show_line: bool = False) -> Any:
             *line_attr(node, show_line),
             node_to_sexp(node.operand, show_line),
         ]
+    if kind == ND_COND:
+        return [
+            sym("ternary"),
+            *line_attr(node, show_line),
+            node_to_sexp(node.cond, show_line),
+            node_to_sexp(node.then, show_line),
+            node_to_sexp(node.else_, show_line),
+        ]
     if kind == ND_SIZEOF_TYPE:
         return [sym("sizeof-type"), format_type(node.ty_str), *line_attr(node, show_line)]
-    if kind == ND_SIZEOF_EXPR:
-        return [
-            sym("sizeof-expr"),
-            *line_attr(node, show_line),
-            node_to_sexp(node.operand, show_line),
-        ]
     if kind == ND_BLOCK:
         return [
             sym("block"),
@@ -219,10 +207,7 @@ def node_to_sexp(node: Node, show_line: bool = False) -> Any:
             [sym("body"), node_to_sexp(node.body, show_line)],
         ]
     if kind == ND_DECL:
-        items = [sym("decl"), node.name, *type_attr(node), *line_attr(node, show_line)]
-        if node.init_expr is not None:
-            items.append([sym("init"), node_to_sexp(node.init_expr, show_line)])
-        return items
+        return [sym("decl"), node.name, *type_attr(node), *line_attr(node, show_line)]
     if kind == ND_FUNCDEF:
         return [
             sym("funcdef"),
@@ -357,7 +342,6 @@ def render_dot(program: List[Node], show_line: bool = False) -> str:
             ("step", node.step),
             ("body", node.body),
             ("operand", node.operand),
-            ("init_expr", node.init_expr),
         ]:
             if fval is not None:
                 walk_node(nid, fname, fval)
@@ -423,7 +407,7 @@ def render_tree_node(node: Node, indent: int = 0, show_line: bool = False) -> Li
         details.append(f":line {node.line}")
     line = " " * indent + label + ((" " + " ".join(details)) if details else "")
     lines = [line]
-    for child in (node.lhs, node.rhs, node.cond, node.then, node.else_, node.init, node.step, node.body, node.operand, node.init_expr):
+    for child in (node.lhs, node.rhs, node.cond, node.then, node.else_, node.init, node.step, node.body, node.operand):
         if isinstance(child, Node):
             lines.extend(render_tree_node(child, indent + 2, show_line))
     for child_list in (node.stmts, node.args, node.params):
