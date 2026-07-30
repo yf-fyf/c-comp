@@ -464,7 +464,6 @@ Parser はこれを `ND_FUNCPROTO` として返す。
 | `fact.c` | 階乗再帰 `fact(5)` | 120 |
 | `add_mul.c` | 複合関数（add + mul） | 42 |
 | `sum_rec.c` | 再帰総和 `sum(10)` | 55 |
-
 | `call_add.c` | 単純な関数呼び出し | 対応する `.ans` を参照 |
 | `call_mul.c` | 乗算関数の呼び出し | 対応する `.ans` を参照 |
 | `three_args.c` | 3引数関数の呼び出し | 対応する `.ans` を参照 |

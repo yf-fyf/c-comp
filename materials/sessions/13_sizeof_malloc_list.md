@@ -75,7 +75,7 @@ python3 scaffold/parse_viewer.py sessions/13_sizeof_malloc_list/tests/list_min.c
 このプログラムの内容は次の通り。
 
 ```c
-int malloc(int size);
+#include "lib.h"
 
 typedef struct Node {
     int val;
@@ -121,7 +121,8 @@ int main() {
 ![`list_min.c` の AST](figures/ast/13_list_min_ast.svg)
 
 `malloc(sizeof(Node))` は、`sizeof(Node)` の結果を引数として `malloc` を呼び出すだけである。
-戻り値はポインタ値なので、`Node *n` に代入できる。
+`lib.h` の宣言は `void *malloc(int size);` である。`void *` は任意の `T *` へ暗黙変換されるので、
+そのまま `Node *n` に代入できる。
 
 ## sizeof のコード生成
 
@@ -139,7 +140,7 @@ if node.kind == ND_SIZEOF_EXPR:
     return
 ```
 
-たとえば `sizeof(Node)` は、`self._struct_defs["Node"]["size"]` が8なら `li a0, 8` を出す。
+たとえば `sizeof(Node)` は、`self._struct_defs["Node"]["size"]` が16なら `li a0, 16` を出す。
 
 ## malloc は普通の関数呼び出し
 

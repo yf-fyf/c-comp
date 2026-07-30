@@ -343,7 +343,6 @@ j Lreturn
 | `if_only.c` | if のみ（else なし） | 1 |
 | `compare.c` | `==`, `>=`, `<` の組み合わせ | 42 |
 | `nested.c` | 入れ子 if | 8 |
-
 | `if_true.c` | if の条件が真になる場合 | 対応する `.ans` を参照 |
 | `if_false.c` | if の条件が偽になる場合 | 対応する `.ans` を参照 |
 | `if_elseif.c` | else if の連なり | 対応する `.ans` を参照 |

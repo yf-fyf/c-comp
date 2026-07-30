@@ -351,7 +351,6 @@ emit(f"  j {_cont_stack[-1]}")
 | `for_count.c` | for で 0..4 の総和 | 10 |
 | `nested_loop.c` | while の入れ子 (3×2) | 6 |
 | `break_early.c` | break で抜ける | 15 |
-
 | `while_sum.c` | while による集計 | 対応する `.ans` を参照 |
 | `for_fib.c` | for によるフィボナッチ計算 | 対応する `.ans` を参照 |
 | `break_loop.c` | break を含むループ | 対応する `.ans` を参照 |

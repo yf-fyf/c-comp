@@ -121,8 +121,6 @@ def _emit_func_body(self, body: Node) -> None:
 | `nested_block.c` | 入れ子ブロック内の変数宣言 | 7 |
 | `eight_locals.c` | 8変数（アラインメント境界） | 36 |
 | `minimal.c` | 最小関数（ローカル変数なし） | 42 |
-
-| `many_locals.c` | 多数のローカル変数 | 対応する `.ans` を参照 |
 | `nested_decl.c` | 入れ子ブロック内の宣言 | 対応する `.ans` を参照 |
 | `early_return.c` | 複数のreturn文 | 対応する `.ans` を参照 |
 

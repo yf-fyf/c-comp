@@ -1,4 +1,4 @@
-int malloc(int size);
+#include "lib.h"
 
 typedef struct Node {
     int val;

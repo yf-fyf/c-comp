@@ -410,17 +410,14 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 |----------|------|--------|
 | `target.c` | `a = 3; b = 5; c = a + b; return c;` | 8 |
 | `reassign.c` | `x = 10; y = x * 2 + 3; x = y - x; return x;` | 13 |
-| `init.c` | `int a; a = 42; return a;` | 42 |
+| `init.c` | `int a = 3; int b = 5; int c = a * b; return c;` | 15 |
 | `chain_assign.c` | `a = 5; b = a; a = b + 1; return a;` | 6 |
-
-各ファイルでは、代入の前に `int a;` のようなローカル変数宣言が書かれている。
-
 | `single.c` | 1変数への代入と参照 | 対応する `.ans` を参照 |
 | `add_vars.c` | 複数変数の加算 | 対応する `.ans` を参照 |
-| `init.c` | 初期化に近い単純代入 | 対応する `.ans` を参照 |
-| `reassign.c` | 再代入 | 対応する `.ans` を参照 |
 | `expr_chain.c` | 変数を含む式の連鎖 | 対応する `.ans` を参照 |
 | `multi_expr.c` | 複数変数と複数式 | 対応する `.ans` を参照 |
+
+代入の前にローカル変数の宣言が必要である。`init.c` のように、宣言と同時に初期値を書いてもよい。
 
 ## テスト
 
