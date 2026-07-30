@@ -13,7 +13,7 @@ jobs:
   scaffold:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check Python sources
         run: python3 -m compileall -q tools workbook/scaffold
       - name: Parse a representative learner program
@@ -22,7 +22,7 @@ jobs:
   site:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install pandoc and PyYAML
         run: |
           sudo apt-get update
@@ -38,8 +38,8 @@ jobs:
   web-app:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
