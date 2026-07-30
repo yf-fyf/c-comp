@@ -68,6 +68,25 @@ def archive_workbook(destination: Path, version: str) -> None:
                 archive.write(source, f"{prefix}/{relative.as_posix()}")
 
 
+def check_skeletons() -> None:
+    """各回の mycc.py がスケルトンのままか確かめる。
+
+    完成解答は Private リポジトリだけで管理する運用なので、公開物に混ざると事故になる。
+    未実装マーカーが1つも無い mycc.py は完成品の置き忘れとみなす。
+    スケルトンの書き方を変えてここが誤検出するようになったら、目印の方を見直す。
+    """
+    complete = [
+        path.relative_to(ROOT).as_posix()
+        for path in sorted(WORKBOOK.glob("sessions/*/mycc.py"))
+        if "NotImplementedError" not in path.read_text(encoding="utf-8")
+    ]
+    if complete:
+        raise RuntimeError(
+            "未実装マーカーの無い mycc.py がある（完成解答の混入の疑い）: "
+            + ", ".join(complete)
+        )
+
+
 def verify_output(output: Path) -> None:
     forbidden = [path for path in output.rglob("*") if "teacher" in path.parts]
     if forbidden:
@@ -107,6 +126,7 @@ def main() -> None:
             raise RuntimeError("web/app/dist is missing; run make web first")
         if args.output.resolve() == ROOT.resolve():
             raise RuntimeError("refusing to use the repository root as output")
+        check_skeletons()
         shutil.rmtree(args.output, ignore_errors=True)
         args.output.mkdir(parents=True)
 

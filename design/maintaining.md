@@ -189,10 +189,12 @@ python3 golden.py   # README で指定されている場合
 | 実装 | 判定に使う述語 | 配列型の扱い |
 |------|----------------|--------------|
 | OCaml | `is_ptr_ty`（`workbook/ocaml/support/ast_def.ml`） | `TyArray` は false |
-| Python | `is_ptr_ty_str`（`workbook/sessions/16_integrate_mycc/mycc.py`） | `"int[4]"` は `*` で終わらないので false |
+| Python | `is_ptr_ty_str`（完成解答。`../c-comp-design/teacher/answers/`） | `"int[4]"` は `*` で終わらないので false |
 
 どちらの実装も配列判定のヘルパー（`is_array_ty` / `is_array_ty_str`）を持っていて、
 `a[i]` の経路では使っているが `+` / `-` の経路では使っていない。
+（Python 側の確認は 2026-07 時点の完成解答で行った。公開リポジトリには
+完成解答を置かないので、追試するときは Private リポジトリ側を見ること。）
 そのため要素サイズ倍のスケーリングが飛ばされ、`a + 2` がアドレス +2（本来は +8）になる。
 
 症状は回によって違う。OCaml 版はコマ10〜13 が黙って誤った値を返し、
@@ -204,8 +206,8 @@ python3 golden.py   # README で指定されている場合
 `p = a;` の形だけを例示している。
 
 直す場合は、`+` / `-` の型判定で配列型をポインタ型へ読み替える（`TyArray {elem}` → `TyPtr elem`）。
-影響は OCaml 版 `koma10.ml`〜`koma16.ml` の7ファイルと Python 版参考実装
-`sessions/16_integrate_mycc/mycc.py`、および資料の記述に及ぶ。
+影響は OCaml 版 `koma10.ml`〜`koma16.ml` の7ファイルと Private リポジトリ側の
+Python 完成解答、および資料の記述に及ぶ。
 学習者が書く `codegen_Add` の仕様が変わるため、
 [`quality_guide.md`](./quality_guide.md) の標準ワークフローの対象になる。
 
