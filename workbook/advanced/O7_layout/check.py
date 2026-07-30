@@ -185,5 +185,7 @@ print("=============================")
 print(f"  PASS: {pass_count}  FAIL: {fail_count}  SKIP: {skip_count}")
 print("=============================")
 
-if fail_count > 0:
+if skip_count > 0:
+    print("未実装の Step が残っている。SKIP は未達なので、完了条件は満たしていない。")
+if fail_count > 0 or skip_count > 0:
     raise SystemExit(1)
