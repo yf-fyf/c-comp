@@ -230,9 +230,9 @@ Hello, World!
 
 1. スケルトンの `importlib` 継承によりコマ10の Codegen クラスを引き継ぐ（あらかじめ書かれている）
 2. `self._strings` と `self._intern()` を追加して文字列ラベル管理を作る
-3. AST 全体を走査して、出現する文字列を事前に登録する
-4. `.data` セクションを出力し、各文字列を `.byte` 列として出す
-5. `.text` セクションを出力して、関数本体を出す
+3. 文字列を集める走査の呼び出し自体は `main()` に書かれている（各 `FuncDef` の本体に対して `collect_strings_stmt()` を呼ぶ）。学習者が実装するのは、AST を再帰的にたどって文字列を集める各ハンドラ（`_intern()` と `collect_strings_stmt_*` / `collect_strings_expr_*`、特に `collect_strings_expr_Str()`）の中身である
+4. `.data` セクションを出力する呼び出し（`emit_data_section()`）も `main()` に書かれている。学習者が実装するのは `emit_data_section()` 自体の中身で、登録済みの各文字列を `.byte` 列として出力する処理である
+5. `.text` セクションの出力と関数本体の生成は、コマ10までの実装がそのまま使われる（この回で新しく書く部分はない）
 6. `self._type_of_expr(node)` で `ND_STR` を `char *` にする
 7. `ND_STR` のハンドラメソッドで `la a0, label` を出す
 8. `printf_hello.c` と `printf_number.c` の stdout テストを通す
