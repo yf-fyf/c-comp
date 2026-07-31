@@ -32,14 +32,13 @@ from ast_def import *  # noqa: E402,F403
 # 畳み込み対象の二項・単項ノード
 BINARY_KINDS = {
     ND_ADD, ND_SUB, ND_MUL, ND_DIV, ND_MOD,
-    ND_SHL, ND_SHR, ND_BITAND, ND_BITOR, ND_BITXOR,
     ND_EQ, ND_NE, ND_LT, ND_LE, ND_AND, ND_OR,
 }
-UNARY_KINDS = {ND_NEG, ND_NOT, ND_BITNOT}
+UNARY_KINDS = {ND_NEG, ND_NOT}
 
 # 子ノードを持つフィールド
 CHILD_FIELDS = ['lhs', 'rhs', 'operand', 'cond', 'then', 'else_',
-                'init', 'step', 'body', 'init_expr']
+                'init', 'step', 'body']
 LIST_FIELDS = ['stmts', 'args', 'params']
 
 MASK64 = (1 << 64) - 1
@@ -63,14 +62,12 @@ def fold_binary(kind, a, b):
     畳み込めない(畳み込んではいけない)場合は None を返す。
 
     方針:
-    - ND_ADD / ND_SUB / ND_MUL / ビット演算 / シフト: 計算して to_i64() で丸める
+    - ND_ADD / ND_SUB / ND_MUL: 計算して to_i64() で丸める
     - ND_DIV / ND_MOD: b == 0 なら None(実行時エラーはそのまま残す)。
       C の除算は 0 方向へ切り捨てで、Python の // (床関数) と負数で挙動が違う。
       例: C では -7 / 2 == -3 だが、Python では -7 // 2 == -4。
       ヒント: q = abs(a) // abs(b) を計算してから符号を付ける。
       剰余は a - q * b(a == q*b + r が成り立つように)
-    - ND_SHL / ND_SHR: b が 0..63 の範囲外なら None。
-      Python の >> は算術シフトなので sra と同じ挙動になる
     - 比較(Eq/Ne/Lt/Le)と論理(And/Or)は 1 か 0 を返す
     - 対応しない kind は None
     """
@@ -83,7 +80,6 @@ def fold_unary(kind, a):
     方針:
     - ND_NEG: -a を to_i64() で丸める
     - ND_NOT: a == 0 なら 1、それ以外は 0
-    - ND_BITNOT: ~a を to_i64() で丸める
     - 対応しない kind は None
     """
     raise NotImplementedError("Step 1: fold_unary を実装する")

@@ -23,8 +23,7 @@ int の桁あふれが C のとおりに折り返さない。
 # addi は「アドレス計算」にも使われる(addi a0, s0, -24 など)ので入れない。
 # 入れてしまうとスタック上のアドレスが 32bit に切り詰められて壊れる。
 NARROWABLE = {
-    'add', 'sub', 'mul', 'div', 'rem', 'divu', 'remu',
-    'sll', 'srl', 'sra', 'neg',
+    'add', 'sub', 'mul', 'div', 'rem', 'neg',
 }
 
 

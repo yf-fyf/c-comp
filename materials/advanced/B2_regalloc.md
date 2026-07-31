@@ -3,7 +3,7 @@
 ## 今日のゴール
 
 式の途中結果の退避先を、メモリから **t レジスタ**に変える。
-`fixed15` を全通させたまま、生成命令数をさらに減らす。
+`fixed17` を全通させたまま、生成命令数をさらに減らす。
 
 ## この回の位置づけ
 
@@ -122,14 +122,14 @@ python3 regcc.py ../../final/tests/f09_recur.c | python3 ../count_insns.py
 
 ```bash
 python3 check.py     # Step ごとの単体テスト(未実装は SKIP)
-python3 golden.py    # fixed15 全通 + 命令数の before/after
+python3 golden.py    # fixed17 全通 + 命令数の before/after
 ```
 
 `check.py` は `emit` と `depth` だけを持つ「コード生成器もどき」に対して
 関数を呼び、出力される行を直接確かめる。
 
 **全テスト PASS かつ命令数が減っている**ことが完了条件である。
-教員の実装では合計 1018 → 812 命令（約20%減）になる。
+教員の実装では合計 1250 → 1007 命令（約19%減）になる。
 
 ::: important
 

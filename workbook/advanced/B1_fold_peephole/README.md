@@ -4,7 +4,7 @@
 
 ## 今日のゴール
 
-2つの最適化パスを追加して生成命令数を減らし、`fixed15` が全通し続けることで
+2つの最適化パスを追加して生成命令数を減らし、`fixed17` が全通し続けることで
 「意味を変えずに速くできた」ことを確認する。
 
 前提はコマ8 まで（効果の測定には コマ16 の `final/mycc.py` を使う）。
@@ -27,7 +27,7 @@ python3 foldcc.py ../../final/tests/f05_for.c | python3 ../count_insns.py
 
 ```bash
 python3 check.py     # Step ごとの単体テスト(未実装は SKIP)
-python3 golden.py    # fixed15 全通 + 命令数の before/after
+python3 golden.py    # fixed17 全通 + 命令数の before/after
 ```
 
 `golden.py` が全テスト PASS かつ命令数削減を報告したら完了です。

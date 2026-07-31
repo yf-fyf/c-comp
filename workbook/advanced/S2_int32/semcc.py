@@ -30,8 +30,8 @@ DIR = Path(__file__).resolve().parent
 WORKBOOK = DIR.parents[1]
 SCAFFOLD = WORKBOOK / "scaffold"
 
-# 型に応じて幅を変えるノード(算術・シフト・単項マイナス)
-ARITH_KINDS = {'Add', 'Sub', 'Mul', 'Div', 'Mod', 'Shl', 'Shr', 'Neg'}
+# 型に応じて幅を変えるノード(算術・前置インクリメント/デクリメント・単項マイナス)
+ARITH_KINDS = {'Add', 'Sub', 'Mul', 'Div', 'Mod', 'PreInc', 'PreDec', 'Neg'}
 
 
 def load_module(name, path):

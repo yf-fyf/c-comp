@@ -16,5 +16,5 @@
 
 ```bash
 python3 check.py     # 判定と生成命令列を確認(未実装は SKIP)
-python3 golden.py    # 修正なしで落ち、修正ありで通ること + fixed15
+python3 golden.py    # 修正なしで落ち、修正ありで通ること + fixed17
 ```

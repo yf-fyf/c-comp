@@ -14,13 +14,13 @@
 // 確認:
 //   python3 check.py
 
-typedef struct Header {
+struct Header {
     int size;               // このブロックのユーザ領域のバイト数
     int free;               // 1 なら解放済み
     struct Header *next;    // 次のブロックのヘッダ(管理用リスト)
-} Header;
+};
 
-Header *heap_head;      // 管理リストの先頭
+struct Header *heap_head;      // 管理リストの先頭
 char   *heap_limit;     // プールの終端
 char   *heap_brk;       // まだ切り出していない領域の先頭
 
@@ -40,8 +40,8 @@ int heap_init(char *buf, int size) {
 // ---- Step 2: 再利用できるブロックを探す(first fit) ----
 // 管理リストを先頭からたどり、free == 1 かつ size 以上のものを返す。
 // 見つからなければ 0 を返す。
-Header *find_free(int size) {
-    Header *h;
+struct Header *find_free(int size) {
+    struct Header *h;
     // TODO(Step 2)
     return 0;
 }
@@ -52,16 +52,16 @@ Header *find_free(int size) {
 //   1. size を align8 で切り上げる
 //   2. find_free で再利用できるブロックを探す。あれば free = 0 にして
 //      「ヘッダの次のアドレス」を返す
-//      (cp = h; return cp + sizeof(Header); と書く。Core プロファイルに
+//      (cp = h; return cp + sizeof(struct Header); と書く。Core プロファイルに
 //       キャストはないので、いったん char * の変数に入れる)
 //   3. なければ未使用領域から切り出す
-//      - heap_brk + sizeof(Header) + size が heap_limit を超えるなら 0 を返す
+//      - heap_brk + sizeof(struct Header) + size が heap_limit を超えるなら 0 を返す
 //      - p = heap_brk とし、heap_brk を進める
 //      - p をヘッダとして size / free = 0 / next = heap_head を設定し、
 //        heap_head を更新する
-//      - p + sizeof(Header) を返す
+//      - p + sizeof(struct Header) を返す
 char *my_malloc(int size) {
-    Header *h;
+    struct Header *h;
     char *p;
     char *cp;
     // TODO(Step 1, Step 2)
@@ -69,10 +69,10 @@ char *my_malloc(int size) {
 }
 
 // ---- Step 2: 解放する ----
-// ユーザ領域のアドレスから sizeof(Header) 引くとヘッダに戻れる。
+// ユーザ領域のアドレスから sizeof(struct Header) 引くとヘッダに戻れる。
 // そのヘッダの free を 1 にするだけでよい(領域は返さない)。
 int my_free(char *p) {
-    Header *h;
+    struct Header *h;
     // TODO(Step 2)
     return 0;
 }
@@ -80,7 +80,7 @@ int my_free(char *p) {
 // ---- Step 3: 確保済み(未解放)のバイト数を返す ----
 // 管理リストをたどり、free == 0 のブロックの size を足す。
 int heap_used() {
-    Header *h;
+    struct Header *h;
     int total;
     // TODO(Step 3)
     return 0;

@@ -1,12 +1,15 @@
 // プールを使い切ったら 0(NULL)を返すことを確かめる
+#include "lib.h"
+
 int heap_init(char *buf, int size);
 char *my_malloc(int size);
 
 int main() {
-    char pool[512];
+    char *pool;
     char *p;
     int count;
 
+    pool = malloc(512);
     heap_init(pool, 512);
     count = 0;
     p = my_malloc(64);

@@ -5,7 +5,7 @@
 ## 今日のゴール
 
 式の途中結果の退避先をメモリから t レジスタに変え、
-`fixed15` を全通させたまま命令数を減らす。
+`fixed17` を全通させたまま命令数を減らす。
 
 前提はコマ8 まで。**`mycc.py` は書き換えません**（`regcc.py` が差し替えます）。
 
@@ -24,5 +24,5 @@ python3 regcc.py ../../final/tests/f09_recur.c | python3 ../count_insns.py
 
 ```bash
 python3 check.py     # Step ごとの単体テスト(未実装は SKIP)
-python3 golden.py    # fixed15 全通 + 命令数の before/after
+python3 golden.py    # fixed17 全通 + 命令数の before/after
 ```

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""B1 golden test — 正しさ(fixed15 全通)と効果(命令数の削減)を確認する
+"""B1 golden test — 正しさ(fixed17 全通)と効果(命令数の削減)を確認する
 
 使い方:
     python3 golden.py                     # final/mycc.py をベースに確認
     OPTCC_COMPILER=... python3 golden.py  # ベースのコンパイラを差し替え
 
-1. fixed15 を foldcc.py(fold + peephole つき)でコンパイルして全テスト実行
+1. fixed17 を foldcc.py(fold + peephole つき)でコンパイルして全テスト実行
 2. 各テストの命令数を最適化なし/ありで数えて表にする
 
 「全テスト PASS」かつ「命令数が減っている」ことがこの回の完了条件。
@@ -39,8 +39,8 @@ def compile_with(args, src):
 
 
 def main():
-    # ---- 1. 正しさ: fixed15 を foldcc 経由で全実行 ----
-    print("=== 正しさの確認(fixed15 を foldcc 経由で実行)===")
+    # ---- 1. 正しさ: fixed17 を foldcc 経由で全実行 ----
+    print("=== 正しさの確認(fixed17 を foldcc 経由で実行)===")
     runner = subprocess.run(
         [sys.executable, str(WORKBOOK / "scaffold" / "test_runner.py"),
          "--compiler", str(DIR / "foldcc.py"), "--tests", str(TESTS)],

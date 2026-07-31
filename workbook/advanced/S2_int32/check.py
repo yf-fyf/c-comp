@@ -51,8 +51,6 @@ def step1():
     check("mul → mulw", nr.narrow('  mul a0, a1, a0', 'int'), '  mulw a0, a1, a0')
     check("div → divw", nr.narrow('  div a0, a1, a0', 'int'), '  divw a0, a1, a0')
     check("rem → remw", nr.narrow('  rem a0, a1, a0', 'int'), '  remw a0, a1, a0')
-    check("sll → sllw", nr.narrow('  sll a0, a1, a0', 'int'), '  sllw a0, a1, a0')
-    check("sra → sraw", nr.narrow('  sra a0, a1, a0', 'int'), '  sraw a0, a1, a0')
     check("neg → negw", nr.narrow('  neg a0, a0', 'int'), '  negw a0, a0')
     check("char も32bit扱い",
           nr.narrow('  add a0, a1, a0', 'char'), '  addw a0, a1, a0')

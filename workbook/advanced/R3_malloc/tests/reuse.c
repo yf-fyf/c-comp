@@ -1,15 +1,18 @@
 // 解放したブロックが再利用されることを確かめる
+#include "lib.h"
+
 int heap_init(char *buf, int size);
 char *my_malloc(int size);
 int my_free(char *p);
 int heap_used();
 
 int main() {
-    char pool[1024];
+    char *pool;
     char *a;
     char *b;
     char *c;
 
+    pool = malloc(1024);
     heap_init(pool, 1024);
     a = my_malloc(16);
     b = my_malloc(16);

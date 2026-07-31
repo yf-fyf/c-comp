@@ -24,5 +24,5 @@ python3 tccc.py tests/deep_sum.c | grep -c call    # call が減る
 
 ```bash
 python3 check.py     # Step ごとの単体テスト(未実装は SKIP)
-python3 golden.py    # 深い末尾再帰が通る + fixed15 が壊れない
+python3 golden.py    # 深い末尾再帰が通る + fixed17 が壊れない
 ```

@@ -1,12 +1,15 @@
 // 差の結果は int なので、そのまま計算に使える
-typedef struct Pair { int x; int y; } Pair;
+#include "lib.h"
+
+struct Pair { int x; int y; };
 
 int main() {
-    Pair a[5];
-    Pair *p;
-    Pair *q;
+    struct Pair *a;
+    struct Pair *p;
+    struct Pair *q;
     int n;
 
+    a = malloc(sizeof(struct Pair) * 5);
     p = &a[1];
     q = &a[4];
 

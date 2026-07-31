@@ -19,7 +19,7 @@
 ```c
 int sum_to(int n, int acc) {
     if (n == 0) { return acc; }
-    return sum_to(n - 1, acc + n);   /* 末尾呼び出し */
+    return sum_to(n - 1, acc + n);   // 末尾呼び出し
 }
 ```
 
@@ -28,7 +28,7 @@ int sum_to(int n, int acc) {
 ```c
 int fact(int n) {
     if (n == 0) { return 1; }
-    return n * fact(n - 1);   /* 呼び出しの後に掛け算が残っている */
+    return n * fact(n - 1);   // 呼び出しの後に掛け算が残っている
 }
 ```
 
@@ -110,7 +110,7 @@ return sum_to(n - 1, acc + n);
 | 引数が9個以上 | しない | レジスタに収まらない |
 
 「怪しいものは変換しない」— B1 と同じく、最適化の基本姿勢である。
-判定が広すぎると `fixed15` が壊れるので、そこで気づける。
+判定が広すぎると `fixed17` が壊れるので、そこで気づける。
 
 ## 実装
 
@@ -128,14 +128,14 @@ python3 tccc.py tests/deep_sum.c | grep -c call   # call が減っているか
 
 ```bash
 python3 check.py     # Step ごとの単体テスト(未実装は SKIP)
-python3 golden.py    # 深い末尾再帰 + fixed15
+python3 golden.py    # 深い末尾再帰 + fixed17
 ```
 
 `golden.py` は3つを続けて確認する。
 
 1. **最適化なし**で `tests/deep_sum.c`（100万回の末尾再帰）が**落ちる**こと
 2. **最適化あり**で同じテストが**通る**こと
-3. `fixed15` が壊れていないこと
+3. `fixed17` が壊れていないこと
 
 「落ちていたものが通るようになる」ので、効果が命令数より分かりやすい。
 
@@ -147,7 +147,8 @@ python3 golden.py    # 深い末尾再帰 + fixed15
    （フレームの解放、引数の渡し方、`ra` の扱い）
 2. **末尾位置の拡張**: `if (c) return f(x); else return f(y);` の両方が
    末尾呼び出しであることは、いまの判定でも扱えている。
-   では `return c ? f(x) : g(y);` は？（三項演算子は Core 外だが設計として考える）
+   では `return c ? f(x) : g(y);` は？三項演算子は Core にあるので実際に試せる。
+   `is_self_tail_call` を `Cond` の両腕に再帰させる拡張を設計する
 3. **fact を末尾再帰に書き換える**: `fact(n)` を累積引数つきの
    `fact_acc(n, acc)` に書き換え、深い階乗が動くことを確かめる
 4. **フレームサイズの計測**: 最適化あり／なしで `sp` がどこまで下がるかを

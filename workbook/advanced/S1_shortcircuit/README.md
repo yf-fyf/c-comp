@@ -17,5 +17,5 @@
 
 ```bash
 python3 check.py     # 生成された命令列の構造を確認(未実装は SKIP)
-python3 golden.py    # 短絡が要るテスト + fixed15
+python3 golden.py    # 短絡が要るテスト + fixed17
 ```

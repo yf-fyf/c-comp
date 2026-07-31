@@ -83,18 +83,12 @@ def step1a():
           fold.fold_binary(ast_def.ND_MOD, -7, 2), -1)
     check("5 / 0 は畳み込まない",
           fold.fold_binary(ast_def.ND_DIV, 5, 0), None)
-    check("1 << 3", fold.fold_binary(ast_def.ND_SHL, 1, 3), 8)
-    check("1 << 64 は畳み込まない",
-          fold.fold_binary(ast_def.ND_SHL, 1, 64), None)
-    check("-8 >> 1 は -4(算術シフト)",
-          fold.fold_binary(ast_def.ND_SHR, -8, 1), -4)
     check("2 < 3", fold.fold_binary(ast_def.ND_LT, 2, 3), 1)
     check("1 && 0", fold.fold_binary(ast_def.ND_AND, 1, 0), 0)
-    check("64bit の桁あふれ",
-          fold.fold_binary(ast_def.ND_MUL, 1 << 62, 4), 0)
+    check("64bit の桁あふれ(4611686018427387904 == 1 << 62)",
+          fold.fold_binary(ast_def.ND_MUL, 4611686018427387904, 4), 0)
     check("-(5)", fold.fold_unary(ast_def.ND_NEG, 5), -5)
     check("!0", fold.fold_unary(ast_def.ND_NOT, 0), 1)
-    check("~0", fold.fold_unary(ast_def.ND_BITNOT, 0), -1)
 
 
 # ---------------------------------------------------------------
@@ -111,7 +105,7 @@ def step1b():
           fold_sexpr("a + 2 * 3"), '(add (var "a") (num 6))')
     check("ゼロ除算は残る",
           fold_sexpr("5 / 0"), "(div (num 5) (num 0))")
-    check("sizeof ではないただの比較",
+    check("畳み込み対象でないただの比較",
           fold_sexpr("1 < 2"), "(num 1)")
     check("f(2 * 3) の引数も畳む",
           fold_sexpr("f(2 * 3)"), '(call "f" (args (num 6)))')

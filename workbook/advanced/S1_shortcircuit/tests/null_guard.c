@@ -1,9 +1,9 @@
 // 短絡評価がないと NULL 参照でクラッシュする
-typedef struct Node { int val; struct Node *next; } Node;
+struct Node { int val; struct Node *next; };
 
 int main() {
-    Node n;
-    Node *p;
+    struct Node n;
+    struct Node *p;
     n.val = 7;
 
     p = 0;

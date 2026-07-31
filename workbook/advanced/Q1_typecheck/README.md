@@ -11,7 +11,8 @@
 
 ## 編集するファイル
 
-- `typecheck.py`（Step 1: check_var、Step 2: check_call、Step 3: check_assign）
+- `typecheck.py`（Step 1: check_var、Step 2: check_call、Step 3: check_assign、
+  Step 4: check_incdec）
 
 ## 動かし方
 
@@ -27,4 +28,4 @@ python3 check.py
 ```
 
 エラーコーパス（`tests/*.c` と `*.expected` の一致）と、
-正常系（講義のテスト入力約96本で誤検出ゼロ）の2つを確認します。
+正常系（講義のテスト入力101本で誤検出ゼロ）の2つを確認します。

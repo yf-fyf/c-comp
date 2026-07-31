@@ -16,7 +16,7 @@
 
 ```bash
 python3 check.py     # narrow の入出力を直接確認(未実装は SKIP)
-python3 golden.py    # 折り返しのテスト + fixed15
+python3 golden.py    # 折り返しのテスト + fixed17
 ```
 
 `tests/pointer_ok.c` は「直しすぎ(アドレス計算まで32bit化)」を検出するための安全網です。

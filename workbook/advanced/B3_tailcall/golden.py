@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""B3 golden test — 深い末尾再帰が動くこと + fixed15 が壊れないこと
+"""B3 golden test — 深い末尾再帰が動くこと + fixed17 が壊れないこと
 
 使い方:
     python3 golden.py
@@ -49,7 +49,7 @@ def main():
         return 1
 
     print()
-    print("=== 3. fixed15 が壊れていないことを確認 ===")
+    print("=== 3. fixed17 が壊れていないことを確認 ===")
     ok_fixed, out_fixed = run_tests(DIR / "tccc.py", WORKBOOK / "final" / "tests")
     print("\n".join(out_fixed.strip().splitlines()[-3:]))
     if not ok_fixed:

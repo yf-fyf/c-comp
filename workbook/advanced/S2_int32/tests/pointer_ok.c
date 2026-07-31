@@ -1,13 +1,16 @@
 // ポインタ演算は64bitのまま壊れていないこと(narrow しすぎの検出)
-typedef struct Node { int val; struct Node *next; } Node;
+#include "lib.h"
+
+struct Node { int val; struct Node *next; };
 
 int main() {
-    int a[8];
+    int *a;
     int *p;
     int i;
-    Node n;
-    Node *q;
+    struct Node n;
+    struct Node *q;
 
+    a = malloc(sizeof(int) * 8);
     for (i = 0; i < 8; i = i + 1) { a[i] = i * 10; }
 
     p = a;

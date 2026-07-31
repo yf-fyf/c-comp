@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""B2 golden test — 正しさ(fixed15 全通)と効果(命令数)を確認する
+"""B2 golden test — 正しさ(fixed17 全通)と効果(命令数)を確認する
 
 使い方:
     python3 golden.py
@@ -32,7 +32,7 @@ def compile_with(prog, src):
 
 
 def main():
-    print("=== 正しさの確認(fixed15 をレジスタスタック版で実行)===")
+    print("=== 正しさの確認(fixed17 をレジスタスタック版で実行)===")
     runner = subprocess.run(
         [sys.executable, str(WORKBOOK / "scaffold" / "test_runner.py"),
          "--compiler", str(DIR / "regcc.py"), "--tests", str(TESTS)],

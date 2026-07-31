@@ -8,6 +8,7 @@ AST を受け取り、実行前に見つけられる誤りを集めて報告す�
     Step 1: check_var       未定義の変数
     Step 2: check_call      未定義の関数・引数の個数
     Step 3: check_assign    代入先にできない式
+    Step 4: check_incdec    前置 ++/-- の対象にできない式
 
 収集(collect)と走査(walk)は完成済み。
 
@@ -34,7 +35,7 @@ sys.path.insert(0, str(_find_scaffold()))
 from ast_def import *  # noqa: E402,F403
 
 CHILD_FIELDS = ['lhs', 'rhs', 'operand', 'cond', 'then', 'else_',
-                'init', 'step', 'body', 'init_expr']
+                'init', 'step', 'body']
 LIST_FIELDS = ['stmts', 'args']
 
 
@@ -122,6 +123,18 @@ class TypeChecker:
         """
         raise NotImplementedError("Step 3: check_assign を実装する")
 
+    # ---- Step 4: 前置 ++/-- の対象の検査 ----
+
+    def check_incdec(self, node):
+        """Step 4: 前置 ++/-- (node) の operand が lvalue かを調べる。
+
+        方針: 対象にできるのは Step 3 の check_assign と同じ4種類だけ
+        (同じ集合を再利用してよい)。それ以外なら
+        f"++/-- の対象にできない式です({operand の kind})" を報告する。
+            ND_VAR / ND_DEREF / ND_INDEX / ND_MEMBER
+        """
+        raise NotImplementedError("Step 4: check_incdec を実装する")
+
     # ---- 走査(完成済み) ----
 
     def walk(self, node):
@@ -133,8 +146,9 @@ class TypeChecker:
             self.check_call(node)
         elif node.kind == ND_ASSIGN:
             self.check_assign(node)
+        elif node.kind in (ND_PREINC, ND_PREDEC):
+            self.check_incdec(node)
         elif node.kind == ND_DECL:
-            self.walk(node.init_expr)
             self.locals[node.name] = node.ty_str
             return
         for f in CHILD_FIELDS:

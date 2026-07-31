@@ -27,7 +27,7 @@ pass_count = 0
 fail_count = 0
 skip_count = 0
 
-SIZES = {'int': 4, 'char': 1, 'Pair': 8}
+SIZES = {'int': 4, 'char': 1, 'struct Pair': 8}
 
 
 class FakeCG:
@@ -111,7 +111,7 @@ def step2():
     check("char* では割らない(要素サイズが 1)",
           not any(l.startswith('div') for l in cg2.lines), str(cg2.lines))
 
-    cg3 = FakeCG({'a': 'Pair*', 'b': 'Pair*'})
+    cg3 = FakeCG({'a': 'struct Pair*', 'b': 'struct Pair*'})
     pd.gen_ptr_diff(cg3, expr("a - b"))
     check("構造体ポインタでは 8 で割っている",
           'li a1, 8' in cg3.lines, str(cg3.lines))
