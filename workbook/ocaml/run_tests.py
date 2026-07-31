@@ -152,7 +152,7 @@ def main() -> int:
     args = ap.parse_args()
 
     build_dir = Path(args.build_dir).resolve()
-    available = sorted(int(p.stem[4:]) for p in OCAML_DIR.glob("koma[0-9][0-9].ml"))
+    available = sorted(int(p.stem[4:]) for p in (OCAML_DIR / "sessions").glob("koma[0-9][0-9].ml"))
     if not available:
         print("komaNN.ml が見つからない", file=sys.stderr)
         return 2
@@ -172,7 +172,7 @@ def main() -> int:
     rows = []
     total = [0, 0, 0]
     for num in wanted:
-        exe = build_dir / f"koma{num:02d}.exe"
+        exe = build_dir / "sessions" / f"koma{num:02d}.exe"
         tests = tests_dir_for(num)
         label = tests.relative_to(WORKBOOK) if tests else "対象テストなし"
         print(f"\n--- コマ{num:02d} ({label}) ---")

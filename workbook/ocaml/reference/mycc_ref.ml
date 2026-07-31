@@ -1,5 +1,7 @@
 (*
-   コマ 16: コードレビュー・リファクタリング用（koma15 と同じ完成形）
+   必修パート（コマ2〜16）の完成版リファレンス実装。
+   koma16 と同じコード生成に、どの命令をどの生成関数が出したかを示す
+   アセンブリコメントを付けたもの。
 *)
 
 open Ast_def
@@ -733,7 +735,7 @@ let () =
   let files = List.filter (fun a -> a <> "--no-comments") args in
   if List.mem "--no-comments" args then comments := false;
   if files = [] then (
-    prerr_endline "使い方: dune exec ./koma16.exe -- [--no-comments] <source.c> [...]";
+    prerr_endline "使い方: dune exec ./mycc_ref.exe -- [--no-comments] <source.c> [...]";
     prerr_endline "  --no-comments: 生成元を示すコメントを付けずに出力する";
     exit 1);
   Struct_env.reset ();

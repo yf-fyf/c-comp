@@ -1,3 +1,8 @@
+(library
+ (name support)
+ (wrapped false)
+ (libraries str))
+
 (ocamllex lexer)
 
 (menhir
