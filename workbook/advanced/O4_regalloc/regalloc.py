@@ -73,10 +73,11 @@ def promotable(locals_, escaped):
     #
     # 次を全部満たすものだけ残す。宣言された順に返す。
     #   - escaped に入っていない(アドレスを取られていない)
-    #   - 型文字列に '[' を含まない(配列はレジスタに入らない)
+    #   - struct 値ではない(型が 'struct' で始まり '*' で終わらないものを除く。
+    #     構造体はレジスタに入りきらない)
     #   - 型が 'int' か、ポインタ(型文字列が '*' で終わる)
     #
-    # struct はどちらの条件にも当てはまらないので自然に外れる。
+    # struct へのポインタ(`struct Point*`)は8バイトなので昇格してよい。
     raise NotImplementedError("Step 2: promotable を実装する")
 
 
@@ -126,6 +127,37 @@ def store_op(ty):
     return 'mv' if ty.endswith('*') else 'sext.w'
 
 
+def incdec_delta(cg, ty, kind, mycc=None):
+    """前置 ++/-- が変数に加える量(完成済み)。
+
+    ポインタは指す先のサイズだけ進む(`mycc.py` の PreInc と同じ規則)。
+    """
+    step = 1
+    if ty.endswith('*'):
+        if mycc is None:
+            # 要素サイズを当て推量すると、この回の主題そのもの
+            # (昇格した変数が静かに壊れる)を作り込むことになる。
+            raise RuntimeError('ポインタの要素サイズ計算には mycc が必要です')
+        step = mycc.size_of_ty_str(
+            mycc.elem_ty_str(ty), getattr(cg, '_struct_defs', None))
+    return step if kind == 'PreInc' else -step
+
+
+def emit_var_incdec(cg, node, reg, delta):
+    """昇格した変数への前置 ++/--(完成済み)。
+
+    昇格していない変数なら `mycc.py` の PreInc がアドレス経由で読み書きするが、
+    昇格した変数の実体はレジスタにしかない。メモリを触ると古い値を読み書きして
+    **静かに壊れる**ので、レジスタを直接更新する。
+
+    `int` は store_op と同じ「32ビットに切り詰める」慣例に合わせて addiw を使う。
+    前置 ++/-- の値は**新しい値**なので、最後に a0 へ写す(`mycc.py` と同じ)。
+    """
+    op = 'addi' if cg._locals[node.operand.name][1].endswith('*') else 'addiw'
+    cg.emit(f'  {op} {reg}, {reg}, {delta}')
+    cg.emit(f'  mv a0, {reg}')
+
+
 # ---------------------------------------------------------------
 # Step 4: 退避と復帰
 # ---------------------------------------------------------------
@@ -142,7 +174,7 @@ def save_restore(cg, used, op):
     # でオフセットが引ける。
     #
     # これを忘れると、呼び出し元が使っていた s レジスタを壊す。
-    # fixed15 は通ってしまうことがあるので、**静かに壊れる**種類のバグになる。
+    # fixed17 は通ってしまうことがあるので、**静かに壊れる**種類のバグになる。
     raise NotImplementedError("Step 4: save_restore を実装する")
 
 
@@ -226,11 +258,19 @@ def patch(cls, mycc=None):
                 and node.lhs.name in prom:
             emit_var_assign(self, node, prom[node.lhs.name])
             return
+        if node.kind in ('PreInc', 'PreDec') \
+                and getattr(node.operand, 'kind', None) == 'Var' \
+                and node.operand.name in prom:
+            ty = self._locals[node.operand.name][1]
+            emit_var_incdec(self, node, prom[node.operand.name],
+                            incdec_delta(self, ty, node.kind, mycc))
+            return
         orig_codegen(self, node)
 
     def gen_func(self, node):
         if node.kind != 'FuncDef':
             return
+        self._depth = 0
         self._locals.clear()
         self._stack_offset = 0
         self._ret_label = self.new_label()
@@ -266,6 +306,8 @@ def patch(cls, mycc=None):
                 self.emit(f'  sd a{i}, {self._locals[p.name][0]}(s0)')
 
         self.gen_stmt(node.body)
+        if self._depth != 0:
+            raise RuntimeError(f'push と pop の数が合っていない (depth={self._depth})')
 
         # --- エピローグ ---
         self.emit(f'{self._ret_label}:')

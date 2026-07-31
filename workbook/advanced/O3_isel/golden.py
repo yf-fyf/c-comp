@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O3 golden test — 正しさ(fixed15)と効果(静的・動的命令数)を測る
+"""O3 golden test — 正しさ(fixed17)と効果(静的・動的命令数)を測る
 
 使い方:
     python3 golden.py
@@ -63,7 +63,7 @@ def build(csrc, passes, workdir, tag):
 
 
 def main():
-    print("=== 1. 正しさの確認(fixed15 を isel ありで実行)===")
+    print("=== 1. 正しさの確認(fixed17 を isel ありで実行)===")
     ok, out = run_tests(WORKBOOK / "final" / "tests", "isel")
     print("\n".join(out.strip().splitlines()[-3:]))
     if not ok:

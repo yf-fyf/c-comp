@@ -1,13 +1,18 @@
-// 3重ループ: 配列アクセスが多い
+// 3重ループ: malloc 領域へのポインタアクセスが多い
+#include "lib.h"
+
 int main() {
-    int a[36];
-    int b[36];
-    int c[36];
+    int *a;
+    int *b;
+    int *c;
     int i;
     int j;
     int k;
     int t;
 
+    a = malloc(sizeof(int) * 36);
+    b = malloc(sizeof(int) * 36);
+    c = malloc(sizeof(int) * 36);
     for (i = 0; i < 6; i = i + 1) {
         for (j = 0; j < 6; j = j + 1) {
             a[i * 6 + j] = i + j;

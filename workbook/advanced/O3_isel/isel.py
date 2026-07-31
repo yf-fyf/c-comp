@@ -139,7 +139,7 @@ def fold_mul_to_shift(lines):
     """li rC, 2^k / mul rD, rX, rC  →  slli rD, rX, k"""
     # TODO(Step 3)
     #
-    # 配列の添字計算 a[i] は「i に要素サイズを掛ける」ので、
+    # ポインタの添字 p[i] は「i に要素サイズを掛ける」ので、
     # li a1, 4 / mul a0, a0, a1 の形が出る。4 は 2 の冪なので
     # slli a0, a0, 2(左に2ビットシフト)1命令で済む。
     #

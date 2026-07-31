@@ -23,7 +23,14 @@ O6(コピー伝播と死コード除去)がこれを使います。
 - `liveness.py`(Step 1: `def_use`、Step 2: `block_def_use` / `solve`、
   Step 3: `live_after`、Step 4: `live_across_calls`)
 
-呼び出し規約の定数、`_is_reg` / `_base_of`、可視化の `annotate` は完成済みです。
+呼び出し規約の定数、`_is_reg` / `_base_of`、`restored_saved`、
+可視化の `annotate` は完成済みです。
+
+`ret` が読む callee-saved は**関数ごとに違います**。O4 のエピローグは
+昇格した変数の分だけ `ld sN, ...(s0)` を出すので、それを集めた
+`restored_saved(blocks)` の値を `def_use(insn, saved)` に渡します。
+`s1`〜`s11` を無条件に読むことにすると、触ってもいないレジスタが
+全ブロックで「生きている」ことになり、測定が意味を失います。
 
 ## 動かし方
 

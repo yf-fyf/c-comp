@@ -46,7 +46,7 @@ python3 ../optcc.py            --passes isel ../O1_measure/bench/loop_sum.c  # �
 
 ```bash
 python3 check.py     # 各関数の単体テスト(未実装は SKIP)
-python3 golden.py    # fixed15 + ベンチマーク + 静的/動的の削減
+python3 golden.py    # fixed17 + ベンチマーク + 静的/動的の削減
 ```
 
-`golden.py` は**先に fixed15 を確認**します。この回はいちばん意味を壊しやすいためです。
+`golden.py` は**先に fixed17 を確認**します。この回はいちばん意味を壊しやすいためです。

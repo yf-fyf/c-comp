@@ -46,5 +46,5 @@ python3 ../optcc.py            --passes isel,copyprop,dce $B
 
 ```bash
 python3 check.py     # 各関数の単体テスト(未実装は SKIP)
-python3 golden.py    # fixed15 + 4構成の比較表
+python3 golden.py    # fixed17 + 4構成の比較表
 ```

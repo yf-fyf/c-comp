@@ -28,7 +28,7 @@ python3 ../optcc.py --passes isel        ../O1_measure/bench/loop_sum.c   # 回�
 
 ```bash
 python3 check.py     # 反転表と回転の単体テスト(未実装は SKIP)
-python3 golden.py    # fixed15 + ベンチマーク + 静的/動的の比較
+python3 golden.py    # fixed17 + ベンチマーク + 静的/動的の比較
 ```
 
 `golden.py` は**動的命令数で合否を判定**します。この回は静的では効果が見えません。

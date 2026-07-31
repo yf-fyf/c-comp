@@ -5,7 +5,7 @@
 ## 今日のゴール
 
 「アドレス計算 + ロード」を、RV64 の `offset(base)` 形式のロード1命令に畳む。
-`fixed15` を通したまま、静的・動的の両方で命令数を減らす。
+`fixed17` を通したまま、静的・動的の両方で命令数を減らす。
 
 前提は O1(測定基盤)。**`mycc.py` は書き換えません**。
 
@@ -25,5 +25,5 @@ python3 ../optcc.py --passes '' ../O1_measure/bench/matmul.c   # 最適化なし
 
 ```bash
 python3 check.py     # 各置き換えの単体テスト(未実装は SKIP)
-python3 golden.py    # fixed15 + ベンチマーク + 静的/動的の削減
+python3 golden.py    # fixed17 + ベンチマーク + 静的/動的の削減
 ```

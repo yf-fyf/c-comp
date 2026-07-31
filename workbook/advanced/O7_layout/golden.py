@@ -67,7 +67,7 @@ def build(csrc, passes, workdir, tag):
 
 
 def main():
-    print("=== 1. 正しさの確認(fixed15 を isel,layout で実行)===")
+    print("=== 1. 正しさの確認(fixed17 を isel,layout で実行)===")
     ok, out = run_tests(WORKBOOK / "final" / "tests", "isel,layout")
     print("\n".join(out.strip().splitlines()[-3:]))
     if not ok:

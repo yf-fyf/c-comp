@@ -5,7 +5,7 @@
     python3 golden.py
     OPT_COMPILER=... OPT_ANSWERS=... python3 golden.py
 
-この回は**意味を壊しやすい**。効果より先に fixed15 を確認する。
+この回は**意味を壊しやすい**。効果より先に fixed17 を確認する。
 """
 
 import importlib.util
@@ -68,7 +68,7 @@ def build(csrc, regalloc, passes, workdir, tag):
 
 
 def main():
-    print("=== 1. 正しさの確認(fixed15 を regalloc + isel で実行)===")
+    print("=== 1. 正しさの確認(fixed17 を regalloc + isel で実行)===")
     try:
         ok, out = run_tests(WORKBOOK / "final" / "tests", True, "isel")
     except Exception as e:                                  # noqa: BLE001

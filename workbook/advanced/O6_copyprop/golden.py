@@ -80,7 +80,7 @@ def main():
     for label, regalloc, passes in CONFIGS[1:]:
         ok, out = run_tests(WORKBOOK / "final" / "tests", regalloc, passes)
         last = out.strip().splitlines()[-2] if out.strip() else ""
-        print(f"{label:<22} fixed15: {last.strip()}")
+        print(f"{label:<22} fixed17: {last.strip()}")
         if not ok:
             if "NotImplementedError" in out:
                 print("(未実装の Step がある。先に check.py を全 PASS にする)")

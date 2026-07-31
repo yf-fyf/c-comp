@@ -29,11 +29,14 @@ DIR = Path(__file__).resolve().parent
 # RV64 の呼び出し規約(完成済み)
 ARG_REGS = {f'a{i}' for i in range(8)}
 CALLER_SAVED = ARG_REGS | {'ra'} | {f't{i}' for i in range(7)}
-# 呼び出し元へ値を返す義務があるレジスタ。関数の出口ではこれらが「生きている」。
-# ここに callee-saved を入れ忘れると、エピローグの `ld s1, ...` が
-# 死コードとして消され、呼び出し元のレジスタが壊れる。
 CALLEE_SAVED = {'sp', 's0'} | {f's{i}' for i in range(1, 12)}
-RETURN_USES = {'a0', 'ra'} | CALLEE_SAVED
+# 関数の出口で必ず生きているレジスタ。戻り値 a0・復帰先 ra と、
+# フレームの土台である sp / s0。
+# s1〜s11 は関数によって違う(下の restored_saved を見る)。
+RETURN_USES = {'a0', 'ra', 'sp', 's0'}
+
+# エピローグの復帰命令 `ld s1, -40(s0)`
+RESTORE = re.compile(r'^ld\s+(s(?:[1-9]|1[01]))\s*,\s*-?\d+\(s0\)$')
 
 MEM = re.compile(r'^(-?\d+)\((\w+)\)$')
 LOADS = ('ld', 'lw', 'lh', 'lb', 'lbu', 'lhu', 'lwu')
@@ -73,13 +76,33 @@ def _base_of(op):
     return {m.group(2)} if m else set()
 
 
+def restored_saved(blocks):
+    """関数ごとに、エピローグで実際に復帰する callee-saved を集める(完成済み)。
+
+    O4 のレジスタ割り当ては**昇格した変数の分だけ** `ld sN, ...(s0)` を出す。
+    触ってもいない sN は保存も復帰もしないので、出口で生きている必要もない。
+    返り値は {関数名: {レジスタ名, ...}}。
+    """
+    result = {}
+    for b in blocks:
+        for insn in b.insns:
+            m = RESTORE.match(insn.strip())
+            if m:
+                result.setdefault(b.func, set()).add(m.group(1))
+    return result
+
+
 # ---------------------------------------------------------------
 # Step 1: 命令ごとの def と use
 # ---------------------------------------------------------------
 
 
-def def_use(insn):
-    """命令が「書くレジスタ」と「読むレジスタ」の組 (defs, uses) を返す。"""
+def def_use(insn, saved=()):
+    """命令が「書くレジスタ」と「読むレジスタ」の組 (defs, uses) を返す。
+
+    saved は、この命令が属する関数がエピローグで復帰する callee-saved
+    (`restored_saved` の値)。`ret` の use に足す。
+    """
     parts = insn.split(None, 1)
     mnemonic = parts[0]
     ops = [o.strip() for o in parts[1].split(',')] if len(parts) > 1 else []
@@ -96,13 +119,13 @@ def def_use(insn):
     #
     # 残りを、次の表のとおりに実装する。
     #
-    # | 命令               | def                | use            |
-    # |--------------------|--------------------|----------------|
-    # | call / jal / jalr  | CALLER_SAVED すべて | ARG_REGS すべて |
-    # | ret / jr           | なし               | RETURN_USES    |
-    # | sw rs2, N(rs1)     | **なし**           | rs2 と rs1     |
-    # | lw rd, N(rs)       | rd                 | rs             |
-    # | それ以外(算術など) | 第1オペランド      | 残りのオペランド |
+    # | 命令               | def                | use                    |
+    # |--------------------|--------------------|------------------------|
+    # | call / jal / jalr  | CALLER_SAVED すべて | ARG_REGS すべて         |
+    # | ret / jr           | なし               | RETURN_USES と saved    |
+    # | sw rs2, N(rs1)     | **なし**           | rs2 と rs1             |
+    # | lw rd, N(rs)       | rd                 | rs                     |
+    # | それ以外(算術など) | 第1オペランド      | 残りのオペランド        |
     #
     # 押さえどころ:
     #   - **ストアはレジスタに書かない**。書き先はメモリなので def は空集合。
@@ -110,7 +133,11 @@ def def_use(insn):
     #   - **call はレジスタを壊す**。呼ばれた側が自由に使ってよいレジスタを
     #     全部 def 扱いにする。どの引数を実際に読むかは命令からは分からないので、
     #     use も a0〜a7 全部にする(安全側に倒す)
-    #   - `ret` は戻り値 a0 と復帰先 ra を読む
+    #   - `ret` は戻り値 a0・復帰先 ra・フレームの sp / s0(= RETURN_USES)に
+    #     加えて、**この関数がエピローグで復帰する s レジスタ**(引数 saved)を読む。
+    #     saved を足し忘れると `ld s1, -40(s0)` が死コードとして消され、
+    #     呼び出し元のレジスタが壊れる。逆に s1〜s11 を無条件に足すと、
+    #     一度も触っていない sN が関数の入口まで「生きている」ことになってしまう
     #
     # ヒント:
     #   - オペランドがレジスタかどうかは _is_reg(op)
@@ -125,18 +152,19 @@ def def_use(insn):
 # ---------------------------------------------------------------
 
 
-def block_def_use(block):
+def block_def_use(block, saved=()):
     """ブロック全体の (defs, uses) を返す。
 
     use は「ブロックの中で、**書かれる前に**読まれる」レジスタ。
     def は「ブロックの中で書かれる」レジスタ。
+    saved は def_use にそのまま渡す。
     """
     # TODO(Step 2)
     #
     # ブロックの命令を**先頭から**なめる。
     #   defined = set()   … ここまでに書かれたレジスタ
     #   use     = set()   … 書かれる前に読まれたレジスタ
-    # 各命令の (d, u) について
+    # 各命令の (d, u) = def_use(命令, saved) について
     #   use |= (u - defined)      ← まだ書かれていないものを読んだら use
     #   defined |= d
     #
@@ -157,6 +185,9 @@ def solve(blocks, edges):
     """
     # TODO(Step 2)
     #
+    # 0. restored = restored_saved(blocks) を一度だけ求めておき、
+    #    ブロック B の def/use は block_def_use(B, restored.get(B.func, ()))
+    #    で取る(関数ごとに ret の読むものが違う)
     # 1. 全ブロックの live_in / live_out を空集合で初期化する
     # 2. 変化がなくなるまで、次を繰り返す(不動点反復)
     #      各ブロック B について(**後ろから**なめると速く収束する)
@@ -185,10 +216,11 @@ def live_after(blocks, edges):
     # solve でブロック単位の解を得たあと、各ブロックについて
     # **末尾から先頭へ** 遡りながら1命令ずつ更新する。
     #
+    #   saved = restored_saved(blocks).get(B.func, ())
     #   live = live_out[B] のコピー
     #   ブロックの命令を逆順に見て、各命令 i について
     #     result[B.start + i] = live のコピー   ← この命令の「直後」の生存集合
-    #     d, u = def_use(命令)
+    #     d, u = def_use(命令, saved)
     #     live -= d
     #     live |= u
     #

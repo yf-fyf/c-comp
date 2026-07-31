@@ -54,12 +54,13 @@ def run_step(name, fn):
         skip_count += 1
 
 
-# 小さなループ:
+# 小さなループ(.L2 は s1 を復帰するエピローグ):
 #   main:  li s1, 0
 #   .L1:   beqz s1, .L2
 #          addi s1, s1, -1
 #          j .L1
 #   .L2:   mv a0, s1
+#          ld s1, -40(s0)
 #          ret
 LOOP = [
     '  .text',
@@ -71,6 +72,7 @@ LOOP = [
     '  j .L1',
     '.L2:',
     '  mv a0, s1',
+    '  ld s1, -40(s0)',
     '  ret',
 ]
 
@@ -102,11 +104,21 @@ def step1():
     check("call は caller-saved を壊す", defs, set(lv.CALLER_SAVED))
     check("call は引数レジスタを読む(安全側)", uses, set(lv.ARG_REGS))
 
-    check("ret", lv.def_use('ret'), (set(), set(lv.RETURN_USES)))
-    check("ret は callee-saved も読む(エピローグの復帰を死コードにしない)",
-          {'s1', 's2', 's11'} <= lv.def_use('ret')[1], True)
+    check("ret: 復帰する s レジスタが無ければ a0 / ra / sp / s0 だけ",
+          lv.def_use('ret'), (set(), set(lv.RETURN_USES)))
+    check("ret は復帰する callee-saved も読む(エピローグの復帰を死コードにしない)",
+          {'s1', 's2'} <= lv.def_use('ret', {'s1', 's2'})[1], True)
+    check("ret は復帰しない callee-saved は読まない(幽霊生存を作らない)",
+          's3' in lv.def_use('ret', {'s1', 's2'})[1], False)
     check("ret は caller-saved の t を読まない",
           't0' in lv.def_use('ret')[1], False)
+
+    class Epilogue:
+        func = 'main'
+        insns = ['mv a0, s1', 'ld s1, -40(s0)', 'ld s0, 32(sp)', 'ret']
+
+    check("エピローグの復帰命令から関数ごとの集合を作る(s0 は数えない)",
+          lv.restored_saved([Epilogue()]), {'main': {'s1'}})
 
 
 # ---------------------------------------------------------------
@@ -147,17 +159,21 @@ def step2():
 def step3():
     blocks, edges = build()
     after = lv.live_after(blocks, edges)
-    check("命令の数だけ結果がある", len(after), 6)
+    check("命令の数だけ結果がある", len(after), 7)
 
-    ret_pos = blocks[3].start + 1                 # `ret`
+    ret_pos = blocks[3].start + 2                 # `ret`
     check("ret の直後には何も生きていない", after[ret_pos], set())
 
     mv_pos = blocks[3].start                      # `mv a0, s1`
     check("mv の直後では a0 が生きている(ret が読む)",
           'a0' in after[mv_pos], True)
-    check("関数の出口では callee-saved も生きている"
+
+    ld_pos = blocks[3].start + 1                  # `ld s1, -40(s0)`
+    check("復帰した callee-saved は出口まで生きている"
           "(呼び出し元へ返す義務があるため)",
-          's1' in after[mv_pos], True)
+          's1' in after[ld_pos], True)
+    check("復帰しない callee-saved は生きていない(幽霊生存が無い)",
+          's2' in after[ld_pos], False)
 
 
 # ---------------------------------------------------------------
