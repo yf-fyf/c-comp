@@ -1,34 +1,39 @@
 # tools/check_docs.py の除外リスト。
 #
 # 「なぜ除外するか」を必ず reason に書く。理由のない除外は原則追加しない。
+#
+# match には、その行に必ず含まれる文字列を書く。行番号で留めると、上の行を
+# 1行足し引きしただけで除外が外れて誤検出になり、逆にずれた先に別の違反が
+# あれば黙って握り潰す。一度も一致しなかったエントリは「死んだ除外」として
+# check_docs.py が違反にするので、本文を直したらこのエントリごと削除する。
 # status: legitimate  … 誤検出ではなく、本文として正当な出現（恒久的に除外）
 # status: pending      … メンテナ判断待ち、または他エージェントの並行編集待ちの
 #                        未修正項目（対応が終わったらこのエントリごと削除する）
 
 legacy_terms:
   - file: materials/sessions/10_types_pointers.md
-    line: 33
+    match: "この言語に配列はない"
     status: legitimate
     reason: >
       「この言語に配列はない」と、仕様の除外を正しく説明している文。
       workbook/docs/language_spec.md と同じ「除外の宣言」パターン。
 
   - file: materials/sessions/13_sizeof_malloc_list.md
-    line: 214
+    match: "この言語に `typedef` は"
     status: legitimate
     reason: >
       「この言語に typedef はない」と、struct のタグ名参照が唯一の型名手段で
       あることを説明する文。除外の宣言パターン。
 
   - file: workbook/docs/debugging.md
-    line: 35
+    match: "配列の添字がずれる"
     status: legitimate
     reason: >
       「配列の添字がずれる」というトラブルシュート項目。p[i] のような添字記法
       （仕様が明示的に許可している）についての説明であり、配列型の話ではない。
 
   - file: workbook/docs/code_example.md
-    line: 347
+    match: "配列ではなく `malloc(sizeof(int) * N)`"
     status: legitimate
     reason: >
       「配列ではなく malloc で確保する」という除外の説明と、p[i] 添字記法の
@@ -36,7 +41,7 @@ legacy_terms:
       している内容。
 
   - file: workbook/docs/conventions.md
-    line: 35
+    match: "ポインタ・配列・構造体メンバへのアクセス"
     status: pending
     reason: >
       T57 分割書で名指しされた判断保留2箇所の1つ。「ポインタ・配列・構造体
@@ -44,7 +49,7 @@ legacy_terms:
       「配列」という語自体を書き換えるべきかはメンテナ判断待ち。
 
   - file: materials/tools/opencode.md
-    line: 122
+    match: "「配列のコード生成をどう設計すればいいか」"
     status: pending
     reason: >
       T57 分割書で名指しされた判断保留2箇所のもう1つ。AI エージェントへの
@@ -52,7 +57,7 @@ legacy_terms:
       例示プロンプトとして正当か、別の例に差し替えるべきかはメンテナ判断待ち。
 
   - file: materials/tools/opencode.md
-    line: 125
+    match: "配列 a[3] の宣言をスタック上に確保する"
     status: pending
     reason: >
       同上。引用ブロック内の例示プロンプト本文（「配列 a[3] の宣言を...」）。
@@ -61,28 +66,28 @@ legacy_terms:
 # 「誤（避ける）」列に旧表記の実例を挙げているため自己検出してしまう箇所を除く。
 style_terms:
   - file: design/maintaining.md
-    line: 111
+    match: "| ゼロ埋め |"
     status: legitimate
     reason: >
       用語表の「ゼロ埋め」行。「誤（避ける）」列に例として `コマ08`・`コマ06`
       を挙げているため、規約の説明として正当な出現。
 
   - file: design/maintaining.md
-    line: 112
+    match: "| コマとNの間の空白 |"
     status: legitimate
     reason: >
       用語表の「コマとNの間の空白」行。「誤（避ける）」列に `コマ 3` を
       挙げているため、規約の説明として正当な出現。
 
   - file: design/maintaining.md
-    line: 113
+    match: "| 呼称（人） |"
     status: legitimate
     reason: >
       用語表の「呼称（人）」行。「誤（避ける）」列に「学生」を挙げているため、
       規約の説明として正当な出現。
 
   - file: materials/advanced/O5_liveness.md
-    line: 255
+    match: "だから1回呼んでいても"
     status: legitimate
     reason: >
       T59 後半（advanced 括弧統一）で追加。`workbook/advanced/O5_liveness/golden.py`
@@ -90,7 +95,7 @@ style_terms:
       数値・コマンド例・実出力は変更しない方針のため、括弧も統一の対象外。
 
   - file: materials/advanced/O5_liveness.md
-    line: 258
+    match: "`fib_rec` が「(なし)」なのは"
     status: legitimate
     reason: >
       同上。`golden.py` の出力 `(なし)` を引用したもう1箇所。

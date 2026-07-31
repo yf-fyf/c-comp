@@ -60,20 +60,52 @@ class Violation:
         return f"{self.relpath}:{self.line}: {self.message}"
 
 
-def load_allowlist() -> list[dict]:
+def _load_allowlist_section(section: str) -> list[dict]:
     if not ALLOWLIST_PATH.is_file():
         return []
     with ALLOWLIST_PATH.open(encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
-    return data.get("legacy_terms", [])
+    return data.get(section, [])
+
+
+def load_allowlist() -> list[dict]:
+    return _load_allowlist_section("legacy_terms")
 
 
 def load_style_allowlist() -> list[dict]:
-    if not ALLOWLIST_PATH.is_file():
-        return []
-    with ALLOWLIST_PATH.open(encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-    return data.get("style_terms", [])
+    return _load_allowlist_section("style_terms")
+
+
+class Allowlist:
+    """除外リスト。行番号ではなく行の内容で照合する。
+
+    行番号で留めると、上の行を1行足し引きしただけで除外が外れて誤検出になり、
+    逆にずれた先に別の違反があれば黙って握り潰す。そこで `match`（その行に
+    必ず含まれる文字列）で照合する。
+
+    一度も一致しなかったエントリは「死んだ除外」として違反にする。本文を直して
+    対象語が消えたのにエントリだけ残る状態を、このチェック自身が見つけるため。
+    """
+
+    def __init__(self, entries: list[dict], section: str):
+        self.section = section
+        self.entries = entries
+        self._used: set[int] = set()
+
+    def matches(self, rel: str, line: str) -> bool:
+        hit = False
+        for idx, entry in enumerate(self.entries):
+            if entry.get("file") != rel:
+                continue
+            needle = entry.get("match")
+            if not needle or needle not in line:
+                continue
+            self._used.add(idx)
+            hit = True
+        return hit
+
+    def unused(self) -> list[dict]:
+        return [e for i, e in enumerate(self.entries) if i not in self._used]
 
 
 # ── チェック1: 原稿とテスト実体の突合 ──
@@ -173,11 +205,23 @@ def is_structurally_exempt(path: Path) -> bool:
     return False
 
 
+def _dead_allowlist_violations(allowlist: "Allowlist") -> list[Violation]:
+    """一度も一致しなかった除外エントリを違反として返す。"""
+    out: list[Violation] = []
+    for entry in allowlist.unused():
+        rel = entry.get("file", "?")
+        needle = entry.get("match", "")
+        out.append(Violation(
+            ROOT / ALLOWLIST_PATH.relative_to(ROOT), 0,
+            f"死んだ除外（{allowlist.section}）: {rel} に "
+            f"「{needle}」が見つからない。本文を直したならこのエントリを消す",
+        ))
+    return out
+
+
 def check_legacy_terms() -> list[Violation]:
     violations: list[Violation] = []
-    allowlist = {
-        (entry["file"], entry["line"]) for entry in load_allowlist()
-    }
+    allowlist = Allowlist(load_allowlist(), "legacy_terms")
     for top in ("materials", "workbook"):
         base = ROOT / top
         if not base.is_dir():
@@ -196,11 +240,12 @@ def check_legacy_terms() -> list[Violation]:
             rel = path.relative_to(ROOT).as_posix()
             for i, line in enumerate(lines, 1):
                 if any(term.search(line) for term in BANNED_TERMS):
-                    if (rel, i) in allowlist:
+                    if allowlist.matches(rel, line):
                         continue
                     violations.append(Violation(
                         path, i, f"旧仕様語の残存の疑い: {line.strip()}",
                     ))
+    violations.extend(_dead_allowlist_violations(allowlist))
     return violations
 
 
@@ -367,7 +412,7 @@ def _style_mask_protected(line: str) -> str:
 
 def _check_advanced_style_in_file(
     path: Path, lines: list[str], violations: list[Violation],
-    allowlist: set[tuple[str, int]], rel: str,
+    allowlist: "Allowlist", rel: str,
 ) -> None:
     in_fence = False
     for i, line in enumerate(lines, 1):
@@ -376,7 +421,7 @@ def _check_advanced_style_in_file(
             continue
         if in_fence:
             continue
-        if (rel, i) in allowlist:
+        if allowlist.matches(rel, line):
             continue
         if STYLE_HATTEN_XN_RE.search(line):
             violations.append(Violation(
@@ -409,7 +454,7 @@ def _check_advanced_style_in_file(
 
 
 def _check_style_terms_in_file(
-    path: Path, violations: list[Violation], allowlist: set[tuple[str, int]]
+    path: Path, violations: list[Violation], allowlist: "Allowlist"
 ) -> None:
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -418,7 +463,7 @@ def _check_style_terms_in_file(
     rel = path.relative_to(ROOT).as_posix()
     advanced = is_advanced_target(path)
     for i, line in enumerate(lines, 1):
-        if (rel, i) in allowlist:
+        if allowlist.matches(rel, line):
             continue
         if not advanced and STYLE_DAI_KAI_RE.search(line):
             violations.append(Violation(
@@ -442,9 +487,7 @@ def _check_style_terms_in_file(
 
 def check_style_terms() -> list[Violation]:
     violations: list[Violation] = []
-    allowlist = {
-        (entry["file"], entry["line"]) for entry in load_style_allowlist()
-    }
+    allowlist = Allowlist(load_style_allowlist(), "style_terms")
     for top in ("materials", "workbook"):
         base = ROOT / top
         if not base.is_dir():
@@ -463,6 +506,7 @@ def check_style_terms() -> list[Violation]:
             if any(part in SKIP_DIRNAMES for part in path.relative_to(ROOT).parts):
                 continue
             _check_style_terms_in_file(path, violations, allowlist)
+    violations.extend(_dead_allowlist_violations(allowlist))
     return violations
 
 
@@ -486,13 +530,13 @@ def print_allowlist() -> None:
         for entry in entries:
             status = entry.get("status", "?")
             reason = " ".join(entry.get("reason", "").split())
-            print(f"  [{status}] {entry['file']}:{entry['line']}  {reason}")
+            print(f"  [{status}] {entry['file']}  {entry.get('match', '')}  {reason}")
     if style_entries:
         print(f"style_terms 除外リスト {len(style_entries)} 件:")
         for entry in style_entries:
             status = entry.get("status", "?")
             reason = " ".join(entry.get("reason", "").split())
-            print(f"  [{status}] {entry['file']}:{entry['line']}  {reason}")
+            print(f"  [{status}] {entry['file']}  {entry.get('match', '')}  {reason}")
 
 
 def main() -> int:
