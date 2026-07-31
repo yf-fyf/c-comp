@@ -132,12 +132,11 @@ int main() {
 if node.kind == ND_SIZEOF_TYPE:
     self.emit(f"  li a0, {self.size_of_ty_str(node.ty_str, self._struct_defs)}")
     return
-
-if node.kind == ND_SIZEOF_EXPR:
-    ty_str = self._type_of_expr(node.operand)
-    self.emit(f"  li a0, {self.size_of_ty_str(ty_str, self._struct_defs)}")
-    return
 ```
+
+`sizeof` の被演算子は型名だけである。`sizeof 式`（`sizeof x` のように式を書く形）は
+言語仕様の対象外なので（`language_spec.md` の「除外」節）、スキャフォールドの AST にも
+対応するノードは無い。
 
 たとえば `sizeof(struct Node)` は、`self._struct_defs["struct Node"]["size"]` が16なら `li a0, 16` を出す。
 
