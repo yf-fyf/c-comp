@@ -4,7 +4,7 @@
 
 `sizeof` と `malloc` を使い、構造体をヒープ上に確保して連結リストを動かす。
 
-第12回では、スタック上の構造体変数と `.` / `->` を扱った。
+コマ12では、スタック上の構造体変数と `.` / `->` を扱った。
 この回では、構造体を `malloc` で動的に確保し、ポインタでつないだデータ構造を作る。
 
 ```c
@@ -139,7 +139,7 @@ if node.kind == ND_SIZEOF_EXPR:
     return
 ```
 
-たとえば `sizeof(Node)` は、`self._struct_defs["Node"]["size"]` が16なら `li a0, 16` を出す。
+たとえば `sizeof(struct Node)` は、`self._struct_defs["struct Node"]["size"]` が16なら `li a0, 16` を出す。
 
 ## malloc は普通の関数呼び出し
 
@@ -147,10 +147,10 @@ if node.kind == ND_SIZEOF_EXPR:
 コンパイラが行うことは、通常の関数呼び出しと同じである。
 
 ```c
-n = malloc(sizeof(Node));
+n = malloc(sizeof(struct Node));
 ```
 
-この式では、まず `sizeof(Node)` を `a0` に計算し、それを第1引数として `malloc` を呼び出す。
+この式では、まず `sizeof(struct Node)` を `a0` に計算し、それを第1引数として `malloc` を呼び出す。
 戻り値も `a0` に返る。
 
 ## malloc を呼び出すと何が起きるか
@@ -158,7 +158,7 @@ n = malloc(sizeof(Node));
 `malloc` は、指定されたバイト数ぶんのメモリ領域をヒープから確保し、その先頭アドレスを返すライブラリ関数である。
 
 ```c
-n = malloc(sizeof(Node));
+n = malloc(sizeof(struct Node));
 ```
 
 この例では、まず `sizeof(struct Node)` によって `struct Node` 1個ぶんに必要なバイト数を求める。
@@ -259,12 +259,12 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 
 ## 実装手順
 
-1. スケルトンの `importlib` 継承により第12回の Codegen クラスを引き継ぐ（あらかじめ書かれている）
+1. スケルトンの `importlib` 継承によりコマ12の Codegen クラスを引き継ぐ（あらかじめ書かれている）
 2. `parse_struct_defs()` が自己参照フィールド（`struct Node *next`）を扱えることを確認する（ポインタは中身を知らなくてもサイズ 8 で確定する）
 3. `self.size_of_ty_str("struct Node", self._struct_defs)` が構造体サイズを返すことを確認する
 4. `sizeof(struct Node)` が `malloc` の引数として使えることを確認する
-6. `malloc(sizeof(Node))` が通常の関数呼び出しとして動くことを確認する
-7. `list_sum.c` まで通す
+5. `malloc(sizeof(struct Node))` が通常の関数呼び出しとして動くことを確認する
+6. `list_sum.c` まで通す
 
 ## テスト
 
@@ -277,5 +277,5 @@ python3 scaffold/test_runner.py sessions/13_sizeof_malloc_list
 | テスト | 内容 | 期待値 |
 |--------|------|--------|
 | `sizeof_test.c` | `sizeof(int) + sizeof(char)` | `5` |
-| `malloc_struct.c` | `malloc(sizeof(Box))` と `->` | `17` |
-| `list_sum.c` | `Node` の連結リスト走査 | `60` |
+| `malloc_struct.c` | `malloc(sizeof(struct Box))` と `->` | `17` |
+| `list_sum.c` | `struct Node` の連結リスト走査 | `60` |

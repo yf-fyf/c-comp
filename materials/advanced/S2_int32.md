@@ -147,7 +147,7 @@ python3 golden.py    # 折り返しのテスト + fixed17
 | `wrap_sub.c` | 引き算で `INT_MIN` をまたいで折り返す |
 | `pointer_ok.c` | **malloc 領域・ポインタ・構造体が壊れていない**（narrow しすぎの検出） |
 
-`pointer_ok.c` が安全網である。`fixed17` と合わせて、
+`pointer_ok.c` が安全網である。[`fixed17`](../../workbook/advanced/README.md#fixed17) と合わせて、
 「直しすぎていないこと」を保証する。
 
 ## 発展課題

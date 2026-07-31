@@ -2,6 +2,9 @@
 
 各コマ終了時点で「コンパイルできる最も複雑なプログラム」を示す（コマ1〜16）。
 
+前提とする言語仕様: [`language_spec.md`](./language_spec.md)（第 2 版、2026 年改訂）。
+ここに載せるコードは、すべてその版で受理される範囲に収めてある。
+
 ## 凡例
 
 | 項目 | 説明 |
@@ -12,7 +15,7 @@
 
 ---
 
-## コマ 1（Phase 0）: 環境構築 + RV64 手書きアセンブリ
+## コマ1（Phase 0）: 環境構築 + RV64 手書きアセンブリ
 
 コンパイラはまだ存在しない。手書きアセンブリを qemu で動かすことが目標。
 
@@ -31,7 +34,7 @@ qemu-riscv64 ./hello; echo $?   # → 42
 
 ---
 
-## コマ 2（Phase 0）: AST 理解 + インタープリター
+## コマ2（Phase 0）: AST 理解 + インタープリター
 
 コンパイラはまだ存在しない。教員提供の Lexer/Parser が返す AST を Python で評価する。
 
@@ -54,7 +57,7 @@ def eval_ast(node):
 
 ---
 
-## コマ 3（Phase 1）: コード生成①：算術式
+## コマ3（Phase 1）: コード生成①：算術式
 
 **フロントエンド**: `mycc.py`
 **新機能**: 整数定数・四則演算・剰余・カッコ → RV64 アセンブリ出力
@@ -75,7 +78,7 @@ int main() {
 
 ---
 
-## コマ 4（Phase 1）: コード生成②：変数・代入・シンボルテーブル
+## コマ4（Phase 1）: コード生成②：変数・代入・シンボルテーブル
 
 **フロントエンド**: `mycc.py`
 **新機能**: ローカル変数宣言・代入・複数変数の管理
@@ -107,7 +110,7 @@ int main() {
 
 ---
 
-## コマ 5（Phase 1）: 制御構文①：if / else + 三項演算子
+## コマ5（Phase 1）: 制御構文①：if / else + 三項演算子
 
 **フロントエンド**: `mycc.py`
 **新機能**: if / else if / else、比較演算子（`==` `!=` `<` `>` `<=` `>=`）、三項演算子 `?:`
@@ -162,7 +165,7 @@ int main() {
 
 ---
 
-## コマ 6（Phase 1）: 制御構文②：while / for + 前置 `++`/`--`
+## コマ6（Phase 1）: 制御構文②：while / for + 前置 `++`/`--`
 
 **フロントエンド**: `mycc.py`
 **新機能**: while、for、break、continue、前置 `++`/`--`
@@ -206,20 +209,21 @@ int main() {
 
 ---
 
-## コマ 7（Phase 1）: 再帰的な変数宣言収集
+## コマ7（Phase 1）: 再帰的な変数宣言収集
 
 **フロントエンド**: `mycc.py`
-**新機能**: `collect_decls()` の再帰化（`Block` / `If` / `While` / `For` の内側の宣言も収集）、`_reset_func_state()` への関数状態初期化の統合
+**新機能**: `collect_decls()` の再帰化（関数本体を `Block` ノードとして走査。`If` / `While` / `For` の内側も辿る）、`_reset_func_state()` への関数状態初期化の統合
 
-このコマは内部整備が主目的。制御構文の内側に変数宣言があっても正しく動くことを確認する。
+このコマは内部整備が主目的。制御構文が入れ子になっていても、関数先頭の宣言をまとめてフレームに確保できることを確認する。
+宣言を書けるのは関数本体の先頭だけで、入れ子ブロックには文しか書けない。
 
 ```c
 int main() {
     int x;
+    int y;         // 宣言は関数本体の先頭にまとめる
     x = 3;
     if (x == 3) {
-        int y;     /* 入れ子ブロック内の宣言もフレームに確保する */
-        y = 4;
+        y = 4;     // 入れ子ブロックでは使うだけ
         return x + y;
     }
     return 0;
@@ -251,7 +255,7 @@ int main() {
 
 ---
 
-## コマ 8（Phase 1）: 関数呼び出し・再帰
+## コマ8（Phase 1）: 関数呼び出し・再帰
 
 **フロントエンド**: `mycc.py`
 **新機能**: ユーザー定義関数の宣言・定義・呼び出し、引数（`a0`〜`a7`）、再帰・相互再帰
@@ -293,7 +297,7 @@ int main() {
 
 ---
 
-## コマ 9（Phase 1）: lvalue / rvalue + ポインタ
+## コマ9（Phase 1）: lvalue / rvalue + ポインタ
 
 **フロントエンド**: `mycc.py`
 **新機能**: `codegen` / `codegen_lval` の2関数設計、アドレス取得（`&`）、間接参照（`*`）
@@ -323,7 +327,7 @@ int main() {
 
 ---
 
-## コマ 10（Phase 1）: Type + ポインタ演算
+## コマ10（Phase 1）: Type + ポインタ演算
 
 **フロントエンド**: `mycc.py`
 **新機能**: `ty_str` 文字列による型サイズ管理、ポインタ演算（`p + n`）、`sizeof(型名)`、`malloc` による連続領域の確保、添字 `p[i]`
@@ -385,7 +389,7 @@ int main() {
 
 ---
 
-## コマ 11（Phase 1）: 文字列リテラル + `printf`
+## コマ11（Phase 1）: 文字列リテラル + `printf`
 
 **フロントエンド**: `mycc.py`
 **新機能**: 文字列リテラル、`printf`、`#include "lib.h"`
@@ -407,7 +411,7 @@ Hello, World!
 
 ---
 
-## コマ 12（Phase 2）: 構造体（struct / `.` / `->`）
+## コマ12（Phase 2）: 構造体（struct / `.` / `->`）
 
 **フロントエンド**: `mycc.py`
 **新機能**: `struct` 定義（タグ必須）、メンバアクセス（`.`）、`->` 演算子
@@ -433,7 +437,7 @@ int main() {
 
 ---
 
-## コマ 13（Phase 2）: `sizeof` + `malloc` + 連結リスト
+## コマ13（Phase 2）: `sizeof` + `malloc` + 連結リスト
 
 **フロントエンド**: `mycc.py`
 **新機能**: 構造体を組み合わせた `sizeof(struct Tag)` + `malloc` による連結リストの構築・走査
@@ -480,7 +484,7 @@ int main() {
 
 ---
 
-## コマ 14（Phase 2）: グローバル変数・スコープ管理
+## コマ14（Phase 2）: グローバル変数・スコープ管理
 
 **フロントエンド**: `mycc.py`
 **新機能**: グローバル変数（`.bss` セクション。0 初期化が保証される）
@@ -514,20 +518,20 @@ int main() {
 
 ---
 
-## コマ 15（Phase 2）: 複数ファイル・前処理の概念
+## コマ15（Phase 2）: 複数ファイル・前処理の概念
 
 **フロントエンド**: `mycc.py`
 **新機能**: `#include "file.h"`、オブジェクト形式 `#define`
 
 ```c
-/* math_util.h */
+// math_util.h
 int my_abs(int x);
 int my_max(int a, int b);
 int my_pow(int base, int exp);
 ```
 
 ```c
-/* math_util.c */
+// math_util.c
 int my_abs(int x) {
     if (x < 0) return -x;
     return x;
@@ -550,7 +554,7 @@ int my_pow(int base, int exp) {
 ```
 
 ```c
-/* main.c */
+// main.c
 #include "math_util.h"
 #define BASE 2
 #define EXP  6
@@ -567,10 +571,10 @@ int main() {
 
 ---
 
-## コマ 16（Phase 2）: Python 版総合演習・`mycc.py` 統合 ← **標準トラック達成**
+## コマ16（Phase 2）: Python 版総合演習・`mycc.py` 統合 ← **標準トラック達成**
 
 **フロントエンド**: `mycc.py`
-**確認**: コマ 16 時点で `python3 scaffold/test_runner.py`（`final/mycc.py` + `final/tests/`）を実行し、`fixed17` 全17問の通過を標準トラック完成の目安とする。
+**確認**: コマ16 時点で `python3 scaffold/test_runner.py`（`final/mycc.py` + `final/tests/`）を実行し、`fixed17` 全17問の通過を標準トラック完成の目安とする。
 
 ### fixed17 テスト一覧（全17問）
 

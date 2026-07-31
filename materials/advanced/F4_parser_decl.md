@@ -288,7 +288,7 @@ golden.py が**全ファイル一致になったら、このシリーズの完�
 ## 総仕上げ（任意）— mycc.py に差し替えて fixed17 を回す
 
 golden test は「同じ AST が出る」ことの証明なので、理屈の上では
-自作フロントエンドで fixed17 も通るはずである。実際に確かめたい場合は、
+自作フロントエンドで [`fixed17`](../../workbook/advanced/README.md#fixed17) も通るはずである。実際に確かめたい場合は、
 `final/mycc.py` の先頭にある
 
 ```python

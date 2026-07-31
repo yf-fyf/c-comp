@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""varcc — 可変長引数の定義つきコンパイララッパー(完成済み。編集しない)
+"""langcc — 可変長引数の定義つきコンパイララッパー(完成済み。編集しない)
 
 scaffold と mycc.py には手を入れず、次を差し込む。
 
@@ -15,12 +15,12 @@ scaffold と mycc.py には手を入れず、次を差し込む。
     codegen       __arg(i) の呼び出しを save area からの読み出しに変換する
 
 使い方:
-    python3 varcc.py file.c
-    python3 scaffold/test_runner.py --compiler advanced/L3_variadic/varcc.py
+    python3 langcc.py file.c
+    python3 scaffold/test_runner.py --compiler advanced/L3_variadic/langcc.py
 
 環境変数:
-    VARCC_COMPILER  ベースにするコンパイラ(既定: workbook/final/mycc.py)
-    VARCC_PASSES    variadic.py のあるディレクトリ(既定: このファイルの場所)
+    LANGCC_COMPILER  ベースにするコンパイラ(既定: workbook/final/mycc.py)
+    LANGCC_PASSES    variadic.py のあるディレクトリ(既定: このファイルの場所)
 """
 
 import importlib.util
@@ -156,11 +156,11 @@ def patch(cls, va):
 def main():
     srcs = [a for a in sys.argv[1:] if not a.startswith("--")]
     if not srcs:
-        print("使い方: python3 varcc.py file.c ...", file=sys.stderr)
+        print("使い方: python3 langcc.py file.c ...", file=sys.stderr)
         raise SystemExit(2)
 
-    passes_dir = Path(os.environ.get("VARCC_PASSES", DIR))
-    compiler = Path(os.environ.get("VARCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
+    passes_dir = Path(os.environ.get("LANGCC_PASSES", DIR))
+    compiler = Path(os.environ.get("LANGCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
     if not compiler.is_file():
         print(f"ベースのコンパイラが見つからない: {compiler}", file=sys.stderr)
         raise SystemExit(2)
@@ -169,8 +169,8 @@ def main():
     import parser as real_parser
 
     install_parser_shim(real_parser)
-    va = load_module("varcc_variadic", passes_dir / "variadic.py")
-    mycc = load_module("mycc_under_varcc", compiler)
+    va = load_module("langcc_variadic", passes_dir / "variadic.py")
+    mycc = load_module("mycc_under_langcc", compiler)
     patch(find_codegen_class(mycc), va)
 
     sys.argv = [str(compiler)] + srcs

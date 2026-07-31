@@ -4,7 +4,7 @@
 
 `struct タグ { ... };` の定義、構造体変数、`.`、`->` を実装する。
 
-第10回までに、型サイズとポインタ演算を扱えるようになった。
+コマ10までに、型サイズとポインタ演算を扱えるようになった。
 この回では、複数のフィールドをまとめた構造体を扱う。
 
 ```c
@@ -29,7 +29,7 @@ struct Point {
 
 言語仕様どおり、構造体のフィールドは `int`、`char`、ポインタに限られる
 （struct 値の入れ子はない）。構造体代入は言語仕様にないため扱わず、
-グローバル構造体変数は第14回で扱う。
+グローバル構造体変数はコマ14で扱う。
 
 ## AST を確認する: `.`
 
@@ -243,8 +243,8 @@ address(p->x) = value(p) + offset(x)
 ```python
 if node.kind == ND_MEMBER and node.is_arrow:
     self.codegen(node.operand)
-    ptr_ty = self._type_of_expr(node.operand)        # e.g. "Point *"
-    strut_ty = self._deref_ptr(ptr_ty)               # "Point"
+    ptr_ty = self._type_of_expr(node.operand)        # e.g. "struct Point *"
+    struct_ty = self._deref_ptr(ptr_ty)              # "struct Point"
     field = self._struct_defs[struct_ty]["fields"][node.name]
     self.emit(f"  addi a0, a0, {field['offset']}")
     return
@@ -252,11 +252,11 @@ if node.kind == ND_MEMBER and node.is_arrow:
 
 ## 実装手順
 
-1. スケルトンの `importlib` 継承により第11回の Codegen クラスを引き継ぐ（あらかじめ書かれている）
+1. スケルトンの `importlib` 継承によりコマ11の Codegen クラスを引き継ぐ（あらかじめ書かれている）
 2. `CodegenNN.parse_struct_defs(source)` で構造体定義をパースし `self._struct_defs` に渡す
 3. `self._type_of_lval()` に `ND_MEMBER` を追加する（フィールドの型は `self._struct_defs` から引く）
-5. `self.codegen_lval()` に `ND_MEMBER` ハンドラを追加する（`self._struct_defs` からフィールドオフセットを引く）
-6. `load()` / `store()` はフィールド型に応じて既存のものを使う
+4. `self.codegen_lval()` に `ND_MEMBER` ハンドラを追加する（`self._struct_defs` からフィールドオフセットを引く）
+5. `load()` / `store()` はフィールド型に応じて既存のものを使う
 
 ## テスト
 

@@ -42,7 +42,7 @@ class Codegen10(prev.Codegen09):
         self._locals: dict[str, tuple[int, str]] = {}
 
     def alloc_local(self, name: str, ty_str: str = 'int') -> None:
-        sz = self._align_to(self.size_of_ty_str(ty_str), 8)
+        sz = self.align_to(self.size_of_ty_str(ty_str), 8)
         self._stack_offset += sz
         self._locals[name] = (-(16 + self._stack_offset), ty_str)
 
@@ -287,11 +287,11 @@ class Codegen10(prev.Codegen09):
         self._stack_offset = 0
         self._ret_label = self.new_label()
         self._break_stack.clear()
-        self._cont_stack.clear()
+        self._continue_stack.clear()
         # TODO: パラメータを p.ty_str or 'int' で型付き alloc_local する。
         self.collect_decls(node.body)
         self._current_params = node.params
-        return self._align_to(self._stack_offset, 16)
+        return self.align_to(self._stack_offset, 16)
 
     def _emit_func_prologue(self, name: str, frame_size: int) -> None:
         self.emit(f'  .globl {name}')

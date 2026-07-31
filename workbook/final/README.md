@@ -7,7 +7,7 @@
 
 ## 統合手順
 
-1. 第15回までに完成した `mycc.py` を `final/mycc.py` に反映する
+1. コマ16までに完成した `mycc.py` を `final/mycc.py` に反映する
 2. `python3 scaffold/test_runner.py` を実行する
 3. 落ちたテストを1つずつ切り分ける
 4. `final/tests/` が全通したら、コードを読み直して完成チェックを行う
@@ -27,5 +27,5 @@ python3 scaffold/test_runner.py --compiler final/mycc.py --tests final/tests
 
 ## final/tests
 
-`final/tests/` は第1回から第15回までの機能をまとめて確認する参考テストである。
+`final/tests/` はコマ1からコマ16までの機能をまとめて確認する参考テストである。
 このテストセットの全通を標準トラック完成の目安とする。

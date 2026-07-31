@@ -1,0 +1,84 @@
+# tools/check_docs.py の除外リスト。
+#
+# 「なぜ除外するか」を必ず reason に書く。理由のない除外は原則追加しない。
+# status: legitimate  … 誤検出ではなく、本文として正当な出現（恒久的に除外）
+# status: pending      … メンテナ判断待ち、または他エージェントの並行編集待ちの
+#                        未修正項目（対応が終わったらこのエントリごと削除する）
+
+legacy_terms:
+  - file: materials/sessions/10_types_pointers.md
+    line: 33
+    status: legitimate
+    reason: >
+      「この言語に配列はない」と、仕様の除外を正しく説明している文。
+      workbook/docs/language_spec.md と同じ「除外の宣言」パターン。
+
+  - file: materials/sessions/13_sizeof_malloc_list.md
+    line: 215
+    status: legitimate
+    reason: >
+      「この言語に typedef はない」と、struct のタグ名参照が唯一の型名手段で
+      あることを説明する文。除外の宣言パターン。
+
+  - file: workbook/docs/debugging.md
+    line: 35
+    status: legitimate
+    reason: >
+      「配列の添字がずれる」というトラブルシュート項目。p[i] のような添字記法
+      （仕様が明示的に許可している）についての説明であり、配列型の話ではない。
+
+  - file: workbook/docs/code_example.md
+    line: 347
+    status: legitimate
+    reason: >
+      「配列ではなく malloc で確保する」という除外の説明と、p[i] 添字記法の
+      説明（`p[i]` は `*(p + i)` の略記）。どちらも仕様が明示的に許可・説明
+      している内容。
+
+  - file: workbook/docs/conventions.md
+    line: 35
+    status: pending
+    reason: >
+      T57 分割書で名指しされた判断保留2箇所の1つ。「ポインタ・配列・構造体
+      メンバへのアクセス」という表現が、p[i] 添字記法の説明として正当なのか、
+      「配列」という語自体を書き換えるべきかはメンテナ判断待ち。
+
+  - file: materials/tools/opencode.md
+    line: 122
+    status: pending
+    reason: >
+      T57 分割書で名指しされた判断保留2箇所のもう1つ。AI エージェントへの
+      相談例として「配列のコード生成」という設計相談の例を挙げている文。
+      例示プロンプトとして正当か、別の例に差し替えるべきかはメンテナ判断待ち。
+
+  - file: materials/tools/opencode.md
+    line: 125
+    status: pending
+    reason: >
+      同上。引用ブロック内の例示プロンプト本文（「配列 a[3] の宣言を...」）。
+
+  - file: materials/figures/12_struct_layout.tex
+    line: 2
+    status: pending
+    reason: >
+      コマ12の図の TikZ ソースの先頭コメント。生成される SVG には出ないが、
+      `typedef struct { ... } Point;` という、仕様が除外した構文をそのまま
+      コメントに残している。図のソースコメントとして許容するか、
+      構造体タグ形式の疑似コードに直すかはメンテナ判断待ち（T57 で新規検出）。
+
+  - file: workbook/ocaml/sessions/koma11.ml
+    line: 15
+    status: pending
+    reason: >
+      OCaml 参考実装のコメント。「配列は値として使われたとき先頭要素の
+      アドレスへ読み替える」と書かれているが、この言語に配列型は無い
+      （文字列リテラルの decay を指しているとみられる）。用語が正確か、
+      コメントの言い回しを直すべきかはメンテナ判断待ち（T57 で新規検出）。
+
+  - file: workbook/ocaml/sessions/koma11.ml
+    line: 171
+    status: pending
+    reason: >
+      同上。「配列名は load が空になるので」というコメント。Var ケースの
+      文字列リテラル・ポインタ変数に共通する decay 挙動の説明とみられるが、
+      「配列」という語の妥当性はメンテナ判断待ち（T57 で新規検出）。

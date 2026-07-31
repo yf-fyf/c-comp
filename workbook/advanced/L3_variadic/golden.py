@@ -3,7 +3,7 @@
 
 使い方:
     python3 golden.py
-    VARCC_COMPILER=... VARCC_PASSES=... python3 golden.py
+    LANGCC_COMPILER=... LANGCC_PASSES=... python3 golden.py
 """
 
 import os
@@ -15,11 +15,11 @@ DIR = Path(__file__).resolve().parent
 WORKBOOK = DIR.parents[1]
 RUNNER = WORKBOOK / "scaffold" / "test_runner.py"
 sys.path.insert(0, str(DIR.parent))
-compiler = Path(os.environ.get("VARCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
+compiler = Path(os.environ.get("LANGCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
 
 
 from basecc import ensure_base  # noqa: E402
-ensure_base(compiler, "VARCC_COMPILER")
+ensure_base(compiler, "LANGCC_COMPILER")
 def run_tests(comp, tests):
     r = subprocess.run(
         [sys.executable, str(RUNNER), "--compiler", str(comp), "--tests", str(tests)],
@@ -40,7 +40,7 @@ def main():
 
     print()
     print("=== 2. 対応ありで全テストが通る ===")
-    ok, out = run_tests(DIR / "varcc.py", tests)
+    ok, out = run_tests(DIR / "langcc.py", tests)
     print("\n".join(out.strip().splitlines()[-3:]))
     if not ok:
         if "NotImplementedError" in out:
@@ -49,7 +49,7 @@ def main():
 
     print()
     print("=== 3. fixed17 が壊れていないことを確認 ===")
-    ok_fixed, out_fixed = run_tests(DIR / "varcc.py", WORKBOOK / "final" / "tests")
+    ok_fixed, out_fixed = run_tests(DIR / "langcc.py", WORKBOOK / "final" / "tests")
     print("\n".join(out_fixed.strip().splitlines()[-3:]))
     if not ok_fixed:
         print("\n可変長でない関数のフレームまで大きくしていないか確認する。")

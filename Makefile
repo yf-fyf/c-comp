@@ -1,4 +1,4 @@
-.PHONY: site serve check-links figures web web-test sim-test ocaml-test pages clean
+.PHONY: site serve check-links check-docs figures web web-test sim-test ocaml-test pages clean
 
 HOST ?= 127.0.0.1
 PORT ?= 8000
@@ -17,6 +17,11 @@ serve:
 
 check-links:
 	python3 tools/build_site.py --check-links
+
+# 原稿・配布物の整合を機械的に検査する（テスト表の実体・旧仕様語・nav.yaml 掲載漏れ）。
+# 除外リストは tools/doc_check_allowlist.yaml（理由つき）。
+check-docs:
+	python3 tools/check_docs.py
 
 # 図を SVG で生成する（依存: lualatex + poppler-utils + Graphviz）。
 # 生成物はコミット対象なので、図を触るときだけ実行する。

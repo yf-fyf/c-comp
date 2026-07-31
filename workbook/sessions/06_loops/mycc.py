@@ -24,7 +24,7 @@ class Codegen06(prev.Codegen05):
     def __init__(self) -> None:
         super().__init__()
         self._break_stack: list[str] = []
-        self._cont_stack: list[str] = []
+        self._continue_stack: list[str] = []
 
     def codegen_PreInc(self, node: Node) -> None:
         # TODO: 前置 ++。codegen_lval で左辺値のアドレスを 1 回だけ求め、
@@ -59,7 +59,7 @@ class Codegen06(prev.Codegen05):
         raise NotImplementedError("Break を実装してください")
 
     def gen_stmt_Continue(self, node: Node) -> None:
-        # TODO: _cont_stack の末尾にある最内ループの継続ラベルへジャンプする。
+        # TODO: _continue_stack の末尾にある最内ループの継続ラベルへジャンプする。
         raise NotImplementedError("Continue を実装してください")
 
     def gen_stmt(self, node: Node) -> None:

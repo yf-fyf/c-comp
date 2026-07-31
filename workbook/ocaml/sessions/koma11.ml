@@ -12,8 +12,8 @@ let error ?(line = 0) msg =
   prerr_endline (Printf.sprintf "[line %d] %s" line msg);
   exit 1
 
-(* 宣言時の型を offset と一緒に覚える。配列は値として使われたとき
-   先頭要素のアドレスへ読み替えるので、型が分からないと判断できない。 *)
+(* 宣言時の型を offset と一緒に覚える。ポインタ演算の幅も load / store の
+   命令幅も型で決まるので、型が分からないと判断できない。 *)
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
@@ -168,7 +168,7 @@ and codegen = function
   | StrLit { value; _ } ->
       emit (Printf.sprintf "  la a0, %s" (intern_string value))
   | Var _ as v ->
-      (* 配列名は load が空になるので、先頭要素のアドレスが a0 に残る。 *)
+      (* lval としてアドレスを求めてから、型に応じた幅で読み出す。 *)
       let ty = type_of_expr v in
       codegen_lval v;
       load ty

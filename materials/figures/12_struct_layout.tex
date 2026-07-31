@@ -1,5 +1,5 @@
-% コマ12: Point のメモリ配置と . / -> のアドレス計算
-% typedef struct { int x; int y; } Point;  Point p;  Point *q = &p;
+% コマ12: struct Point のメモリ配置と . / -> のアドレス計算
+% struct Point { int x; int y; };  struct Point p;  struct Point *q = &p;
 \documentclass[border=8pt]{standalone}
 \input{figure-preamble}
 \begin{document}
@@ -16,11 +16,11 @@
 
   % ---- sizeof ----
   \draw[bracestyle] ($(X.north west)+(0,1mm)$) -- ($(Y.north east)+(0,1mm)$)
-      node[gannot, midway, above=2.5mm] {sizeof(Point) = 8};
+      node[gannot, midway, above=2.5mm] {sizeof(struct Point) = 8};
 
   % ---- 変数 p の先頭アドレス ----
   \node[annot, anchor=east, align=right] (pbase) at ($(X.west)+(-8mm,0)$)
-      {Point p; の実体\\先頭アドレスは\\codegen\_lval(p) が返す};
+      {struct Point p; の実体\\先頭アドレスは\\codegen\_lval(p) が返す};
   \draw[regptr] (pbase.east) -- (X.west);
 
   % ---- p.y のアドレス計算 ----
@@ -31,7 +31,7 @@
   % ---- ポインタ経由 ----
   \node[memcell, minimum width=30mm] (q) at (0mm, -20mm) {q：p のアドレス};
   \node[annot, anchor=east, align=right] at ($(q.west)+(-4mm,0)$)
-      {Point *q = \&p;\\（構造体ポインタ）};
+      {struct Point *q = \&p;\\（構造体ポインタ）};
   \draw[ptr] (q.north) -- (X.south);
   \draw[ptr] (q.east) to[out=0,in=-90] (Y.south);
   \node[annot, text=TcEmph, anchor=west] at ($(q.east)+(16mm,-2mm)$)

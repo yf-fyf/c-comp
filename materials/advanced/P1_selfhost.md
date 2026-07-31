@@ -76,5 +76,5 @@ python3 scaffold/test_runner.py --compiler ./mycc_stage1 --tests final/tests
 **なぜ段階を踏むか**: セルフホストは「動いた気がする」状態になりやすい。
 どの段階の成果物でテストを通したのかを自分で明示的に確認する必要がある。
 
-参考達成条件（必達目標ではない）: `mycc_stage1` の生成成功 + `final/tests`（fixed17）全通 +
+参考達成条件（必達目標ではない）: `mycc_stage1` の生成成功 + `final/tests`（[fixed17](../../workbook/advanced/README.md#fixed17)）全通 +
 前処理（`#include` / `#define`）の自前実装が動くこと。

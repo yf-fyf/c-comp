@@ -19,6 +19,8 @@ C 言語サブセットのコンパイラを、**動く状態を保ちながら*
 
 学習者は [`workbook/`](./workbook/README.md) だけを見ればよい。演習はこの中で完結する。
 
+リポジトリルートから実行する。
+
 ```bash
 # 推奨: Docker で RV64 実行環境を用意
 bash workbook/docker/rv64/run.sh
@@ -45,6 +47,8 @@ bash workbook/docker/rv64/run.sh python3 sessions/01_environment/check.py
 
 ## 資料サイトを自前でビルドする場合
 
+リポジトリルートから実行する。
+
 ```bash
 make site      # .site/ に生成
 make serve     # 生成して http://127.0.0.1:8000/ で配信（保存すると自動リロード）
@@ -61,7 +65,7 @@ poppler-utils、Graphviz を用意して `make figures` を実行する。
 ビルド済み補助ツール、`workbook/` 全体の ZIP を置く。
 
 GitHub Actions の **Release Pages** を `dev` から手動実行し、`v0.1.0` のような
-リリース番号を指定する。ローカルで公開物を確認する場合は次を実行する。
+リリース番号を指定する。ローカルで公開物を確認する場合は、リポジトリルートから次を実行する。
 
 ```bash
 make pages VERSION=v0.1.0

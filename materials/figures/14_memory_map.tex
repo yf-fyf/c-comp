@@ -14,7 +14,7 @@
   \node[region, fill=TcAccentLighter, minimum height=11mm, below=0mm of heap] (bss)
       {{\ttfamily .bss}　未初期化グローバル変数};
   \node[region, fill=TcAccentLighter, minimum height=13mm, below=0mm of bss] (data)
-      {{\ttfamily .data}　初期値付きグローバル変数\\文字列リテラル};
+      {{\ttfamily .data}　文字列リテラル};
   \node[region, fill=TcGrayBg, minimum height=11mm, below=0mm of data] (text)
       {{\ttfamily .text}　機械語命令（関数本体）};
 
@@ -34,13 +34,13 @@
       {{\ttfamily int a;}（関数の中で宣言）};
   \draw[flow] (c1.west) -- (stack.east);
   \node[annot, anchor=west] (c2) at ($(heap.east)+(11mm,0)$)
-      {{\ttfamily malloc(sizeof(Node))} で確保した領域};
+      {{\ttfamily malloc(sizeof(struct Node))} で確保した領域};
   \draw[flow] (c2.west) -- (heap.east);
   \node[annot, anchor=west] (c3) at ($(bss.east)+(11mm,0)$)
       {{\ttfamily int count;}（関数の外で宣言・初期値なし）};
   \draw[flow] (c3.west) -- (bss.east);
   \node[annot, anchor=west] (c4) at ($(data.east)+(11mm,0)$)
-      {{\ttfamily int base = 7;}　{\ttfamily "hello"}};
+      {文字列リテラル {\ttfamily "hello"}（本教材の範囲では初期化子付きグローバル変数は扱わない）};
   \draw[flow] (c4.west) -- (data.east);
   \node[annot, anchor=west] (c5) at ($(text.east)+(11mm,0)$)
       {コンパイラが出力した命令列};

@@ -136,7 +136,7 @@ S2 で見たとおり、この処理系の `int` 演算は64ビットで行わ�
 found = i;      // i がレジスタにあるのに、古いメモリから読まれる
 ```
 
-`fixed17` の `f06_break.c` がこれを検出する。
+[`fixed17`](../../workbook/advanced/README.md#fixed17) の `f06_break.c` がこれを検出する。
 
 :::
 

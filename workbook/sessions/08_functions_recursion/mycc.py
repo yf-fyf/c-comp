@@ -141,11 +141,11 @@ class Codegen08(prev.Codegen):
         self._stack_offset = 0
         self._ret_label = self.new_label()
         self._break_stack.clear()
-        self._cont_stack.clear()
+        self._continue_stack.clear()
         # TODO: collect_decls の前に node.params を alloc_local する。
         self.collect_decls(node.body)
         self._current_params = node.params
-        return self._align_to(self._stack_offset, 16)
+        return self.align_to(self._stack_offset, 16)
 
     def _emit_func_prologue(self, name: str, frame_size: int) -> None:
         self.emit(f'  .globl {name}')

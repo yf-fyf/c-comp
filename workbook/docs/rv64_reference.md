@@ -6,8 +6,7 @@
 
 ## ターゲットアーキテクチャ
 
-- **第1候補**: RISC-V RV64IM（整数 + M拡張、C拡張なし・全命令 32bit 固定長）
-- **代替候補**: x86-64（System V ABI）
+RISC-V RV64IM（整数 + M拡張、C拡張なし・全命令 32bit 固定長）。
 
 RV64 を選ぶ理由（可変長命令や暗黙のフラグレジスタがないこと）は、
 開発リポジトリの `design/curriculum.md` にある RISC-V 導入戦略に書いてある。
@@ -87,10 +86,7 @@ frame_size = align_to(self._stack_offset, 16)   # 必ずこれを使う
 
 ## 実行環境
 
-| ターゲット | 実行方法 |
-|-----------|---------|
-| RV64 | `qemu-riscv64`（Linux user-mode emulation） |
-| x86-64 | ホストネイティブ実行 |
+RV64 は `qemu-riscv64`（Linux user-mode emulation）で実行する。
 
 ```bash
 riscv64-linux-gnu-gcc -static hello.s -o hello

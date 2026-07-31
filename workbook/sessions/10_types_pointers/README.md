@@ -1,4 +1,4 @@
-# コマ10: Type + ポインタ演算 + 配列
+# コマ10: Type + ポインタ演算
 
 この回の資料は [https://yf-fyf.github.io/c-comp/sessions/10_types_pointers/](https://yf-fyf.github.io/c-comp/sessions/10_types_pointers/) にあります。
 

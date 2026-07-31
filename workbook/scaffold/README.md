@@ -30,7 +30,6 @@ S-expression では、変数名・関数名などの文字列値は double quota
 
 ```lisp
 (decl "p" :type (ptr int))
-(decl "arr" :type (array int 10))
 ```
 
 ## テストランナー

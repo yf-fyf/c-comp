@@ -124,6 +124,9 @@ python3 check.py     # 判定と生成命令列を確認(未実装は SKIP)
 python3 golden.py    # 構造体代入のテスト + fixed17
 ```
 
+`golden.py` の後半で回す [`fixed17`](../../workbook/advanced/README.md#fixed17) が、
+構造体のコピーを足したせいで既存の代入を壊していないことの安全網になる。
+
 | テスト | 確認内容 |
 |--------|---------|
 | `assign.c` | `q = p` でコピーされ、その後 `p` を変えても `q` が変わらない |

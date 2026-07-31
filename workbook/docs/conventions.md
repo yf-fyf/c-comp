@@ -3,6 +3,9 @@
 Python 版コンパイラ（`sessions/` と `final/`）を書くときの規約。
 C 版へ移植するときの規約は発展課題 [`P1_selfhost`](../advanced/P1_selfhost/README.md) にある。
 
+ここに書くのは「どう書くか」の規約であり、「何を受理するか」は
+[`language_spec.md`](./language_spec.md)（第 2 版、2026 年改訂）が定める。
+
 ---
 
 ## 編集するファイル

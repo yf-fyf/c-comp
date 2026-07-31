@@ -34,6 +34,7 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 | `workbook/docs/rv64_reference.md` | 呼び出し規約・スタックフレーム・よく使う命令 |
 | `workbook/docs/testing.md` | `test_runner` の使い方・テストケースの形式 |
 | `workbook/docs/code_example.md` | 各コマのコンパイル到達目標コード例 |
+| `workbook/docs/debugging.md` | デバッグ手順（小さい入力に戻す・生成アセンブリの読み方） |
 
 ---
 

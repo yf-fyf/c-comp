@@ -56,6 +56,7 @@ python3 scaffold/test_runner.py --compiler advanced/optcc.py --tests final/tests
 foo.c       # 入力ソース
 foo.ans     # 期待する exit code
 foo.stdout  # 期待する標準出力（必要な場合のみ）
+foo.files   # 一緒にコンパイルする追加ソース（複数ファイル構成の場合のみ）
 ```
 
 例:
@@ -70,6 +71,20 @@ final/tests/f01_arith.ans
 
 `.ans` は終了コードで結果を確認するため、値は 0〜255 に収める。
 テストケース側で未定義動作（UB）に踏み込まないようにする。
+
+### `.files`（複数ファイルのテスト）
+
+`foo.files` があると、`foo.c` に加えてそこに列挙したファイルもコンパイル対象に含める。
+1行に1ファイル名で、パスは `foo.c` と同じディレクトリからの相対で書く。
+
+```text
+sessions/15_preprocess_multifile/tests/multifile_global.files:
+stat_lib.c
+```
+
+`stat_lib.c` 自身には対応する `.ans` が無い。**単体では実行せず他のテストと
+一緒にコンパイルされる補助ソース**であり、テストランナーが直接 `stat_lib.c` を
+拾ったときは `.ans` が無いので `SKIP` になる（前述のとおり正常な挙動）。
 
 ## `final/tests`（fixed17）
 

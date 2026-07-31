@@ -144,7 +144,7 @@ class Codegen12(prev.Codegen11):
 
     def alloc_local(self, name: str, ty_str: str = 'int') -> None:
         # TODO: self._struct_defs を渡して struct のサイズで領域確保する。
-        sz = self._align_to(self.size_of_ty_str(ty_str), 8)
+        sz = self.align_to(self.size_of_ty_str(ty_str), 8)
         self._stack_offset += sz
         self._locals[name] = (-(16 + self._stack_offset), ty_str)
 

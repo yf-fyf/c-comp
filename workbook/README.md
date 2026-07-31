@@ -1,7 +1,9 @@
 # 学習者向けガイド
 
 この教材では、Python で C 言語サブセットの簡易コンパイラを作る。
-標準トラックの最終成果物は `final/mycc.py` である。Python は 3.10 以降を使う。
+標準トラックの最終成果物は `final/mycc.py` である。
+必要な Python バージョンは [`docs/getting_started.md`](./docs/getting_started.md) の
+「環境を用意する」節を参照。
 
 **まず [`docs/getting_started.md`](./docs/getting_started.md) を読む。**
 環境の用意から各回の進め方まで、始めるのに必要なことがまとまっている。
@@ -20,6 +22,8 @@
 | [`guides/`](./guides/) | 補助ツールの導入手順（任意） |
 
 ## よく使うコマンド
+
+`workbook/` から実行する。
 
 ```bash
 # 各回のテスト

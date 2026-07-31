@@ -124,9 +124,9 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 | `sessions/koma07.ml` | 07_functions_abi | 再帰的な変数宣言収集 |
 | `sessions/koma08.ml` | 08_functions_recursion | 関数呼び出し・再帰 |
 | `sessions/koma09.ml` | 09_lvalue_rvalue | lvalue / rvalue と `&` / `*` |
-| `sessions/koma10.ml` | 10_types_pointers | 型・ポインタ演算・配列 |
+| `sessions/koma10.ml` | 10_types_pointers | 型・ポインタ演算 |
 | `sessions/koma11.ml` | 11_strings_printf | 文字列リテラル・`printf` |
-| `sessions/koma12.ml` | 12_struct | struct / typedef / `.` / `->` |
+| `sessions/koma12.ml` | 12_struct | struct / `.` / `->` |
 | `sessions/koma13.ml` | 13_sizeof_malloc_list | `sizeof` / `malloc` / 連結リスト |
 | `sessions/koma14.ml` | 14_globals_scope | グローバル変数・スコープ |
 | `sessions/koma15.ml` | 15_preprocess_multifile | 前処理・複数ファイル |

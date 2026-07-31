@@ -20,7 +20,9 @@
 
 - Docker がインストールされていること
 - 現在のユーザーで Docker を実行できること（`docker ps` が権限エラーにならない）
-- 作業ディレクトリが `workbook/` であること
+
+`run.sh` はスクリプト自身の場所からマウント元（`workbook/`）を解決するため、
+呼び出す側の作業ディレクトリはどこでもよい。以下の例は `workbook/` から実行する形で書いてある。
 
 ## イメージ名を変える
 
@@ -55,7 +57,8 @@ Docker グループの設定、または sudo 経由の実行を確認する。
 
 Docker を使わない場合、ホストに次が必要になる。
 
-- `python3`（3.10 以降）
+- `python3`（必要バージョンは
+  [`../../docs/getting_started.md`](../../docs/getting_started.md) を参照）
 - `riscv64-linux-gnu-gcc`（RV64 クロスコンパイラ）
 - `qemu-riscv64`
 - `gdb-multiarch`（デバッグする場合）

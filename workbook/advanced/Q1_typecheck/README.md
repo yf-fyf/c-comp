@@ -24,8 +24,8 @@ python3 checkcc.py ../../final/tests/f09_recur.c     # 検査してからコン�
 ## テスト
 
 ```bash
-python3 check.py
+python3 check.py     # エラーコーパス(`tests/*.c` と `*.expected` の一致)
+python3 golden.py    # 正常系(講義のテスト入力101本で誤検出ゼロ)
 ```
 
-エラーコーパス（`tests/*.c` と `*.expected` の一致）と、
-正常系（講義のテスト入力101本で誤検出ゼロ）の2つを確認します。
+`check.py` を全 PASS にしてから `golden.py` を回します。

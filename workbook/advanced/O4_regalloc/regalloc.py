@@ -275,7 +275,7 @@ def patch(cls, mycc=None):
         self._stack_offset = 0
         self._ret_label = self.new_label()
         self._break_stack.clear()
-        self._cont_stack.clear()
+        self._continue_stack.clear()
         for p in node.params:
             if p.name:
                 self.alloc_local(p.name, p.ty_str or 'int')
@@ -285,7 +285,7 @@ def patch(cls, mycc=None):
         used = [r for r in SREGS if r in set(self._prom.values())]
         for r in used:
             self.alloc_local(f'__save_{r}', 'long')
-        frame = self._align_to(self._stack_offset, 16)
+        frame = self.align_to(self._stack_offset, 16)
 
         # --- プロローグ ---
         self.emit(f'  .globl {node.name}')

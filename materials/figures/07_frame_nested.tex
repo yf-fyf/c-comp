@@ -13,11 +13,11 @@
   \node[line] at (4mm, -7mm)   {└ block};
   \node[line] (px) at (8mm, -14mm)  {├};
   \node[declbox, right=1.5mm of px] (dx) {decl "x"};
-  \node[line] at (8mm, -21mm)  {├ x = 3};
-  \node[line] at (8mm, -28mm)  {└ if (x == 3)};
-  \node[line] at (12mm, -35mm) {└ block（then 側）};
-  \node[line] (py) at (16mm, -42mm) {├};
+  \node[line] (py) at (8mm, -21mm)  {├};
   \node[declbox, right=1.5mm of py] (dy) {decl "y"};
+  \node[line] at (8mm, -28mm)  {├ x = 3};
+  \node[line] at (8mm, -35mm)  {└ if (x == 3)};
+  \node[line] at (12mm, -42mm) {└ block（then 側）};
   \node[line] at (16mm, -49mm) {├ y = 4};
   \node[line] at (16mm, -56mm) {└ return x + y};
 
@@ -41,7 +41,7 @@
 
   % ---- 補足 ----
   \node[gannot, anchor=north] at (52mm, -62mm)
-      {if の中の宣言も、関数に入った時点でまとめてフレームに確保する\\
-       （コマ7 ではブロックスコープを作らない）};
+      {宣言は関数本体の先頭だけ。入れ子ブロックでは使うだけで、\\
+       関数に入った時点でまとめてフレームに確保する（ブロックスコープは無い）};
 \end{tikzpicture}
 \end{document}

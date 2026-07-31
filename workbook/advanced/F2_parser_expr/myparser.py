@@ -104,8 +104,8 @@ class ExprParser:
 
         cond_expr は unary_expr を含むので、先に cond_expr まで読んでしまい
         '=' があればそれを代入とみなす(仕様の unary_expr 限定は意味解析で検査)。
-        Core の scaffold トークンには複合代入(+= など)がないので '=' のみでよい
-        (複合代入は発展 L2 で扱う)。
+        仕様に複合代入(+= など)は無く scaffold のトークンにも現れないので
+        '=' のみでよい(複合代入は発展 L2 が仕様の外側に追加する)。
 
         TODO(Step 6): parse_cond() を読んだ後、'=' があれば
         parse_assign() を再帰して ND_ASSIGN を作る(右結合)。
