@@ -41,7 +41,7 @@ def sig(n):
     return (n.kind, n.val, n.sval, n.name, n.is_arrow, n.ty_str,
             sig(n.lhs), sig(n.rhs), sig(n.operand),
             sig(n.cond), sig(n.then), sig(n.else_),
-            sig(n.init), sig(n.step), sig(n.body), sig(n.init_expr),
+            sig(n.init), sig(n.step), sig(n.body),
             tuple(sig(a) for a in n.args),
             tuple(sig(s) for s in n.stmts),
             tuple(sig(p) for p in n.params))

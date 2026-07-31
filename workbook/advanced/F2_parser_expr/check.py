@@ -121,13 +121,8 @@ def step3():
     check_expr("a >= b", '(le (var "b") (var "a"))')
     check_expr("a == b != c",
                '(ne (eq (var "a") (var "b")) (var "c"))')
-    check_expr("1 << 2 + 3", '(shl (num 1) (add (num 2) (num 3)))')
-    check_expr("a < b << c",
-               '(lt (var "a") (shl (var "b") (var "c")))')
-    check_expr("a == b & c",
-               '(bitand (eq (var "a") (var "b")) (var "c"))')
-    check_expr("a & b ^ c | d",
-               '(bitor (bitxor (bitand (var "a") (var "b")) (var "c")) (var "d"))')
+    check_expr("a < b == c < d",
+               '(eq (lt (var "a") (var "b")) (lt (var "c") (var "d")))')
     check_expr("a && b || c && d",
                '(or (and (var "a") (var "b")) (and (var "c") (var "d")))')
 
@@ -141,10 +136,13 @@ def step4():
     check_expr("-x", '(neg (var "x"))')
     check_expr("-1 + 2", '(add (neg (num 1)) (num 2))')
     check_expr("!x", '(not (var "x"))')
-    check_expr("~x", '(bitnot (var "x"))')
     check_expr("*p", '(deref (var "p"))')
     check_expr("&x", '(addr (var "x"))')
     check_expr("*&x", '(deref (addr (var "x")))')
+    check_expr("++x", '(preinc (var "x"))')
+    check_expr("--x", '(predec (var "x"))')
+    check_expr("++a[i]",
+               '(preinc (index (var "a") (var "i")))')
     check_expr("a[i]", '(index (var "a") (var "i"))')
     check_expr("a[i][j]",
                '(index (index (var "a") (var "i")) (var "j"))')
@@ -161,11 +159,28 @@ def step4():
 
 
 # ---------------------------------------------------------------
-# Step 5: parse_assign(右結合)
+# Step 5: parse_cond(三項演算子、右結合)
 # ---------------------------------------------------------------
 
 
 def step5():
+    check_expr("a ? b : c", '(ternary (var "a") (var "b") (var "c"))')
+    check_expr("a ? b : c ? d : e",
+               '(ternary (var "a") (var "b") '
+               '(ternary (var "c") (var "d") (var "e")))')
+    check_expr("a || b ? c : d",
+               '(ternary (or (var "a") (var "b")) (var "c") (var "d"))')
+    check_expr("a ? f(x) : g(y)",
+               '(ternary (var "a") (call "f" (args (var "x"))) '
+               '(call "g" (args (var "y"))))')
+
+
+# ---------------------------------------------------------------
+# Step 6: parse_assign(右結合、cond_expr を呼ぶ)
+# ---------------------------------------------------------------
+
+
+def step6():
     check_expr("a = 1", '(assign (var "a") (num 1))')
     check_expr("a = b = c",
                '(assign (var "a") (assign (var "b") (var "c")))')
@@ -176,13 +191,16 @@ def step5():
                '(assign (member "->" "x" (var "p")) (num 0))')
     check_expr("sum = sum + a[i]",
                '(assign (var "sum") (add (var "sum") (index (var "a") (var "i"))))')
+    check_expr("x = a ? b : c",
+               '(assign (var "x") (ternary (var "a") (var "b") (var "c")))')
 
 
 run_step("Step 1: parse_primary(リテラル・変数・カッコ)", step1)
 run_step("Step 2: parse_mul / parse_add(左結合ループ)", step2)
 run_step("Step 3: 残りの二項レベルと rel の正規化", step3)
 run_step("Step 4: 単項・postfix・関数呼び出し", step4)
-run_step("Step 5: 代入(右結合)", step5)
+run_step("Step 5: 三項演算子(右結合)", step5)
+run_step("Step 6: 代入(右結合)", step6)
 
 print()
 print("=============================")

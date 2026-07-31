@@ -38,18 +38,19 @@ EXPRESSIONS = [
     "1 + 2 * 3", "1 * 2 + 3", "(1 + 2) * 3", "(100 - 3 * 7) / 4 + 1",
     "a - b - c", "a / b / c", "10 % 3 % 2", "1 + 2 + 3 + 4",
     # 単項
-    "-x", "- - x", "!x", "!!x", "~x", "~ -x", "-1 + 2", "-(a + b)",
+    "-x", "- - x", "!x", "!!x", "-1 + 2", "-(a + b)",
     "*p", "&x", "*&x", "&*p", "**pp", "-*p",
+    # 前置 ++/--(ポインタ・postfix と組み合わせても正しく再帰する)
+    "++x", "--x", "++ --x", "++*p", "--a[i]", "++p->next",
     # 比較(swap 含む)・等値
     "a < b", "a > b", "a <= b", "a >= b", "a == b", "a != b",
     "a < b == c < d", "a > b != c >= d", "x == 0",
-    # シフト・ビット演算
-    "1 << 2", "x >> 1", "1 << 2 + 3", "a << b >> c",
-    "a & b", "a | b", "a ^ b", "a & b | c ^ d", "a ^ b & c",
-    "~a & b", "a & 15 == b",
     # 論理
     "a && b", "a || b", "a && b || c", "a || b && c",
     "x != 0 && y != 0", "!(a && b)",
+    # 三項演算子(右結合。then 側は expr 全体、else 側だけ再帰)
+    "a ? b : c", "a ? b : c ? d : e", "a || b ? c : d",
+    "a ? b = 1 : c", "x = a ? b : c", "a ? f(x) : g(y)",
     # 代入(右結合・lvalue いろいろ)
     "a = 1", "a = b = c", "a = b + 1", "*p = 5", "a[i] = v",
     "p->x = 0", "s.x = s.y = 1", "x = f(x)",
@@ -72,6 +73,7 @@ def sig(n):
         return None
     return (n.kind, n.val, n.sval, n.name, n.is_arrow, n.ty_str,
             sig(n.lhs), sig(n.rhs), sig(n.operand),
+            sig(n.cond), sig(n.then), sig(n.else_),
             tuple(sig(a) for a in n.args))
 
 

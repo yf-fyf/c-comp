@@ -4,7 +4,7 @@
 
 `language_spec.md` の EBNF の式の階層を、そのまま関数の階層に写して、
 Core プロファイルの式パーサを自作する。
-86本の式コーパスで、AST が scaffold の Parser と**完全一致**することを golden test で確認する。
+85本の式コーパスで、AST が scaffold の Parser と**完全一致**することを golden test で確認する。
 
 ## この回の位置づけ
 
@@ -23,7 +23,9 @@ F0 の CYK 法は、どんな文法でも扱える代わりに O(n³) の表を�
 > **文法の1規則を1つの関数にする。関数は、自分の規則の形どおりにトークンを読み進め、
 > 対応する部分木を返す。**
 
-`language_spec.md` の式の EBNF は、優先順位の低い順に10段の規則が並んでいる。
+`language_spec.md` の式の EBNF は、優先順位の低い順に
+`assign → cond → lor → land → eq → rel → add → mul → unary → postfix → primary`
+の11段の規則が並んでいる。
 
 ```text
 add_expr ::= mul_expr { ('+' | '-') mul_expr }
@@ -78,7 +80,7 @@ def parse_binary(self, op_map, next_fn):
     return node
 
 def parse_land(self):
-    return self.parse_binary({'&&': ND_AND}, self.parse_bitor)
+    return self.parse_binary({'&&': ND_AND}, self.parse_eq)
 ```
 
 残りの二項レベルは、この1行ずつで書ける。
@@ -87,9 +89,7 @@ def parse_land(self):
 |--------|--------|
 | `parse_lor` | `{'||': ND_OR}` |
 | `parse_land` | `{'&&': ND_AND}` |
-| `parse_bitor` / `parse_bitxor` / `parse_bitand` | `{'|': ND_BITOR}` など |
 | `parse_eq` | `{'==': ND_EQ, '!=': ND_NE}` |
-| `parse_shift` | `{'<<': ND_SHL, '>>': ND_SHR}` |
 
 実は scaffold の `parser.py` もまったく同じ `_parse_binary` を持っている。
 黒箱の中身は、いま自分が書いたものと同じである。
@@ -126,7 +126,7 @@ def parse_unary(self):
 
 ```python
 def parse_assign(self):
-    node = self.parse_lor()
+    node = self.parse_cond()
     if self.consume_if('='):
         return Node(ND_ASSIGN, lhs=node, rhs=self.parse_assign())  # 右結合
     return node
@@ -134,14 +134,36 @@ def parse_assign(self):
 
 ::: note
 
-**仕様の EBNF は `unary_expr '=' assign_expr` なのに、なぜ lor まで読むのか。**
-`lor_expr` は `unary_expr` を含むので、「先に lor まで読んでしまい、
-`=` が来たらそれを代入の左辺とみなす」ことができる。
+**仕様の EBNF は `unary_expr '=' assign_expr` なのに、なぜ cond まで読むのか。**
+`cond_expr`（その中の `lor_expr`）は `unary_expr` を含むので、「先に cond まで
+読んでしまい、`=` が来たらそれを代入の左辺とみなす」ことができる。
 `1 + 2 = x` のような不正な左辺はこの段階では通ってしまうが、
 左辺が lvalue かどうかの検査は意味解析（codegen_lval）に任せる —
 EBNF の注釈「lvalue 制約は意味解析フェーズで検査」の実装がこれである。
 
 :::
+
+## 値を持つ if — parse_cond（三項演算子）
+
+`cond_expr ::= lor_expr [ '?' expr ':' cond_expr ]` は、`assign` と `lor` の
+**間**に挟まる新しいレベルである。コマ5 で「文の `if` / 値を持つ式の `?:`」として
+導入した三項演算子は、ここで木になる。
+
+```python
+def parse_cond(self):
+    node = self.parse_lor()
+    if self.consume_if('?'):
+        then = self.parse_expr()      # then 側は expr 全体(assign も含められる)
+        self.expect(':')
+        else_ = self.parse_cond()     # else 側だけ再帰 — 右結合
+        return Node(ND_COND, cond=node, then=then, else_=else_)
+    return node
+```
+
+`'?'` がなければ、いつもどおり1段下（`lor_expr`）の結果をそのまま返す
+——これも「素通し」の一種である。`else_` 側だけ `parse_cond` を再帰しているのが
+ポイントで、`a ? b : c ? d : e` が `(ternary a b (ternary c d e))` という
+右結合の木になる（`then` 側は `parse_expr` で読むため、そちらは代入も許される）。
 
 ## 後置はループで連なる — postfix
 
@@ -177,7 +199,8 @@ EBNF の注釈「lvalue 制約は意味解析フェーズで検査」の実装�
 このように「先読み1トークンで迷いなく解析できる」文法のクラスを LL(1) と呼ぶ。
 Core プロファイルの文法は、意図的にこの形に設計されている。
 唯一きわどいのは `sizeof(x)` の `(` の次が型か式かの判定で、
-scaffold は `peek(1)` と typedef 名の表で解決している（F4 で扱う）。
+scaffold は `peek(1)` と型キーワード（`int`/`char`/`void`/`struct`）の集合で
+解決している(typedef がないので単純なキーワード判定で足りる。F4 で扱う)。
 
 :::
 
@@ -192,8 +215,9 @@ scaffold は `peek(1)` と typedef 名の表で解決している（F4 で扱う
 | 1 | `parse_primary` | リテラル・変数・カッコ |
 | 2 | `parse_add` / `parse_mul` | 左結合ループを手で2回書く |
 | 3 | `parse_binary` + 残りのレベル + `parse_rel` | 共通化と swap 正規化 |
-| 4 | `parse_unary` / `parse_postfix` + 関数呼び出し | 前置の再帰・後置のループ |
-| 5 | `parse_assign` | 右結合の再帰 |
+| 4 | `parse_unary` / `parse_postfix` + 関数呼び出し | 前置の再帰(`++`/`--` 含む)・後置のループ |
+| 5 | `parse_cond` | 三項演算子。right 側だけ再帰する右結合 |
+| 6 | `parse_assign` | 右結合の再帰。`parse_cond` を呼ぶ |
 
 素通しのため、まだ実装していない演算子を含む式は
 「式の後にトークンが余っています」というエラーになる。
@@ -223,14 +247,17 @@ python3 golden.py
 ```
 
 全演算子・優先順位の組み合わせ・結合方向・postfix の連鎖を網羅した
-86本の式について、scaffold の Parser と AST を構造比較する（`line` は比較しない）。
+85本の式について、scaffold の Parser と AST を構造比較する（`line` は比較しない）。
 **全式 PASS がこの回の完了条件**である。
 
 ## 発展課題
 
 1. **sizeof の先取り**: scaffold の `_parse_sizeof` と `_peek_is_type` を読み、
    自作パーサに移植する（F4 の予習になる）
-2. **三項演算子** `a ? b : c` を追加する（ヒント: 右結合。Core 外なので golden は対象外）
+2. **複合代入** `+= -= *= /= %=` を追加する（標準トラック外の機能。ヒント:
+   `parse_assign` の `'='` 判定を演算子の集合に広げ、対応するノード種別を選ぶ。
+   golden は対象外なので単体テストで確認する。発展 L2「複合代入の実装」で
+   コード生成まで作り込む回に接続する）
 3. **エラーメッセージの改善**: 「`)` が期待されました」に加えて、
    対応する開きカッコの行番号も表示する
 4. **数を数える**: 自作パーサの関数呼び出し回数を数え、
@@ -238,12 +265,13 @@ python3 golden.py
 
 ::: note
 
-**コラム: 10個の関数を1個にする方法。**
-二項演算のレベルを「演算子ごとの優先順位の数値」を引数に持つ1つの関数
-`parse_expr(min_prec)` にまとめる書き方があり、
-precedence climbing あるいは Pratt parsing と呼ばれる。
+**コラム: 二項演算のレベルを1個の関数にする方法。**
+`lor`・`land`・`eq`・`rel`・`add`・`mul` のような二項演算のレベルは、
+「演算子ごとの優先順位の数値」を引数に持つ1つの関数 `parse_expr(min_prec)`
+にまとめる書き方があり、precedence climbing あるいは Pratt parsing と呼ばれる
+(`cond`・`assign`・`unary`・`postfix` は構造が違うので、この一般化には乗らない)。
 実務のパーサ（clang など）でも使われる技法だが、
-「文法の階層がそのままコードに見える」教育的な美しさは10関数方式にある。
+「文法の階層がそのままコードに見える」教育的な美しさはレベルごとに関数を分ける方式にある。
 興味があれば `parse_binary` をさらに一般化してみるとよい。
 
 :::

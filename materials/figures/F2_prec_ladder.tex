@@ -11,52 +11,46 @@
   \node[op] at (22mm, 0mm)    {入口(assign を呼ぶだけ)};
   \node[fn] (f1)  at (0mm, -9mm)   {parse\_assign};
   \node[op] at (22mm, -9mm)   {= （右結合: 自分を再帰）};
-  \node[fn] (f2)  at (0mm, -18mm)  {parse\_lor};
-  \node[op] at (22mm, -18mm)  {||};
-  \node[fn] (f3)  at (0mm, -27mm)  {parse\_land};
-  \node[op] at (22mm, -27mm)  {\&\&};
-  \node[fn] (f4)  at (0mm, -36mm)  {parse\_bitor};
-  \node[op] at (22mm, -36mm)  {|};
-  \node[fn] (f5)  at (0mm, -45mm)  {parse\_bitxor};
-  \node[op] at (22mm, -45mm)  {\^{}};
-  \node[fn] (f6)  at (0mm, -54mm)  {parse\_bitand};
-  \node[op] at (22mm, -54mm)  {\&};
-  \node[fn] (f7)  at (0mm, -63mm)  {parse\_eq};
-  \node[op] at (22mm, -63mm)  {==　!=};
-  \node[fn] (f8)  at (0mm, -72mm)  {parse\_rel};
-  \node[op] at (22mm, -72mm)  {<　>　<=　>=　{\color{TcEmph}> と >= は swap で Lt / Le に}};
-  \node[fn] (f9)  at (0mm, -81mm)  {parse\_shift};
-  \node[op] at (22mm, -81mm)  {{\ttfamily <<}　{\ttfamily >>}};
-  \node[fn] (f10) at (0mm, -90mm)  {parse\_add};
-  \node[op] at (22mm, -90mm)  {+　-};
-  \node[fn] (f11) at (0mm, -99mm)  {parse\_mul};
-  \node[op] at (22mm, -99mm)  {*　/　\%};
-  \node[fn] (f12) at (0mm, -108mm) {parse\_unary};
-  \node[op] at (22mm, -108mm) {前置の -　!　\~{}　*　\&（自分を再帰）};
-  \node[fn] (f13) at (0mm, -117mm) {parse\_postfix};
-  \node[op] at (22mm, -117mm) {a[i]　p->f　s.f（後置のループ）};
-  \node[fn] (f14) at (0mm, -126mm) {parse\_primary};
-  \node[op] at (22mm, -126mm) {リテラル・変数・f(args)・{\color{TcEmph}( expr )}};
+  \node[fn] (f2)  at (0mm, -18mm)  {parse\_cond};
+  \node[op] at (22mm, -18mm)  {{\ttfamily ?} {\ttfamily :}　{\color{TcEmph}三項。else 側だけ再帰で右結合}};
+  \node[fn] (f3)  at (0mm, -27mm)  {parse\_lor};
+  \node[op] at (22mm, -27mm)  {||};
+  \node[fn] (f4)  at (0mm, -36mm)  {parse\_land};
+  \node[op] at (22mm, -36mm)  {\&\&};
+  \node[fn] (f5)  at (0mm, -45mm)  {parse\_eq};
+  \node[op] at (22mm, -45mm)  {==　!=};
+  \node[fn] (f6)  at (0mm, -54mm)  {parse\_rel};
+  \node[op] at (22mm, -54mm)  {<　>　<=　>=　{\color{TcEmph}> と >= は swap で Lt / Le に}};
+  \node[fn] (f7)  at (0mm, -63mm)  {parse\_add};
+  \node[op] at (22mm, -63mm)  {+　-};
+  \node[fn] (f8)  at (0mm, -72mm)  {parse\_mul};
+  \node[op] at (22mm, -72mm)  {*　/　\%};
+  \node[fn] (f9)  at (0mm, -81mm)  {parse\_unary};
+  \node[op] at (22mm, -81mm) {前置の -　!　*　\&　{\ttfamily ++}　{\ttfamily --}（自分を再帰）};
+  \node[fn] (f10) at (0mm, -90mm) {parse\_postfix};
+  \node[op] at (22mm, -90mm) {a[i]　p->f　s.f（後置のループ）};
+  \node[fn] (f11) at (0mm, -99mm) {parse\_primary};
+  \node[op] at (22mm, -99mm) {リテラル・変数・f(args)・{\color{TcEmph}( expr )}};
 
   % ---- 呼び出しの向き ----
   \foreach \a/\b in {f0/f1, f1/f2, f2/f3, f3/f4, f4/f5, f5/f6, f6/f7,
-                     f7/f8, f8/f9, f9/f10, f10/f11, f11/f12, f12/f13, f13/f14} {
+                     f7/f8, f8/f9, f9/f10, f10/f11} {
     \draw[flow] (\a.south) -- (\b.north);
   }
 
   % ---- 優先順位の向き ----
   \node[gannot, anchor=south] (plow) at (-32mm, -16mm) {優先順位 低い};
-  \node[gannot, anchor=north] (phigh) at (-32mm, -110mm)
+  \node[gannot, anchor=north] (phigh) at (-32mm, -83mm)
       {優先順位 高い\\（木の深い所で\\先に結ばれる）};
   \draw[flow, color=TcGrayText] ($(plow.south)+(0,-1mm)$) -- ($(phigh.north)+(0,1mm)$);
 
   % ---- ( expr ) の再帰 ----
-  \draw[ptr] (f14.west) to[out=180,in=180,looseness=0.35] (f0.west);
+  \draw[ptr] (f11.west) to[out=180,in=180,looseness=0.35] (f0.west);
   \node[annot, text=TcEmph, anchor=south, align=center] at (-14mm, 5mm)
       {( expr ) は先頭に戻る（再帰の輪）};
 
   % ---- 補足 ----
-  \node[gannot, anchor=north, align=left] at (30mm, -134mm)
+  \node[gannot, anchor=north, align=left] at (30mm, -107mm)
       {EBNF の1規則 = 1関数。各関数は自分のレベルの演算子だけを処理し、\\
        それより優先順位の高い部分は1段下の関数に任せる};
 \end{tikzpicture}

@@ -1,0 +1,52 @@
+% F4: 位置ごとに許される型 — scalar_type / obj_type / ret_type
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    cell/.style={draw=TcAccentDark, line width=0.6pt, fill=white,
+                 minimum height=9mm, minimum width=26mm, font=\small,
+                 align=center, inner sep=2pt, outer sep=0pt},
+    hdr/.style={cell, fill=TcAccentLight, font=\small\bfseries},
+    rowhdr/.style={cell, minimum width=44mm, fill=TcAccentLighter,
+                   font=\ttfamily\small, align=left},
+    ok/.style={cell, text=TcAccentDark},
+    ng/.style={cell, fill=TcGrayBg, text=TcEmph}]
+
+  % ---- 列見出し ----
+  \node[rowhdr, fill=TcAccentLight, font=\small\bfseries] (h0) at (0mm, 0mm) {書ける位置};
+  \node[hdr] (h1) at (35mm, 0mm) {int / char};
+  \node[hdr] (h2) at (61mm, 0mm) {ポインタ\\（\texttt{*} つき）};
+  \node[hdr] (h3) at (87mm, 0mm) {struct 値};
+  \node[hdr] (h4) at (113mm, 0mm) {void 単独};
+
+  % ---- 行 1: scalar_type ----
+  \node[rowhdr] (r1) at (0mm, -11mm) {scalar\_type};
+  \node[ok]  at (35mm, -11mm) {○};
+  \node[ok]  at (61mm, -11mm) {○};
+  \node[ng]  at (87mm, -11mm) {×};
+  \node[ng]  at (113mm, -11mm) {×};
+  \node[annot, anchor=west, font=\scriptsize] at (128mm, -11mm) {引数・struct フィールド};
+
+  % ---- 行 2: obj_type ----
+  \node[rowhdr] (r2) at (0mm, -20mm) {obj\_type};
+  \node[ok]  at (35mm, -20mm) {○};
+  \node[ok]  at (61mm, -20mm) {○};
+  \node[ok]  at (87mm, -20mm) {○};
+  \node[ng]  at (113mm, -20mm) {×};
+  \node[annot, anchor=west, font=\scriptsize] at (128mm, -20mm) {変数宣言・sizeof の型名};
+
+  % ---- 行 3: ret_type ----
+  \node[rowhdr] (r3) at (0mm, -29mm) {ret\_type};
+  \node[ok]  at (35mm, -29mm) {○};
+  \node[ok]  at (61mm, -29mm) {○};
+  \node[ng]  at (87mm, -29mm) {×};
+  \node[ok]  at (113mm, -29mm) {○};
+  \node[annot, anchor=west, font=\scriptsize] at (128mm, -29mm) {関数の戻り値型};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=left] at (60mm, -38mm)
+      {読み方は共通（基底 + \texttt{*} の並び）。違うのは読んだ後の検証だけ。\\
+       × の理由: void 単独はサイズを持たないので実体を作れない／\\
+       struct 値の受け渡しは ABI のコピー規則を要求する（ポインタで渡す設計にした）};
+\end{tikzpicture}
+\end{document}

@@ -12,7 +12,8 @@ Node と定数は scaffold の ast_def から借り、「組み立てる側」�
     Step 2: parse_mul / parse_add(左結合ループを手で2回書く)
     Step 3: parse_binary 共通化 + 残りの二項レベル + parse_rel(swap)
     Step 4: parse_unary / parse_postfix / 関数呼び出し
-    Step 5: parse_assign(右結合)
+    Step 5: parse_cond(三項演算子、右結合)
+    Step 6: parse_assign(右結合、cond_expr を呼ぶ)
 
 確認:
     python3 check.py     # Step ごとの単体テスト
@@ -99,12 +100,29 @@ class ExprParser:
         return self.parse_assign()
 
     def parse_assign(self):
-        """assign_expr ::= lor_expr [ '=' assign_expr ]   ※右結合
+        """assign_expr ::= unary_expr '=' assign_expr | cond_expr   ※右結合
 
-        TODO(Step 5): lor_expr を読んだ後、'=' があれば
+        cond_expr は unary_expr を含むので、先に cond_expr まで読んでしまい
+        '=' があればそれを代入とみなす(仕様の unary_expr 限定は意味解析で検査)。
+        Core の scaffold トークンには複合代入(+= など)がないので '=' のみでよい
+        (複合代入は発展 L2 で扱う)。
+
+        TODO(Step 6): parse_cond() を読んだ後、'=' があれば
         parse_assign() を再帰して ND_ASSIGN を作る(右結合)。
         """
-        return self.parse_lor()  # TODO: '=' の処理を足す
+        return self.parse_cond()  # TODO: '=' の処理を足す
+
+    def parse_cond(self):
+        """cond_expr ::= lor_expr [ '?' expr ':' cond_expr ]   ※右結合
+
+        TODO(Step 5): lor_expr を読んだ後、'?' があれば
+        - then = parse_expr()(then 側は expr 全体。assign を含められる)
+        - ':' を expect
+        - else_ = parse_cond()(else 側だけ再帰、a?b:c?d:e の連鎖に対応)
+        で Node(ND_COND, cond=lor の木, then=then, else_=else_) を作る。
+        '?' がなければ lor_expr の結果をそのまま返す。
+        """
+        return self.parse_lor()  # TODO: '?' ':' の処理を足す
 
     def parse_binary(self, op_map, next_fn):
         """左結合の二項演算を汎用的にパースする共通部品。
@@ -122,23 +140,8 @@ class ExprParser:
         return self.parse_land()  # TODO
 
     def parse_land(self):
-        """land_expr ::= bitor_expr { '&&' bitor_expr }
-        TODO(Step 3)"""
-        return self.parse_bitor()  # TODO
-
-    def parse_bitor(self):
-        """bitor_expr ::= bitxor_expr { '|' bitxor_expr }
-        TODO(Step 3)"""
-        return self.parse_bitxor()  # TODO
-
-    def parse_bitxor(self):
-        """bitxor_expr ::= bitand_expr { '^' bitand_expr }
-        TODO(Step 3)"""
-        return self.parse_bitand()  # TODO
-
-    def parse_bitand(self):
-        """bitand_expr ::= eq_expr { '&' eq_expr }
-        TODO(Step 3)"""
+        """land_expr ::= eq_expr { '&&' eq_expr }
+        TODO(Step 3): parse_binary を使って実装する。"""
         return self.parse_eq()  # TODO
 
     def parse_eq(self):
@@ -147,18 +150,13 @@ class ExprParser:
         return self.parse_rel()  # TODO
 
     def parse_rel(self):
-        """rel_expr ::= shift_expr { ('<' | '>' | '<=' | '>=') shift_expr }
+        """rel_expr ::= add_expr { ('<' | '>' | '<=' | '>=') add_expr }
 
         TODO(Step 3): これは parse_binary では書けない。
         '>' と '>=' は lhs・rhs を入れ替えて ND_LT / ND_LE に正規化する
         (AST に ND_GT / ND_GE は存在しない — コマ5 資料の種明かし)。
         例: a > b は Node(ND_LT, lhs=b の木, rhs=a の木)
         """
-        return self.parse_shift()  # TODO
-
-    def parse_shift(self):
-        """shift_expr ::= add_expr { ('<<' | '>>') add_expr }
-        TODO(Step 3)"""
         return self.parse_add()  # TODO
 
     def parse_add(self):
@@ -179,12 +177,14 @@ class ExprParser:
         return self.parse_unary()  # TODO: ループを足す
 
     def parse_unary(self):
-        """unary_expr ::= ('-'|'!'|'~'|'*'|'&') unary_expr | postfix_expr
+        """unary_expr ::= ('-'|'!'|'*'|'&'|'++'|'--') unary_expr | postfix_expr
 
         TODO(Step 4): 前置演算子があれば読み進めて、
         自分自身を再帰した結果を operand に持つノードを作る。
-        - '-' → ND_NEG   '!' → ND_NOT   '~' → ND_BITNOT
-        - '*' → ND_DEREF '&' → ND_ADDR
+        - '-' → ND_NEG    '!' → ND_NOT
+        - '*' → ND_DEREF  '&' → ND_ADDR
+        - '++' → ND_PREINC(前置インクリメント)
+        - '--' → ND_PREDEC(前置デクリメント。後置形はこの言語にはない)
         どれでもなければ parse_postfix() へ。
         """
         return self.parse_postfix()  # TODO: 前置演算子を足す

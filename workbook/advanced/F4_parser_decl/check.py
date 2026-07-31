@@ -8,6 +8,8 @@
 Step 1 は型文字列を直接比べる。
 Step 2 以降は、同じ入力を scaffold の Parser にも解析させて AST を構造比較する
 (失敗時は両方の S 式を表示する)。
+各 Step には「弾かれるべき入力」の確認も含まれる —
+位置ごとの型検証(void 単独・struct 値)は、この回の主題そのものである。
 """
 
 import importlib.util
@@ -39,7 +41,7 @@ def sig(n):
     return (n.kind, n.val, n.sval, n.name, n.is_arrow, n.ty_str,
             sig(n.lhs), sig(n.rhs), sig(n.operand),
             sig(n.cond), sig(n.then), sig(n.else_),
-            sig(n.init), sig(n.step), sig(n.body), sig(n.init_expr),
+            sig(n.init), sig(n.step), sig(n.body),
             tuple(sig(a) for a in n.args),
             tuple(sig(s) for s in n.stmts),
             tuple(sig(p) for p in n.params))
@@ -57,6 +59,19 @@ def check(label, actual, expected):
     else:
         print(f"  [FAIL] {label} — expected={expected!r}, got={actual!r}")
         fail_count += 1
+
+
+def check_error(label, mine_fn):
+    """「弾かれるべき入力」がエラーになることを確認する。"""
+    global pass_count, fail_count
+    try:
+        result = mine_fn()
+    except SyntaxError:
+        print(f"  [PASS] {label}(正しくエラー)")
+        pass_count += 1
+        return
+    print(f"  [FAIL] {label} — エラーになるべきだが通ってしまった: {result!r}")
+    fail_count += 1
 
 
 def check_vs_scaffold(label, mine_fn, scaffold_fn):
@@ -89,81 +104,92 @@ def run_step(name, fn):
         skip_count += 1
 
 
-def mine(src, typedefs=()):
-    p = myparser.ProgramParser(tokenize(src))
-    p.typedef_names = set(typedefs)
-    return p
+def mine(src):
+    return myparser.ProgramParser(tokenize(src))
 
 
-def scaffold(src, typedefs=()):
-    p = ScaffoldParser(tokenize(src))
-    p.typedef_names = set(typedefs)
-    return p
+def scaffold(src):
+    return ScaffoldParser(tokenize(src))
 
 
 # ---------------------------------------------------------------
-# Step 1: parse_type / is_type_start
+# Step 1: is_type_start / parse_base_and_stars / 位置ごとの型
 # ---------------------------------------------------------------
 
 
 def step1():
-    check("parse_type: int", mine("int").parse_type(), "int")
-    check("parse_type: int **", mine("int **").parse_type(), "int**")
-    check("parse_type: char *", mine("char *").parse_type(), "char*")
-    check("parse_type: struct Node *",
-          mine("struct Node *").parse_type(), "struct Node*")
-    check("parse_type: typedef 名",
-          mine("Point *", typedefs=["Point"]).parse_type(), "Point*")
     check("is_type_start: int", mine("int x;").is_type_start(), True)
     check("is_type_start: struct", mine("struct Node n;").is_type_start(), True)
     check("is_type_start: 式の先頭", mine("x = 1;").is_type_start(), False)
-    check("is_type_start: typedef 名",
-          mine("Point p;", typedefs=["Point"]).is_type_start(), True)
-    check("is_type_start: 未登録の名前",
-          mine("Point p;").is_type_start(), False)
+    check("is_type_start: ただの識別子", mine("Point p;").is_type_start(), False)
+
+    check("parse_base_and_stars: int **",
+          mine("int **").parse_base_and_stars(), ("int", "**"))
+    check("parse_base_and_stars: struct Node *",
+          mine("struct Node *").parse_base_and_stars(), ("struct Node", "*"))
+
+    # obj_type(変数宣言・sizeof の型名): struct 値は可、void 単独は不可
+    check("obj_type: int", mine("int").parse_obj_type(), "int")
+    check("obj_type: char *", mine("char *").parse_obj_type(), "char*")
+    check("obj_type: struct Point(値)",
+          mine("struct Point").parse_obj_type(), "struct Point")
+    check_error("obj_type: void 単独", lambda: mine("void").parse_obj_type())
+
+    # scalar_type(引数・フィールド): struct 値も void 単独も不可
+    check("scalar_type: int *", mine("int *").parse_scalar_type(), "int*")
+    check("scalar_type: void *", mine("void *").parse_scalar_type(), "void*")
+    check_error("scalar_type: void 単独", lambda: mine("void").parse_scalar_type())
+    check_error("scalar_type: struct 値",
+                lambda: mine("struct Point").parse_scalar_type())
+
+    check_error("型でないもの", lambda: mine("Point").parse_base_and_stars())
 
 
 # ---------------------------------------------------------------
-# Step 2: 宣言とブロック
+# Step 2: 局所宣言と関数本体
 # ---------------------------------------------------------------
 
-BLOCKS = [
+BODIES = [
     "{ int a; a = 1; return a; }",
-    "{ int a = 42; return a; }",
-    "{ int a[5]; int i; return a[i]; }",
     "{ int *p; char c; return 0; }",
-    "{ int x; if (x == 3) { int y; y = 4; return x + y; } return 0; }",
+    "{ struct Point p; p.x = 3; return p.x; }",
+    "{ int x; if (x == 3) { x = x + 1; } return x; }",
+    "{ int i; int s; s = 0; for (i = 0; i < 3; ++i) { s = s + i; } return s; }",
 ]
 
 
 def step2():
-    for src in BLOCKS:
-        check_vs_scaffold(f"ブロック {src[:30]!r}...",
-                          lambda s=src: mine(s).parse_block(),
-                          lambda s=src: scaffold(s).parse_block())
+    for src in BODIES:
+        check_vs_scaffold(f"関数本体 {src[:32]!r}...",
+                          lambda s=src: mine(s).parse_func_body(),
+                          lambda s=src: scaffold(s).parse_func_body())
+    check_error("void 型のローカル変数",
+                lambda: mine("{ void v; return 0; }").parse_func_body())
+    check_error("宣言は先頭のみ(途中の宣言は式文として読まれて落ちる)",
+                lambda: mine("{ int a; a = 1; int b; return a; }").parse_func_body())
 
 
 # ---------------------------------------------------------------
-# Step 3: sizeof
+# Step 3: sizeof(型名形式のみ)
 # ---------------------------------------------------------------
 
 SIZEOFS = [
-    ("sizeof(int)", ()),
-    ("sizeof(char *)", ()),
-    ("sizeof(struct Node)", ()),
-    ("sizeof(Node)", ("Node",)),
-    ("sizeof(x)", ()),          # x は型ではない → sizeof 式
-    ("sizeof x", ()),
-    ("sizeof *p", ()),
-    ("sizeof(Node) + 1", ("Node",)),
+    "sizeof(int)",
+    "sizeof(char *)",
+    "sizeof(struct Node)",
+    "sizeof(void *)",
+    "sizeof(int) * 5",
 ]
 
 
 def step3():
-    for src, tds in SIZEOFS:
+    for src in SIZEOFS:
         check_vs_scaffold(f"sizeof {src!r}",
-                          lambda s=src, t=tds: mine(s, t).parse_expr(),
-                          lambda s=src, t=tds: scaffold(s, t).parse_expr())
+                          lambda s=src: mine(s).parse_expr(),
+                          lambda s=src: scaffold(s).parse_expr())
+    check_error("sizeof x(式形式はない)", lambda: mine("sizeof x").parse_expr())
+    check_error("sizeof(x)(式形式はない)", lambda: mine("sizeof(x)").parse_expr())
+    check_error("sizeof(void)", lambda: mine("sizeof(void)").parse_expr())
 
 
 # ---------------------------------------------------------------
@@ -173,10 +199,10 @@ def step3():
 FUNCS = [
     ("int", "add", "(int a, int b) { return a + b; }"),
     ("int", "main", "() { return 0; }"),
-    ("int", "main", "(void) { return 0; }"),
     ("int", "f", "(int x);"),
     ("int", "printf", "(char *fmt, ...);"),
     ("void", "g", "(int *p, char c) { *p = c; }"),
+    ("struct Node*", "next_of", "(struct Node *n) { return n->next; }"),
 ]
 
 
@@ -187,29 +213,49 @@ def step4():
                               mine(r).parse_func(t, n),
                           lambda t=ty, n=name, r=rest:
                               scaffold(r)._parse_func(t, n))
+    check_error("引数 (void) は書けない",
+                lambda: mine("(void) { return 0; }").parse_func("int", "main"))
+    check_error("引数が struct 値",
+                lambda: mine("(struct Point p);").parse_func("int", "f"))
+    check_error("固定引数なしの ...",
+                lambda: mine("(...);").parse_func("int", "f"))
+    check_error("可変長の定義は書けない",
+                lambda: mine("(char *fmt, ...) { return 0; }")
+                        .parse_func("int", "f"))
 
 
 # ---------------------------------------------------------------
-# Step 5: parse_program / typedef / グローバル変数
+# Step 5: struct 定義 / parse_program
 # ---------------------------------------------------------------
 
 PROGRAMS = [
     "int g; int main() { g = 1; return g; }",
-    "int base = 7; int main() { return base; }",
-    "int a[10]; int main() { return a[0]; }",
-    "typedef int myint; int main() { myint x; x = 1; return x; }",
-    "typedef struct { int x; int y; } Point; "
-    "int main() { Point p; p.x = 3; return p.x; }",
-    "typedef struct Node { int val; struct Node *next; } Node; "
-    "int main() { Node *n; return 0; }",
+    "char *msg; int main() { msg = \"hi\"; return 0; }",
+    "int main() { int *p; p = malloc(sizeof(int) * 4); p[0] = 1; return p[0]; }",
+    "struct Point { int x; int y; }; "
+    "int main() { struct Point p; p.x = 3; return p.x; }",
+    "struct Node; "
+    "struct Node { int val; struct Node *next; }; "
+    "struct Node *head; "
+    "int main() { return 0; }",
     "int is_even(int n); int is_odd(int n); "
     "int is_even(int n) { if (n == 0) { return 1; } return is_odd(n - 1); } "
     "int is_odd(int n) { if (n == 0) { return 0; } return is_even(n - 1); } "
     "int main() { return is_even(10); }",
 ]
 
+BAD_PROGRAMS = [
+    ("空のプログラム", ""),
+    ("void のグローバル変数", "void v; int main() { return 0; }"),
+    ("struct 値の戻り値",
+     "struct Point { int x; }; struct Point f() { struct Point p; return p; }"),
+    ("フィールドが struct 値",
+     "struct Inner { int x; }; struct Outer { struct Inner in; };"),
+]
+
 
 def step5():
+    global pass_count, fail_count
     for src in PROGRAMS:
         def mine_prog(s=src):
             return myparser.ProgramParser(tokenize(s)).parse_program()
@@ -217,7 +263,6 @@ def step5():
         def scaffold_prog(s=src):
             return ScaffoldParser(tokenize(s)).parse_program()
 
-        global pass_count, fail_count
         expected = [sig(n) for n in scaffold_prog()]
         try:
             actual = [sig(n) for n in mine_prog()]
@@ -232,12 +277,15 @@ def step5():
             print(f"  [FAIL] {src[:40]!r}... — AST が scaffold と不一致")
             fail_count += 1
 
+    for label, src in BAD_PROGRAMS:
+        check_error(label, lambda s=src: mine(s).parse_program())
 
-run_step("Step 1: parse_type / is_type_start", step1)
-run_step("Step 2: 宣言とブロック", step2)
+
+run_step("Step 1: 型 — is_type_start と位置ごとの 3 分類", step1)
+run_step("Step 2: 局所宣言と関数本体", step2)
 run_step("Step 3: sizeof", step3)
 run_step("Step 4: 関数", step4)
-run_step("Step 5: parse_program / typedef / グローバル変数", step5)
+run_step("Step 5: struct 定義 / parse_program", step5)
 
 print()
 print("=============================")

@@ -2,7 +2,7 @@
 
 ## 今日のゴール
 
-宣言・型・関数・`typedef` を実装して `parse_program` を完成させる。
+型・宣言・`struct` 定義・関数を実装して `parse_program` を完成させる。
 講義の全テスト入力（約100本の `.c`）で AST が scaffold と**完全一致**したら、
 Lexer（F1）とあわせて**黒箱の完全な置き換え**を宣言する。
 
@@ -13,157 +13,258 @@ Lexer（F1）とあわせて**黒箱の完全な置き換え**を宣言する。
   F2（式）→ F3（文）→ F4（宣言・型）で完結する
 - F2 で先送りした `sizeof` も、この回で最後のピースとして埋める
 
-## 宣言か、文か — C の文法の最難関
+## 宣言か、文か — 判定は4語の照合で終わる
 
-F3 のコラムで予告した問題から始める。ブロックの中の次の2行を考える。
+F3 のコラムで予告した問題から始める。関数本体の先頭の2行を考える。
 
 ```c
-Point p;   /* 宣言 */
-x = 1;     /* 式文 */
+struct Point p;   // 宣言
+x = 1;            // 式文
 ```
 
-`Point p ;` と `x = 1 ;` は、どちらも「識別子で始まる」。
-トークンの種類だけを見ても、宣言か式かは決められない。
-**`Point` が型名かどうかを知っていて、はじめて区別できる**。
+宣言と式文を見分ける必要がある。この言語では、その判定は次の1行で終わる。
 
-そこでパーサは、`typedef` で定義された型名の集合 `typedef_names` を持ち歩き、
-「宣言の開始かどうか」を次の順で判定する。
+```python
+def is_type_start(self):
+    return self.cur.kind == TK_KW and self.cur.sval in TYPE_KEYWORDS
+```
 
-![宣言か文か — is_type_start と typedef_names](figures/F4_decl_or_stmt.svg)
+`TYPE_KEYWORDS` は `('int', 'char', 'void', 'struct')` の4語である。
+型を書き始められるトークンはこの4語だけで、**解析中に増えることがない**。
+だから表もいらず、字句解析器へ情報を戻す必要もない。
 
-`typedef_names` は**解析の途中で育つ**。
-`typedef` を1つ読むたびに名前が増え、それ以降の行の解釈が変わる。
-文法が入力の前の方に依存する — これが C の文法の文脈依存性である。
+![宣言か文か — トップレベルと関数本体の判定](figures/F4_decl_or_stmt.svg)
 
 ::: note
 
-**コラム: lexer hack。**
-`language_spec.md` の EBNF には「`TYPEDEF_NAME` は字句解析時にシンボルテーブルを
-参照して `IDENT` と区別する」とある。本物の C コンパイラの多くは、
-実際にパーサから字句解析器へ型名の表をフィードバックする。
-この折衷は俗に **lexer hack** と呼ばれる。
-scaffold は、より単純に**パーサ側で** `TK_IDENT` を表と照合する方式を採っている
-（トークンの種類は変えず、解釈だけ変える）。どちらでも解ける問題だが、
-「層をまたぐ情報の逆流」が必要になる時点で、C の文法の設計上の傷と言われる所以である。
+**コラム: 本物の C ではこの1行が書けない。**
+C には `typedef` があるので、`Point p;` の `Point` が型名かどうかは
+「そこまでに `typedef` を読んだか」で変わる。つまり同じトークン列
+「識別子 識別子 `;`」が、宣言にも式にもなりうる。
+パーサは型名の集合を持ち歩き、解析しながらそれを育てなければならない
+——これが C の文法の**文脈依存性**である。
+`language_spec.md` の EBNF が参照している N1570 の文法では、
+型名は `TYPEDEF_NAME` という**別のトークン種別**になっていて、
+多くの実装はパーサから字句解析器へ型名の表をフィードバックしてこれを作る。
+この折衷は俗に **lexer hack** と呼ばれ、C の文法の設計上の傷と言われる。
+
+Core プロファイルは `typedef` を持たない。
+その1つの決定だけで、パーサは表もフィードバックも持たずに済み、
+判定は4語の集合照合に縮んだ。
+**言語の設計が実装の難しさを決める**——F1 のコラムで見た `a-->b` も、
+「後置 `--` を持たない」という決定ひとつで解釈の分かれ道が消えていた。
+同じことが、ここではもっと大きな規模で起きている。
 
 :::
 
-## parse_type — ty_str はここで生まれる
+## 型を読む — 「どこに書かれた型か」で許される型が違う
 
-型は `ty_str` 文字列として返す。コマ10 からずっと使ってきた
-`'int'` `'int*'` `'int[5]'` という表記の出所がこの関数である。
+型そのものの読み方は単純である。基底（`int` / `char` / `void` / `struct タグ`）を
+読み、続く `*` を数えるだけ。
 
-```text
-type ::= base_type { '*' }
+```python
+def parse_base_and_stars(self):
+    """('int', '**') のような組を返す"""
 ```
 
-| 入力 | 返す ty_str |
-|------|------------|
-| `int` | `int` |
-| `char *` | `char*` |
-| `int **` | `int**` |
-| `struct Node *` | `struct Node*` |
-| `Point`（typedef 済み） | `Point` |
+`ty_str` 文字列（`'int'` `'char*'` `'struct Node*'`）は、この組をつないで作る。
+コマ10 からずっと使ってきた表記の出所がここである。
 
-`struct` の後にインライン定義 `{ ... }` が続く場合は、
-**中身を読み飛ばす**（`skip_braces`）。フィールドの情報は AST に残さない。
+問題は**その型がどこに書かれたか**である。`language_spec.md` の型の EBNF は、
+1つではなく**位置ごとに3つ**の非終端記号に分かれている。
 
-これはコマ12 の種明かしである。あの回で構造体のフィールドを
-「ソース文字列を走査して集める」という一見遠回りな方法を使ったのは、
+| 位置 | 呼ぶ関数 | 書ける型 | 弾かれる型 |
+|------|----------|----------|-----------|
+| 引数・`struct` フィールド | `parse_scalar_type` | `int` / `char` / ポインタ全般 | `void` 単独、`struct` 値 |
+| 変数宣言・`sizeof` の型名 | `parse_obj_type` | 上記 + `struct` 値 | `void` 単独 |
+| 関数の戻り値 | （`parse_program` 内で検証） | 上記 + `void` 単独 | `struct` 値 |
+
+![位置ごとに許される型 — scalar / obj / ret](figures/F4_type_positions.svg)
+
+同じ「基底 + `*`」の文法を読んでいるのに、通る型が位置ごとに違う。
+scaffold はこれを**読んでから検証する**形で実装している。
+
+```python
+def parse_scalar_type(self):
+    base, stars = self.parse_base_and_stars()
+    if base == 'void' and not stars:
+        self.error("void 型は使えません(void * は可)")
+    if base.startswith('struct') and not stars:
+        self.error("struct 値はここでは使えません(ポインタにする)")
+    return base + stars
+```
+
+弾かれる2つには、それぞれ理由がある。
+
+- **`void` 単独**は「サイズを持たない型」である。スタックにも `.bss` にも
+  場所を取れないので、変数・フィールド・引数という**実体**にはできない。
+  戻り値だけは「値を返さない」という意味で使える
+- **`struct` 値**を引数や戻り値にすると、コピーの規則が必要になる。
+  サイズは型ごとに違い、小さければレジスタ2本、大きければ呼び出し側が
+  確保した領域へ——というのが実際の ABI の規定である（コマ7 の引数渡し規則が
+  一気に複雑になる）。この言語は「struct はポインタで渡す」に限定して、
+  その規則ごと避けた。フィールドに `struct` 値を許さないのも同じ判断で、
+  コマ12 のレイアウト計算をスカラーとポインタだけに閉じている
+
+::: note
+
+**この検査は構文の仕事か、意味解析の仕事か。**
+「`void` の変数は作れない」は、型に関する制約なので意味解析（型検査）に
+置くこともできる。実際 F2 では、`1 + 2 = x` の左辺検査を
+「意味解析に任せる」として通していた。
+ここで構文側に置けたのは、**位置と型の組み合わせだけで判定が閉じる**からである。
+変数表も型環境も要らず、その場のトークンだけで決まる制約は、文法に書ける。
+逆に「代入の左右の型が合うか」は周囲の情報が要るので文法には書けず、
+発展 Q1（型検査器）の仕事になる。
+**どの層で弾くかは設計判断**であり、文法に書けるものを文法に書いておくと、
+後段が扱う場合の数がその分減る。
+
+:::
+
+## 局所宣言と関数本体 — 宣言を置ける場所は1箇所だけ
+
+局所宣言は初期化子を持たない（`int a;` と書いて、値は次の行で代入する）。
+
+```text
+local_decl ::= obj_type IDENT ';'
+```
+
+宣言を書けるのは**関数本体の先頭だけ**である。そこで F4 が新設するのは
+`parse_func_body` で、F3 の `parse_block` は**上書きしない**。
+
+```python
+def parse_func_body(self):
+    self.expect('{')
+    stmts = []
+    while self.is_type_start():          # ← 宣言の並び。関数本体だけの特権
+        stmts.append(self.parse_local_decl())
+    while not self.consume_if('}'):      # ← ここから先は F3 の parse_block と同じ
+        stmts.append(self.parse_stmt())
+    return Node(ND_BLOCK, stmts=stmts)
+```
+
+同じ `{ ... }` の見た目でも、関数本体と入れ子ブロックは**別の規則**である。
+`if` の中の `{ ... }` は `parse_stmt` 経由で F3 の `parse_block` に届き、
+そこには `is_type_start` のループがない。だから入れ子ブロックの中の
+`int y;` は「型キーワードで始まる式文」として読まれ、構文エラーになる。
+「関数の中の宣言は先頭にまとめる」という規則が、
+**2つの関数を分けた**という形でコードに刻まれている。
+
+## struct 定義 — 検証はするが、AST には残さない
+
+トップレベルには `struct` で始まる形が3つ並ぶ。
+
+```c
+struct Node { int val; struct Node *next; };   // 定義
+struct Node;                                   // 前方宣言
+struct Node *head;                             // グローバル変数
+```
+
+先頭トークンはどれも `struct`、次はどれもタグ名である。
+分かれるのは**その次**なので、判定には2トークン先読みが要る。
+
+```python
+if self.cur.sval == 'struct' and self.peek(2).sval in ('{', ';'):
+    self.parse_struct_decl()
+    continue
+```
+
+`parse_struct_decl` はフィールドを1個以上読み、それぞれを
+`parse_scalar_type`（= `struct` 値と `void` 単独を弾く）で検証する。
+そして——**Node を1つも作らずに戻る**。
+
+これがコマ12 の種明かしである。あの回で構造体のフィールドを
+「ソース文字列を走査して集める」という一見遠回りな方法で扱ったのは、
 Parser が意図的にフィールドを AST に残していないからだった。
 **何を AST に残し、何を残さないかも設計**であり、scaffold は
 「コード生成に必要な最小限」に絞る側に倒している（発展課題で逆の設計も試せる）。
 
-## 宣言 — declarator と配列サフィックス
-
-```text
-local_decl ::= type declarator [ '=' expr ] ';'
-declarator ::= IDENT [ '[' INT ']' ]
-```
-
-`int a[5]` は、型 `int` + 宣言子 `a[5]` と読み、`ty_str` を `'int[5]'` に組み立てる。
-初期化子があれば `parse_expr` で読む（コマ4 の `int a = 42;` がここに来る）。
-
-ブロックは F3 版を**上書き**して、C89 スタイル「宣言が先頭」に対応する。
-
-```python
-def parse_block(self):
-    self.expect('{')
-    stmts = []
-    while self.is_type_start():          # ← この行が F4 の追加分
-        stmts.append(self.parse_local_decl())
-    while not self.consume_if('}'):
-        ...
-```
-
-宣言の判定に `is_type_start` を使うので、`typedef` された型のローカル変数
-（コマ12 の `Point p;`）もここで正しく宣言になる。
-
 ## sizeof — F2 で先送りした最後のピース
 
-`sizeof` には2つの形がある。
+`sizeof` の形は1つだけである。
 
 ```text
-'sizeof' '(' type ')'     →  ND_SIZEOF_TYPE（ty_str を持つ）
-'sizeof' unary_expr       →  ND_SIZEOF_EXPR（式を持つ）
+'sizeof' '(' obj_type ')'    →  ND_SIZEOF_TYPE（ty_str を持つ）
 ```
 
-厄介なのは `(` を見ただけでは区別できないことである。
-`sizeof(int)` は型、`sizeof(x)` は式（カッコつきの `x`）。
-そこで **`(` の次のトークン**を `peek(1)` で覗き、型の開始なら型版として読む。
+式に対する `sizeof` はこの言語にはない。`sizeof(x)` は構文エラーになる。
+`(` の次が型キーワードなら型名形式、そうでなければ——**そうでない場合はない**。
 
-これが F2 の LL(1) コラムで「唯一きわどい」と言った箇所である。
-判定には `typedef_names` も使うので、`sizeof(Node)` が型版になるのは
-`typedef struct Node {...} Node;` を先に読んでいるからである
-（コマ13 の `malloc(sizeof(Node))` はこうして解析されていた）。
+```python
+def parse_sizeof(self):
+    self.pos += 1  # 'sizeof'
+    if not (self.cur.sval == '(' and self.peek_is_type()):
+        self.error("sizeof は sizeof(型名) 形式のみ使えます")
+    ...
+```
+
+F2 の LL(1) のコラムで「唯一きわどいのは `sizeof(x)` の `(` の次が型か式かの判定だ」
+と書いた。その曖昧さは、`sizeof` を型名形式に絞った時点で**消えている**。
+`peek_is_type` が残っているのは判定のためではなく、
+「`(` が来ていない」「型でないものが来た」を**その場で名指しできる**ようにするため——
+つまり良いエラーメッセージのためである。
+
+先読みが本当に必要だったのは、むしろ1つ上の節の `struct` 定義の判定
+（`peek(2)`）のほうだった。**きわどい箇所は、思っていたのと別の場所にある**。
 
 ## 関数 — 宣言か定義かは「読み進めた結果」で分かる
 
 ```text
-func_proto ::= type declarator '(' [params] ')' ';'
-func_def   ::= type declarator '(' [params] ')' block
+func_proto ::= ret_type IDENT '(' [ params [ ',' '...' ] ] ')' ';'
+func_def   ::= ret_type IDENT '(' [ params ] ')' func_body
 ```
 
 引数リストを読み終えるまで、宣言（`ND_FUNCPROTO`）か定義（`ND_FUNCDEF`）かは
 分からなくてよい。**閉じカッコの次が `;` なら宣言、`{` なら定義**と、
 読み進めた結果で決めればよい（先読み不要）。
 
-引数リストには3つの特例がある。
+引数リストの規則は4つ。
 
 | 形 | 扱い |
 |----|------|
-| `f()` / `f(void)` | 引数なし（`params` は空リスト） |
-| `f(char *fmt, ...)` | `...` が来たらそこで打ち切る（可変長宣言。`lib.h` の `printf` 用） |
-| 引数名の省略 `f(int)` | 名前は空文字列でよい（プロトタイプで使われる） |
+| `f()` | 引数なし（`params` は空リスト） |
+| `f(void)` | **構文エラー**。`parse_scalar_type` が `void` 単独を弾く |
+| `f(int)` | **構文エラー**。仮引数は名前必須 |
+| `f(char *fmt, ...)` | `...` で打ち切る。固定引数が1個以上必要で、**プロトタイプ限定**（`lib.h` の `printf` 用） |
+
+下2つは、F2 までの「多めに受理して後段で弾く」方針とは逆の判断である。
+`(void)` も引数名の省略も、**書けても意味が増えない**（本物の C では
+`()` と `(void)` に意味の差があるが、この言語の `()` は常に「0引数」である）。
+受理する形を1つに絞れば、後段が場合分けを持たずに済む。
 
 ## parse_program — 全体を組み立てる
 
 トップレベルは3種類だけである。
 
 ```text
-program ::= { typedef | グローバル変数宣言 | 関数宣言/定義 }
+program ::= { struct 定義/前方宣言 | グローバル変数宣言 | 関数宣言/定義 }+
 ```
 
-1. `typedef` なら `parse_typedef()`。**AST ノードは作らず**、型名の登録だけする
-2. それ以外は `parse_type` → 名前、と読み進めて、
-   次が `(` なら関数、そうでなければグローバル変数
+1. `struct` + タグ名 + `{` または `;` なら `parse_struct_decl()`。**AST には何も足さない**
+2. それ以外は基底と `*` を読み、名前を読む。次が `(` なら関数、そうでなければ
+   グローバル変数
+3. 空のプログラム（外部宣言が0個）はエラーにする
 
-グローバル変数（コマ14 の `int total;` や `int base = 7;`）は、
-ローカル宣言と同じ `ND_DECL` になる。トップレベルにあるか関数の中にあるかで
-コード生成側が `.bss`/`.data` かスタックかを決めていた（コマ14）。
+戻り値型の検証（`struct` 値は不可）とグローバル変数の検証（`void` 単独は不可）が
+ここに直接書かれているのは、**名前の次を見るまで、どちらの位置なのか決まらない**
+からである。`parse_scalar_type` のように読む前から位置が分かっていれば関数に
+くくれるが、ここだけは「読んでから分岐して、分岐先で検証する」形になる。
+
+グローバル変数（コマ14 の `int total;`）は、ローカル宣言と同じ `ND_DECL` になる。
+トップレベルにあるか関数の中にあるかでコード生成側が `.bss` かスタックかを
+決めていた（コマ14）。
 
 ## 実装
 
 | Step | 実装対象 | 内容 |
 |------|----------|------|
-| 1 | `is_type_start` / `parse_type` | 型の判定と ty_str の組み立て |
-| 2 | `parse_array_suffix` / `parse_local_decl` / `parse_block`（上書き） | 宣言。C89 スタイル |
-| 3 | `peek_is_type` / `parse_sizeof` | `(` の次を覗く |
-| 4 | `parse_func` | params・`(void)`・`...`・宣言/定義 |
-| 5 | `parse_typedef` / `parse_program` | 型名の登録とトップレベル |
+| 1 | `is_type_start` / `parse_base_and_stars` / `parse_obj_type` / `parse_scalar_type` | 型の読み取りと位置ごとの検証 |
+| 2 | `parse_local_decl` / `parse_func_body` | 宣言は関数本体の先頭のみ |
+| 3 | `peek_is_type` / `parse_sizeof` | 型名形式のみ |
+| 4 | `parse_func` | params・`...`・宣言/定義の後決め |
+| 5 | `parse_field` / `parse_struct_decl` / `parse_program` | struct 定義とトップレベル |
 
-`expect_ident` / `skip_braces` / `parse_unary` の上書き（sizeof への分岐）/
-入口 `parse()` は完成済み。
+`expect_ident` / `parse_unary` の上書き（`sizeof` への分岐）/ 入口 `parse()` は完成済み。
 
 ```bash
 python3 myparser.py ../../sessions/13_sizeof_malloc_list/tests/list_min.c
@@ -177,14 +278,17 @@ python3 golden.py    # 全テスト入力(約100本)で scaffold と突き合わ
 ```
 
 check.py の Step 2 以降は、同じ入力を scaffold にも解析させて構造比較する。
+各 Step には「弾かれるべき入力」の確認（`void v;` / `f(struct Point p)` /
+`sizeof x` など）も入っている。**通す**だけでなく**弾く**のもパーサの仕事だからである。
+
 golden.py が**全ファイル一致になったら、このシリーズの完了**である。
 
 ![完成したフロントエンド — 黒箱はもうない](figures/F4_full_pipeline.svg)
 
-## 総仕上げ（任意）— mycc.py に差し替えて fixed15 を回す
+## 総仕上げ（任意）— mycc.py に差し替えて fixed17 を回す
 
 golden test は「同じ AST が出る」ことの証明なので、理屈の上では
-自作フロントエンドで fixed15 も通るはずである。実際に確かめたい場合は、
+自作フロントエンドで fixed17 も通るはずである。実際に確かめたい場合は、
 `final/mycc.py` の先頭にある
 
 ```python
@@ -198,7 +302,7 @@ import importlib.util as _il
 _spec = _il.spec_from_file_location(
     "myparser",
     os.path.join(os.path.dirname(__file__), "..", "advanced",
-                 "frontend", "F4_parser_decl", "myparser.py"))
+                 "F4_parser_decl", "myparser.py"))
 _mod = _il.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 parse = _mod.parse
@@ -215,13 +319,19 @@ parse = _mod.parse
 | F1 | 字句解析 — 最長一致・分岐の順序・行番号。golden test という検証手法 |
 | F2 | 再帰下降（式）— EBNF の階層 = 関数の階層。左結合はループ、右結合は再帰 |
 | F3 | 再帰下降（文）— 先頭トークンでのディスパッチ。dangling else の自然な解決 |
-| F4 | 宣言・型 — 文脈依存性（typedef_names）。プログラム全体の組み立て |
+| F4 | 宣言・型 — 位置ごとに許される型が違う。文法に書ける制約は文法に書く |
 
 出発点の CYK は汎用だが遅く、到達点の再帰下降は
-「文法を LL(1) に設計しておけば、先読み1トークン・線形時間・手書き可能」だった。
+「文法を LL(1) に設計しておけば、先読み1〜2トークン・線形時間・手書き可能」だった。
 この対比が、実用コンパイラのフロントエンドが再帰下降で書かれている理由である。
 
-そして次の一歩は Phase 3 の C 移植である。
+そして F4 で繰り返し見たのは、その「設計しておけば」の重みである。
+`typedef` を持たない・`sizeof` を型名形式に絞る・`(void)` を受理しない・
+`struct` 値を渡さない——どれも**言語の側の1行の決定**だが、
+その1つずつが、パーサから表・先読み・場合分けを1つずつ消していった。
+コンパイラの複雑さは、書き方より先に**何を許すかで決まる**。
+
+次の一歩は Phase 3 の C 移植である。
 いま Python で書いたこのフロントエンドを C に写せば
 （`dict` → 連結リスト、クラス → `struct` の定石どおり）、
 セルフホストに必要な部品がすべて自分の手の中に揃う。
@@ -230,11 +340,15 @@ parse = _mod.parse
 
 1. **前処理も自作する**: `preprocess()`（`#include` / `#define`）を自作して、
    scaffold への依存を完全にゼロにする（上位トラックの `#define` 自前化と同じ課題）
-2. **struct のフィールドを AST に残す**: `parse_type` の `skip_braces` をやめて
-   フィールドを `ND_DECL` のリストとして持たせ、コマ12 のソース走査を
-   不要にする改造を設計する（scaffold を超える設計変更。golden は通らなくなる）
-3. **エラー回復**: エラーで即座に止めず、`;` か `}` まで読み飛ばして解析を続行し、
+2. **struct のフィールドを AST に残す**: `parse_struct_decl` を、フィールドを
+   `ND_DECL` のリストとして持つノードを返す形に改造し、コマ12 のソース走査を
+   不要にする設計を試す（scaffold を超える設計変更。golden は通らなくなる）
+3. **`typedef` を足してみる**: 型名の集合 `typedef_names` を持ち、
+   `is_type_start` を「4語 **または** 表にある識別子」に広げる。
+   golden は通らなくなるが、コラムで述べた文脈依存性を自分の手で作れる。
+   そのうえで、増えたコードの量を数えてみるとよい
+4. **エラー回復**: エラーで即座に止めず、`;` か `}` まで読み飛ばして解析を続行し、
    1回の実行で複数のエラーを報告する（パニックモード回復）
-4. **OCaml 参考実装と読み比べる**: 配布済みの `workbook/ocaml/support/parser.mly`（Menhir）は、
+5. **OCaml 参考実装と読み比べる**: 配布済みの `workbook/ocaml/support/parser.mly`（Menhir）は、
    同じ文法を宣言的に書いている。自分の手書き再帰下降と見比べ、
    生成系が何を自動化しているのかを確かめる

@@ -31,7 +31,7 @@ TK_PUNCT = 'TK_PUNCT'  # 演算子・区切り文字
 TK_EOF   = 'TK_EOF'    # 入力終端
 
 KEYWORDS = {
-    'int', 'char', 'void', 'struct', 'typedef',
+    'int', 'char', 'void', 'struct',
     'if', 'else', 'while', 'for',
     'return', 'break', 'continue',
     'sizeof',
@@ -39,13 +39,13 @@ KEYWORDS = {
 
 # 2文字演算子(長いものから先に試す)
 TWO_CHAR_PUNCTS = [
-    '==', '!=', '<=', '>=', '&&', '||', '<<', '>>', '->',
+    '==', '!=', '<=', '>=', '&&', '||', '->', '++', '--',
 ]
 
-ONE_CHAR_PUNCTS = set('+-*/%&|^~!<>=;:,.(){}[]')
+ONE_CHAR_PUNCTS = set('+-*/%&!<>=;:,.?(){}[]')
 
-# エスケープ文字 → 文字コード
-ESCAPES = {'n': 10, 't': 9, '\\': 92, "'": 39, '"': 34, '0': 0, 'r': 13}
+# エスケープ文字 → 文字コード(6 種のみ。言語仕様「リテラル」参照)
+ESCAPES = {'n': 10, 't': 9, '\\': 92, "'": 39, '"': 34, '0': 0}
 
 
 @dataclass
@@ -94,7 +94,7 @@ class Lexer:
             c = self.src[self.i]
             if c in ' \t\r\n':
                 self.skip_whitespace()                 # Step 1
-            elif self.startswith('//') or self.startswith('/*'):
+            elif self.startswith('//'):
                 self.skip_comment()                    # Step 1
             elif c.isdigit():
                 self.read_number()                     # Step 1
@@ -121,13 +121,11 @@ class Lexer:
         raise NotImplementedError("Step 1: skip_whitespace を実装する")
 
     def skip_comment(self):
-        """// 行コメント、または /* */ ブロックコメントを読み飛ばす。
+        """// 行コメントを読み飛ばす(ブロックコメントは言語仕様にない)。
 
         方針:
-        - '//' なら、行末(または入力終端)まで読み飛ばす。改行自体は消費しない
+        - 行末(または入力終端)まで読み飛ばす。改行自体は消費しない
           (次のループの skip_whitespace が行番号を数える)
-        - '/*' なら、'*/' が見つかるまで読み飛ばす。途中の改行で self.line を
-          1増やす。終端せずに入力が尽きたら self.error(...) を呼ぶ
         """
         raise NotImplementedError("Step 1: skip_comment を実装する")
 

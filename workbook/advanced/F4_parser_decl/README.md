@@ -4,9 +4,12 @@
 
 ## 今日のゴール
 
-宣言・型・関数・typedef を実装して `parse_program` を完成させる。
+型・宣言・`struct` 定義・関数を実装して `parse_program` を完成させる。
 講義の全テスト入力（約100本の `.c`）で AST が scaffold と完全一致したら、
 Lexer（F1）とあわせて黒箱の完全な置き換え達成。
+
+この回の主題は「同じ型の文法でも、書かれた位置（引数・変数・戻り値）で
+許される型が違う」こと。scaffold の scalar / obj / ret の3分類を自分で書く。
 
 前提は F3（`ProgramParser` は自分の F3 `StmtParser` を継承する）。
 
@@ -26,5 +29,8 @@ python3 myparser.py ../../sessions/13_sizeof_malloc_list/tests/list_min.c
 python3 check.py     # Step ごとの単体テスト(Step 2 以降は scaffold と構造比較)
 python3 golden.py    # 全テスト入力(約100本)で scaffold と突き合わせ
 ```
+
+`check.py` には「弾かれるべき入力」（`void v;` / `f(struct Point p)` /
+`sizeof x` など）の確認も入っています。
 
 `golden.py` の全ファイル PASS がシリーズの完了条件です。

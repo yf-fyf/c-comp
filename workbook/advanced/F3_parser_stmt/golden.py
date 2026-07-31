@@ -36,7 +36,7 @@ STATEMENTS = [
     # 単純な文
     "return 42;", "return;", "return fib(n - 1) + fib(n - 2);",
     "break;", "continue;", ";",
-    "x = 1;", "sum = sum + a[i];", "f(1, 2);", "head = head->next;",
+    "x = 1;", "sum = sum + p[i];", "f(1, 2);", "head = head->next;",
     "*p = 20;", "p->val = 10;",
     # ブロック
     "{ }", "{ ; }", "{ x = 1; }",
@@ -76,7 +76,7 @@ def sig(n):
     return (n.kind, n.val, n.sval, n.name, n.is_arrow, n.ty_str,
             sig(n.lhs), sig(n.rhs), sig(n.operand),
             sig(n.cond), sig(n.then), sig(n.else_),
-            sig(n.init), sig(n.step), sig(n.body), sig(n.init_expr),
+            sig(n.init), sig(n.step), sig(n.body),
             tuple(sig(a) for a in n.args),
             tuple(sig(s) for s in n.stmts),
             tuple(sig(p) for p in n.params))

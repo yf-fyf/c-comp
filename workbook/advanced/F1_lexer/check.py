@@ -88,10 +88,9 @@ def step1():
                  [("TK_NUM", 12, ""), ("TK_NUM", 345, "")])
     check_tokens("行コメント", "1 // comment\n2",
                  [("TK_NUM", 1, ""), ("TK_NUM", 2, "")])
-    check_tokens("ブロックコメント", "1 /* a\n b */ 2",
-                 [("TK_NUM", 1, ""), ("TK_NUM", 2, "")])
+    check_tokens("行末までの行コメント(改行なしで入力終端)", "1 // comment",
+                 [("TK_NUM", 1, "")])
     check_tokens("空文字列", "", [])
-    check_error("終端しないブロックコメント", "1 /* comment")
 
 
 # ---------------------------------------------------------------
@@ -126,9 +125,9 @@ def step3():
     check_tokens("アロー演算子", "p->next",
                  [("TK_IDENT", 0, "p"), ("TK_PUNCT", 0, "->"),
                   ("TK_IDENT", 0, "next")])
-    check_tokens("シフトと比較", "a << 2 >= b",
-                 [("TK_IDENT", 0, "a"), ("TK_PUNCT", 0, "<<"),
-                  ("TK_NUM", 2, ""), ("TK_PUNCT", 0, ">="),
+    check_tokens("前置演算子と比較", "++a >= --b",
+                 [("TK_PUNCT", 0, "++"), ("TK_IDENT", 0, "a"),
+                  ("TK_PUNCT", 0, ">="), ("TK_PUNCT", 0, "--"),
                   ("TK_IDENT", 0, "b")])
     check_tokens("可変長引数の ...", "int printf(char *fmt, ...);",
                  [("TK_KW", 0, "int"), ("TK_IDENT", 0, "printf"),
@@ -136,9 +135,9 @@ def step3():
                   ("TK_PUNCT", 0, "*"), ("TK_IDENT", 0, "fmt"),
                   ("TK_PUNCT", 0, ","), ("TK_PUNCT", 0, "..."),
                   ("TK_PUNCT", 0, ")"), ("TK_PUNCT", 0, ";")])
-    check_tokens("a-->b はどうなるか", "a-->b",
-                 [("TK_IDENT", 0, "a"), ("TK_PUNCT", 0, "-"),
-                  ("TK_PUNCT", 0, "->"), ("TK_IDENT", 0, "b")])
+    check_tokens("a-->b はどうなるか(最長一致で -- が勝つ)", "a-->b",
+                 [("TK_IDENT", 0, "a"), ("TK_PUNCT", 0, "--"),
+                  ("TK_PUNCT", 0, ">"), ("TK_IDENT", 0, "b")])
     check_error("未知の文字", "a @ b")
 
 
@@ -167,7 +166,7 @@ def step4():
 
 STEP5_SNIPPETS = [
     "int main() {\n    // comment\n    return 42;\n}\n",
-    "1 /* a\n b\n c */ 2\n3",
+    "int a;\n// comment line\n// another\nint b;\n",
     'char *s;\ns = "a\\nb";\n',
     "int x;\n\n\nint y;\n",
 ]

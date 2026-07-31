@@ -1,44 +1,48 @@
-% F4: 宣言か文か — is_type_start と typedef_names
+% F4: 宣言か文か — 型キーワード 4 語だけで分岐する
 \documentclass[border=8pt]{standalone}
 \input{figure-preamble}
 \begin{document}
 \begin{tikzpicture}[node distance=0mm,
-    q/.style={cfgbox, minimum width=44mm, minimum height=8mm},
+    q/.style={cfgbox, minimum width=52mm, minimum height=8mm},
     code/.style={font=\ttfamily\small, anchor=west, inner sep=1.5pt}]
-  % ================ 左: 判定の段 ================
-  \node[gannot] at (0mm, 11mm) {ブロックの先頭で: これは宣言か?};
+  % ================ 左: トップレベルの判定 ================
+  \node[gannot] at (2mm, 13mm) {parse\_program（トップレベル）};
 
-  \node[q] (b1) at (0mm, 0mm) {int / char / void / struct ?};
+  \node[q] (t1) at (0mm, 2mm) {struct + タグ + \texttt{\{} か \texttt{;} ?};
+  \draw[ptr] (t1.east) -- +(4mm,0);
+  \node[annot, anchor=west] at (32mm, 2mm) {struct 定義 / 前方宣言\\（AST には残さない）};
+
+  \node[q] (t2) at (0mm, -14mm) {型を読み，名前の次が \texttt{(} ?};
+  \draw[ptr] (t2.east) -- +(4mm,0);
+  \node[annot, anchor=west] at (32mm, -14mm) {関数宣言 / 定義};
+
+  \node[q] (t3) at (0mm, -28mm) {それ以外};
+  \draw[ptr] (t3.east) -- +(4mm,0);
+  \node[annot, anchor=west] at (32mm, -28mm) {グローバル変数宣言};
+
+  \draw[flow] (t1.south) -- node[annot, right=1mm, pos=0.4] {\small いいえ} (t2.north);
+  \draw[flow] (t2.south) -- (t3.north);
+
+  % ================ 右: 関数本体の先頭の判定 ================
+  \node[gannot] at (95mm, 13mm) {parse\_func\_body（関数本体の先頭）};
+
+  \node[q] (b1) at (93mm, 2mm) {int / char / void / struct ?};
   \draw[ptr] (b1.east) -- +(4mm,0);
-  \node[annot, anchor=west] at (28mm, 0mm) {宣言として読む};
+  \node[annot, anchor=west] at (125mm, 2mm) {宣言として読む};
 
-  \node[q] (b2) at (0mm, -14mm) {名前が typedef\_names にある?};
+  \node[q] (b2) at (93mm, -14mm) {それ以外};
   \draw[ptr] (b2.east) -- +(4mm,0);
-  \node[annot, anchor=west] at (28mm, -14mm) {宣言として読む};
-
-  \node[q] (b3) at (0mm, -28mm) {どちらでもない};
-  \draw[ptr] (b3.east) -- +(4mm,0);
-  \node[annot, anchor=west] at (28mm, -28mm) {文として読む（parse\_stmt）};
+  \node[annot, anchor=west] at (125mm, -14mm) {文として読む（parse\_stmt）};
 
   \draw[flow] (b1.south) -- node[annot, right=1mm, pos=0.4] {\small いいえ} (b2.north);
-  \draw[flow] (b2.south) -- (b3.north);
 
-  % ================ 右: typedef が表を育てる ================
-  \node[gannot] at (110mm, 11mm) {typedef\_names は解析中に育つ};
-
-  \node[code] (c1) at (78mm, 2mm) {typedef struct \{ ... \} Point;};
-  \node[annot, text=TcEmph, anchor=west] at (80mm, -5mm)
-      {→ 表に "Point" を登録};
-
-  \node[code] (c2) at (78mm, -14mm) {Point p;};
-  \node[annot, anchor=west] at (100mm, -14mm) {→ 宣言（表にあるから）};
-
-  \node[code] (c3) at (78mm, -22mm) {x = 1;};
-  \node[annot, anchor=west] at (100mm, -22mm) {→ 式文（表にないから）};
+  \node[code] (c1) at (72mm, -26mm) {is\_type\_start():};
+  \node[code] (c2) at (76mm, -32mm) {kind == TK\_KW and sval in};
+  \node[code, text=TcEmph] (c3) at (76mm, -38mm) {('int','char','void','struct')};
 
   % ---- 補足 ----
-  \node[gannot, anchor=north, align=left] at (55mm, -37mm)
-      {「名前 名前 ;」という同じ形でも、typedef\_names の中身しだいで宣言にも式にもなる。\\
-       トークンの種類だけでは決められない = C の文法の文脈依存性};
+  \node[gannot, anchor=north, align=left] at (62mm, -46mm)
+      {型を書き始められるトークンは 4 語だけで，解析中に増えない。\\
+       だから型名の表も，字句解析器へのフィードバック（lexer hack）も要らない};
 \end{tikzpicture}
 \end{document}
