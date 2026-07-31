@@ -164,9 +164,9 @@ OCaml 側は `Js_of_ocaml.Js.export` で次だけを公開する。
 
 ```
 parse(source)             -> JSON { ok, tokens, ast, lineMap, errors }
-astSexp(source, showLine) -> JSON { ok, text }   /* parse_viewer.py --format sexp と一致 */
-astDot(source, showLine)  -> JSON { ok, text }   /* parse_viewer.py --format dot  と一致 */
-typeInfo(source)          -> JSON                /* struct レイアウト・sizeof（B2 着手時に足す） */
+astSexp(source, showLine) -> JSON { ok, text }   // parse_viewer.py --format sexp と一致
+astDot(source, showLine)  -> JSON { ok, text }   // parse_viewer.py --format dot  と一致
+typeInfo(source)          -> JSON                // struct レイアウト・sizeof（B2 着手時に足す）
 ```
 
 `lineMap` は前処理後の行番号と元ソースの行番号の対応表である。
@@ -193,11 +193,11 @@ dev/web/
 現状の詳しい構成は [`../web/README.md`](../web/README.md) を単一の出典とする。
 
 - `workbook/ocaml/support/` を `web/` 側に**コピーしない**。dune のディレクトリ参照で取り込み、二重管理を避ける
-- シミュレータが実装する範囲は、参照コンパイラが実際に出す命令に合わせる。現状は命令29種で足りる。
+- シミュレータが実装する範囲は、参照コンパイラが実際に出す命令に合わせる。現状は命令25種で足りる。
 
   ```
-  add addi and beqz call div j la lb ld li lw mul neg not or rem ret
-  sb sd seqz sll slt snez sra sub sw xor xori
+  add addi and beqz call div j la lb ld li lw mul neg or rem ret
+  sb sd seqz slt snez sub sw xori
   ```
 
   ディレクティブは8種（`.text` `.globl` `.data` `.bss` `.byte` `.word` `.dword` `.zero`）
@@ -230,7 +230,7 @@ OCaml 版と Python 版では AST の内部表現が異なる。
   終了コードと標準出力を突き合わせる。これはローカルと CI でのみ走らせる
 
 > **実装時の記録（2026-07）**: `make sim-test`（`web/app/test/qemu-conformance.ts`）が
-> workbook の全テスト 98 本で qemu と一致している（残る2本は `main` を持たない
+> workbook の全テスト 104 本中 102 本で qemu と一致している（残る2本は `main` を持たない
 > 補助ソースで対象外）。突き合わせ先を `.ans` ではなく **qemu の実測値**にしてあるのは、
 > ここで試験したいのがコンパイラではなくシミュレータだからである。
 
@@ -238,15 +238,13 @@ OCaml 版と Python 版では AST の内部表現が異なる。
 Python 版と OCaml 版で既に同じ規約になっている。
 
 > **実装時の記録（2026-07）**: 黄金テスト（`web/core/golden_test.py`）は
-> 134 ファイル × 4 通りすべてで一致している（L2 の配列初期化子 4 件は両実装とも拒否で skip）。
-> 導入の過程で OCaml 参考実装の実バグを 2 件検出し修正した
-> （menhir では働かない `Parsing.symbol_start_pos` による行番号の全損、
-> `typedef struct {...} X; X y;` が LR の先読みで構文エラーになる字句フィードバック問題）。
+> 138 ファイル × 4 通り中 528 通りで一致している（残る 6 通りは両実装とも拒否で skip。
+> 内訳は L2 の複合代入 3 件 + L3 の可変長引数 3 件）。
+> 導入の過程で OCaml 参考実装の実バグを 1 件検出し修正した
+> （menhir では働かない `Parsing.symbol_start_pos` による行番号の全損）。
 > 「ウェブアプリが参考実装の検証を兼ねる」という本章の狙いが初回から機能した形である。
-> なお Python 版は使用箇所の型の綴りを保持する（`Node*` → `(ptr (type "Node"))`）が
-> OCaml 版は解決してしまうため、astdump が typedef 別名を逆引きして表示を合わせている。
-> 教材テストは宣言で `struct X` を直接綴らないため全数一致するが、
-> 直接綴った入力では表示が異なり得る（黄金テストが検出する）。
+> typedef 廃止により、typedef 別名の字句フィードバック問題と、それに伴う
+> astdump 側の別名逆引き機構は仕組みごと不要になった。
 
 ---
 

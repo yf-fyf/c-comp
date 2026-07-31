@@ -174,45 +174,6 @@ python3 golden.py   # README で指定されている場合
 
 ---
 
-## 既知の制限
-
-### 配列名を二項 `+` / `-` の対象に直接置く形
-
-`*(a + 2)` のように配列名をポインタ演算の対象へ直接書く形は、
-**Python 版・OCaml 版のどちらの参考実装でも正しく動かない**。
-`p = a; *(p + 2)` とポインタ変数を経由する形は動く。
-
-コード生成側の配列読み替え（配列名を rvalue として使うと先頭要素のアドレスを返す）は
-両実装とも入っている。足りないのは型側で、二項 `+` / `-` が「ポインタ演算かどうか」を
-判定するところで配列型を数えていない。
-
-| 実装 | 判定に使う述語 | 配列型の扱い |
-|------|----------------|--------------|
-| OCaml | `is_ptr_ty`（`workbook/ocaml/support/ast_def.ml`） | `TyArray` は false |
-| Python | `is_ptr_ty_str`（完成解答。`../c-comp-design/teacher/answers/`） | `"int[4]"` は `*` で終わらないので false |
-
-どちらの実装も配列判定のヘルパー（`is_array_ty` / `is_array_ty_str`）を持っていて、
-`a[i]` の経路では使っているが `+` / `-` の経路では使っていない。
-（Python 側の確認は 2026-07 時点の完成解答で行った。公開リポジトリには
-完成解答を置かないので、追試するときは Private リポジトリ側を見ること。）
-そのため要素サイズ倍のスケーリングが飛ばされ、`a + 2` がアドレス +2（本来は +8）になる。
-
-症状は回によって違う。OCaml 版はコマ10〜13 が黙って誤った値を返し、
-コマ14〜16 は `* の対象がポインタではありません` で拒否する。
-
-**教材はこの形を避けている**ので、現状の教材利用では露出しない。
-`sessions/10_types_pointers/tests/ptr_arith.c` が唯一 `*(p + i)` を含むが `p = a;` を経由し、
-資料（`materials/sessions/10_types_pointers.md` の「配列変数の扱い」）も
-`p = a;` の形だけを例示している。
-
-直す場合は、`+` / `-` の型判定で配列型をポインタ型へ読み替える（`TyArray {elem}` → `TyPtr elem`）。
-影響は OCaml 版 `koma10.ml`〜`koma16.ml` の7ファイルと Private リポジトリ側の
-Python 完成解答、および資料の記述に及ぶ。
-学習者が書く `codegen_Add` の仕様が変わるため、
-[`quality_guide.md`](./quality_guide.md) の標準ワークフローの対象になる。
-
----
-
 ## 教材追加の手順
 
 1. `materials/sessions/`（または `materials/advanced/`）に Markdown 原稿を書く
@@ -303,7 +264,7 @@ workflow はテスト、Web ビルド、公開物の許可リスト検査、ZIP 
 | `b2_regalloc` | `B2_regalloc` | | `f0_cyk`〜`f4_parser_decl` | `F0_cyk`〜`F4_parser_decl`（大文字化のみ） |
 | `b3_tailcall` | `B3_tailcall` | | `q1_typecheck` | `Q1_typecheck` |
 | `d3_struct` | `L1_struct` | | `r1_nolibc`〜`r3_malloc` | `R1_nolibc`〜`R3_malloc`（大文字化のみ） |
-| `d4_initializer` | `L2_initializer` | | `m1_shortcircuit` | `S1_shortcircuit` |
+| `d4_initializer` | `L2_compound_assign`（主題変更） | | `m1_shortcircuit` | `S1_shortcircuit` |
 | `v1_variadic` | `L3_variadic` | | `m2_int32` / `m3_ptrdiff` | `S2_int32` / `S3_ptrdiff` |
 
 ---

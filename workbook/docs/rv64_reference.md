@@ -81,7 +81,7 @@ frame_size = align_to(self._stack_offset, 16)   # 必ずこれを使う
 | `add` / `sub` / `mul` / `div` / `rem` | 算術（`div` / `rem` は M 拡張） |
 | `slt` / `sltu` | 比較（小なりで1） |
 | `seqz` / `snez` | 0 と等しい / 等しくない を 0/1 に |
-| `and` / `or` / `xor` / `sll` / `sra` | ビット演算・シフト |
+| `and` / `or` / `xori` | 論理演算（`&&` / `\|\|` / `!`）の下位化に使う |
 | `beqz rs, label` / `bnez` | 0 なら / 0 でなければ分岐 |
 | `j label` / `call sym` / `ret` | 無条件ジャンプ / 関数呼び出し / 復帰 |
 

@@ -14,7 +14,7 @@
 
 | 文書 | 内容 |
 |------|------|
-| [`language_spec.md`](./language_spec.md) | Core プロファイルの言語仕様（型・演算子・EBNF・除外機能） |
+| [`language_spec.md`](./language_spec.md) | Core プロファイルの言語仕様（型・演算子・EBNF・除外機能・標準/発展の到達範囲） |
 | [`rv64_reference.md`](./rv64_reference.md) | 呼び出し規約・スタックフレーム・よく使う命令 |
 | [`testing.md`](./testing.md) | `test_runner` の使い方・テストケースの形式 |
 | [`code_example.md`](./code_example.md) | 各コマ終了時点でコンパイルできるプログラム（コマ1〜16） |
