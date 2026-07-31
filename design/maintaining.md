@@ -249,6 +249,13 @@ THIRD_PARTY_NOTICES.md
 2. `make pages VERSION=<version>` で `.pages/` を生成し、資料のページ、ZIP、補助ツールを確認する。
 3. `main` を直接編集せず、`dev` の手動リリース workflow だけで更新する。
 
+### 内部タスク番号を公開領域に残さない
+
+`c-comp-design/tasks/TODO.md`（およびその archive）が使う内部タスク番号（`T49` 等）は
+private な計画管理リポジトリだけの内部参照であり、公開リポジトリ `c-comp` の読者が
+知る必要のある情報ではない。今後のコミットメッセージ・コード中のコメント・
+コミット対象のファイルには書かない。過去に紛れ込んだ履歴は書き換えない。
+
 ### GitHub の初期設定
 
 初回コミットを `dev` に push したら、GitHub 側で次を設定する。
