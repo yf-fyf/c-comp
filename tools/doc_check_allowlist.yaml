@@ -14,7 +14,7 @@ legacy_terms:
       workbook/docs/language_spec.md と同じ「除外の宣言」パターン。
 
   - file: materials/sessions/13_sizeof_malloc_list.md
-    line: 215
+    line: 214
     status: legitimate
     reason: >
       「この言語に typedef はない」と、struct のタグ名参照が唯一の型名手段で
@@ -56,32 +56,6 @@ legacy_terms:
     status: pending
     reason: >
       同上。引用ブロック内の例示プロンプト本文（「配列 a[3] の宣言を...」）。
-
-  - file: materials/figures/12_struct_layout.tex
-    line: 2
-    status: pending
-    reason: >
-      コマ12の図の TikZ ソースの先頭コメント。生成される SVG には出ないが、
-      `typedef struct { ... } Point;` という、仕様が除外した構文をそのまま
-      コメントに残している。図のソースコメントとして許容するか、
-      構造体タグ形式の疑似コードに直すかはメンテナ判断待ち（T57 で新規検出）。
-
-  - file: workbook/ocaml/sessions/koma11.ml
-    line: 15
-    status: pending
-    reason: >
-      OCaml 参考実装のコメント。「配列は値として使われたとき先頭要素の
-      アドレスへ読み替える」と書かれているが、この言語に配列型は無い
-      （文字列リテラルの decay を指しているとみられる）。用語が正確か、
-      コメントの言い回しを直すべきかはメンテナ判断待ち（T57 で新規検出）。
-
-  - file: workbook/ocaml/sessions/koma11.ml
-    line: 171
-    status: pending
-    reason: >
-      同上。「配列名は load が空になるので」というコメント。Var ケースの
-      文字列リテラル・ポインタ変数に共通する decay 挙動の説明とみられるが、
-      「配列」という語の妥当性はメンテナ判断待ち（T57 で新規検出）。
 
 # style チェック（T59）の除外リスト。design/maintaining.md の用語表そのものが
 # 「誤（避ける）」列に旧表記の実例を挙げているため自己検出してしまう箇所を除く。
