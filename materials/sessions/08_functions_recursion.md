@@ -416,7 +416,7 @@ Parser はこれを `ND_FUNCPROTO` として返す。
 ```text
 1. _reset_func_state() で self._locals と self._stack_offset を初期化する
 2. return用の共通ラベルを作る
-3. funcdef.params を self.alloc_local() する  ← コマ8で追加
+3. _alloc_params() で funcdef.params を self.alloc_local() する  ← コマ8で追加
 4. self.collect_decls(funcdef.body) でローカル変数を集める
 5. frame_size = align_to(self._stack_offset, 16) を計算する
 6. プロローグを出す
@@ -454,7 +454,9 @@ Parser はこれを `ND_FUNCPROTO` として返す。
 |------------------|----------|
 | `codegen_Call(node)` | 関数呼び出しのコード生成（新規） |
 | `codegen(node)` の `match` 節に `'Call'` | ディスパッチャに追加する（スケルトンに書かれている） |
-| `gen_func(node)` | パラメータ登録・引数退避を追加する。フックメソッド `_reset_func_state`, `_emit_func_prologue`, `_emit_func_body`, `_emit_func_epilogue` に処理を記述する |
+| `_gen_call(name, args)` | 引数を `a0`〜`a7` に並べて `call` する（`codegen_Call` から呼ぶ） |
+| `_alloc_params(node)` | `node.params` を `alloc_local()` してスロットを確保する |
+| `_emit_func_prologue(name, frame_size)` | プロローグの末尾で `a0`〜`a7` をパラメータのスロットへ退避する |
 
 ## tests/
 

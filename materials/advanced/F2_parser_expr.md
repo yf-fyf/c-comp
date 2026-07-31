@@ -200,7 +200,7 @@ def parse_cond(self):
 Core プロファイルの文法は、意図的にこの形に設計されている。
 唯一きわどいのは `sizeof(x)` の `(` の次が型か式かの判定で、
 scaffold は `peek(1)` と型キーワード（`int`/`char`/`void`/`struct`）の集合で
-解決している(typedef がないので単純なキーワード判定で足りる。F4 で扱う)。
+解決している（typedef がないので単純なキーワード判定で足りる。F4 で扱う）。
 
 :::
 
@@ -215,7 +215,7 @@ scaffold は `peek(1)` と型キーワード（`int`/`char`/`void`/`struct`）�
 | 1 | `parse_primary` | リテラル・変数・カッコ |
 | 2 | `parse_add` / `parse_mul` | 左結合ループを手で2回書く |
 | 3 | `parse_binary` + 残りのレベル + `parse_rel` | 共通化と swap 正規化 |
-| 4 | `parse_unary` / `parse_postfix` + 関数呼び出し | 前置の再帰(`++`/`--` 含む)・後置のループ |
+| 4 | `parse_unary` / `parse_postfix` + 関数呼び出し | 前置の再帰（`++`/`--` 含む）・後置のループ |
 | 5 | `parse_cond` | 三項演算子。right 側だけ再帰する右結合 |
 | 6 | `parse_assign` | 右結合の再帰。`parse_cond` を呼ぶ |
 
@@ -256,7 +256,7 @@ python3 golden.py
    自作パーサに移植する（F4 の予習になる）
 2. **複合代入** `+= -= *= /= %=` を追加する（`language_spec.md` の外側の機能。ヒント:
    `parse_assign` の `'='` 判定を演算子の集合に広げ、対応するノード種別を選ぶ。
-   golden は対象外なので単体テストで確認する。発展 L2「複合代入の実装」で
+   golden は対象外なので単体テストで確認する。発展課題 L2「複合代入の実装」で
    コード生成まで作り込む回に接続する）
 3. **エラーメッセージの改善**: 「`)` が期待されました」に加えて、
    対応する開きカッコの行番号も表示する
@@ -269,7 +269,7 @@ python3 golden.py
 `lor`・`land`・`eq`・`rel`・`add`・`mul` のような二項演算のレベルは、
 「演算子ごとの優先順位の数値」を引数に持つ1つの関数 `parse_expr(min_prec)`
 にまとめる書き方があり、precedence climbing あるいは Pratt parsing と呼ばれる
-(`cond`・`assign`・`unary`・`postfix` は構造が違うので、この一般化には乗らない)。
+（`cond`・`assign`・`unary`・`postfix` は構造が違うので、この一般化には乗らない）。
 実務のパーサ（clang など）でも使われる技法だが、
 「文法の階層がそのままコードに見える」教育的な美しさはレベルごとに関数を分ける方式にある。
 興味があれば `parse_binary` をさらに一般化してみるとよい。

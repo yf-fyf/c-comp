@@ -139,6 +139,16 @@ class Codegen14(prev.Codegen13):
         # TODO: operand を生成し、seqz で論理否定を作る。
         raise NotImplementedError("codegen_Not を実装してください")
 
+    def codegen_And(self, node: Node) -> None:
+        # TODO: && は短絡しない（language_spec.md 例外 E3）。
+        #       lhs と rhs を必ず両方評価し、それぞれ snez で 0/1 にしてから and を取る。
+        raise NotImplementedError("codegen_And を実装してください")
+
+    def codegen_Or(self, node: Node) -> None:
+        # TODO: || も短絡しない。lhs と rhs を必ず両方評価し、
+        #       or を取ってから snez で 0/1 にする。
+        raise NotImplementedError("codegen_Or を実装してください")
+
     def codegen(self, node: Node) -> None:
         match node.kind:
             case 'Num':
@@ -204,6 +214,10 @@ class Codegen14(prev.Codegen13):
     def collect_all_strings(self, prog: list[Node]) -> None:
         # TODO: 各 FuncDef の本体から文字列を収集する。
         raise NotImplementedError("collect_all_strings を実装してください")
+
+    def _collect_strings_binary_expr(self, node: Node) -> None:
+        # TODO: 二項演算の node.lhs と node.rhs を collect_strings_expr で走査する。
+        raise NotImplementedError("_collect_strings_binary_expr を実装してください")
 
     def collect_strings_expr_Not(self, node: Node) -> None:
         self.collect_strings_expr(node.operand)

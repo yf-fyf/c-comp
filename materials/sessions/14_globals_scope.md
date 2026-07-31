@@ -258,6 +258,21 @@ int main() {
 
 オフセットの割り当ては、関数本体を走査して各ローカル変数のオフセットを先に決めておく。
 
+## 残りの演算子 `!` `&&` `||`
+
+この回で最後の演算子3つを足す。どれも結果は `0` か `1` の int である。
+
+| ノード | ハンドラ | 生成の要点 |
+|--------|----------|-----------|
+| `'Not'` | `codegen_Not` | operand を評価し、`seqz a0, a0` |
+| `'And'` | `codegen_And` | 両辺を評価し、それぞれ `snez` で 0/1 にしてから `and` |
+| `'Or'` | `codegen_Or` | 両辺を評価して `or` を取り、`snez` で 0/1 にする |
+
+`&&` と `||` は**短絡しない**（`language_spec.md` 例外 E3）。
+左辺の値にかかわらず右辺も評価するので、分岐を作る必要はなく、
+比較演算子と同じ「両辺を評価してから合成する」形で書ける。
+短絡する版は発展課題 S1 で扱う。
+
 ## 実装手順
 
 1. コマ13の実装を `sessions/14_globals_scope/mycc.py` に反映する<br>（スケルトンの `importlib` 継承により、前回の `Codegen` クラスを継承する。新機能の handler だけを実装すればよい。）
@@ -266,7 +281,8 @@ int main() {
 4. グローバル変数を `.bss` に出力する（全て 0 初期化）
 5. `self.lookup_var_ty()` を `self._locals` → `self._globals` の順にする
 6. `self.codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
-7. `global_counter.c`、`global_init.c`、`global_local_shadow.c`、`global_struct.c` を通す
+7. `codegen_Not()` / `codegen_And()` / `codegen_Or()` を実装する（`&&` `||` は短絡しない）
+8. `global_counter.c`、`global_init.c`、`global_local_shadow.c`、`global_struct.c` を通す
 
 ## 編集するファイル
 

@@ -11,17 +11,17 @@
 
 | 種別 | 内容 |
 |------|------|
-| **必須** | O2(`cfg.py`)—— フローグラフの上で解く |
-| **必須** | O4(`regalloc.py`)—— 割り当て前は解析しても何も出てこない |
-| 推奨 | O3(命令選択) |
+| **必須** | O2（`cfg.py`）—— フローグラフの上で解く |
+| **必須** | O4（`regalloc.py`）—— 割り当て前は解析しても何も出てこない |
+| 推奨 | O3（命令選択） |
 
 **この回は命令数を減らしません。** 解析そのものが成果物で、
-O6(コピー伝播と死コード除去)がこれを使います。
+O6（コピー伝播と死コード除去）がこれを使います。
 
 ## 編集するファイル
 
-- `liveness.py`(Step 1: `def_use`、Step 2: `block_def_use` / `solve`、
-  Step 3: `live_after`、Step 4: `live_across_calls`)
+- `liveness.py`（Step 1: `def_use`、Step 2: `block_def_use` / `solve`、
+  Step 3: `live_after`、Step 4: `live_across_calls`）
 
 呼び出し規約の定数、`_is_reg` / `_base_of`、`restored_saved`、
 可視化の `annotate` は完成済みです。

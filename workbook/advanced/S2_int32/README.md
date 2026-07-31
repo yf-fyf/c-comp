@@ -4,7 +4,7 @@
 
 ## 今日のゴール
 
-`int` の演算を32bit命令(`addw` など)で行い、桁あふれが C のとおりに折り返すようにする。
+`int` の演算を32bit命令（`addw` など）で行い、桁あふれが C のとおりに折り返すようにする。
 
 前提はコマ10 まで。**`mycc.py` は書き換えません**（`semcc.py` が `emit` を包みます）。
 
@@ -19,4 +19,4 @@ python3 check.py     # narrow の入出力を直接確認(未実装は SKIP)
 python3 golden.py    # 折り返しのテスト + fixed17
 ```
 
-`tests/pointer_ok.c` は「直しすぎ(アドレス計算まで32bit化)」を検出するための安全網です。
+`tests/pointer_ok.c` は「直しすぎ（アドレス計算まで32bit化）」を検出するための安全網です。

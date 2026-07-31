@@ -7,21 +7,21 @@
 アセンブリを**基本ブロック**に切り分け、制御の流れを辺で結んで
 **フローグラフ**を作る。Graphviz で図にして目で確かめる。
 
-前提はコマ16(完成した `final/mycc.py`)。**`mycc.py` は書き換えません**。
+前提はコマ16（完成した `final/mycc.py`）。**`mycc.py` は書き換えません**。
 
 この回で作るフローグラフを、以降の回がそのまま使います。
 
 | 回 | 何に使うか |
 |----|-----------|
-| O5 | 生存変数解析(ブロックの間で情報を伝える) |
+| O5 | 生存変数解析（ブロックの間で情報を伝える） |
 | O6 | コピー伝播・死コード除去 |
-| O7 | ブロック整列とループ回転(後方辺を探す) |
+| O7 | ブロック整列とループ回転（後方辺を探す） |
 
 ## 編集するファイル
 
-- `cfg.py`(Step 1: `find_leaders`、Step 2: `build_blocks`、Step 3: `build_edges`)
+- `cfg.py`（Step 1: `find_leaders`、Step 2: `build_blocks`、Step 3: `build_edges`）
 
-`Block` クラス・`strip_asm`・`to_dot`(Graphviz 出力)は完成済みです。
+`Block` クラス・`strip_asm`・`to_dot`（Graphviz 出力）は完成済みです。
 
 ## 動かし方
 
@@ -30,7 +30,7 @@ python3 ../optcc.py --passes '' ../O1_measure/bench/loop_sum.c    # 素の出力
 python3 golden.py                                                 # 図を書き出す
 ```
 
-図は `cfg_out/` に出ます(`dot` があれば PNG も作ります)。
+図は `cfg_out/` に出ます（`dot` があれば PNG も作ります）。
 
 ## テスト
 

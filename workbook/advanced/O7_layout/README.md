@@ -7,15 +7,15 @@
 ループが**毎回実行している「条件へ戻るジャンプ」**を消す。
 静的命令数はほとんど変わらないのに、動的命令数が減ることを測って確かめる。
 
-前提は O1(測定基盤)と O2(フローグラフ)。**`mycc.py` は書き換えません**。
+前提は O1（測定基盤）と O2（フローグラフ）。**`mycc.py` は書き換えません**。
 
 ## 編集するファイル
 
-- `layout.py`(Step 1: `invert_branch`、Step 2: `rotate_one` / `rotate_loops`、
-  Step 3: `remove_jump_to_next`、Step 4: `run`)
+- `layout.py`（Step 1: `invert_branch`、Step 2: `rotate_one` / `rotate_loops`、
+  Step 3: `remove_jump_to_next`、Step 4: `run`）
 
 ループの入口を探す `loop_headers` は、O2 の `cfg.py` の**後方辺**を使って
-書いてあります(完成済み)。O2 が未完成だと、ここで止まります。
+書いてあります（完成済み）。O2 が未完成だと、ここで止まります。
 
 Step 3 の `remove_jump_to_next` は、**B1 の Step 3 と同名・同一の最適化**です。
 B1 を先にやっているなら `peephole.py` の実装をそのまま持ち込めます。
