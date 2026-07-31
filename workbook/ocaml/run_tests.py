@@ -11,6 +11,9 @@ OCaml 参考実装の回帰テストランナー
 コマ2 だけはインタープリターでアセンブリを出さないため、
 `評価結果: N` の印字を `.ans` と直接比較する。
 
+最後に等価性テストを回す。`reference/mycc_ref.exe --no-comments` の出力が
+`koma16.exe` の出力とバイト単位で一致することを、全テストソースで確かめる。
+
 使い方:
     cd workbook/ocaml
     dune build
@@ -18,6 +21,7 @@ OCaml 参考実装の回帰テストランナー
     python3 run_tests.py 13            # コマ13 だけ
     python3 run_tests.py 12 13 16      # 複数指定
     python3 run_tests.py --build-dir DIR   # 別ビルド（変更前版との比較用）
+    python3 run_tests.py --no-equivalence  # 等価性テストを飛ばす
 
 前提: riscv64-linux-gnu-gcc と qemu-riscv64（コマ3以降で使う）。
       無い場合は docker/rv64 経由で実行する。
@@ -142,6 +146,72 @@ def run_interpreter_case(exe: Path, src: Path, timeout_s: int) -> str:
     return "PASS"
 
 
+def all_test_sources() -> list[Path]:
+    """全回のテストソース（コマ2 のものも含む。どれも同じ C サブセットである）"""
+    dirs = sorted(WORKBOOK.glob("sessions/*/tests")) + [WORKBOOK / "final" / "tests"]
+    return [src for d in dirs if d.is_dir() for src in sorted(d.glob("*.c"))]
+
+
+def run_equivalence_case(k16: Path, ref: Path, src: Path, timeout_s: int) -> str:
+    """`koma16.exe` と `mycc_ref.exe --no-comments` の出力が一致することを確かめる。
+
+    mycc_ref は注記コメントを足しただけの別実装なので、素の出力は koma16 と
+    バイト単位で同じでなければならない。リファレンス側を書き換えたときに
+    生成コードが変わっていないことを、この比較で担保する。
+    """
+    extras = extra_sources(src)
+    if isinstance(extras, str):
+        return extras
+    argv = [str(src), *(str(p) for p in extras)]
+    try:
+        a = subprocess.run([str(k16), *argv], capture_output=True, text=True, timeout=timeout_s)
+        b = subprocess.run(
+            [str(ref), "--no-comments", *argv], capture_output=True, text=True, timeout=timeout_s
+        )
+    except subprocess.TimeoutExpired:
+        return f"FAIL: コンパイルが {timeout_s}s で終わらない"
+    if a.returncode != b.returncode:
+        return f"FAIL: 終了コードが違う koma16={a.returncode} mycc_ref={b.returncode}"
+    if a.returncode != 0:
+        # 両方が同じように失敗するケース（このコーパスには無い想定）は比較対象外
+        return "SKIP"
+    if a.stdout != b.stdout:
+        expected = a.stdout.splitlines()
+        got = b.stdout.splitlines()
+        for i, (x, y) in enumerate(zip(expected, got)):
+            if x != y:
+                return f"FAIL: {i + 1} 行目が違う\n    koma16:   {x!r}\n    mycc_ref: {y!r}"
+        return f"FAIL: 行数が違う koma16={len(expected)} mycc_ref={len(got)}"
+    return "PASS"
+
+
+def run_equivalence(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, int, int]:
+    k16 = build_dir / "sessions" / "koma16.exe"
+    ref = build_dir / "reference" / "mycc_ref.exe"
+    print("\n--- 等価性 (koma16.exe == mycc_ref.exe --no-comments) ---")
+    for exe in (k16, ref):
+        if not exe.is_file():
+            print(f"  実行ファイルがない: {exe}", file=sys.stderr)
+            return (0, 1, 0)
+
+    npass = nfail = nskip = 0
+    for src in all_test_sources():
+        result = run_equivalence_case(k16, ref, src, timeout_s)
+        rel = src.relative_to(WORKBOOK)
+        if result == "PASS":
+            npass += 1
+            if not quiet:
+                print(f"  [PASS] {rel}")
+        elif result == "SKIP":
+            nskip += 1
+            if not quiet:
+                print(f"  [SKIP] {rel} (両方ともコンパイルできない)")
+        else:
+            nfail += 1
+            print(f"  [{result}] {rel}")
+    return (npass, nfail, nskip)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="OCaml 参考実装の回帰テスト")
     ap.add_argument("sessions", nargs="*", type=int, help="コマ番号（省略時は全回）")
@@ -149,6 +219,8 @@ def main() -> int:
                     help="komaNN.exe があるディレクトリ")
     ap.add_argument("--timeout", type=int, default=15, help="1件あたりの制限秒数")
     ap.add_argument("-q", "--quiet", action="store_true", help="PASS を表示しない")
+    ap.add_argument("--no-equivalence", action="store_true",
+                    help="koma16 と mycc_ref の出力一致テストを飛ばす")
     args = ap.parse_args()
 
     build_dir = Path(args.build_dir).resolve()
@@ -169,7 +241,7 @@ def main() -> int:
             print(f"{tool} が見つからない。docker/rv64 経由で実行する", file=sys.stderr)
             return 2
 
-    rows = []
+    rows: list[tuple[str, int, int, int]] = []
     total = [0, 0, 0]
     for num in wanted:
         exe = build_dir / "sessions" / f"koma{num:02d}.exe"
@@ -178,12 +250,12 @@ def main() -> int:
         print(f"\n--- コマ{num:02d} ({label}) ---")
         if not exe.is_file():
             print(f"  実行ファイルがない: {exe}", file=sys.stderr)
-            rows.append((num, 0, 1, 0))
+            rows.append((f"コマ{num:02d}", 0, 1, 0))
             total[1] += 1
             continue
         if tests is None or not tests.is_dir():
             print("  対象テストがないので飛ばす")
-            rows.append((num, 0, 0, 0))
+            rows.append((f"コマ{num:02d}", 0, 0, 0))
             continue
 
         npass = nfail = nskip = 0
@@ -204,14 +276,20 @@ def main() -> int:
             else:
                 nfail += 1
                 print(f"  [{result}] {rel}")
-        rows.append((num, npass, nfail, nskip))
+        rows.append((f"コマ{num:02d}", npass, nfail, nskip))
+        for i, v in enumerate((npass, nfail, nskip)):
+            total[i] += v
+
+    if not args.no_equivalence:
+        npass, nfail, nskip = run_equivalence(build_dir, args.timeout, args.quiet)
+        rows.append(("等価性  ", npass, nfail, nskip))
         for i, v in enumerate((npass, nfail, nskip)):
             total[i] += v
 
     print("\n=================================")
-    for num, npass, nfail, nskip in rows:
+    for label, npass, nfail, nskip in rows:
         mark = "OK  " if nfail == 0 else "FAIL"
-        print(f"  {mark} コマ{num:02d}  PASS: {npass:3d}  FAIL: {nfail:3d}  SKIP: {nskip:3d}")
+        print(f"  {mark} {label}  PASS: {npass:3d}  FAIL: {nfail:3d}  SKIP: {nskip:3d}")
     print("---------------------------------")
     print(f"  合計       PASS: {total[0]:3d}  FAIL: {total[1]:3d}  SKIP: {total[2]:3d}")
     print("=================================")

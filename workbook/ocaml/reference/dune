@@ -1,3 +1,5 @@
+; mycc_ref.exe は asm / emitter / codegen と一緒にリンクする
 (executables
  (names mycc_ref)
+ (modules asm emitter codegen mycc_ref)
  (libraries support))
