@@ -44,7 +44,7 @@ python3 scaffold/test_runner.py --compiler final/mycc.py --tests final/tests
 発展課題ではラッパー経由で走らせることが多い。
 
 ```bash
-# 最適化パスを差し込んだコンパイラで fixed15 を通す
+# 最適化パスを差し込んだコンパイラで fixed17 を通す
 python3 scaffold/test_runner.py --compiler advanced/optcc.py --tests final/tests
 ```
 
@@ -71,9 +71,9 @@ final/tests/f01_arith.ans
 `.ans` は終了コードで結果を確認するため、値は 0〜255 に収める。
 テストケース側で未定義動作（UB）に踏み込まないようにする。
 
-## `final/tests`（fixed15）
+## `final/tests`（fixed17）
 
-コマ1〜15 の機能をまとめて確認する15本のテスト。
+コマ1〜16 の機能をまとめて確認する17本のテスト。
 **標準トラック完成の目安**であり、発展課題では「意味を壊していないこと」の安全網として使う。
 
 発展課題に取り組むときは、変更を入れたあと毎回これを通すこと。

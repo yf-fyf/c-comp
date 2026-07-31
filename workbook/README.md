@@ -12,7 +12,7 @@
 |------|------|
 | [`docs/`](./docs/README.md) | 進め方・言語仕様・RV64 リファレンス・テスト・デバッグ |
 | `sessions/NN_xxx/` | 各回の作業指示・`mycc.py`・テスト（資料は[サイト](https://yf-fyf.github.io/c-comp/)） |
-| `final/` | コマ16 で作る最終統合版と `fixed15` テスト |
+| `final/` | コマ16 で作る最終統合版と `fixed17` テスト |
 | [`advanced/`](./advanced/README.md) | 選択制の発展課題 25 トピック |
 | [`porting/`](./porting/README.md) | C 移植・セルフホストトラック |
 | [`ocaml/`](./ocaml/README.md) | 各回の完成形に相当する OCaml 版参考実装 |
