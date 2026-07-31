@@ -191,8 +191,7 @@ advanced教材では、5つの必須品質基準に加えて次を確認する�
 | `materials/figures/` | 図のTikZソースと生成SVG（`ast/` は生成物） |
 | `workbook/` | 学習者向け配布物。この範囲だけで演習を実施する |
 | `workbook/sessions/` | 通常回のREADME、starter、テスト |
-| `workbook/advanced/` | advanced教材のREADME、starter、テスト（1トピック=1ディレクトリ） |
-| `workbook/porting/` | C移植・セルフホストトラック |
+| `workbook/advanced/` | advanced教材のREADME、starter、テスト（1トピック=1ディレクトリ。C移植・セルフホストP1を含む） |
 | `workbook/docs/language_spec.md` | Coreプロファイルの言語仕様 |
 | `workbook/docs/getting_started.md` | 学習者向け進め方ガイド |
 | `design/curriculum.md` | 教育方針と全体設計 |

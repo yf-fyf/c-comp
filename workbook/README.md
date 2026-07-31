@@ -13,8 +13,7 @@
 | [`docs/`](./docs/README.md) | 進め方・言語仕様・RV64 リファレンス・テスト・デバッグ |
 | `sessions/NN_xxx/` | 各回の作業指示・`mycc.py`・テスト（資料は[サイト](https://yf-fyf.github.io/c-comp/)） |
 | `final/` | コマ16 で作る最終統合版と `fixed17` テスト |
-| [`advanced/`](./advanced/README.md) | 選択制の発展課題 25 トピック |
-| [`porting/`](./porting/README.md) | C 移植・セルフホストトラック |
+| [`advanced/`](./advanced/README.md) | 選択制の発展課題 26 トピック（C 移植・セルフホストを含む） |
 | [`ocaml/`](./ocaml/README.md) | 各回の完成形に相当する OCaml 版参考実装 |
 | `scaffold/` | 提供される Lexer / Parser / AST 定義 / テストランナー |
 | [`docker/rv64/`](./docker/rv64/README.md) | 推奨実行環境 |

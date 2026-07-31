@@ -52,7 +52,6 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 | `workbook/advanced/README.md` | 発展教材の入口 |
 | `materials/advanced/` | 発展教材の資料の Markdown 原稿 |
 | `materials/figures/` | 図の TikZ ソースと生成 SVG（sessions・advanced 共用。`ast/` は生成物） |
-| `workbook/porting/` | C 移植・セルフホストトラック |
 | `workbook/docker/` | 推奨実行環境 |
 | `web/` | 補助ウェブアプリ（A1 AST ビジュアライザ / A2 RV64 シミュレータ）。企画は `design/webapps.md`、構成は `web/README.md` |
 | `../c-comp-design/teacher/` | 非公開の完成解答・品質記録・隠しテスト（Private リポジトリ） |

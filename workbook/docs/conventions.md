@@ -1,7 +1,7 @@
 # 実装の約束ごと
 
 Python 版コンパイラ（`sessions/` と `final/`）を書くときの規約。
-C 版へ移植するときの規約は [`../porting/README.md`](../porting/README.md) にある。
+C 版へ移植するときの規約は発展課題 [`P1_selfhost`](../advanced/P1_selfhost/README.md) にある。
 
 ---
 
@@ -45,7 +45,7 @@ print("  add a0, a1, a0")         # × 直接呼ばない
 ### シンボルテーブルは `dict` でよい
 
 Python 版では素直に `dict` を使う。C 版へ移植するときに連結リストへ置き換える
-（対応表は [`../porting/README.md`](../porting/README.md)）。
+（対応表は [`../advanced/P1_selfhost/README.md`](../advanced/P1_selfhost/README.md)）。
 
 ### アラインメントはヘルパーに任せる
 

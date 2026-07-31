@@ -39,7 +39,7 @@ sections:
 
   - slug: advanced
     title: 発展課題
-    summary: 選択制の25トピック。回 ID の頭文字がカテゴリを表す。
+    summary: 選択制の26トピック。回 ID の頭文字がカテゴリを表す。
     pages:
       - workbook/advanced/README.md
       - materials/advanced/F0_cyk.md
@@ -67,13 +67,7 @@ sections:
       - materials/advanced/L2_compound_assign.md
       - materials/advanced/L3_variadic.md
       - materials/advanced/Q1_typecheck.md
-
-  - slug: porting
-    title: C 移植・セルフホスト
-    summary: Python 版完成後に挑戦する長期トラック。
-    pages:
-      - workbook/porting/README.md
-      - workbook/porting/code_example.md
+      - materials/advanced/P1_selfhost.md
 
   - slug: docs
     title: 仕様・参考文書

@@ -131,14 +131,14 @@ python3 scaffold/test_runner.py --compiler final/mycc.py --tests final/tests
 - 自分が苦労したバグと、その直し方を説明できる
 - `final/mycc.py` が最終成果物であることを確認している
 
-## 第17回以降
+## このあと
 
-第17回以降は進度別に分岐する。
+標準トラックはここで完成する。Python 版の補修、テスト追加、発表準備に充てるか、
+[選択制の発展課題](../../workbook/advanced/README.md)に進む。
 
-標準トラックの受講者は、Python 版の補修、テスト追加、発表準備を行う。
-上位トラックを目指す受講者は、Python 版を参照しながら C 版コンパイラへの移植に進む。
-
-移植では、Python の `dict` を C の連結リストへ、Python のクラスを C の `struct` へ写すことが中心になる。
+発展課題の中でも C 移植・セルフホスト（P1）は、動く Python 版を参照実装として、
+Python の `dict` を C の連結リストへ、Python のクラスを C の `struct` へ写す
+長期チャレンジである。
 
 ## テスト
 

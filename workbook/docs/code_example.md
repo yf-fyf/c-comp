@@ -1,7 +1,6 @@
 # コンパイル到達目標コード集
 
 各コマ終了時点で「コンパイルできる最も複雑なプログラム」を示す（コマ1〜16）。
-C 版への移植（コマ17〜24）は [`../porting/code_example.md`](../porting/code_example.md) を参照。
 
 ## 凡例
 
@@ -647,4 +646,5 @@ int main() {
 | 15 | 複数ファイル・前処理 | `#include "f.h"` / `#define N 10` |
 | 16 | 統合確認 | 標準トラック完成（`fixed17` 全通が目安） |
 
-コマ17 以降（C 版への移植）のコード例は [`../porting/code_example.md`](../porting/code_example.md) にある。
+コマ16 のあとは選択制の発展課題（`../advanced/README.md`）に進む。
+C 移植・セルフホスト（P1）の進め方は [`../advanced/P1_selfhost/README.md`](../advanced/P1_selfhost/README.md) にある。

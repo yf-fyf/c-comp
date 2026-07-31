@@ -54,8 +54,7 @@
     │   ├── README.md      # 全トピック一覧・カテゴリ別の解説
     │   ├── optcc.py       # O 系列の共有ラッパー
     │   ├── count_insns.py # B 系列の共有ツール
-    │   └── <回ID>_xxx/    # 例: O3_isel/、S1_shortcircuit/
-    ├── porting/           # C 移植・セルフホスト（C 実装の規約と移植対応表もここ）
+    │   └── <回ID>_xxx/    # 例: O3_isel/、P1_selfhost/（C 移植・セルフホスト）
     ├── guides/            # 補助ツールガイドへの導線
     └── docker/rv64/       # 推奨実行環境
 ```
@@ -93,8 +92,7 @@ R=ランタイム、S=意味論、L=言語機能、Q=品質）。
 | Docker の使い方 | `workbook/docs/getting_started.md`（設定とトラブルシュートは `workbook/docker/rv64/README.md`） |
 | テストの走らせ方・テスト形式 | `workbook/docs/testing.md` |
 | RV64 の ABI・アラインメント規則 | `workbook/docs/rv64_reference.md` |
-| Python→C 移植対応表・C 実装の規約 | `workbook/porting/README.md` |
-| 発展課題の一覧と前提 | `workbook/advanced/README.md` |
+| 発展課題の一覧と前提（Python→C 移植対応表・C 実装の規約を含む） | `workbook/advanced/README.md` |
 | サイトの章立てとページの並び | `site/nav.yaml` |
 
 `materials/` は資料の原稿、`workbook/` は学習者向け配布物として扱う。
@@ -214,7 +212,7 @@ GitHub Pages は `main` ブランチのルートを配信する。`main` は開�
 index.html                # サイトのトップ
 assets/                   # スタイルシート
 figures/                  # 図の SVG
-sessions/ advanced/ porting/ docs/ guides/   # 資料のページ
+sessions/ advanced/ docs/ guides/   # 資料のページ
 tools/                    # ビルド済みの補助ウェブアプリ
 downloads/*.zip           # workbook/ 全体の配布アーカイブ
 LICENSE
