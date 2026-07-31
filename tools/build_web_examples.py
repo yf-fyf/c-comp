@@ -29,7 +29,7 @@ PUBLIC = DEV / "web" / "app" / "public"
 OUT = PUBLIC / "examples.json"
 SIM_OUT = PUBLIC / "sim-examples.json"
 HANDWRITTEN = DEV / "web" / "examples" / "asm"
-KOMA16 = WORKBOOK / "ocaml" / "_build" / "default" / "koma16.exe"
+KOMA16 = WORKBOOK / "ocaml" / "_build" / "default" / "sessions" / "koma16.exe"
 
 sys.path.insert(0, str(WORKBOOK / "scaffold"))
 from lexer import preprocess, tokenize  # noqa: E402
