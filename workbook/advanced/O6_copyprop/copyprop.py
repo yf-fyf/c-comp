@@ -31,7 +31,7 @@ MV = re.compile(r'^mv\s+(\w+),\s*(\w+)$')
 def _load(name, subdir, filename):
     """前提の回のモジュールを読み込む(完成済み)。"""
     candidates = [DIR.parent / subdir / filename]
-    answers = os.environ.get("OPT_ANSWERS")
+    answers = os.environ.get("OPTCC_ANSWERS")
     if answers:
         candidates.append(Path(answers) / subdir / filename)
     for path in candidates:

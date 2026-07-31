@@ -4,7 +4,7 @@
 使い方:
     python3 golden.py
     python3 golden.py path/to/answers_dir       # 教員用参照実装で確認する
-    OPT_COMPILER=... python3 golden.py
+    OPTCC_COMPILER=... python3 golden.py
 
 1. bench/*.c のフローグラフが構造的に正しいこと
 2. ブロック数・辺数・後方辺(ループの戻り)を表にすること

@@ -3,7 +3,7 @@
 
 使い方:
     python3 golden.py
-    OPT_COMPILER=... OPT_ANSWERS=... python3 golden.py
+    OPTCC_COMPILER=... OPTCC_ANSWERS=... python3 golden.py
 
 この回は**意味を壊しやすい**。効果より先に fixed17 を確認する。
 """
@@ -26,8 +26,8 @@ GCC = os.environ.get("GCC", "riscv64-linux-gnu-gcc")
 
 
 def _measure_path():
-    """O1 の measure.py を探す(OPT_ANSWERS があればそちらを優先)。"""
-    answers = os.environ.get("OPT_ANSWERS")
+    """O1 の measure.py を探す(OPTCC_ANSWERS があればそちらを優先)。"""
+    answers = os.environ.get("OPTCC_ANSWERS")
     if answers:
         cand = Path(answers) / "O1_measure" / "measure.py"
         if cand.is_file():
@@ -41,8 +41,8 @@ spec.loader.exec_module(me)
 
 
 def run_tests(tests, regalloc, passes):
-    env = dict(os.environ, OPT_PASSES=passes,
-               OPT_REGALLOC="1" if regalloc else "0")
+    env = dict(os.environ, OPTCC_PASSES=passes,
+               OPTCC_REGALLOC="1" if regalloc else "0")
     r = subprocess.run(
         [sys.executable, str(RUNNER), "--compiler", str(OPTCC), "--tests", str(tests)],
         text=True, capture_output=True, env=env,

@@ -82,3 +82,27 @@ legacy_terms:
       同上。「配列名は load が空になるので」というコメント。Var ケースの
       文字列リテラル・ポインタ変数に共通する decay 挙動の説明とみられるが、
       「配列」という語の妥当性はメンテナ判断待ち（T57 で新規検出）。
+
+# style チェック（T59）の除外リスト。design/maintaining.md の用語表そのものが
+# 「誤（避ける）」列に旧表記の実例を挙げているため自己検出してしまう箇所を除く。
+style_terms:
+  - file: design/maintaining.md
+    line: 111
+    status: legitimate
+    reason: >
+      用語表の「ゼロ埋め」行。「誤（避ける）」列に例として `コマ08`・`コマ06`
+      を挙げているため、規約の説明として正当な出現。
+
+  - file: design/maintaining.md
+    line: 112
+    status: legitimate
+    reason: >
+      用語表の「コマとNの間の空白」行。「誤（避ける）」列に `コマ 3` を
+      挙げているため、規約の説明として正当な出現。
+
+  - file: design/maintaining.md
+    line: 113
+    status: legitimate
+    reason: >
+      用語表の「呼称（人）」行。「誤（避ける）」列に「学生」を挙げているため、
+      規約の説明として正当な出現。

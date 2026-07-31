@@ -20,7 +20,7 @@
 コンパイラはまだ存在しない。手書きアセンブリを qemu で動かすことが目標。
 
 ```asm
-# hello.s — 学生が手で書く
+# hello.s — 学習者が手で書く
     .global main
 main:
     addi    a0, zero, 42    # 戻り値 = 42
@@ -39,7 +39,7 @@ qemu-riscv64 ./hello; echo $?   # → 42
 コンパイラはまだ存在しない。教員提供の Lexer/Parser が返す AST を Python で評価する。
 
 ```python
-# 学生が書くインタープリター
+# 学習者が書くインタープリター
 def eval_ast(node):
     if node.kind == 'Num':  return node.val
     if node.kind == 'Add':  return eval_ast(node.lhs) + eval_ast(node.rhs)

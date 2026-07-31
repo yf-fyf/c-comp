@@ -3,7 +3,7 @@
 
 使い方:
     python3 golden.py
-    OPT_COMPILER=... OPT_ANSWERS=... python3 golden.py
+    OPTCC_COMPILER=... OPTCC_ANSWERS=... python3 golden.py
 
 同じ死コード除去でも、レジスタ割り当ての前と後では結果がまったく違う。
 それを4つの構成で測って並べる(phase ordering)。
@@ -35,7 +35,7 @@ CONFIGS = [
 
 
 def _measure_path():
-    answers = os.environ.get("OPT_ANSWERS")
+    answers = os.environ.get("OPTCC_ANSWERS")
     if answers:
         cand = Path(answers) / "O1_measure" / "measure.py"
         if cand.is_file():
@@ -49,8 +49,8 @@ spec.loader.exec_module(me)
 
 
 def run_tests(tests, regalloc, passes):
-    env = dict(os.environ, OPT_PASSES=passes,
-               OPT_REGALLOC="1" if regalloc else "0")
+    env = dict(os.environ, OPTCC_PASSES=passes,
+               OPTCC_REGALLOC="1" if regalloc else "0")
     r = subprocess.run(
         [sys.executable, str(RUNNER), "--compiler", str(OPTCC), "--tests", str(tests)],
         text=True, capture_output=True, env=env,

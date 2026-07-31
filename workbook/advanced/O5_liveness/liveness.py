@@ -47,7 +47,7 @@ NO_DEF = ('j', 'ret', 'jr', 'call', 'jal', 'jalr')
 def _load_cfg():
     """O2 で作った cfg.py を読み込む(完成済み)。"""
     candidates = [DIR.parent / "O2_cfg" / "cfg.py"]
-    answers = os.environ.get("OPT_ANSWERS")
+    answers = os.environ.get("OPTCC_ANSWERS")
     if answers:
         candidates.append(Path(answers) / "O2_cfg" / "cfg.py")
     for path in candidates:

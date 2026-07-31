@@ -3,7 +3,7 @@
 
 使い方:
     python3 golden.py
-    OPT_COMPILER=... python3 golden.py
+    OPTCC_COMPILER=... python3 golden.py
     python3 golden.py path/to/passes_dir      # 教員用参照実装で確認する
 
 1. bench/*.c が全部正しく動くこと
@@ -31,10 +31,10 @@ spec = importlib.util.spec_from_file_location("O1_measure", passes_dir / "measur
 me = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(me)
 
-COMPILER = Path(os.environ.get("OPT_COMPILER", WORKBOOK / "final" / "mycc.py"))
+COMPILER = Path(os.environ.get("OPTCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
 sys.path.insert(0, str(DIR.parent))
 from basecc import ensure_base  # noqa: E402
-ensure_base(COMPILER, "OPT_COMPILER")
+ensure_base(COMPILER, "OPTCC_COMPILER")
 GCC = os.environ.get("GCC", "riscv64-linux-gnu-gcc")
 
 

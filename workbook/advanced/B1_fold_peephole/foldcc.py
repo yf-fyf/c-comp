@@ -14,8 +14,8 @@ test_runner からも普通のコンパイラとして使える:
     python3 scaffold/test_runner.py --compiler advanced/B1_fold_peephole/foldcc.py
 
 環境変数:
-    OPTCC_COMPILER  ベースにするコンパイラ(既定: workbook/final/mycc.py)
-    OPTCC_PASSES    fold.py / peephole.py のあるディレクトリ(既定: このファイルの場所)
+    FOLDCC_COMPILER  ベースにするコンパイラ(既定: workbook/final/mycc.py)
+    FOLDCC_PASSES    fold.py / peephole.py のあるディレクトリ(既定: このファイルの場所)
 
 仕組み: mycc.py は `from parser import parse` で scaffold のパーサを読む。
 foldcc は mycc を読み込む前に、sys.modules['parser'] を
@@ -52,8 +52,8 @@ def main():
               file=sys.stderr)
         raise SystemExit(2)
 
-    passes_dir = Path(os.environ.get("OPTCC_PASSES", DIR))
-    compiler = Path(os.environ.get("OPTCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
+    passes_dir = Path(os.environ.get("FOLDCC_PASSES", DIR))
+    compiler = Path(os.environ.get("FOLDCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
     if not compiler.is_file():
         print(f"ベースのコンパイラが見つからない: {compiler}", file=sys.stderr)
         raise SystemExit(2)

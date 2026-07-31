@@ -13,7 +13,7 @@
 4. `final/tests/` が全通したら、コードを読み直して完成チェックを行う
 
 `final/mycc.py` はコマ16開始時点では統合先プレースホルダーである。
-学生は自分の実装をここへ移す。
+学習者は自分の実装をここへ移す。
 
 ```bash
 python3 scaffold/test_runner.py

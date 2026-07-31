@@ -1,7 +1,7 @@
 # sessions
 
 各コマの作業内容を置く。
-学生は、その日の `sessions/NN_xxx/` だけを見ればよい。
+学習者は、その日の `sessions/NN_xxx/` だけを見ればよい。
 
 講義資料は <https://yf-fyf.github.io/c-comp/sessions/> にある。まずこれを読む。
 

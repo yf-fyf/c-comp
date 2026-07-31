@@ -14,6 +14,9 @@
            （design/maintaining.md のワンライナーと同じロジック）
     libh   workbook/scaffold/lib.h の宣言一覧と language_spec.md の
            「標準ライブラリ」節のコードブロックが一致しているか（T55）
+    style  design/maintaining.md の用語表（T59）で決めた表記に反していないか
+           （第NN回・ゼロ埋め・コマとNの間の空白・「学生」表記）。
+           workbook/advanced/・materials/advanced/ は対象外（後半タスクで別途統一）
 
 除外リストは tools/doc_check_allowlist.yaml。理由は各エントリの reason に書く。
 依存: PyYAML（tools/build_site.py と共通）。
@@ -61,6 +64,14 @@ def load_allowlist() -> list[dict]:
     with ALLOWLIST_PATH.open(encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     return data.get("legacy_terms", [])
+
+
+def load_style_allowlist() -> list[dict]:
+    if not ALLOWLIST_PATH.is_file():
+        return []
+    with ALLOWLIST_PATH.open(encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    return data.get("style_terms", [])
 
 
 # ── チェック1: 原稿とテスト実体の突合 ──
@@ -289,24 +300,116 @@ def check_libh_sync() -> list[Violation]:
     )]
 
 
+# ── チェック5: 用語・表記の統一（T59） ──
+#
+# design/maintaining.md の「用語と表記の統一」節が定める規約のうち、機械的に
+# 検出できるものを検査する: 回の呼称は「コマN」（ゼロ埋めなし・空白なし）に
+# 統一し「第NN回」は使わない。人の呼称は「学習者」に統一し「学生」は使わない。
+#
+# 対象: materials/, workbook/ 配下の Markdown（*.md）のみ。原稿とスケルトン
+# コード（*.py / *.ml）のコメント・docstring は対象外（コード中の記述であり、
+# 進行中の授業で既に配布済みのファイルを書き換える実利が薄いため）。
+#
+# 構造的な除外: materials/advanced/, workbook/advanced/ は本チェックの対象外。
+# advanced 側は括弧の全角/半角・「発展 XN」/「発展課題 XN」・B ファミリの
+# 呼称・「（選択制）」の有無・スキャフォールド表記など、T59 後半タスクで
+# 別途まとめて統一する（本チェックへの追加もそのタスクで行う）。
+
+STYLE_DAI_KAI_RE = re.compile(r"第[0-9]{1,2}回")
+STYLE_KOMA_ZERO_RE = re.compile(r"コマ0[0-9]")
+STYLE_KOMA_SPACE_RE = re.compile(r"コマ[ 　][0-9]")
+STYLE_GAKUSEI_RE = re.compile(r"学生")
+
+
+def is_advanced_exempt(path: Path) -> bool:
+    parts = path.relative_to(ROOT).parts
+    return parts[:2] in {("materials", "advanced"), ("workbook", "advanced")}
+
+
+def _check_style_terms_in_file(
+    path: Path, violations: list[Violation], allowlist: set[tuple[str, int]]
+) -> None:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError:
+        return
+    rel = path.relative_to(ROOT).as_posix()
+    for i, line in enumerate(lines, 1):
+        if (rel, i) in allowlist:
+            continue
+        if STYLE_DAI_KAI_RE.search(line):
+            violations.append(Violation(
+                path, i, f"「第NN回」表記の残存（「コマN」を使う）: {line.strip()}",
+            ))
+        if STYLE_KOMA_ZERO_RE.search(line):
+            violations.append(Violation(
+                path, i, f"「コマN」のゼロ埋めの残存: {line.strip()}",
+            ))
+        if STYLE_KOMA_SPACE_RE.search(line):
+            violations.append(Violation(
+                path, i, f"「コマ」と数字の間の空白の残存: {line.strip()}",
+            ))
+        if STYLE_GAKUSEI_RE.search(line):
+            violations.append(Violation(
+                path, i, f"「学生」表記の残存（「学習者」を使う）: {line.strip()}",
+            ))
+
+
+def check_style_terms() -> list[Violation]:
+    violations: list[Violation] = []
+    allowlist = {
+        (entry["file"], entry["line"]) for entry in load_style_allowlist()
+    }
+    for top in ("materials", "workbook"):
+        base = ROOT / top
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.md")):
+            if any(part in SKIP_DIRNAMES for part in path.relative_to(ROOT).parts):
+                continue
+            if is_advanced_exempt(path):
+                continue
+            _check_style_terms_in_file(path, violations, allowlist)
+    # README.md（リポジトリ直下）と design/ も対象に含める。
+    readme = ROOT / "README.md"
+    if readme.is_file():
+        _check_style_terms_in_file(readme, violations, allowlist)
+    design_dir = ROOT / "design"
+    if design_dir.is_dir():
+        for path in sorted(design_dir.rglob("*.md")):
+            if any(part in SKIP_DIRNAMES for part in path.relative_to(ROOT).parts):
+                continue
+            _check_style_terms_in_file(path, violations, allowlist)
+    return violations
+
+
 CHECKS = {
     "tests": ("原稿とテスト実体の突合", check_test_tables),
     "terms": ("旧仕様語の検出", check_legacy_terms),
     "nav": ("nav.yaml 未掲載の検出", check_nav_listing),
     "libh": ("lib.h と仕様書の宣言一致", check_libh_sync),
+    "style": ("用語・表記の統一（T59）", check_style_terms),
 }
 
 
 def print_allowlist() -> None:
     entries = load_allowlist()
-    if not entries:
+    style_entries = load_style_allowlist()
+    if not entries and not style_entries:
         print("除外リストは空。")
         return
-    print(f"除外リスト {len(entries)} 件:")
-    for entry in entries:
-        status = entry.get("status", "?")
-        reason = " ".join(entry.get("reason", "").split())
-        print(f"  [{status}] {entry['file']}:{entry['line']}  {reason}")
+    if entries:
+        print(f"legacy_terms 除外リスト {len(entries)} 件:")
+        for entry in entries:
+            status = entry.get("status", "?")
+            reason = " ".join(entry.get("reason", "").split())
+            print(f"  [{status}] {entry['file']}:{entry['line']}  {reason}")
+    if style_entries:
+        print(f"style_terms 除外リスト {len(style_entries)} 件:")
+        for entry in style_entries:
+            status = entry.get("status", "?")
+            reason = " ".join(entry.get("reason", "").split())
+            print(f"  [{status}] {entry['file']}:{entry['line']}  {reason}")
 
 
 def main() -> int:

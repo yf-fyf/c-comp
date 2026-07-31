@@ -26,7 +26,7 @@ me = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(me)
 
 import os  # noqa: E402
-COMPILER = Path(os.environ.get("OPT_COMPILER", WORKBOOK / "final" / "mycc.py"))
+COMPILER = Path(os.environ.get("OPTCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
 GCC = os.environ.get("GCC", "riscv64-linux-gnu-gcc")
 
 pass_count = 0

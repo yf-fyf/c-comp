@@ -3,7 +3,7 @@
 
 使い方:
     python3 golden.py                     # final/mycc.py をベースに確認
-    OPTCC_COMPILER=... python3 golden.py  # ベースのコンパイラを差し替え
+    FOLDCC_COMPILER=... python3 golden.py  # ベースのコンパイラを差し替え
 
 1. fixed17 を foldcc.py(fold + peephole つき)でコンパイルして全テスト実行
 2. 各テストの命令数を最適化なし/ありで数えて表にする
@@ -23,11 +23,11 @@ TESTS = WORKBOOK / "final" / "tests"
 sys.path.insert(0, str(DIR.parent))
 from count_insns import count  # noqa: E402
 
-compiler = Path(os.environ.get("OPTCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
+compiler = Path(os.environ.get("FOLDCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
 
 
 from basecc import ensure_base  # noqa: E402
-ensure_base(compiler, "OPTCC_COMPILER")
+ensure_base(compiler, "FOLDCC_COMPILER")
 def compile_with(args, src):
     result = subprocess.run(
         [sys.executable, *args, str(src)],

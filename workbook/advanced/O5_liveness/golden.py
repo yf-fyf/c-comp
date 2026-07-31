@@ -3,7 +3,7 @@
 
 使い方:
     python3 golden.py
-    OPT_COMPILER=... OPT_ANSWERS=... python3 golden.py
+    OPTCC_COMPILER=... OPTCC_ANSWERS=... python3 golden.py
 
 この回は命令数を減らさない。**解析そのもの**が成果物である。
 そこで「ブロックの境界で何本のレジスタが生きているか」を測り、

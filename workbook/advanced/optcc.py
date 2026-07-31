@@ -13,7 +13,7 @@ mycc.py には手を入れず、次の2種類の最適化を差し込む。
 
     python3 scaffold/test_runner.py \
         --compiler advanced/optcc.py --tests final/tests
-    # ↑ この場合は環境変数 OPT_PASSES / OPT_REGALLOC でパスを指定する
+    # ↑ この場合は環境変数 OPTCC_PASSES / OPTCC_REGALLOC でパスを指定する
 
 パスの名前と実体:
     isel      O3_isel/isel.py
@@ -29,10 +29,10 @@ mycc.py には手を入れず、次の2種類の最適化を差し込む。
 局所変数をレジスタに置く判断には AST の情報が要るので、アセンブリでは遅い。
 
 環境変数:
-    OPT_COMPILER  ベースにするコンパイラ(既定: workbook/final/mycc.py)
-    OPT_PASSES    適用するパス(--passes と同じ書式。--passes 未指定のとき使う)
-    OPT_REGALLOC  1 なら --regalloc と同じ
-    OPT_ANSWERS   実装を別ディレクトリから読む(教員用参照実装の確認用)
+    OPTCC_COMPILER  ベースにするコンパイラ(既定: workbook/final/mycc.py)
+    OPTCC_PASSES    適用するパス(--passes と同じ書式。--passes 未指定のとき使う)
+    OPTCC_REGALLOC  1 なら --regalloc と同じ
+    OPTCC_ANSWERS   実装を別ディレクトリから読む(教員用参照実装の確認用)
 """
 
 import importlib.util
@@ -69,9 +69,9 @@ def load_module(name, path):
 def resolve_file(subdir, filename):
     """実装ファイルの場所を決める。
 
-    OPT_ANSWERS が指定されていればそちらを優先する(教員用参照実装)。
+    OPTCC_ANSWERS が指定されていればそちらを優先する(教員用参照実装)。
     """
-    answers = os.environ.get("OPT_ANSWERS")
+    answers = os.environ.get("OPTCC_ANSWERS")
     if answers:
         cand = Path(answers) / subdir / filename
         if cand.is_file():
@@ -138,8 +138,8 @@ def apply_passes(asm, pass_names):
 
 def main():
     args = sys.argv[1:]
-    passes_spec = os.environ.get("OPT_PASSES", "")
-    regalloc = os.environ.get("OPT_REGALLOC", "") == "1"
+    passes_spec = os.environ.get("OPTCC_PASSES", "")
+    regalloc = os.environ.get("OPTCC_REGALLOC", "") == "1"
     srcs = []
     i = 0
     while i < len(args):
@@ -163,12 +163,12 @@ def main():
               file=sys.stderr)
         raise SystemExit(2)
 
-    compiler = Path(os.environ.get("OPT_COMPILER", WORKBOOK / "final" / "mycc.py"))
+    compiler = Path(os.environ.get("OPTCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
     # コマ16 前は final/mycc.py が統合先のプレースホルダなので、
     # ここで弾かないと「最適化で壊れた」ように見える失敗になる。
     sys.path.insert(0, str(DIR))
     from basecc import ensure_base  # noqa: E402
-    ensure_base(compiler, "OPT_COMPILER")
+    ensure_base(compiler, "OPTCC_COMPILER")
 
     asm = compile_to_asm(compiler, srcs, regalloc=regalloc)
     sys.stdout.write(apply_passes(asm, parse_passes(passes_spec)))
