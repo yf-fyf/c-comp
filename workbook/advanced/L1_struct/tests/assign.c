@@ -1,9 +1,9 @@
 // 構造体の代入(まるごとコピー)
-typedef struct Point { int x; int y; } Point;
+struct Point { int x; int y; };
 
 int main() {
-    Point p;
-    Point q;
+    struct Point p;
+    struct Point q;
     p.x = 3;
     p.y = 4;
 

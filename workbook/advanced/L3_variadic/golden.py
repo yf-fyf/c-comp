@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""L3 golden test — 可変長引数の定義が動くこと + fixed15 が壊れないこと
+"""L3 golden test — 可変長引数の定義が動くこと + fixed17 が壊れないこと
 
 使い方:
     python3 golden.py
@@ -36,7 +36,7 @@ def main():
     if ok_plain:
         print("(すでに可変長引数が実装されているコンパイラのようです)")
     else:
-        print("対応なし: FAIL — __arg が未定義の関数として呼ばれる。期待どおり")
+        print("対応なし: FAIL — 可変長 '...' の関数定義を仕様どおり構文で弾く。期待どおり")
 
     print()
     print("=== 2. 対応ありで全テストが通る ===")
@@ -48,7 +48,7 @@ def main():
         return 1
 
     print()
-    print("=== 3. fixed15 が壊れていないことを確認 ===")
+    print("=== 3. fixed17 が壊れていないことを確認 ===")
     ok_fixed, out_fixed = run_tests(DIR / "varcc.py", WORKBOOK / "final" / "tests")
     print("\n".join(out_fixed.strip().splitlines()[-3:]))
     if not ok_fixed:

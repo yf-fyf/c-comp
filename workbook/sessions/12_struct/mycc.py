@@ -92,7 +92,7 @@ class Codegen12(prev.Codegen11):
                     break
             if name_idx < 0:
                 continue
-            fields.append((tokens[name_idx], ' '.join(tokens[:name_idx])))
+            fields.append((tokens[name_idx], ' '.join(tokens[:name_idx]).replace(' *', '*')))
         return fields
 
     @classmethod

@@ -1,14 +1,14 @@
 // ポインタ経由の構造体代入
-typedef struct Box { int w; int h; int d; } Box;
+struct Box { int w; int h; int d; };
 
-int fill(Box *dst, Box *src) {
+int fill(struct Box *dst, struct Box *src) {
     *dst = *src;           // ポインタの先どうしをコピー
     return 0;
 }
 
 int main() {
-    Box a;
-    Box b;
+    struct Box a;
+    struct Box b;
     a.w = 2; a.h = 3; a.d = 5;
 
     fill(&b, &a);

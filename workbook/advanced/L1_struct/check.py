@@ -29,9 +29,18 @@ fail_count = 0
 skip_count = 0
 
 STRUCTS = {
-    'Point': {'size': 8, 'fields': {'x': (0, 'int'), 'y': (4, 'int')}},
-    'Line': {'size': 16, 'fields': {'a': (0, 'Point'), 'b': (8, 'Point')}},
-    'Small': {'size': 5, 'fields': {'c': (0, 'char'), 'n': (1, 'int')}},
+    'struct Point': {'size': 8, 'align': 4,
+                      'fields': {'x': (0, 'int'), 'y': (4, 'int')}},
+    # 'struct Line' は R-17(2026-07-31)によりポインタ・フィールド版へ再設計。
+    # フィールドは int・char・ポインタのみという新仕様の制約により、struct 値の
+    # 入れ子(旧: 'a': (0, 'struct Point') 等)はもう書けない。
+    'struct Line': {'size': 16, 'align': 8,
+                     'fields': {'a': (0, 'struct Point*'), 'b': (8, 'struct Point*')}},
+    # 'struct Small' は参照実装の自然整列では発生しないレイアウト(char の後に
+    # int が続くと本来はパディングが入る)。ここでは端数バイトのコピー
+    # (sw + sb)を検査するための合成フィクスチャとして size=5・align=1 のまま維持する。
+    'struct Small': {'size': 5, 'align': 1,
+                      'fields': {'c': (0, 'char'), 'n': (1, 'int')}},
 }
 
 
@@ -92,13 +101,16 @@ def run_step(name, fn):
 
 
 def step1():
-    cg = FakeCG({'p': 'Point', 'q': 'Point', 'l': 'Line',
-                 'i': 'int', 'ptr': 'Point*'})
+    cg = FakeCG({'p': 'struct Point', 'q': 'struct Point', 'l': 'struct Line',
+                 'i': 'int', 'ptr': 'struct Point*'})
     check("構造体同士の代入は対象", bool(sc.is_struct_assign(cg, expr("q = p"))))
-    check("ネストしたメンバへの代入も対象",
-          bool(sc.is_struct_assign(cg, expr("l.a = p"))))
     check("ポインタ経由も対象",
           bool(sc.is_struct_assign(cg, expr("*ptr = p"))))
+    # R-17(2026-07-31): struct フィールドは int・char・ポインタのみで、
+    # struct 値の入れ子は書けない。'l.a' は 'struct Point*' というポインタ・
+    # フィールドなので、代入は構造体コピーではなく「ただのポインタ代入」になる。
+    check("ポインタ・フィールドへの代入は対象外(ポインタ代入)",
+          not sc.is_struct_assign(cg, expr("l.a = ptr")))
     check("int の代入は対象外", not sc.is_struct_assign(cg, expr("i = 1")))
     check("メンバ(int)の代入は対象外",
           not sc.is_struct_assign(cg, expr("p.x = 1")))
@@ -108,7 +120,7 @@ def step1():
 
 
 def step2():
-    cg = FakeCG({'p': 'Point', 'q': 'Point'})
+    cg = FakeCG({'p': 'struct Point', 'q': 'struct Point'})
     sc.gen_struct_copy(cg, expr("q = p"))
     check("左辺→退避→右辺→復元の順",
           cg.lines[:4] == ['# lval Var', 'push a0', '# lval Var', 'pop a1'],
@@ -118,12 +130,12 @@ def step2():
     check("最後に mv a0, a1 で左辺のアドレスを残す",
           cg.lines[-1] == 'mv a0, a1', str(cg.lines))
 
-    cg2 = FakeCG({'l': 'Line', 'm': 'Line'})
+    cg2 = FakeCG({'l': 'struct Line', 'm': 'struct Line'})
     sc.gen_struct_copy(cg2, expr("m = l"))
     n_sd = sum(1 for l in cg2.lines if l.startswith('sd '))
     check("16 バイトは sd 2回でコピー", n_sd == 2, str(cg2.lines))
 
-    cg3 = FakeCG({'a': 'Small', 'b': 'Small'})
+    cg3 = FakeCG({'a': 'struct Small', 'b': 'struct Small'})
     sc.gen_struct_copy(cg3, expr("b = a"))
     kinds = [l.split()[0] for l in cg3.lines if l[:2] in ('sd', 'sw', 'sb')]
     check("5 バイトは sw 1回 + sb 1回", kinds == ['sw', 'sb'], str(cg3.lines))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""L2 golden test — 初期化子が動くこと + fixed15 が壊れないこと
+"""L2 golden test — 複合代入が動くこと + fixed17 が壊れないこと
 
 使い方:
     python3 golden.py
@@ -31,15 +31,15 @@ def run_tests(comp, tests):
 def main():
     tests = DIR / "tests"
 
-    print("=== 1. 初期化子なし(いまの mycc)では構文解析すら通らないことを確認 ===")
+    print("=== 1. 複合代入なし(いまの mycc)では字句解析すら通らないことを確認 ===")
     ok_plain, out_plain = run_tests(compiler, tests)
     if ok_plain:
-        print("(すでに初期化子が実装されているコンパイラのようです)")
+        print("(すでに複合代入が実装されているコンパイラのようです)")
     else:
-        print("初期化子なし: FAIL —『式が期待されましたが {』。期待どおり")
+        print("複合代入なし: FAIL —『+』のあとで『=』が余る。期待どおり")
 
     print()
-    print("=== 2. 初期化子ありで全テストが通る ===")
+    print("=== 2. 複合代入ありで全テストが通る ===")
     ok, out = run_tests(DIR / "langcc.py", tests)
     print("\n".join(out.strip().splitlines()[-3:]))
     if not ok:
@@ -48,15 +48,15 @@ def main():
         return 1
 
     print()
-    print("=== 3. fixed15 が壊れていないことを確認 ===")
+    print("=== 3. fixed17 が壊れていないことを確認 ===")
     ok_fixed, out_fixed = run_tests(DIR / "langcc.py", WORKBOOK / "final" / "tests")
     print("\n".join(out_fixed.strip().splitlines()[-3:]))
     if not ok_fixed:
-        print("\n初期化子のない宣言(int a[5];)を壊していないか確認する。")
+        print("\n複合代入を含まない代入(x = x + 1;)を壊していないか確認する。")
         return 1
 
     print()
-    print("初期化子リストが動き、既存のテストも壊れていない!")
+    print("複合代入が動き、既存のテストも壊れていない!")
     return 0
 
 

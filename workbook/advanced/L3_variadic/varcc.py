@@ -3,9 +3,11 @@
 
 scaffold と mycc.py には手を入れず、次を差し込む。
 
-  パーサ側:
-    _parse_func   引数リストに '...' があった関数名を覚えておく
-                  (scaffold のパーサは '...' を読み飛ばして捨ててしまうため)
+  構文側:
+    _parse_func   関数「定義」の引数リストに書かれた '...' を受理する
+                  (scaffold のパーサは仕様どおり、定義側の '...' を
+                   「プロトタイプ宣言でのみ使えます」でエラーにする)
+                  受理した関数名は VARIADIC_FUNCS に覚えておく
 
   コード生成側:
     collect_decls 可変長関数なら save area 用のスロットを先に8個確保する
@@ -56,27 +58,59 @@ def find_codegen_class(mod):
 
 
 def install_parser_shim(real_parser):
-    """引数リストに '...' があった関数名を VARIADIC_FUNCS に記録する。"""
+    """関数定義側の '...' を受理する parser を sys.modules["parser"] に入れる。
+
+    scaffold/parser.py の Parser を継承した複製クラスを作り、_parse_func だけ
+    を差し替える(scaffold のファイルには触らない)。差分は 1 点だけ —
+    本家は引数リストに '...' があって、かつ ';' で終わらなかったとき
+    「可変長 '...' はプロトタイプ宣言でのみ使えます」でエラーにするが、
+    複製側はそこで止めずに本体を読み、関数名を VARIADIC_FUNCS に記録する。
+    このあとに読み込む mycc も `from parser import parse` でこの複製を掴む。
+    """
+    Node = real_parser.Node
+    parse_error = real_parser._parse_error
 
     class VariadicParser(real_parser.Parser):
         def _parse_func(self, ty_str, name):
-            start = self.pos
-            # 引数リストの終わり('{' か ';')までに '...' があるか調べる
-            i = start
-            while i < len(self.tokens):
-                sval = self.tokens[i].sval
-                if sval in ('{', ';'):
-                    break
-                if sval == '...':
-                    VARIADIC_FUNCS.add(name)
-                    break
-                i += 1
-            return super()._parse_func(ty_str, name)
+            self.expect('(')
+            params = []
+            variadic = False
+
+            if not self.consume_if(')'):
+                while True:
+                    if self.cur.sval == '...':
+                        if not params:
+                            parse_error(
+                                "可変長 '...' は 1 個以上の固定引数の後にのみ書けます",
+                                self.cur.line)
+                        self.pos += 1
+                        variadic = True
+                        break
+                    p_ty = self.parse_scalar_type()
+                    p_name = self.expect_ident()   # 仮引数は名前必須
+                    params.append(Node(real_parser.ND_DECL,
+                                       name=p_name, ty_str=p_ty))
+                    if not self.consume_if(','):
+                        break
+                self.expect(')')
+
+            # 関数宣言(; で終わり)— 本家と同じ。仕様どおり許されている
+            if self.consume_if(';'):
+                return Node(real_parser.ND_FUNCPROTO,
+                            name=name, ty_str=ty_str, params=params)
+
+            # 関数定義 — 本家はここで可変長を弾く。この回の拡張はここを通す
+            if variadic:
+                VARIADIC_FUNCS.add(name)
+            body = self.parse_func_body()
+            return Node(real_parser.ND_FUNCDEF, name=name, ty_str=ty_str,
+                        params=params, body=body)
 
     shim = types.ModuleType("parser")
     shim.Parser = VariadicParser
     shim.parse = lambda tokens: VariadicParser(tokens).parse_program()
     sys.modules["parser"] = shim
+    return shim
 
 
 def patch(cls, va):
