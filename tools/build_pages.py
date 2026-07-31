@@ -18,6 +18,21 @@ WORKBOOK = ROOT / "workbook"
 WEB_DIST = ROOT / "web" / "app" / "dist"
 BUILD_SITE = ROOT / "tools" / "build_site.py"
 EXCLUDED_PARTS = {"__pycache__", "_build", "cfg_out", "node_modules"}
+# dist の鮮度を比べる相手。web/app の入力と、埋め込まれるコア（web/core）の原稿。
+WEB_SOURCES = [
+    ROOT / "web" / "app" / "src",
+    ROOT / "web" / "app" / "public",
+    ROOT / "web" / "app" / "scripts",
+    ROOT / "web" / "app" / "index.html",
+    ROOT / "web" / "app" / "ast.html",
+    ROOT / "web" / "app" / "sim.html",
+    ROOT / "web" / "app" / "vite.config.ts",
+    ROOT / "web" / "app" / "tsconfig.json",
+    ROOT / "web" / "app" / "package.json",
+    ROOT / "web" / "core" / "lib",
+    ROOT / "web" / "core" / "js",
+    ROOT / "web" / "core" / "cli",
+]
 
 
 def revision() -> str:
@@ -66,6 +81,39 @@ def archive_workbook(destination: Path, version: str) -> None:
                 if "teacher" in relative.parts:
                     raise RuntimeError(f"forbidden path in workbook archive: {relative}")
                 archive.write(source, f"{prefix}/{relative.as_posix()}")
+
+
+def newest_mtime(paths, *, skip_dirs=frozenset()) -> float:
+    """paths 以下（ファイルなら自身）の最終更新時刻の最大値。存在しないものは無視する。"""
+    newest = 0.0
+    for path in paths:
+        if path.is_file():
+            newest = max(newest, path.stat().st_mtime)
+        elif path.is_dir():
+            for directory, subdirs, filenames in os.walk(path):
+                subdirs[:] = [name for name in subdirs if name not in skip_dirs]
+                for filename in filenames:
+                    candidate = Path(directory) / filename
+                    if candidate.is_file():
+                        newest = max(newest, candidate.stat().st_mtime)
+    return newest
+
+
+def check_web_dist() -> None:
+    """web/app/dist が存在し、ソースより新しいことを確かめる。
+
+    `make web` が失敗しても古い dist が残っていれば公開物は作れてしまう。
+    それでは壊れたまま exit 0 になり、破損が隠れる。ここで鮮度まで見る。
+    """
+    if not WEB_DIST.is_dir() or not (WEB_DIST / "index.html").is_file():
+        raise RuntimeError("web/app/dist が無い（または不完全）。先に make web を実行する")
+    dist_mtime = newest_mtime([WEB_DIST])
+    source_mtime = newest_mtime(WEB_SOURCES, skip_dirs=EXCLUDED_PARTS | {"dist"})
+    if dist_mtime < source_mtime:
+        raise RuntimeError(
+            "web/app/dist がソースより古い（make web が失敗しているか未実行）。"
+            "先に make web を実行する"
+        )
 
 
 def check_skeletons() -> None:
@@ -122,8 +170,7 @@ def main() -> None:
     args = parser.parse_args()
     try:
         version = safe_version(args.version)
-        if not WEB_DIST.is_dir():
-            raise RuntimeError("web/app/dist is missing; run make web first")
+        check_web_dist()
         if args.output.resolve() == ROOT.resolve():
             raise RuntimeError("refusing to use the repository root as output")
         check_skeletons()

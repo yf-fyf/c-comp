@@ -1,6 +1,7 @@
-; support/ は workbook/ocaml/support へのシンボリックリンク（コピーしない: webapps.md 3.4）
-(include_subdirs unqualified)
-
+; support/ は workbook/ocaml/support へのシンボリックリンク（コピーしない: webapps.md 3.4）。
+; workbook 側で support は dune library なので、こちらもライブラリとして依存する
+; （(include_subdirs unqualified) だと部分ディレクトリの library スタンザが禁止される）。
+; support は (wrapped false) なので Frontend / Preprocess などは非修飾で参照する。
 (library
  (name core_lib)
- (libraries str))
+ (libraries support str))

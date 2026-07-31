@@ -31,7 +31,7 @@ let () =
   | None -> usage ()
   | Some f -> (
       try
-        let prog = Core_lib.Frontend.parse_file f in
+        let prog = Frontend.parse_file f in
         let out =
           match !fmt with
           | "sexp" -> Core_lib.Astdump.program_sexp ~show_line:!show_line prog

@@ -3,7 +3,7 @@
 (executable
  (name api)
  (modes js)
- (libraries core_lib str js_of_ocaml)
+ (libraries core_lib support str js_of_ocaml)
  (preprocess
   (pps js_of_ocaml-ppx)))
 
