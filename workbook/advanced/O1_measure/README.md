@@ -29,3 +29,9 @@ python3 golden.py    # ベンチマークの正しさ + 静的/動的の表
 python3 ../../scaffold/test_runner.py \
     --compiler ../optcc.py --tests bench
 ```
+
+## 命令数の基準表
+
+O 系列の資料が出す「前 → 後」の表は、どれもこの回の資料にある
+**全構成の基準表**（素 / +isel / +regalloc / +copyprop,dce / +layout の5構成）からの
+差分です。数字が食い違って見えたら、まず基準表と突き合わせてください。

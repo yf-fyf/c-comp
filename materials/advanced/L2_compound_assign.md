@@ -133,7 +133,7 @@ TWO_CHAR_PUNCTS = ['==', '!=', '<=', '>=', '&&', '||', '->', '++', '--']
 ::: note
 
 **標準トラックのテストでは、この5つのトークンは「無い」ままである。**
-`workbook/final/tests`（fixed17）も、OCaml 版パーサとの S 式一致テストも、
+`workbook/final/tests`（[`fixed17`](../../workbook/advanced/README.md#fixed17)）も、OCaml 版パーサとの S 式一致テストも、
 複合代入を含まないソースだけで書かれている。
 この回の `tests/*.c` は標準トラックの字句を通らないので、
 web の golden テストでは **skip として数えられる**。これは失敗ではなく、

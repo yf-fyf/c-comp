@@ -85,7 +85,7 @@ def collect_decls(self, node: Node) -> None:
 1. self._locals をクリアする
 2. self._stack_offset を 0 にする
 3. self._break_stack / self._continue_stack をクリアする
-4. self._ret_label を self._new_label() で生成する
+4. self._ret_label を self.new_label() で生成する
 5. self.collect_decls(node.body) で再帰的に宣言を収集する
 6. align_to(self._stack_offset, 16) を frame_size として返す
 ```

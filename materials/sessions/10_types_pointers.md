@@ -185,6 +185,26 @@ int main() {
 
 `self.alloc_local()` では、`ty_str` から `self.size_of_ty_str()` を使って必要なスタック領域を計算する。
 
+### ローカル変数表に型を持たせる
+
+型ごとにサイズと命令が変わるため、この回で `self._locals` の中身を変える。
+
+```python
+# コマ4〜コマ9
+self._locals: dict[str, int]                 # name → offset
+
+# コマ10 以降
+self._locals: dict[str, tuple[int, str]]     # name → (offset, ty_str)
+```
+
+コマ9 まではオフセットだけを覚えていればよかったが、
+`*p` や `p[i]` で `lb` / `lw` / `ld` を選ぶには、変数の型も覚えておく必要がある。
+
+値の取り出し方も変わる。オフセットは `self._locals[name][0]`、
+型は `self._locals[name][1]` である。スケルトンでは前者を `self.lookup_var()`、
+後者を `self.lookup_local_ty()` として用意してあるので、
+添字を直接書かずにこの2つを使う。この表現はコマ16 まで変えない。
+
 ## `sizeof(型名)` のコード生成
 
 `sizeof` は値を計算する式だが、実行時にメモリを読む必要はない。
@@ -238,12 +258,12 @@ rvalue としての `p[i]` は、このアドレスから値を読む。
 前置 `++`（コマ6）もこの回で型対応になる。`++p` は `p` を
 「1 要素ぶん」、つまり指し先型のサイズだけ進める。
 
-## _emit_load / _emit_store
+## _load_ty / _store_ty
 
 型サイズに応じて、読み書きする命令を変える。
 
 ```python
-def _emit_load(self, ty):
+def _load_ty(self, ty):
     size = self.size_of_ty_str(ty)
     if size == 1:
         self.emit("  lb a0, 0(a0)")
@@ -252,7 +272,7 @@ def _emit_load(self, ty):
     else:
         self.emit("  ld a0, 0(a0)")
 
-def _emit_store(self, ty):
+def _store_ty(self, ty):
     size = self.size_of_ty_str(ty)
     if size == 1:
         self.emit("  sb a0, 0(a1)")
@@ -268,27 +288,45 @@ def _emit_store(self, ty):
 
 - `mycc.py`
 
-`importlib` でコマ9 の `Codegen09` を継承した `Codegen10` に、以下の機能を追加する（スケルトンにあらかじめ書かれている）。
+`importlib` でコマ9 の `Codegen09` を継承した `Codegen10` に、以下の機能を追加する。
 
-| ハンドラメソッド | 変更内容 |
-|------------------|----------|
+スケルトンに**あらかじめ書かれている**ものは次の通りで、実装対象ではない。
+呼び出して使うだけでよい。
+
+| 提供済み | 役割 |
+|----------|------|
+| `size_of_ty_str(ty)` | `ty_str` から型のバイトサイズを返す |
+| `elem_ty_str(ty)` | ポインタの要素型 `ty_str` を返す |
+| `is_ptr_ty_str(ty)` | ポインタ型かどうかを返す |
+| `alloc_local(name, ty_str)` | `size_of_ty_str` を使って型付きで領域を確保する |
+| `lookup_var(name, line)` / `lookup_local_ty(name, line)` | `self._locals` からオフセットと型を引く |
+| `_push_a0()` / `_pop_into(reg)` | 一時値の退避と復帰 |
+| `_type_of_expr` / `_type_of_lval` / `codegen` / `codegen_lval` の `match` | 各ハンドラへの振り分け |
+
+実装対象は次の通りである。
+
+| 実装対象 | 役割 |
+|----------|------|
 | `_load_ty(ty)` / `_store_ty(ty)` | 型サイズに応じて `lb`/`lw`/`ld` と `sb`/`sw`/`sd` を選ぶ |
-| `self.size_of_ty_str(ty)` | `ty_str` から型のバイトサイズを計算する |
-| `self.elem_ty_str(ty)` | ポインタの要素型 `ty_str` を返す |
-| `codegen(node)` の `match` 節に `'Index'` | `p[i]` のアドレス計算とロード |
-| `codegen(node)` の `match` 節 `'SizeofType'` | `sizeof(型名)` を即値で出力 |
-| `codegen(node)` の `match` 節 `'Add'` / `'Sub'` | ポインタ演算：添字に要素サイズを掛ける |
+| `_scale_index(elem_ty)` | 添字 `a0` に要素サイズを掛ける |
+| `type_of_expr_*` / `type_of_lval_*` | 各ノードの型を求める |
+| `codegen_lval_Index(node)` | `p[i]` のアドレス計算 |
+| `codegen_Var` / `codegen_Assign` / `codegen_Deref` / `codegen_Index` | 型に応じたロード・ストアに置き換える |
+| `codegen_Add` / `codegen_Sub` | ポインタ演算：整数側に要素サイズを掛ける |
+| `codegen_SizeofType(node)` | `sizeof(型名)` を即値で出力 |
 | `codegen_PreInc` / `codegen_PreDec` | 前置 `++`/`--` を型対応にする（ポインタは要素サイズで進む） |
+| `collect_decls_Decl(node)` | `node.ty_str` を渡して型付きで `alloc_local` する |
+| `_alloc_params(node)` / `_emit_func_prologue` | パラメータも型付きで確保・保存する |
 
 ## 実装手順
 
 1. スケルトンの `Codegen10` が `Codegen09` を `importlib` で継承していることを確認する
-2. `_load_ty` / `_store_ty` を型サイズ対応にする（`size_of_ty_str` を使う）
-3. `self.alloc_local()` で `ty_str` から `size_of_ty_str` を呼んでスタック領域を決める
-4. `codegen_lval(node)` に `'Index'` handler を追加する（`a0 = base + i * elem_size`）
-5. `codegen(node)` の `'Index'` handler を追加する（lval → `_load_ty`）
-6. `codegen(node)` の `'SizeofType'` handler を追加する（翻訳時定数）
-7. `codegen(node)` の `'Add'` / `'Sub'` handler でポインタ演算を追加する
+2. `_load_ty` / `_store_ty` を型サイズ対応にする（提供済みの `size_of_ty_str` を使う）
+3. `type_of_expr_*` / `type_of_lval_*` を埋めて、式の型を引けるようにする
+4. `codegen_lval(node)` の `'Index'` handler を実装する（`a0 = base + i * elem_size`）
+5. `codegen(node)` の `'Index'` handler を実装する（lval → `_load_ty`）
+6. `codegen(node)` の `'SizeofType'` handler を実装する（翻訳時定数）
+7. `codegen(node)` の `'Add'` / `'Sub'` handler でポインタ演算を実装する
 8. `codegen_PreInc` / `codegen_PreDec` を型対応にする
 
 ## テスト

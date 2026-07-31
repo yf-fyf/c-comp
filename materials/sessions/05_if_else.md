@@ -186,7 +186,7 @@ beqz a0, .L1
 `new_label()` は、呼ばれるたびに異なる名前のラベルを返すメソッドである。
 
 ```python
-def _new_label(self) -> str:
+def new_label(self) -> str:
     self._label_counter += 1
     return f".L{self._label_counter}"
 ```
@@ -372,7 +372,7 @@ def codegen_Cond(self, node):
 
 | 実装対象 | 役割 |
 |----------|------|
-| `_new_label()` | 一意なアセンブリラベルを返す |
+| `new_label()` | 一意なアセンブリラベルを返す |
 | `gen_stmt_If(node)` | 条件分岐 (`beqz` / `j`) を生成。`else_` も処理する |
 | `gen_stmt_Block(node)` | `stmts` を順に `gen_stmt` する |
 | `codegen_Eq(node)` / `codegen_Ne(node)` / `codegen_Lt(node)` / `codegen_Le(node)` | 比較演算。handler を追加する |

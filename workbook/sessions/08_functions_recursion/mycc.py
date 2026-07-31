@@ -136,13 +136,17 @@ class Codegen08(prev.Codegen):
         # TODO: 引数を評価して ABI の a0-a7 に並べ、call {name} を emit する。
         raise NotImplementedError("_gen_call を実装してください")
 
+    def _alloc_params(self, node: Node) -> None:
+        # TODO: node.params の各パラメータを alloc_local してスロットを確保する。
+        raise NotImplementedError("_alloc_params を実装してください")
+
     def _reset_func_state(self, node: Node) -> int:
         self._locals.clear()
         self._stack_offset = 0
         self._ret_label = self.new_label()
         self._break_stack.clear()
         self._continue_stack.clear()
-        # TODO: collect_decls の前に node.params を alloc_local する。
+        self._alloc_params(node)
         self.collect_decls(node.body)
         self._current_params = node.params
         return self.align_to(self._stack_offset, 16)
@@ -155,6 +159,7 @@ class Codegen08(prev.Codegen):
         self.emit(f'  sd s0, {frame_size}(sp)')
         self.emit(f'  addi s0, sp, {frame_size + 16}')
         # TODO: a0-a7 のパラメータ値を対応するローカル変数スロットへ保存する。
+        raise NotImplementedError("パラメータのスタック退避を実装してください")
 
     def gen_func(self, node: Node) -> None:
         if node.kind != 'FuncDef':

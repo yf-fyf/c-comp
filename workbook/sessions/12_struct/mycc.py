@@ -356,12 +356,14 @@ def main() -> None:
     with open(filename, 'r', encoding='utf-8') as f:
         source = f.read()
     source = preprocess(source, filename)
-    # TODO: struct_defs = Codegen12.parse_struct_defs(source)
+    struct_defs = Codegen12.parse_struct_defs(source)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen12({})
-    # TODO: 収集した struct_defs を Codegen12 に渡す。
-    # TODO: 文字列収集と emit_data_section() を .text より前に呼ぶ。
+    cg = Codegen12(struct_defs)
+    for node in prog:
+        if node.kind == 'FuncDef':
+            cg.collect_strings_stmt(node.body)
+    cg.emit_data_section()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

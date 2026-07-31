@@ -83,7 +83,8 @@ class Codegen04(prev.Codegen03):
                 raise RuntimeError(f'codegen: コマ4で未対応の式です (kind={node.kind!r})')
 
     def gen_stmt_Decl(self, node: Node) -> None:
-        # TODO: 初期化式がある宣言は、一時的な Var/Assign ノードを作って codegen する。
+        # TODO: 宣言に初期化子はない（language_spec.md「宣言」節）。
+        #       領域確保は collect_decls で済んでいるので、ここでは何も出力しない。
         raise NotImplementedError("gen_stmt: Decl を実装してください")
 
     def gen_stmt_ExprStmt(self, node: Node) -> None:

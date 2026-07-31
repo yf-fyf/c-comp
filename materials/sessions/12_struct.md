@@ -187,12 +187,20 @@ Parser は `struct Point { ... };` のフィールド一覧を AST には残さ�
 ```python
 {
     "size": 8,
+    "align": 4,
     "fields": {
-        "x": {"offset": 0, "size": 4},
-        "y": {"offset": 4, "size": 4},
+        "x": (0, "int"),        # (オフセット, ty_str)
+        "y": (4, "int"),
     },
 }
 ```
+
+タプルの中身を直接取り出す必要はない。スケルトンは次の2つを提供している。
+
+| 提供済み | 役割 |
+|----------|------|
+| `field_offset(struct_ty, name, struct_defs, line)` | フィールドのオフセットを返す |
+| `field_ty(struct_ty, name, struct_defs, line)` | フィールドの `ty_str` を返す |
 
 スケルトンは次のクラスメソッドでソースから構造体情報を抽出する。
 
@@ -212,6 +220,33 @@ struct Point {
 };
 ```
 
+## size_of_ty_str に引数が増える
+
+コマ10 の `size_of_ty_str(ty)` は `int` / `char` / ポインタしか知らなかった。
+`struct Point` のサイズは定義を見ないと分からないので、この回で第2引数が増える。
+
+```python
+# コマ10〜コマ11
+size_of_ty_str(ty_str) -> int
+
+# コマ12 以降
+size_of_ty_str(ty_str, struct_defs=None) -> int
+```
+
+`struct_defs` は省略でき、省略した場合の結果はコマ10 と同じである。
+そのため、コマ11 までに書いた呼び出しはそのまま動く。
+ただし **`struct` のサイズが要る場所では `self._struct_defs` を必ず渡す**。
+渡し忘れると `struct Point` のサイズが `int` と同じ4バイトとして扱われ、
+エラーにならないまま結果だけがずれる。
+
+```python
+self.size_of_ty_str("struct Point", self._struct_defs)   # 8
+self.size_of_ty_str("struct Point")                      # 4（渡し忘れ）
+```
+
+`alloc_local` / `_scale_index` / `_load_ty` / `_store_ty` は、
+この引数を渡す形に直す必要がある。以降のコマ13〜コマ16 でもこの2引数の形を使う。
+
 ## `.` のコード生成
 
 `p.x` の lvalue は、`p` のアドレスにフィールドオフセットを足したアドレスである。
@@ -225,9 +260,9 @@ address(p.x) = address(p) + offset(x)
 ```python
 if node.kind == ND_MEMBER and not node.is_arrow:
     self.codegen_lval(node.operand)
-    ty_str = self._type_of_lval(node.operand)
-    field = self._struct_defs[ty_str]["fields"][node.name]
-    self.emit(f"  addi a0, a0, {field['offset']}")
+    struct_ty = self._type_of_lval(node.operand)
+    offset = self.field_offset(struct_ty, node.name, self._struct_defs, node.line)
+    self.emit(f"  addi a0, a0, {offset}")
     return
 ```
 
@@ -243,12 +278,15 @@ address(p->x) = value(p) + offset(x)
 ```python
 if node.kind == ND_MEMBER and node.is_arrow:
     self.codegen(node.operand)
-    ptr_ty = self._type_of_expr(node.operand)        # e.g. "struct Point *"
-    struct_ty = self._deref_ptr(ptr_ty)              # "struct Point"
-    field = self._struct_defs[struct_ty]["fields"][node.name]
-    self.emit(f"  addi a0, a0, {field['offset']}")
+    ptr_ty = self._type_of_expr(node.operand)        # e.g. "struct Point*"
+    struct_ty = self.elem_ty_str(ptr_ty)             # "struct Point"
+    offset = self.field_offset(struct_ty, node.name, self._struct_defs, node.line)
+    self.emit(f"  addi a0, a0, {offset}")
     return
 ```
+
+`.` と `->` で構造体型名の求め方が違うだけなので、
+スケルトンではこの分岐を `self._member_struct_type(node)` に切り出してある。
 
 ## 実装手順
 
@@ -256,7 +294,8 @@ if node.kind == ND_MEMBER and node.is_arrow:
 2. `CodegenNN.parse_struct_defs(source)` で構造体定義をパースし `self._struct_defs` に渡す
 3. `self._type_of_lval()` に `ND_MEMBER` を追加する（フィールドの型は `self._struct_defs` から引く）
 4. `self.codegen_lval()` に `ND_MEMBER` ハンドラを追加する（`self._struct_defs` からフィールドオフセットを引く）
-5. `load()` / `store()` はフィールド型に応じて既存のものを使う
+5. `alloc_local()` / `_scale_index()` / `_load_ty()` / `_store_ty()` の `size_of_ty_str` 呼び出しに `self._struct_defs` を渡す
+6. `_load_ty()` は `struct` 型のときロードせず、アドレスのまま扱う（`is_struct_ty_str` で判定）
 
 ## テスト
 

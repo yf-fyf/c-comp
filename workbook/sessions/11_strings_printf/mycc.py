@@ -46,7 +46,8 @@ class Codegen11(prev.Codegen10):
                 pass
 
     def collect_strings_stmt_Decl(self, node: Node) -> None:
-        # TODO: 初期化式があれば collect_strings_expr する。
+        # TODO: 宣言に初期化子はない（language_spec.md「宣言」節）ので、
+        #       走査する式が無い。何もしない。
         raise NotImplementedError("collect_strings_stmt_Decl を実装してください")
 
     def collect_strings_stmt_ExprStmt(self, node: Node) -> None:
@@ -289,7 +290,10 @@ def main() -> None:
     tokens = tokenize(source, filename)
     prog = parse(tokens)
     cg = Codegen11()
-    # TODO: 関数本体を事前走査して文字列を収集し、emit_data_section() を .text より前に呼ぶ。
+    for node in prog:
+        if node.kind == 'FuncDef':
+            cg.collect_strings_stmt(node.body)
+    cg.emit_data_section()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

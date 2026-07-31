@@ -203,13 +203,16 @@ def codegen_lval_Var(self, node):
 ## 変数表を2種類に分ける
 
 コマ13までは `self._locals` という辞書にローカル変数だけを入れていた。
-コマ14では、グローバル変数とローカル変数を分ける。
+コマ14では、グローバル変数用の表をもう1つ持つ。
 
 ```python
 # インスタンス変数として持つ
-self._globals: dict[str, str]                      # name → ty_str
-self._locals: dict[str, tuple[int, str]]           # name → (offset, ty_str)
+self._globals: dict[str, str]                      # name → ty_str（コマ14で追加）
+self._locals: dict[str, tuple[int, str]]           # name → (offset, ty_str)（コマ10 のまま）
 ```
+
+`self._locals` の形はコマ10 で `(offset, ty_str)` のタプルになって以来変わらない。
+グローバル変数はスタック上に置かないのでオフセットを持たず、型だけを覚える。
 
 `self._globals` はプログラム全体で1つだけ持つ。トップレベルの宣言を `self.collect_globals(prog)` で集めてからコード生成に入る。
 
@@ -218,13 +221,17 @@ self._locals: dict[str, tuple[int, str]]           # name → (offset, ty_str)
 変数名を探すときは、まず `self._locals` を調べ、なければ `self._globals` を調べる。
 
 ```python
-def lookup_var(self, name, line):
+def lookup_var_ty(self, name, line):
     if name in self._locals:
-        return ('local', self._locals[name])
+        return self._locals[name][1]
     if name in self._globals:
-        return ('global', self._globals[name])
-    raise self._error_at_node_line(f"未定義の変数: {name}", line)
+        return self._globals[name]
+    raise RuntimeError(f"[line {line}] 未定義の変数: '{name}'")
 ```
+
+アドレスの作り方はローカルとグローバルで違うので、
+型の問い合わせ（`lookup_var_ty`）とアドレス生成（`codegen_lval_Var`）を分けて書く。
+どちらがローカルかの判定はスケルトンの `self._is_local(name)` を使う。
 
 この順序にすることで、ローカル変数が同名のグローバル変数を隠す動作を実現できる。
 
@@ -257,7 +264,7 @@ int main() {
 2. `self._globals` と `self._locals` を追加する（スケルトンにあらかじめ書かれている）
 3. トップレベルの `'Decl'` ノードを `self.collect_globals()` で集める（覚えるのは名前と型だけでよい）
 4. グローバル変数を `.bss` に出力する（全て 0 初期化）
-5. `self.lookup_var()` を `self._locals` → `self._globals` の順にする
+5. `self.lookup_var_ty()` を `self._locals` → `self._globals` の順にする
 6. `self.codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
 7. `global_counter.c`、`global_init.c`、`global_local_shadow.c`、`global_struct.c` を通す
 
@@ -267,7 +274,7 @@ int main() {
 
 | ファイル | 実装するハンドラ・メソッド |
 |----------|----------------------------|
-| `mycc.py` | `Codegen14` クラス。`collect_globals()`、`lookup_var()`、`codegen_lval_Var()`、`_is_local()`、`_emit_global_data()` など |
+| `mycc.py` | `Codegen14` クラス。`collect_globals()`、`lookup_var_ty()`、`codegen_lval_Var()`、`emit_bss_section()`、`gen_program()` など（`_is_local()` は提供済み） |
 | (AST パーサ) | 変更不要（`'Decl'` ノードはコマ13から存在する） |
 
 ## テスト
