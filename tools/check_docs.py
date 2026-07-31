@@ -21,6 +21,7 @@
            全廃・スキャフォールド表記も、advanced 配下限定であわせて検査する）
 
 除外リストは tools/doc_check_allowlist.yaml。理由は各エントリの reason に書く。
+チェック6は language_spec.md の「N 件の例外」宣言と例外見出しの数を突き合わせる。
 依存: PyYAML（tools/build_site.py と共通）。
 """
 
@@ -397,6 +398,53 @@ _STYLE_PROTECT_PATTERNS = (_STYLE_LINK_RE, _STYLE_SPAN_RE, _STYLE_BIGO_RE, _STYL
 _STYLE_SCAFFOLD_RE = re.compile(r"\bscaffold\b(?!/)")
 
 
+# ── チェック6: ISO C 例外の宣言件数と見出し数の一致 ──
+#
+# language_spec.md の冒頭は「N 件の例外(後述)を除き」と件数を宣言している。
+# 例外を1つ足したのに冒頭の件数を直し忘れると、規範文書が自分自身と矛盾する
+# （実際に T53 で E3 を足したとき「2 件」のまま残った）。両者を突き合わせる。
+
+EXC_COUNT_RE = re.compile(r"(\d+)\s*件の例外")
+EXC_HEADING_RE = re.compile(r"^\*\*例外 E(\d+) —")
+
+
+def check_exception_count() -> list[Violation]:
+    violations: list[Violation] = []
+    if not LANG_SPEC_PATH.is_file():
+        return violations
+    lines = LANG_SPEC_PATH.read_text(encoding="utf-8").splitlines()
+
+    declared: list[tuple[int, int]] = []
+    headings: list[tuple[int, int]] = []
+    for i, line in enumerate(lines, 1):
+        m = EXC_COUNT_RE.search(line)
+        if m:
+            declared.append((i, int(m.group(1))))
+        h = EXC_HEADING_RE.match(line)
+        if h:
+            headings.append((i, int(h.group(1))))
+
+    if not headings:
+        return violations
+
+    ids = [n for _, n in headings]
+    expected = list(range(1, len(ids) + 1))
+    if ids != expected:
+        violations.append(Violation(
+            LANG_SPEC_PATH, headings[0][0],
+            f"例外の番号が連番でない: E{ids} （E{expected} のはず）",
+        ))
+
+    for line_no, count in declared:
+        if count != len(headings):
+            violations.append(Violation(
+                LANG_SPEC_PATH, line_no,
+                f"宣言された例外の件数 {count} が、実際の見出し数 "
+                f"{len(headings)} と一致しない",
+            ))
+    return violations
+
+
 def is_advanced_target(path: Path) -> bool:
     parts = path.relative_to(ROOT).parts
     return parts[:2] in {("materials", "advanced"), ("workbook", "advanced")}
@@ -516,6 +564,7 @@ CHECKS = {
     "nav": ("nav.yaml 未掲載の検出", check_nav_listing),
     "libh": ("lib.h と仕様書の宣言一致", check_libh_sync),
     "style": ("用語・表記の統一（T59）", check_style_terms),
+    "exc": ("ISO C 例外の件数と見出しの一致", check_exception_count),
 }
 
 
