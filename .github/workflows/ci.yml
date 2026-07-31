@@ -37,6 +37,33 @@ jobs:
       - name: Check documentation consistency
         run: make check-docs
 
+  workbook-tests:
+    runs-on: ubuntu-24.04
+    # 配布スケルトンは未実装の演習用コードなので、各回のテストは常に FAIL が正常な状態
+    # （teacher/quality/records/phase-1.md で確認済み）。ここでは「テストハーネスと
+    # RV64 ツールチェーンが壊れていないか」を可視化する情報用ジョブとし、ブロックはしない。
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install the RV64 toolchain and QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-riscv64-linux-gnu libc6-dev-riscv64-cross binutils-riscv64-linux-gnu qemu-user
+      - name: Run each session's tests
+        working-directory: workbook
+        run: |
+          status=0
+          for session in sessions/*/; do
+            session="${session%/}"
+            if [ -f "$session/mycc.py" ] && [ -d "$session/tests" ]; then
+              echo "=== $session ==="
+              python3 scaffold/test_runner.py "$session" || status=1
+            fi
+          done
+          echo "=== final (bare invocation, covers session 16) ==="
+          python3 scaffold/test_runner.py || status=1
+          exit "$status"
+
   web-app:
     runs-on: ubuntu-24.04
     steps:
