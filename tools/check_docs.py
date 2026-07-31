@@ -16,7 +16,9 @@
            「標準ライブラリ」節のコードブロックが一致しているか（T55）
     style  design/maintaining.md の用語表（T59）で決めた表記に反していないか
            （第NN回・ゼロ埋め・コマとNの間の空白・「学生」表記）。
-           workbook/advanced/・materials/advanced/ は対象外（後半タスクで別途統一）
+           workbook/advanced/・materials/advanced/ も対象（T59 後半で統一した
+           全角/半角括弧・「発展課題 XN」・B ファミリの呼称・「（選択制）」の
+           全廃・スキャフォールド表記も、advanced 配下限定であわせて検査する）
 
 除外リストは tools/doc_check_allowlist.yaml。理由は各エントリの reason に書く。
 依存: PyYAML（tools/build_site.py と共通）。
@@ -310,20 +312,100 @@ def check_libh_sync() -> list[Violation]:
 # コード（*.py / *.ml）のコメント・docstring は対象外（コード中の記述であり、
 # 進行中の授業で既に配布済みのファイルを書き換える実利が薄いため）。
 #
-# 構造的な除外: materials/advanced/, workbook/advanced/ は本チェックの対象外。
-# advanced 側は括弧の全角/半角・「発展 XN」/「発展課題 XN」・B ファミリの
-# 呼称・「（選択制）」の有無・スキャフォールド表記など、T59 後半タスクで
-# 別途まとめて統一する（本チェックへの追加もそのタスクで行う）。
+# materials/advanced/, workbook/advanced/ も対象に含める（T59 後半）。ただし
+# 「第N回」チェックだけは advanced 側で除外する: advanced の「Xシリーズの
+# 第N回」（F/O/S/R/Q/B の各ファミリ内での位置）は、コマ1〜16 を指す「第NN回」
+# とは無関係な別の数え方であり、正当な出現のため。
+#
+# advanced 配下限定の追加規約（T59 後半でこの節から統一したもの）:
+#   - 全角/半角括弧: 地の文の丸括弧は全角（）に統一する。ただし Big-O 記法
+#     （例: O(n³)）・LL(1) のような確立した記法、Markdown リンク／画像の
+#     `](...)`、インラインコード・コードブロックの中身は対象外
+#   - 「発展 XN」は使わない。他トピックを指すときは「発展課題 XN」に統一する
+#     （各資料末尾の見出し「## 発展課題」はトピック内の節見出しであり対象外）
+#   - 「（選択制）」は使わない（索引が既に「いずれも選択制」と宣言している）
+#   - 「バックエンド発展シリーズ」は使わない（B ファミリの呼称は索引と同じ
+#     「最適化入門」に統一し、「最適化入門発展シリーズ」と書く）
+#   - 地の文の「scaffold」は「スキャフォールド」（カタカナ）に統一する。
+#     ディレクトリ名・ファイルパス（`scaffold/`）・コマンド例・インライン
+#     コード・コードブロックの中身は対象外
 
 STYLE_DAI_KAI_RE = re.compile(r"第[0-9]{1,2}回")
 STYLE_KOMA_ZERO_RE = re.compile(r"コマ0[0-9]")
 STYLE_KOMA_SPACE_RE = re.compile(r"コマ[ 　][0-9]")
 STYLE_GAKUSEI_RE = re.compile(r"学生")
 
+STYLE_HATTEN_XN_RE = re.compile(r"発展 [A-Z][0-9]")
+STYLE_SENTAKUSEI_RE = re.compile(r"（選択制）")
+STYLE_BACKEND_SERIES_RE = re.compile(r"バックエンド発展シリーズ")
 
-def is_advanced_exempt(path: Path) -> bool:
+# 半角括弧の統一（advanced 限定）: インラインコード・Markdown リンク／画像・
+# Big-O 記法・LL(1) を保護してから、残った半角 ( ) を検出する。
+_STYLE_LINK_RE = re.compile(r"\]\([^)]*\)")
+_STYLE_SPAN_RE = re.compile(r"`[^`]*`")
+_STYLE_BIGO_RE = re.compile(r"(?<![A-Za-z0-9_])O\([^()]*\)")
+_STYLE_LL1_RE = re.compile(r"LL\(1\)")
+_STYLE_PROTECT_PATTERNS = (_STYLE_LINK_RE, _STYLE_SPAN_RE, _STYLE_BIGO_RE, _STYLE_LL1_RE)
+
+# スキャフォールドの地の文表記（advanced 限定）: インラインコード・コード
+# ブロックの中身と、`scaffold/` のようなパス表記は対象外にする。
+_STYLE_SCAFFOLD_RE = re.compile(r"\bscaffold\b(?!/)")
+
+
+def is_advanced_target(path: Path) -> bool:
     parts = path.relative_to(ROOT).parts
     return parts[:2] in {("materials", "advanced"), ("workbook", "advanced")}
+
+
+def _style_mask_protected(line: str) -> str:
+    """保護対象（リンク・インラインコード・Big-O・LL(1)）を除いた残りを返す。"""
+    out = line
+    for pat in _STYLE_PROTECT_PATTERNS:
+        out = pat.sub(lambda m: "\x00" * len(m.group(0)), out)
+    return out
+
+
+def _check_advanced_style_in_file(
+    path: Path, lines: list[str], violations: list[Violation],
+    allowlist: set[tuple[str, int]], rel: str,
+) -> None:
+    in_fence = False
+    for i, line in enumerate(lines, 1):
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if (rel, i) in allowlist:
+            continue
+        if STYLE_HATTEN_XN_RE.search(line):
+            violations.append(Violation(
+                path, i,
+                f"「発展 XN」表記の残存（「発展課題 XN」を使う）: {line.strip()}",
+            ))
+        if STYLE_SENTAKUSEI_RE.search(line):
+            violations.append(Violation(
+                path, i, f"「（選択制）」の残存（索引で既に宣言済みなので削る）: {line.strip()}",
+            ))
+        if STYLE_BACKEND_SERIES_RE.search(line):
+            violations.append(Violation(
+                path, i,
+                "「バックエンド発展シリーズ」の残存"
+                f"（「最適化入門発展シリーズ」を使う）: {line.strip()}",
+            ))
+        masked = _style_mask_protected(line)
+        if "(" in masked or ")" in masked:
+            violations.append(Violation(
+                path, i, f"半角括弧の残存（全角（）を使う）: {line.strip()}",
+            ))
+        masked_scaffold = _STYLE_SPAN_RE.sub(
+            lambda m: "\x00" * len(m.group(0)), line
+        )
+        if _STYLE_SCAFFOLD_RE.search(masked_scaffold):
+            violations.append(Violation(
+                path, i,
+                f"地の文の「scaffold」の残存（「スキャフォールド」を使う）: {line.strip()}",
+            ))
 
 
 def _check_style_terms_in_file(
@@ -334,10 +416,11 @@ def _check_style_terms_in_file(
     except UnicodeDecodeError:
         return
     rel = path.relative_to(ROOT).as_posix()
+    advanced = is_advanced_target(path)
     for i, line in enumerate(lines, 1):
         if (rel, i) in allowlist:
             continue
-        if STYLE_DAI_KAI_RE.search(line):
+        if not advanced and STYLE_DAI_KAI_RE.search(line):
             violations.append(Violation(
                 path, i, f"「第NN回」表記の残存（「コマN」を使う）: {line.strip()}",
             ))
@@ -353,6 +436,8 @@ def _check_style_terms_in_file(
             violations.append(Violation(
                 path, i, f"「学生」表記の残存（「学習者」を使う）: {line.strip()}",
             ))
+    if advanced:
+        _check_advanced_style_in_file(path, lines, violations, allowlist, rel)
 
 
 def check_style_terms() -> list[Violation]:
@@ -366,8 +451,6 @@ def check_style_terms() -> list[Violation]:
             continue
         for path in sorted(base.rglob("*.md")):
             if any(part in SKIP_DIRNAMES for part in path.relative_to(ROOT).parts):
-                continue
-            if is_advanced_exempt(path):
                 continue
             _check_style_terms_in_file(path, violations, allowlist)
     # README.md（リポジトリ直下）と design/ も対象に含める。

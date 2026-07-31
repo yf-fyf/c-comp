@@ -6,7 +6,7 @@
 
 F2 の式パーサを継承して、文（return / break / continue / if / while / for /
 ブロック / 式文）の解析を追加する。
-37本の文コーパスで AST が scaffold の Parser と完全一致すれば完了。
+37本の文コーパスで AST が スキャフォールド の Parser と完全一致すれば完了。
 
 前提は F2（`StmtParser` は自分の F2 `ExprParser` を importlib で継承する）。
 宣言と関数定義は F4 で扱う。

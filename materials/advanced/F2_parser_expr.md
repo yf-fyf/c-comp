@@ -4,14 +4,14 @@
 
 `language_spec.md` の EBNF の式の階層を、そのまま関数の階層に写して、
 Core プロファイルの式パーサを自作する。
-85本の式コーパスで、AST が scaffold の Parser と**完全一致**することを golden test で確認する。
+85本の式コーパスで、AST が スキャフォールド の Parser と**完全一致**することを golden test で確認する。
 
 ## この回の位置づけ
 
-- フロントエンド発展シリーズの第2回（選択制）。前提は F1
+- フロントエンド発展シリーズの第2回。前提は F1
 - F1 で作ったトークン列を、今度は木にする。F2 は**式**、F3 で**文**、F4 で**宣言・型**を扱い、
-  F4 の終わりで scaffold の Parser を完全に置き換える
-- 編集するのは `myparser.py` だけ。`Node` と `ND_*` 定数は scaffold の `ast_def.py` から借りる。
+  F4 の終わりで スキャフォールド の Parser を完全に置き換える
+- 編集するのは `myparser.py` だけ。`Node` と `ND_*` 定数は スキャフォールド の `ast_def.py` から借りる。
   **AST の形は既に決まっている。作るのは「組み立てる側」**である
 - `sizeof` は型のパースが必要なので F4 で扱う
 
@@ -91,7 +91,7 @@ def parse_land(self):
 | `parse_land` | `{'&&': ND_AND}` |
 | `parse_eq` | `{'==': ND_EQ, '!=': ND_NE}` |
 
-実は scaffold の `parser.py` もまったく同じ `_parse_binary` を持っている。
+実は スキャフォールド の `parser.py` もまったく同じ `_parse_binary` を持っている。
 黒箱の中身は、いま自分が書いたものと同じである。
 
 ## 例外が1つ — parse_rel の swap
@@ -199,7 +199,7 @@ def parse_cond(self):
 このように「先読み1トークンで迷いなく解析できる」文法のクラスを LL(1) と呼ぶ。
 Core プロファイルの文法は、意図的にこの形に設計されている。
 唯一きわどいのは `sizeof(x)` の `(` の次が型か式かの判定で、
-scaffold は `peek(1)` と型キーワード（`int`/`char`/`void`/`struct`）の集合で
+スキャフォールド は `peek(1)` と型キーワード（`int`/`char`/`void`/`struct`）の集合で
 解決している（typedef がないので単純なキーワード判定で足りる。F4 で扱う）。
 
 :::
@@ -240,19 +240,19 @@ python3 check.py
 期待値は講義で見慣れた S 式で書いてある。
 `(lt (var "b") (var "a"))` が `a > b` の正解である、という swap の確認も含む。
 
-### golden test（scaffold との突き合わせ）
+### golden test（スキャフォールド との突き合わせ）
 
 ```bash
 python3 golden.py
 ```
 
 全演算子・優先順位の組み合わせ・結合方向・postfix の連鎖を網羅した
-85本の式について、scaffold の Parser と AST を構造比較する（`line` は比較しない）。
+85本の式について、スキャフォールド の Parser と AST を構造比較する（`line` は比較しない）。
 **全式 PASS がこの回の完了条件**である。
 
 ## 発展課題
 
-1. **sizeof の先取り**: scaffold の `_parse_sizeof` と `_peek_is_type` を読み、
+1. **sizeof の先取り**: スキャフォールド の `_parse_sizeof` と `_peek_is_type` を読み、
    自作パーサに移植する（F4 の予習になる）
 2. **複合代入** `+= -= *= /= %=` を追加する（`language_spec.md` の外側の機能。ヒント:
    `parse_assign` の `'='` 判定を演算子の集合に広げ、対応するノード種別を選ぶ。
