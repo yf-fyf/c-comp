@@ -77,6 +77,7 @@ sections:
       - workbook/docs/getting_started.md
       - workbook/docs/conventions.md
       - workbook/docs/debugging.md
+      - workbook/docs/migration.md
       - workbook/docs/language_spec.md
       - workbook/docs/rv64_reference.md
       - workbook/docs/testing.md

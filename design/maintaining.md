@@ -42,6 +42,7 @@
     │   ├── getting_started.md # 進め方・環境・全コマ一覧（読む）
     │   ├── conventions.md     # Python 実装の約束ごと（読む）
     │   ├── debugging.md       # 症状から原因を絞る（読む）
+    │   ├── migration.md       # 教材更新と手元ファイルの非互換（読む・唯一の出典）
     │   ├── language_spec.md   # Core プロファイル（引く）
     │   ├── rv64_reference.md  # ABI・スタックフレーム・命令（引く）
     │   ├── testing.md         # test_runner・テスト形式（引く）

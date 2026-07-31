@@ -8,6 +8,10 @@
 **まず [`docs/getting_started.md`](./docs/getting_started.md) を読む。**
 環境の用意から各回の進め方まで、始めるのに必要なことがまとまっている。
 
+> **2026-08-01 より前に取得したファイルで作業している場合**は、先に
+> [`docs/migration.md`](./docs/migration.md) を読むこと。
+> 古いファイルと新しいファイルを混ぜると `AttributeError` で動かなくなる箇所がある。
+
 ## この中にあるもの
 
 | パス | 内容 |

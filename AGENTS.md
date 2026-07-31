@@ -35,6 +35,7 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 | `workbook/docs/testing.md` | `test_runner` の使い方・テストケースの形式 |
 | `workbook/docs/code_example.md` | 各コマのコンパイル到達目標コード例 |
 | `workbook/docs/debugging.md` | デバッグ手順（小さい入力に戻す・生成アセンブリの読み方） |
+| `workbook/docs/migration.md` | 教材更新に伴う手元ファイルとの非互換と移行手順（学習者向け・唯一の出典） |
 
 ---
 

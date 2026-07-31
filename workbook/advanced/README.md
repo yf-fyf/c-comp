@@ -146,18 +146,10 @@ R は生成物のリンク方法を変え、P は移植そのものが課題で�
 ラッパーを持たない R 系列だけは例外で、回 ID を接頭辞にする
 （`R1_COMPILER` / `R2_COMPILER` / `R3_COMPILER`）。
 
-> **注意: 2つのラッパーの環境変数名を規則に合わせて改名した。**
-> 以前の名前を書いた手元のスクリプトやメモがあれば読み替えること。
->
-> | ラッパー | 旧 | 新 |
-> |----------|----|----|
-> | `B1_fold_peephole/foldcc.py` | `OPTCC_COMPILER` / `OPTCC_PASSES` | `FOLDCC_COMPILER` / `FOLDCC_PASSES` |
-> | `optcc.py` | `OPT_COMPILER` / `OPT_PASSES` / `OPT_REGALLOC` / `OPT_ANSWERS` | `OPTCC_COMPILER` / `OPTCC_PASSES` / `OPTCC_REGALLOC` / `OPTCC_ANSWERS` |
->
-> B1 が `OPTCC_*`、O 系列が `OPT_*` を使っていたため、
-> **1文字違いの名前が別のラッパーを指す**状態になっていた。
-> 既定値（`final/mycc.py` と各トピックのディレクトリ）で使っている場合、
-> 環境変数を設定していなければ何も変わらない。
+> **注意: 2026-08-01 に、この規則へそろえる形でいくつかの名前を改名した。**
+> 環境変数名（`optcc.py`・`foldcc.py`・L3 のラッパー）とファイル名（L3 の `varcc.py`）が対象である。
+> 旧名は**エラーにならず黙って無視される**ので、以前の名前を書いた手元のスクリプトやメモが
+> あれば読み替えること。新旧の対応と症状は [`docs/migration.md`](../docs/migration.md) にまとめてある。
 
 `workbook/advanced/` から実行する。
 

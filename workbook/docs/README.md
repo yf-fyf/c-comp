@@ -9,6 +9,7 @@
 | [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・全17コマ一覧・コマ16 のあと | **最初に** |
 | [`conventions.md`](./conventions.md) | 実装の約束ごと（`codegen` / `codegen_lval` の分離など） | コマ3 の前に一度 |
 | [`debugging.md`](./debugging.md) | 動かないときの確認手順 | 詰まったとき |
+| [`migration.md`](./migration.md) | 2026-08-01 の教材更新と、古いファイルとの非互換の一覧 | それより前に取得したファイルで作業しているとき |
 
 ## 引くもの
 
