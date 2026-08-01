@@ -24,7 +24,7 @@ let parse ~filename source =
    sessions/koma*.ml と web/core は従来どおり Preprocess.preprocess /
    preprocess_with_map（その場で印字して終了する）を使い続けるため、
    ここでの変更は reference/ の内部だけに閉じている。 *)
-let compile_units ~comments units =
+let compile_units ~comments ?include_dirs units =
   try
     let parsed =
       List.map
@@ -32,7 +32,7 @@ let compile_units ~comments units =
           (* 見出しに元の C を出すため、前処理後ソースも一緒に持ち回る。
              位置はこのソースへのものなので、ファイルごとに対応付けておく必要がある *)
           let preprocessed =
-            try Preprocess.preprocess_exn source filename with
+            try Preprocess.preprocess_exn ?include_dirs source filename with
             | Preprocess.Pp_error { line; msg; _ } ->
                 Diag.error ~phase:Diag.Preprocess ~line "%s" msg
           in
@@ -46,5 +46,5 @@ let compile_units ~comments units =
     Ok (Emitter.to_string ~comments em)
   with Diag.Error e -> Error e
 
-let compile_source ~comments ?(filename = "input.c") source =
-  compile_units ~comments [ (filename, source) ]
+let compile_source ~comments ?include_dirs ?(filename = "input.c") source =
+  compile_units ~comments ?include_dirs [ (filename, source) ]

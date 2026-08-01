@@ -3,6 +3,7 @@
    境界は「文字列を渡して JSON 文字列を受け取る」に限定する。
 
    公開: myccCore.parse(source) / astSexp(source, showLine) / astDot(source, showLine)
+        / compile(source, comments)
    typeInfo は B2（struct レイアウト可視化）に着手する時点で足す。
 *)
 
@@ -55,6 +56,27 @@ let text_json render source show_line =
   with_parse source (fun _mapped prog ->
       JObj [ ("ok", JBool true); ("text", JStr (render ?show_line:(Some show_line) prog)) ])
 
+let phase_string = function
+  | Refcomp.Diag.Preprocess -> "preprocess"
+  | Refcomp.Diag.Parse -> "parse"
+  | Refcomp.Diag.Typing -> "typing"
+
+let compile_json source comments =
+  try
+    match Refcomp.Compile.compile_source ~comments ~include_dirs ~filename source with
+    | Ok text -> JObj [ ("ok", JBool true); ("text", JStr text) ]
+    | Error (diag : Refcomp.Diag.t) ->
+        JObj
+          [ ("ok", JBool false);
+            ("errors",
+              JList
+                [ JObj
+                    [ ("message", JStr diag.msg);
+                      ("line", JInt diag.line);
+                      ("phase", JStr (phase_string diag.phase)) ]
+                ]) ]
+  with e -> JObj [ ("ok", JBool false); ("errors", JList [ error_json e ]) ]
+
 let () =
   Js.export "myccCore"
     (object%js
@@ -68,4 +90,8 @@ let () =
        method astDot (s : Js.js_string Js.t) (show_line : bool Js.t) =
          Js.string
            (json_to_string (text_json program_dot (Js.to_string s) (Js.to_bool show_line)))
+
+       method compile (s : Js.js_string Js.t) (comments : bool Js.t) =
+         Js.string
+           (json_to_string (compile_json (Js.to_string s) (Js.to_bool comments)))
     end)
