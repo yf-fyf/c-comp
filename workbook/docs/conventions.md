@@ -88,3 +88,23 @@ Python 版では素直に `dict` を使う。C 版へ移植するときに連結
 
 複雑な処理にだけ短く書く。行数を稼ぐためのコメントは書かない。
 「なぜこうしたか」が読み取れないところに1〜2行入れるのが目安である。
+
+### スケルトンで前回回の実装をコメントとして残す
+
+前回のコマで動いていたコードを今回のコマで書き換えさせるスケルトンでは、
+前回版の実装をコメントとして `raise NotImplementedError(...)` の直前に残してよい。
+コマ12 の `alloc_local` がその例である。
+
+```python
+def alloc_local(self, name: str, ty_str: str = 'int') -> None:
+    # TODO: self._struct_defs を渡して struct のサイズで領域確保する。
+    #       コマ11 版は次の形だった。size_of_ty_str に self._struct_defs を足す。
+    #           sz = self.align_to(self.size_of_ty_str(ty_str), 8)
+    #           self._stack_offset += sz
+    #           self._locals[name] = (-(16 + self._stack_offset), ty_str)
+    raise NotImplementedError("alloc_local を実装してください")
+```
+
+前回回で書いたコードを学習者自身が覚えている前提を置かず、
+「何がどう変わるか」を見える形にするための例外的な措置である。
+行数稼ぎのコメントを禁じる原則とは矛盾しない（前回版の再掲であって水増しではない）。
