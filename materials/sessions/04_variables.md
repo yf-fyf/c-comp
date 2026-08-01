@@ -335,6 +335,8 @@ addi s0, sp, frame_size + 16
 ## alloc_local の役割
 
 `self.alloc_local(name)` は、新しいローカル変数にスタック上の位置を割り当てるメソッドである。
+スケルトンにあらかじめ書かれているが、割り当て方を知らないとオフセットの意味が読めないので、
+方針をここに示す。
 
 方針は次の通り。
 
@@ -378,8 +380,11 @@ a = b + 1;
 | `self.codegen(node)` | 式の値を計算し、結果を `a0` に置く |
 | `self.codegen_lval(node)` | 代入先のアドレスを計算し、結果を `a0` に置く |
 
-この回の `codegen_lval()` は、`'Var'` だけ対応すればよい。
-ポインタに対する lvalue は後の回で扱う。
+この回の `codegen_lval()` は、`'Var'` だけ対応する最小形でよい。
+`codegen()` と `codegen_lval()` を分ける設計はここが出発点で、以降ずっと使う
+（`conventions.md` の「守ってほしい設計」節）。
+コマ9 で `*p` を代入先にできるよう `'Deref'` の分岐を足して拡張するが、
+`'Var'` の分岐と `codegen_Assign()` はこの回で書いたものをそのまま引き継ぐ。
 
 ## 変数参照の生成
 
@@ -442,26 +447,25 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 
 コマ3 の `Codegen03` を `importlib` で継承した `Codegen04` を実装する。
 
+コマ3 で埋めた TODO（`_codegen_binary_value`、`codegen_Neg`、`codegen_Add` 〜 `codegen_Mod`、
+`gen_stmt_Return`、`_emit_func_prologue` / `_emit_func_body` / `_emit_func_epilogue`）は、
+`importlib` の継承でそのまま引き継がれる。この回で書き直すものは無い。
+
 | 実装対象 | 役割 |
 |----------|------|
-| `alloc_local(name)` | 変数名にスタック上の位置を割り当てる |
 | `codegen_lval_Var(node)` | 代入先のアドレス（`s0 + offset`）を `a0` に置く |
 | `codegen_Var(node)` | 左辺値アドレスを取得後 `ld` で値を読む |
 | `codegen_Assign(node)` | 左辺のアドレスを保存 → 右辺計算 → 保存 |
-| `_codegen_binary_value(node, op)` | コマ3 の TODO を埋める（二項演算共通処理） |
-| `codegen_Neg(node)` | コマ3 の TODO を埋める |
-| `codegen_Add` 〜 `codegen_Mod` | コマ3 の TODO を埋める |
 | `gen_stmt_Decl(node)` | 何もしない（初期化子はなく、領域確保は宣言収集で行う） |
 | `gen_stmt_ExprStmt(node)` | 式文を処理 |
-| `gen_stmt_Return(node)` | コマ3 の TODO を埋める |
 | `collect_decls_Decl(node)` | `alloc_local` を呼ぶ |
-| `_reset_func_state` | 関数ごとに変数表を初期化し、`node.body` を `collect_decls` に渡して frame_size を計算 |
-| `_emit_func_prologue` / `_emit_func_body` / `_emit_func_epilogue` | コマ3 の TODO を埋める |
+| `_reset_func_state(node)` | 関数ごとに変数表を初期化し、`node.body` を `collect_decls` に渡して frame_size を計算 |
 
-コマ3 で未実装だった TODO も合わせて埋める。
+次のものはスケルトンにあらかじめ書かれている（実装対象ではない）。
 
-`collect_decls()` のディスパッチ部分と `collect_decls_Block()`（関数本体の `Block` を
-1 段開くだけの処理）は、スケルトンにあらかじめ書かれている。
+- `align_to()`、`alloc_local()`、`lookup_var()`
+- `codegen()` / `gen_stmt()` / `codegen_lval()` のディスパッチ
+- `collect_decls()` のディスパッチと `collect_decls_Block()`（関数本体の `Block` を 1 段開くだけの処理）
 
 ## tests/
 

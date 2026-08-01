@@ -21,24 +21,26 @@ requires:
 
 ## 今日のゴール
 
-`codegen()` と `codegen_lval()` を分離し、`&` と `*` を実装する。
+`codegen_lval()` を `*p` へ拡張し、`&` と `*` を実装する。
 
-コマ8までの `codegen()` は、式を評価して値を `a0` に残す関数だった。
-しかし代入の左辺では、値ではなく「どこに書き込むか」というアドレスが必要になる。
+`codegen()` と `codegen_lval()` の分離そのものはコマ4 で済んでいる。
 
-この回では、式を2つの見方に分ける。
+```text
+codegen(node)      -> rvalue を計算し、値を a0 に置く
+codegen_lval(node) -> lvalue のアドレスを計算し、アドレスを a0 に置く
+```
+
+ただしコマ4 の `codegen_lval()` が扱えるのは変数 `'Var'` だけで、
+それ以外を渡すと `lvalue でない式です` で止まる。
+この回で扱う `*p = 20;` は、変数ではない式を代入先に置く最初の例である。
 
 | 見方 | 意味 | 例 |
 |------|------|----|
 | rvalue | 式を評価して得られる値 | `a`, `*p`, `1 + 2` |
 | lvalue | 書き込み先として使える場所 | `a`, `*p` |
 
-この区別をコード上では次の2関数で表す。
-
-```text
-codegen(node)      -> rvalue を計算し、値を a0 に置く
-codegen_lval(node) -> lvalue のアドレスを計算し、アドレスを a0 に置く
-```
+この回で新しくなるのは、この表の `*p` の列である。
+`codegen_lval()` に `'Deref'` を足し、`codegen()` に `'Addr'` と `'Deref'` を足す。
 
 ## この回で扱う範囲
 
@@ -106,54 +108,44 @@ int main() {
 `p = &a;` は、右辺に `(addr (var "a"))` を持つ代入である。
 `*p = 20;` は、左辺に `(deref (var "p"))` を持つ代入である。
 
-## rvalue と lvalue
+## lvalue になれる式が増える
 
-同じ式でも、使われる場所によって意味が変わる。
+変数 `a` の2つの使い方（`a = 10` の左辺はアドレス、`return a;` は値）は
+コマ4 の「rvalue と lvalue」節で扱った。この回で増えるのは、
+**変数以外にも lvalue になれる式がある**という点である。
 
-```c
-a = 10;
-return a;
-```
+| Cコード | lvalue になる式 | 書き込み先アドレスの求め方 |
+|---------|-----------------|----------------------------|
+| `a = 10;` | `a`（`'Var'`） | `s0` からのオフセットを足す（コマ4） |
+| `*p = 20;` | `*p`（`'Deref'`） | `p` を rvalue として評価した値がそのままアドレス |
 
-代入の左辺 `a` は「書き込み先」である。
-一方、`return a;` の `a` は「値を読む式」である。
-
-つまり、`a` には2つの使い方がある。
-
-| Cコード | 必要なもの | 処理 |
-|---------|------------|------|
-| `a = 10` の `a` | `a` のアドレス | `codegen_lval(var a)` |
-| `return a` の `a` | `a` の値 | `codegen_lval(var a)` の後に `ld` |
-
-この違いを明確にするために、`codegen()` と `codegen_lval()` を分ける。
+`*p` のアドレスは、スタック上の位置を計算して作るのではなく、
+`p` に入っている値をそのまま使う。ここが `'Var'` との違いである。
 
 ![`p = &a;` 実行後のメモリと、rvalue / lvalue の関係](figures/09_ptr_memory.svg)
 
 `p` のスロットには `a` のアドレスが値として入っている。
 `*p` を lvalue として使うときは、この値（矢印の先）がそのまま書き込み先アドレスになる。
 
-## `codegen_lval()` の役割
+## `codegen_lval()` に `'Deref'` を足す
 
 `codegen_lval(node)` は、代入先として使える式のアドレスを `a0` に入れる。
 
-変数 `a` の場合、スタック上のアドレスを計算する。
+コマ4 で書いた `'Var'` の分岐は、継承でそのまま引き継がれる（再掲）。
 
 ```python
-def codegen_lval(node):
-    if node.kind == ND_VAR:
-        offset = self._locals.get(node.name)
-        if offset is None:
-            raise RuntimeError(f"未定義の変数: '{node.name}'")
-        self.emit(f"  addi a0, s0, {offset}")
-        return
+def codegen_lval_Var(self, node):
+    offset = self.lookup_var(node.name, node.line)
+    self.emit(f"  addi a0, s0, {offset}")
 ```
 
-`*p` の場合は、`p` の値そのものが書き込み先アドレスである。
+この回で足すのは `'Deref'` の分岐である。
+`*p` の場合は、`p` の値そのものが書き込み先アドレスなので、
+`node.operand` を rvalue として評価するだけでよい。
 
 ```python
-    if node.kind == ND_DEREF:
-        self.codegen(node.operand)
-        return
+def codegen_lval_Deref(self, node):
+    self.codegen(node.operand)
 ```
 
 `*p = 20;` では、まず `p` を rvalue として評価する。
@@ -166,9 +158,8 @@ def codegen_lval(node):
 したがって、`&` の中身を lvalue として評価すればよい。
 
 ```python
-if node.kind == ND_ADDR:
+def codegen_Addr(self, node):
     self.codegen_lval(node.operand)
-    return
 ```
 
 `p = &a;` の流れは次のようになる。
@@ -191,27 +182,28 @@ if node.kind == ND_ADDR:
 rvalue としての `*p` は次のように生成する。
 
 ```python
-if node.kind == ND_DEREF:
+def codegen_Deref(self, node):
     self.codegen(node.operand)
     self.emit("  ld a0, 0(a0)")
-    return
 ```
 
-## 代入のコード生成
+## 代入は書き換えなくてよい
 
 代入 `lhs = rhs` では、左辺は lvalue、右辺は rvalue として扱う。
+コマ4 の `codegen_Assign()` は、すでにこの形で書かれている。
 
-```python
-if node.kind == ND_ASSIGN:
-    self.codegen_lval(node.lhs)   # 書き込み先アドレス
-    push a0
-    self.codegen(node.rhs)        # 書き込む値
-    pop a1
-    self.emit("  sd a0, 0(a1)")
-    return
+```text
+1. self.codegen_lval(node.lhs) で書き込み先アドレスを求める
+2. アドレスをスタックへ退避する
+3. self.codegen(node.rhs) で書き込む値を求める
+4. 退避したアドレスを a1 に戻す
+5. sd a0, 0(a1) で書き込む
 ```
 
-ここで重要なのは、左辺には `codegen()` ではなく `codegen_lval()` を使うことである。
+左辺に `codegen()` ではなく `codegen_lval()` を使ってあるので、
+`codegen_lval()` に `'Deref'` が足されただけで `*p = 20;` が動く。
+`codegen_Assign()` 自体には手を入れない。
+コマ4 の時点でこの形にしておく理由が、ここで効いてくる。
 
 ## 関数引数としてのポインタ
 
@@ -277,23 +269,25 @@ void swap(int *a, int *b) {
 
 - `mycc.py`
 
-`importlib` でコマ8 の `Codegen08` を継承した `Codegen09` に、以下の機能を追加する（スケルトンにあらかじめ書かれている）。
+`importlib` でコマ8 の `Codegen08` を継承した `Codegen09` に、以下の3つを実装する。
+`codegen_lval()` と `codegen()` のディスパッチはスケルトンにあらかじめ書かれている。
 
-| ハンドラメソッド | 変更内容 |
-|------------------|----------|
-| `codegen_lval_Var(node)` | 変数のアドレスを `self._locals` から引いて `a0` に返す |
+| 実装対象 | 役割 |
+|----------|------|
 | `codegen_lval_Deref(node)` | `self.codegen(node.operand)` でアドレスを得る |
-| `codegen(node)` の `match` 節に `'Addr'` | `self.codegen_lval(node.operand)` でアドレスを値として返す |
-| `codegen(node)` の `match` 節に `'Deref'` | `self.codegen(node.operand)` の後 `self.emit("  ld a0, 0(a0)")` |
-| `codegen(node)` の `match` 節に `'Assign'` | 左辺は lval、右辺は rval で評価し `self.emit("  sd a0, 0(a1)")` |
+| `codegen_Addr(node)` | `self.codegen_lval(node.operand)` でアドレスを値として返す |
+| `codegen_Deref(node)` | `self.codegen(node.operand)` の後 `self.emit("  ld a0, 0(a0)")` |
+
+`codegen_lval_Var(node)` と `codegen_Assign(node)` はコマ4 で実装済みで、
+継承でそのまま働く。この回で書き直すものは無い。
 
 ## 実装手順
 
 1. スケルトンの `Codegen09` が `Codegen08` を `importlib` で継承していることを確認する
-2. `codegen_lval(node)` に `'Deref'` handler を追加する
-3. `codegen(node)` に `'Addr'` handler を追加する
-4. `codegen(node)` に rvalue としての `'Deref'` handler を追加する
-5. `codegen(node)` の `'Assign'` handler が左辺に `self.codegen_lval()` を使っていることを確認する
+2. `codegen_lval_Deref(node)` を実装する
+3. `codegen_Addr(node)` を実装する
+4. rvalue としての `codegen_Deref(node)` を実装する
+5. コマ4 の `codegen_Assign()` が左辺に `self.codegen_lval()` を使っていることを確認する（`*p = 20;` はこれで動く）
 6. `swap.c` まで通ることを確認する
 7. `void_func.c` を通す（`Return` の `operand` が `None` のとき、値を計算せずエピローグへ飛ぶ）
 

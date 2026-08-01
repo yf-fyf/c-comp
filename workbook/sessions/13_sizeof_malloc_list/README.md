@@ -8,8 +8,9 @@
 
 ## 実装する主な機能
 
-- `sizeof(型名)` をコード生成する（`sizeof(struct Node)` を含む）
-- `malloc` によるヒープ確保を扱う（`malloc` 自体は自作せず libc のものを呼ぶ）
+- `sizeof` を構造体へ広げる（`sizeof(struct Node)`。`sizeof(int)` などはコマ10 で導入済み）
+- `malloc` で構造体をヒープに確保する（`malloc` 自体は自作せず libc のものを呼ぶ）
+- `NULL`（`lib.h` の `#define NULL 0`）を終端の印として使う
 - 自己参照構造体（`struct Node *next` など）を扱う
 - ポインタをたどる連結リストの走査を動かす
 
