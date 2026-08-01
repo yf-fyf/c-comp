@@ -32,7 +32,7 @@
 | 文書 | 内容 | 読みどき |
 |------|------|---------|
 | [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・読む順序・全16コマ一覧・コマ16 のあと | **最初に**（入口） |
-| [`conventions.md`](./conventions.md) | 実装の約束ごと（編集するファイル・`emit()`・命名） | コマ3 の前に一度。`codegen` / `codegen_lval` の分離はコマ9 で導入するので、その回に読み直す |
+| [`conventions.md`](./conventions.md) | 実装の約束ごと（編集するファイル・`emit()`・命名） | コマ3 の前に一度。`codegen` / `codegen_lval` の分離はコマ4 で最小形を導入しコマ9 で拡張するので、両方の回に読み直す |
 | [`debugging.md`](./debugging.md) | 動かないときの確認手順と症状表 | 詰まったとき |
 | [`migration.md`](./migration.md) | 2026-08-01 の教材更新と、古いファイルとの非互換の一覧 | それより前に取得したファイルで作業しているとき |
 | [`language_spec.md`](./language_spec.md) | Core プロファイルの言語仕様（型・演算子・EBNF・除外機能・標準/発展の到達範囲） | 引くもの。冒頭に目次がある |
