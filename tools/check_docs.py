@@ -6,30 +6,42 @@
     python3 tools/check_docs.py                # 全チェックを実行
     python3 tools/check_docs.py --only tests    # 1つだけ実行（tests/terms/nav）
     python3 tools/check_docs.py --list-allowed  # 除外リストの内容を一覧表示
+    python3 tools/check_docs.py --list-kinds    # 除外リストに書ける検出種別を表示
 
 チェック一覧:
-    tests  原稿のテスト表に挙がるファイル名が workbook/**/tests/ に実在するか
-    terms  旧仕様語（配列・typedef・union・enum・fixed15）の残存を検査する
-    nav    site/nav.yaml に載っていない materials/ 原稿を検出する
-           （design/maintaining.md のワンライナーと同じロジック）
-    libh   workbook/scaffold/lib.h の宣言一覧と language_spec.md の
-           「標準ライブラリ」節のコードブロックが一致しているか（T55）
-    style  design/maintaining.md の用語表（T59）で決めた表記に反していないか
-           （第NN回・ゼロ埋め・コマとNの間の空白・「学生」表記）。
-           workbook/advanced/・materials/advanced/ も対象（T59 後半で統一した
-           全角/半角括弧・「発展課題 XN」・B ファミリの呼称・「（選択制）」の
-           全廃・スキャフォールド表記も、advanced 配下限定であわせて検査する）
+    tests     原稿のテスト表に挙がるファイル名が workbook/**/tests/ に実在するか
+    terms     旧仕様語（配列・typedef・union・enum・fixed15）の残存を検査する
+    nav       site/nav.yaml に載っていない materials/ 原稿を検出する
+              （design/maintaining.md のワンライナーと同じロジック）
+    libh      workbook/scaffold/lib.h の宣言一覧と language_spec.md の
+              「標準ライブラリ」節のコードブロックが一致しているか（T55）
+    style     design/maintaining.md の用語表（T59）で決めた表記に反していないか
+              （第NN回・ゼロ埋め・コマとNの間の空白・「学生」表記）。
+              workbook/advanced/・materials/advanced/ も対象（T59 後半で統一した
+              全角/半角括弧・「発展課題 XN」・B ファミリの呼称・「（選択制）」の
+              全廃・スキャフォールド表記も、advanced 配下限定であわせて検査する）
+    exc       language_spec.md の「N 件の例外」宣言と例外見出しの数の一致
+    codeexec  workbook/docs/code_example.md の C コードブロックを実際に処理系へ
+              通す。前段（構文）は常時、後段（実行と期待終了コードの照合）は
+              処理系と RV64 ツールチェーンが揃っているときだけ走る
+    ident     conventions.md / debugging.md / scaffold/README.md が挙げる識別子が
+              workbook/sessions/ と workbook/scaffold/ に実在するか
 
 除外リストは tools/doc_check_allowlist.yaml。理由は各エントリの reason に書く。
-チェック6は language_spec.md の「N 件の例外」宣言と例外見出しの数を突き合わせる。
+除外は「ファイル + 行の内容（match） + 検出種別（check）」の3点で指定する。
 依存: PyYAML（tools/build_site.py と共通）。
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import shlex
+import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -77,12 +89,32 @@ def load_style_allowlist() -> list[dict]:
     return _load_allowlist_section("style_terms")
 
 
+# 除外リストに書ける検出種別（T77）。セクションごとに閉じた集合として持ち、
+# 綴り違いをその場で違反にする。ここに無い種別を書いた除外は「効かない除外」に
+# なるが、それは死んだ除外としてしか現れず原因が分かりにくいので明示的に弾く。
+ALLOWLIST_KINDS: dict[str, set[str]] = {
+    "legacy_terms": {"array", "typedef", "union", "enum", "fixed15"},
+    "style_terms": {
+        "dai-kai", "koma-zero-pad", "koma-space", "gakusei",
+        "hatten-xn", "sentakusei", "backend-series",
+        "hankaku-paren", "scaffold-hyoki",
+    },
+    "code_examples": {"parse", "exec"},
+    "identifiers": {"missing-identifier", "missing-file"},
+}
+
+
 class Allowlist:
-    """除外リスト。行番号ではなく行の内容で照合する。
+    """除外リスト。行番号ではなく「行の内容 + 検出種別」で照合する。
 
     行番号で留めると、上の行を1行足し引きしただけで除外が外れて誤検出になり、
     逆にずれた先に別の違反があれば黙って握り潰す。そこで `match`（その行に
     必ず含まれる文字列）で照合する。
+
+    さらに、1行が複数の検出種別に引っかかることがある（例: `コマ 08` は
+    ゼロ埋めと空白の両方）。行の内容だけで照合すると、片方を許すつもりの除外が
+    もう片方まで黙らせてしまう。そこで `check`（検出種別。文字列またはその配列）
+    を必須にし、名指しした種別だけを除外する（T77）。
 
     一度も一致しなかったエントリは「死んだ除外」として違反にする。本文を直して
     対象語が消えたのにエントリだけ残る状態を、このチェック自身が見つけるため。
@@ -92,11 +124,30 @@ class Allowlist:
         self.section = section
         self.entries = entries
         self._used: set[int] = set()
+        self.malformed: list[tuple[dict, str]] = []
+        known = ALLOWLIST_KINDS.get(section, set())
+        self._kinds: list[set[str]] = []
+        for entry in entries:
+            raw = entry.get("check")
+            if raw is None:
+                self._kinds.append(set())
+                self.malformed.append((entry, "check（検出種別）が無い"))
+                continue
+            kinds = {raw} if isinstance(raw, str) else set(raw)
+            unknown = sorted(kinds - known)
+            if unknown:
+                self.malformed.append(
+                    (entry, f"未知の検出種別: {', '.join(unknown)}"
+                            f"（使えるのは {', '.join(sorted(known))}）"))
+            self._kinds.append(kinds)
 
-    def matches(self, rel: str, line: str) -> bool:
+    def matches(self, rel: str, line: str, kind: str) -> bool:
+        """rel の line に対する kind の検出を除外してよいか。"""
         hit = False
         for idx, entry in enumerate(self.entries):
             if entry.get("file") != rel:
+                continue
+            if kind not in self._kinds[idx]:
                 continue
             needle = entry.get("match")
             if not needle or needle not in line:
@@ -182,12 +233,13 @@ def check_test_tables() -> list[Violation]:
 #     ディレクトリではなくファイル名で判定する
 # 上記に当てはまらない出現は tools/doc_check_allowlist.yaml で個別に扱う。
 
+# (検出種別, 正規表現)。検出種別は除外リストの check: に書く名前と対応する。
 BANNED_TERMS = [
-    re.compile(r"配列"),
-    re.compile(r"\btypedef\b"),
-    re.compile(r"\bunion\b"),
-    re.compile(r"\benum\b"),
-    re.compile(r"fixed15"),
+    ("array", re.compile(r"配列")),
+    ("typedef", re.compile(r"\btypedef\b")),
+    ("union", re.compile(r"\bunion\b")),
+    ("enum", re.compile(r"\benum\b")),
+    ("fixed15", re.compile(r"fixed15")),
 ]
 
 TEXT_SUFFIXES = {".md", ".py", ".ml", ".tex", ".txt", ".yaml", ".yml", ".ts", ".tsx"}
@@ -207,14 +259,22 @@ def is_structurally_exempt(path: Path) -> bool:
 
 
 def _dead_allowlist_violations(allowlist: "Allowlist") -> list[Violation]:
-    """一度も一致しなかった除外エントリを違反として返す。"""
+    """書式不備の除外と、一度も一致しなかった除外エントリを違反として返す。"""
     out: list[Violation] = []
+    allow_path = ROOT / ALLOWLIST_PATH.relative_to(ROOT)
+    for entry, why in allowlist.malformed:
+        out.append(Violation(
+            allow_path, 0,
+            f"除外エントリの書式不備（{allowlist.section}）: "
+            f"{entry.get('file', '?')} / 「{entry.get('match', '')}」: {why}",
+        ))
     for entry in allowlist.unused():
         rel = entry.get("file", "?")
         needle = entry.get("match", "")
+        kind = entry.get("check", "?")
         out.append(Violation(
-            ROOT / ALLOWLIST_PATH.relative_to(ROOT), 0,
-            f"死んだ除外（{allowlist.section}）: {rel} に "
+            allow_path, 0,
+            f"死んだ除外（{allowlist.section}）: {rel} の検出種別 {kind} に "
             f"「{needle}」が見つからない。本文を直したならこのエントリを消す",
         ))
     return out
@@ -240,11 +300,14 @@ def check_legacy_terms() -> list[Violation]:
                 continue
             rel = path.relative_to(ROOT).as_posix()
             for i, line in enumerate(lines, 1):
-                if any(term.search(line) for term in BANNED_TERMS):
-                    if allowlist.matches(rel, line):
+                for kind, term in BANNED_TERMS:
+                    if not term.search(line):
+                        continue
+                    if allowlist.matches(rel, line, kind):
                         continue
                     violations.append(Violation(
-                        path, i, f"旧仕様語の残存の疑い: {line.strip()}",
+                        path, i,
+                        f"旧仕様語の残存の疑い（{kind}）: {line.strip()}",
                     ))
     violations.extend(_dead_allowlist_violations(allowlist))
     return violations
@@ -469,32 +532,35 @@ def _check_advanced_style_in_file(
             continue
         if in_fence:
             continue
-        if allowlist.matches(rel, line):
-            continue
-        if STYLE_HATTEN_XN_RE.search(line):
+        if (STYLE_HATTEN_XN_RE.search(line)
+                and not allowlist.matches(rel, line, "hatten-xn")):
             violations.append(Violation(
                 path, i,
                 f"「発展 XN」表記の残存（「発展課題 XN」を使う）: {line.strip()}",
             ))
-        if STYLE_SENTAKUSEI_RE.search(line):
+        if (STYLE_SENTAKUSEI_RE.search(line)
+                and not allowlist.matches(rel, line, "sentakusei")):
             violations.append(Violation(
                 path, i, f"「（選択制）」の残存（索引で既に宣言済みなので削る）: {line.strip()}",
             ))
-        if STYLE_BACKEND_SERIES_RE.search(line):
+        if (STYLE_BACKEND_SERIES_RE.search(line)
+                and not allowlist.matches(rel, line, "backend-series")):
             violations.append(Violation(
                 path, i,
                 "「バックエンド発展シリーズ」の残存"
                 f"（「最適化入門発展シリーズ」を使う）: {line.strip()}",
             ))
         masked = _style_mask_protected(line)
-        if "(" in masked or ")" in masked:
+        if (("(" in masked or ")" in masked)
+                and not allowlist.matches(rel, line, "hankaku-paren")):
             violations.append(Violation(
                 path, i, f"半角括弧の残存（全角（）を使う）: {line.strip()}",
             ))
         masked_scaffold = _STYLE_SPAN_RE.sub(
             lambda m: "\x00" * len(m.group(0)), line
         )
-        if _STYLE_SCAFFOLD_RE.search(masked_scaffold):
+        if (_STYLE_SCAFFOLD_RE.search(masked_scaffold)
+                and not allowlist.matches(rel, line, "scaffold-hyoki")):
             violations.append(Violation(
                 path, i,
                 f"地の文の「scaffold」の残存（「スキャフォールド」を使う）: {line.strip()}",
@@ -511,21 +577,23 @@ def _check_style_terms_in_file(
     rel = path.relative_to(ROOT).as_posix()
     advanced = is_advanced_target(path)
     for i, line in enumerate(lines, 1):
-        if allowlist.matches(rel, line):
-            continue
-        if not advanced and STYLE_DAI_KAI_RE.search(line):
+        if (not advanced and STYLE_DAI_KAI_RE.search(line)
+                and not allowlist.matches(rel, line, "dai-kai")):
             violations.append(Violation(
                 path, i, f"「第NN回」表記の残存（「コマN」を使う）: {line.strip()}",
             ))
-        if STYLE_KOMA_ZERO_RE.search(line):
+        if (STYLE_KOMA_ZERO_RE.search(line)
+                and not allowlist.matches(rel, line, "koma-zero-pad")):
             violations.append(Violation(
                 path, i, f"「コマN」のゼロ埋めの残存: {line.strip()}",
             ))
-        if STYLE_KOMA_SPACE_RE.search(line):
+        if (STYLE_KOMA_SPACE_RE.search(line)
+                and not allowlist.matches(rel, line, "koma-space")):
             violations.append(Violation(
                 path, i, f"「コマ」と数字の間の空白の残存: {line.strip()}",
             ))
-        if STYLE_GAKUSEI_RE.search(line):
+        if (STYLE_GAKUSEI_RE.search(line)
+                and not allowlist.matches(rel, line, "gakusei")):
             violations.append(Violation(
                 path, i, f"「学生」表記の残存（「学習者」を使う）: {line.strip()}",
             ))
@@ -558,6 +626,375 @@ def check_style_terms() -> list[Violation]:
     return violations
 
 
+# ── チェック7: code_example.md の C コードブロックを処理系に通す（T57-1） ──
+#
+# code_example.md は「各コマ終了時点でコンパイルできる最も複雑なプログラム」を
+# 示す文書で、各例に期待する終了コード・標準出力まで書いてある。人手では検算
+# されないので、仕様から外れた構文（かつてのブロックコメントなど）や、書き換えの
+# ときに直し忘れた期待値が残る。ここでは文書からコードブロックを取り出し、
+#
+#   前段（parse）: 提供物の Lexer/Parser（workbook/scaffold）に通す。追加の
+#                  依存が要らないので CI でも常に走る。仕様外の構文はここで落ちる
+#   後段（exec）:  処理系でアセンブリまで落とし、riscv64 gcc と qemu で実行して
+#                  期待する終了コード・標準出力と突き合わせる。処理系と RV64
+#                  ツールチェーンが揃っているときだけ走り、無ければスキップする
+#
+# を行う。後段の処理系は既定で公開されている OCaml 参考実装
+# （workbook/ocaml/reference/mycc_ref.exe。`cd workbook/ocaml && dune build` で
+# 作る）を使う。CHECK_DOCS_COMPILER 環境変数で別の処理系（例: 非公開の Python
+# 完成版 mycc.py）を指定できる。標準トラックの workbook/final/mycc.py は
+# 統合先のプレースホルダーで動く処理系ではないため、既定にはしない。
+
+CODE_EXAMPLE_PATH = ROOT / "workbook" / "docs" / "code_example.md"
+SCAFFOLD_DIR = ROOT / "workbook" / "scaffold"
+OCAML_REF_EXE = ROOT / "workbook" / "ocaml" / "_build" / "default" / "reference" / "mycc_ref.exe"
+
+CE_FENCE_RE = re.compile(r"^```(\w*)\s*$")
+CE_FILENAME_RE = re.compile(r"^//\s*([A-Za-z0-9_]+\.[ch])\s*$")
+CE_EXIT_RE = re.compile(r"期待する終了コード:\s*`(-?\d+)`")
+CE_STDOUT_INLINE_RE = re.compile(r"期待する標準出力:\s*`([^`]*)`")
+CE_STDOUT_BLOCK_RE = re.compile(r"期待する標準出力:\s*$")
+
+# 実行検証に必要な外部コマンド
+CE_ASSEMBLER = "riscv64-linux-gnu-gcc"
+CE_RUNNER = "qemu-riscv64"
+
+# 各チェックが出す補足（違反ではないが伝えたいこと）。main() が結果行の下に出す。
+NOTES: list[str] = []
+
+
+class CodeBlock:
+    def __init__(self, section: str, lang: str, start: int, end: int, body: list[str]):
+        self.section = section
+        self.lang = lang
+        self.start = start        # 開始フェンスの行番号（1 始まり）
+        self.end = end            # 終了フェンスの行番号
+        self.body = body
+        self.name: str | None = None
+        self.exit_code: int | None = None
+        self.stdout: str | None = None
+
+
+def extract_code_blocks(lines: list[str]) -> list[CodeBlock]:
+    """フェンス付きコードブロックを文書順に取り出す。"""
+    blocks: list[CodeBlock] = []
+    section = ""
+    i, n = 0, len(lines)
+    while i < n:
+        if lines[i].startswith("## "):
+            section = lines[i][3:].strip()
+            i += 1
+            continue
+        m = CE_FENCE_RE.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        j = i + 1
+        while j < n and lines[j].strip() != "```":
+            j += 1
+        blocks.append(CodeBlock(section, m.group(1), i + 1, j + 1, lines[i + 1:j]))
+        i = j + 1
+    return blocks
+
+
+def annotate_code_blocks(blocks: list[CodeBlock], lines: list[str]) -> None:
+    """C ブロックに仮想ファイル名と期待値を付ける。
+
+    ブロック先頭の `// name.c` 行はファイル名の宣言として扱う（コマ15 の
+    複数ファイル例がこの形）。期待値は、そのブロックの後から次のブロック
+    （または次の見出し・区切り線）までの範囲に書かれたものを拾う。
+    """
+    n = len(lines)
+    for idx, block in enumerate(blocks):
+        if block.lang != "c":
+            continue
+        if block.body:
+            m = CE_FILENAME_RE.match(block.body[0].strip())
+            if m:
+                block.name = m.group(1)
+        stop = blocks[idx + 1].start - 1 if idx + 1 < len(blocks) else n
+        k = block.end
+        while k < stop:
+            text = lines[k]
+            if text.startswith("## ") or text.strip() == "---":
+                break
+            m = CE_EXIT_RE.search(text)
+            if m:
+                block.exit_code = int(m.group(1))
+            m = CE_STDOUT_INLINE_RE.search(text)
+            if m:
+                block.stdout = m.group(1) + "\n"
+            elif CE_STDOUT_BLOCK_RE.search(text):
+                # 直後の言語指定なしフェンスが期待する標準出力そのもの
+                if idx + 1 < len(blocks) and blocks[idx + 1].lang == "":
+                    block.stdout = "\n".join(blocks[idx + 1].body) + "\n"
+            k += 1
+
+
+def group_code_blocks(blocks: list[CodeBlock]) -> list[list[CodeBlock]]:
+    """1つのプログラムを成すブロックをまとめる。
+
+    ファイル名を宣言したブロックは、同じ節にある限り1つのプログラム
+    （コマ15 の math_util.h / math_util.c / main.c）として束ねる。
+    """
+    groups: list[list[CodeBlock]] = []
+    current: list[CodeBlock] | None = None
+    for block in blocks:
+        if block.lang != "c":
+            continue
+        if block.name and current and current[0].name and current[0].section == block.section:
+            current.append(block)
+            continue
+        current = [block]
+        groups.append(current)
+    return groups
+
+
+def _exec_compiler_argv() -> list[str] | None:
+    """後段（実行検証）で使う処理系のコマンド。使えなければ None。"""
+    override = os.environ.get("CHECK_DOCS_COMPILER")
+    if override:
+        return shlex.split(override)
+    if OCAML_REF_EXE.is_file():
+        return [str(OCAML_REF_EXE), "--no-comments"]
+    return None
+
+
+def _write_group(tmpdir: Path, group: list[CodeBlock]) -> list[Path]:
+    """グループのブロックを一時ディレクトリに書き出す。lib.h も同居させる。"""
+    libh = SCAFFOLD_DIR / "lib.h"
+    if libh.is_file():
+        shutil.copy(libh, tmpdir / "lib.h")
+    paths = []
+    for block in group:
+        name = block.name or f"block_{block.start}.c"
+        path = tmpdir / name
+        path.write_text("\n".join(block.body) + "\n", encoding="utf-8")
+        paths.append(path)
+    return paths
+
+
+def _parse_code_block(path: Path) -> str | None:
+    """提供物の Lexer/Parser に通す。通れば None、落ちればその理由を返す。"""
+    sys.path.insert(0, str(SCAFFOLD_DIR))
+    try:
+        from lexer import preprocess, tokenize  # noqa: PLC0415
+        from parser import parse                # noqa: PLC0415
+        source = path.read_text(encoding="utf-8")
+        parse(tokenize(preprocess(source, str(path)), str(path)))
+    except SystemExit:
+        # scaffold の字句・構文エラーは exit(1) で落ちる。直前に stderr へ
+        # 詳細を出しているので、ここでは種別だけ伝える
+        return "Lexer/Parser が受理しなかった（詳細は直前の標準エラー出力）"
+    except Exception as exc:  # noqa: BLE001
+        return f"{type(exc).__name__}: {exc}"
+    finally:
+        if sys.path and sys.path[0] == str(SCAFFOLD_DIR):
+            sys.path.pop(0)
+    return None
+
+
+def _run_code_group(tmpdir: Path, paths: list[Path], compiler: list[str]) -> tuple[int, str] | str:
+    """処理系 → アセンブル → 実行。(終了コード, 標準出力) か、失敗理由を返す。"""
+    sources = [str(p) for p in paths if p.suffix == ".c"]
+    asm = tmpdir / "out.s"
+    exe = tmpdir / "out.bin"
+    r = subprocess.run([*compiler, *sources], capture_output=True, text=True)
+    if r.returncode != 0:
+        return f"処理系が失敗した: {r.stderr.strip().splitlines()[-1] if r.stderr.strip() else ''}"
+    asm.write_text(r.stdout, encoding="utf-8")
+    r = subprocess.run(
+        [CE_ASSEMBLER, "-x", "assembler", "-static", str(asm), "-o", str(exe)],
+        capture_output=True, text=True)
+    if r.returncode != 0:
+        return f"アセンブルに失敗した: {r.stderr.strip()[:200]}"
+    try:
+        r = subprocess.run([CE_RUNNER, str(exe)], capture_output=True, text=True,
+                           timeout=30)
+    except subprocess.TimeoutExpired:
+        return "実行がタイムアウトした（30 秒）"
+    return (r.returncode, r.stdout)
+
+
+def check_code_examples() -> list[Violation]:
+    violations: list[Violation] = []
+    if not CODE_EXAMPLE_PATH.is_file():
+        return violations
+    allowlist = Allowlist(_load_allowlist_section("code_examples"), "code_examples")
+    rel = CODE_EXAMPLE_PATH.relative_to(ROOT).as_posix()
+    lines = CODE_EXAMPLE_PATH.read_text(encoding="utf-8").splitlines()
+    blocks = extract_code_blocks(lines)
+    annotate_code_blocks(blocks, lines)
+    groups = group_code_blocks(blocks)
+
+    compiler = _exec_compiler_argv()
+    can_exec = bool(compiler) and all(
+        shutil.which(cmd) for cmd in (CE_ASSEMBLER, CE_RUNNER))
+    if not can_exec:
+        missing = []
+        if not compiler:
+            missing.append(
+                "処理系（workbook/ocaml で dune build するか CHECK_DOCS_COMPILER を指定）")
+        missing += [c for c in (CE_ASSEMBLER, CE_RUNNER) if not shutil.which(c)]
+        NOTES.append(
+            f"C ブロック {len(groups)} 本の構文だけ検査した。"
+            f"実行検証は未実施（不足: {' / '.join(missing)}）")
+
+    executed = 0
+    for group in groups:
+        head = group[0]
+        with tempfile.TemporaryDirectory() as td:
+            tmpdir = Path(td)
+            paths = _write_group(tmpdir, group)
+            broken = False
+            for path, block in zip(paths, group):
+                reason = _parse_code_block(path)
+                if reason and not allowlist.matches(rel, block.body[0] if block.body else "", "parse"):
+                    violations.append(Violation(
+                        CODE_EXAMPLE_PATH, block.start,
+                        f"C コードブロックが処理系のフロントエンドを通らない: {reason}"))
+                    broken = True
+            if broken or not can_exec:
+                continue
+            last = group[-1]
+            if last.exit_code is None and last.stdout is None:
+                continue
+            result = _run_code_group(tmpdir, paths, compiler)
+            if isinstance(result, str):
+                violations.append(Violation(
+                    CODE_EXAMPLE_PATH, head.start,
+                    f"C コードブロックを実行できない: {result}"))
+                continue
+            code, out = result
+            executed += 1
+            if last.exit_code is not None and code != last.exit_code:
+                violations.append(Violation(
+                    CODE_EXAMPLE_PATH, last.start,
+                    f"期待する終了コード {last.exit_code} に対し実際は {code}"))
+            if last.stdout is not None and out != last.stdout:
+                violations.append(Violation(
+                    CODE_EXAMPLE_PATH, last.start,
+                    f"期待する標準出力 {last.stdout!r} に対し実際は {out!r}"))
+    if can_exec:
+        NOTES.append(
+            f"C ブロック {len(groups)} 本を構文検査し、"
+            f"うち期待値の書かれた {executed} 本を実行して終了コード・標準出力を照合した")
+    violations.extend(_dead_allowlist_violations(allowlist))
+    return violations
+
+
+# ── チェック8: 規約文書が挙げる識別子の実在確認（T57-2） ──
+#
+# conventions.md の「命名の目安」表・debugging.md の症状表・scaffold/README.md の
+# ファイル一覧は、実装側の名前を名指しする。名前が変わったのに文書が古いままだと、
+# 学習者は存在しないヘルパーを探すことになる。conventions.md:77 は `_push_a0` /
+# `_pop_into` の名前固定を発展課題の動作条件にしているので、実利もある。
+#
+# 拾うのはインラインコード（`...`）のうち、Python の識別子として書かれたと
+# 判断できるものだけに絞る:
+#   - スネークケース（`size_of_ty_str`、`align_to`）
+#   - 先頭アンダースコア（`_locals`）
+#   - 呼び出しの形（`emit()`、`align_to(n, 16)` → 呼び出し先の名前を見る）
+# レジスタ名（`a0`、`sp`）・引用符つきの過去の名前（`'_align_to'`）・パスを
+# 含む表記（`sessions/NN_xxx/mycc.py`）は、この形に当てはまらないので拾わない。
+# コードフェンスの中は対象外（説明用の擬似コードが混ざるため）。
+
+IDENT_DOCS = [
+    Path("workbook/docs/conventions.md"),
+    Path("workbook/docs/debugging.md"),
+    Path("workbook/scaffold/README.md"),
+]
+IDENT_SOURCE_DIRS = [Path("workbook/sessions"), Path("workbook/scaffold")]
+
+IDENT_SPAN_RE = re.compile(r"`([^`\n]+)`")
+IDENT_CALL_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\([^()]*\)$")
+IDENT_SNAKE_RE = re.compile(r"^_?[a-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+$")
+IDENT_UNDER_RE = re.compile(r"^_[a-z][a-z0-9]*$")
+IDENT_BARE_RE = re.compile(r"^[a-z][a-z0-9]*$")
+IDENT_FILE_RE = re.compile(r"^([A-Za-z0-9_]+\.(?:py|h))$")
+
+
+def _identifier_candidates(line: str) -> tuple[set[str], set[str]]:
+    """1行から (識別子名, ファイル名) の候補を返す。"""
+    idents: set[str] = set()
+    files: set[str] = set()
+    for span in IDENT_SPAN_RE.findall(line):
+        m = IDENT_FILE_RE.match(span)
+        if m:
+            files.add(m.group(1))
+            continue
+        m = IDENT_CALL_RE.match(span)
+        name, called = (m.group(1), True) if m else (span, False)
+        if (IDENT_SNAKE_RE.match(name) or IDENT_UNDER_RE.match(name)
+                or (called and IDENT_BARE_RE.match(name))):
+            idents.add(name)
+    return idents, files
+
+
+def check_identifiers() -> list[Violation]:
+    violations: list[Violation] = []
+    allowlist = Allowlist(_load_allowlist_section("identifiers"), "identifiers")
+
+    sources: list[str] = []
+    scaffold_files: set[str] = set()
+    for base in IDENT_SOURCE_DIRS:
+        d = ROOT / base
+        if not d.is_dir():
+            continue
+        for path in sorted(d.rglob("*")):
+            if not path.is_file():
+                continue
+            if any(part in SKIP_DIRNAMES for part in path.relative_to(ROOT).parts):
+                continue
+            scaffold_files.add(path.name)
+            if path.suffix in {".py", ".h"}:
+                try:
+                    sources.append(path.read_text(encoding="utf-8"))
+                except UnicodeDecodeError:
+                    continue
+    if not sources:
+        return violations
+    corpus = "\n".join(sources)
+
+    checked = 0
+    for rel_doc in IDENT_DOCS:
+        doc = ROOT / rel_doc
+        if not doc.is_file():
+            continue
+        rel = rel_doc.as_posix()
+        in_fence = False
+        for i, line in enumerate(doc.read_text(encoding="utf-8").splitlines(), 1):
+            if line.lstrip().startswith("```"):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            idents, files = _identifier_candidates(line)
+            for name in sorted(idents):
+                checked += 1
+                if re.search(r"\b" + re.escape(name) + r"\b", corpus):
+                    continue
+                if allowlist.matches(rel, line, "missing-identifier"):
+                    continue
+                violations.append(Violation(
+                    doc, i,
+                    f"文書が挙げる識別子 `{name}` が "
+                    "workbook/sessions/・workbook/scaffold/ に存在しない"))
+            for name in sorted(files):
+                checked += 1
+                if name in scaffold_files:
+                    continue
+                if allowlist.matches(rel, line, "missing-file"):
+                    continue
+                violations.append(Violation(
+                    doc, i,
+                    f"文書が挙げるファイル `{name}` が "
+                    "workbook/sessions/・workbook/scaffold/ に存在しない"))
+    NOTES.append(f"{len(IDENT_DOCS)} 文書から {checked} 個の名前を突き合わせた")
+    violations.extend(_dead_allowlist_violations(allowlist))
+    return violations
+
+
 CHECKS = {
     "tests": ("原稿とテスト実体の突合", check_test_tables),
     "terms": ("旧仕様語の検出", check_legacy_terms),
@@ -565,27 +1002,35 @@ CHECKS = {
     "libh": ("lib.h と仕様書の宣言一致", check_libh_sync),
     "style": ("用語・表記の統一（T59）", check_style_terms),
     "exc": ("ISO C 例外の件数と見出しの一致", check_exception_count),
+    "codeexec": ("code_example.md のコード実行（T57-1）", check_code_examples),
+    "ident": ("規約文書が挙げる識別子の実在（T57-2）", check_identifiers),
 }
 
 
 def print_allowlist() -> None:
-    entries = load_allowlist()
-    style_entries = load_style_allowlist()
-    if not entries and not style_entries:
-        print("除外リストは空。")
-        return
-    if entries:
-        print(f"legacy_terms 除外リスト {len(entries)} 件:")
+    empty = True
+    for section in ALLOWLIST_KINDS:
+        entries = _load_allowlist_section(section)
+        if not entries:
+            continue
+        empty = False
+        print(f"{section} 除外リスト {len(entries)} 件:")
         for entry in entries:
             status = entry.get("status", "?")
+            check = entry.get("check", "?")
+            if not isinstance(check, str):
+                check = ",".join(check)
             reason = " ".join(entry.get("reason", "").split())
-            print(f"  [{status}] {entry['file']}  {entry.get('match', '')}  {reason}")
-    if style_entries:
-        print(f"style_terms 除外リスト {len(style_entries)} 件:")
-        for entry in style_entries:
-            status = entry.get("status", "?")
-            reason = " ".join(entry.get("reason", "").split())
-            print(f"  [{status}] {entry['file']}  {entry.get('match', '')}  {reason}")
+            print(f"  [{status}] <{check}> {entry['file']}  "
+                  f"{entry.get('match', '')}  {reason}")
+    if empty:
+        print("除外リストは空。")
+
+
+def print_allowlist_kinds() -> None:
+    print("除外リストの check: に書ける検出種別:")
+    for section, kinds in ALLOWLIST_KINDS.items():
+        print(f"  {section}: {', '.join(sorted(kinds))}")
 
 
 def main() -> int:
@@ -594,10 +1039,16 @@ def main() -> int:
     parser.add_argument("--only", help=f"実行するチェック（カンマ区切り: {','.join(CHECKS)}）")
     parser.add_argument("--list-allowed", action="store_true",
                         help="除外リストの内容を表示して終了する")
+    parser.add_argument("--list-kinds", action="store_true",
+                        help="除外リストに書ける検出種別を表示して終了する")
     args = parser.parse_args()
 
     if args.list_allowed:
         print_allowlist()
+        return 0
+
+    if args.list_kinds:
+        print_allowlist_kinds()
         return 0
 
     names = list(CHECKS)
@@ -611,6 +1062,7 @@ def main() -> int:
     total = 0
     for name in names:
         title, func = CHECKS[name]
+        NOTES.clear()
         violations = func()
         if violations:
             print(f"\n[{name}] {title}: {len(violations)} 件の違反")
@@ -619,6 +1071,8 @@ def main() -> int:
             total += len(violations)
         else:
             print(f"[{name}] {title}: 違反なし")
+        for note in NOTES:
+            print(f"       … {note}")
 
     if total:
         print(f"\n合計 {total} 件の違反")

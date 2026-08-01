@@ -78,6 +78,14 @@ make site         # .site/ に全ページを生成
 make serve        # 生成して配信。原稿を保存すると作り直して自動リロード
 make check-links  # 内部リンク切れを検査
 
+# 原稿・配布物の整合の機械チェック（除外リストは tools/doc_check_allowlist.yaml）
+make check-docs                              # 全チェック
+python3 tools/check_docs.py --only ident     # 1つだけ
+python3 tools/check_docs.py --list-kinds     # 除外リストに書ける検出種別
+# code_example.md の C コードを実際に処理系へ通し、期待する終了コードまで照合する
+# （依存: dune + menhir、riscv64-linux-gnu-gcc、qemu-riscv64）
+make check-code-examples
+
 # 図の SVG（依存: lualatex + poppler-utils + Graphviz）。図を触ったときだけ
 make figures
 

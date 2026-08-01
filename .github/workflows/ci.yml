@@ -37,6 +37,26 @@ jobs:
       - name: Check documentation consistency
         run: make check-docs
 
+  code-examples:
+    # workbook/docs/code_example.md の C コードを実際に処理系へ通し、文書に書かれた
+    # 期待する終了コード・標準出力と突き合わせる（T57-1）。site ジョブの
+    # `make check-docs` でも codeexec は走るが、あちらは処理系もツールチェーンも
+    # 無いので構文検査だけになる。実行まで見るのはこのジョブの役割。
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+      - name: Install OCaml dependencies
+        run: opam install -y dune menhir
+      - name: Install the RV64 toolchain and QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-riscv64-linux-gnu libc6-dev-riscv64-cross qemu-user python3-yaml
+      - name: Compile and run every C example in code_example.md
+        run: opam exec -- make check-code-examples
+
   workbook-tests:
     runs-on: ubuntu-24.04
     # 配布スケルトンは未実装の演習用コードなので、各回のテストは常に FAIL が正常な状態

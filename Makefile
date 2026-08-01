@@ -1,4 +1,4 @@
-.PHONY: site serve check-links check-docs figures web web-test sim-test ocaml-test pages clean
+.PHONY: site serve check-links check-docs check-code-examples figures web web-test sim-test ocaml-test pages clean
 
 HOST ?= 127.0.0.1
 PORT ?= 8000
@@ -18,10 +18,18 @@ serve:
 check-links:
 	python3 tools/build_site.py --check-links
 
-# 原稿・配布物の整合を機械的に検査する（テスト表の実体・旧仕様語・nav.yaml 掲載漏れ）。
+# 原稿・配布物の整合を機械的に検査する（テスト表の実体・旧仕様語・nav.yaml 掲載漏れ・
+# code_example.md のコード・規約文書が挙げる識別子の実在）。
 # 除外リストは tools/doc_check_allowlist.yaml（理由つき）。
 check-docs:
 	python3 tools/check_docs.py
+
+# code_example.md の C コードを実際に処理系へ通し、期待する終了コード・標準出力まで
+# 照合する（check-docs の codeexec を実行形態で走らせる）。
+# 依存: dune + menhir（参考実装のビルド）、riscv64-linux-gnu-gcc、qemu-riscv64。
+check-code-examples:
+	cd workbook/ocaml && dune build
+	python3 tools/check_docs.py --only codeexec
 
 # 図を SVG で生成する（依存: lualatex + poppler-utils + Graphviz）。
 # 生成物はコミット対象なので、図を触るときだけ実行する。

@@ -2,10 +2,20 @@
 #
 # 「なぜ除外するか」を必ず reason に書く。理由のない除外は原則追加しない。
 #
+# 除外は「file + match + check」の3点で指定する。
+#
 # match には、その行に必ず含まれる文字列を書く。行番号で留めると、上の行を
 # 1行足し引きしただけで除外が外れて誤検出になり、逆にずれた先に別の違反が
-# あれば黙って握り潰す。一度も一致しなかったエントリは「死んだ除外」として
-# check_docs.py が違反にするので、本文を直したらこのエントリごと削除する。
+# あれば黙って握り潰す。
+#
+# check には検出種別を書く（T77）。1行が複数の種別に引っかかることがある
+# （例: `コマ 08` はゼロ埋めと空白の両方）ので、行の内容だけで除外すると
+# 許すつもりのない違反まで黙る。名指しした種別だけを除外する。
+# 複数を許すときは配列で書く（check: [koma-zero-pad, koma-space]）。
+# 使える種別は `python3 tools/check_docs.py --list-kinds` で確認できる。
+#
+# 一度も一致しなかったエントリは「死んだ除外」として check_docs.py が違反に
+# するので、本文を直したらこのエントリごと削除する。
 # status: legitimate  … 誤検出ではなく、本文として正当な出現（恒久的に除外）
 # status: pending      … メンテナ判断待ち、または他エージェントの並行編集待ちの
 #                        未修正項目（対応が終わったらこのエントリごと削除する）
@@ -13,6 +23,7 @@
 legacy_terms:
   - file: materials/sessions/10_types_pointers.md
     match: "この言語に配列はない"
+    check: array
     status: legitimate
     reason: >
       「この言語に配列はない」と、仕様の除外を正しく説明している文。
@@ -20,6 +31,7 @@ legacy_terms:
 
   - file: materials/sessions/13_sizeof_malloc_list.md
     match: "この言語に `typedef` は"
+    check: typedef
     status: legitimate
     reason: >
       「この言語に typedef はない」と、struct のタグ名参照が唯一の型名手段で
@@ -27,6 +39,7 @@ legacy_terms:
 
   - file: workbook/docs/debugging.md
     match: "配列の添字がずれる"
+    check: array
     status: legitimate
     reason: >
       「配列の添字がずれる」というトラブルシュート項目。p[i] のような添字記法
@@ -34,6 +47,7 @@ legacy_terms:
 
   - file: workbook/docs/code_example.md
     match: "配列ではなく `malloc(sizeof(int) * N)`"
+    check: array
     status: legitimate
     reason: >
       「配列ではなく malloc で確保する」という除外の説明と、p[i] 添字記法の
@@ -42,6 +56,7 @@ legacy_terms:
 
   - file: workbook/docs/conventions.md
     match: "ポインタ・配列・構造体メンバへのアクセス"
+    check: array
     status: pending
     reason: >
       「ポインタ・配列・構造体メンバへのアクセス」という表現。p[i] 添字記法の
@@ -49,6 +64,7 @@ legacy_terms:
 
   - file: materials/tools/opencode.md
     match: "「配列のコード生成をどう設計すればいいか」"
+    check: array
     status: pending
     reason: >
       AI エージェントへの相談例として「配列のコード生成」という設計相談の例を
@@ -56,6 +72,7 @@ legacy_terms:
 
   - file: materials/tools/opencode.md
     match: "配列 a[3] の宣言をスタック上に確保する"
+    check: array
     status: pending
     reason: >
       同上。引用ブロック内の例示プロンプト本文（「配列 a[3] の宣言を...」）。
@@ -65,6 +82,7 @@ legacy_terms:
 style_terms:
   - file: design/maintaining.md
     match: "| ゼロ埋め |"
+    check: koma-zero-pad
     status: legitimate
     reason: >
       用語表の「ゼロ埋め」行。「誤（避ける）」列に例として `コマ08`・`コマ06`
@@ -72,6 +90,7 @@ style_terms:
 
   - file: design/maintaining.md
     match: "| コマとNの間の空白 |"
+    check: koma-space
     status: legitimate
     reason: >
       用語表の「コマとNの間の空白」行。「誤（避ける）」列に `コマ 3` を
@@ -79,6 +98,7 @@ style_terms:
 
   - file: design/maintaining.md
     match: "| 呼称（人） |"
+    check: gakusei
     status: legitimate
     reason: >
       用語表の「呼称（人）」行。「誤（避ける）」列に「学生」を挙げているため、
@@ -86,6 +106,7 @@ style_terms:
 
   - file: materials/advanced/O5_liveness.md
     match: "だから1回呼んでいても"
+    check: hankaku-paren
     status: legitimate
     reason: >
       T59 後半（advanced 括弧統一）で追加。`workbook/advanced/O5_liveness/golden.py`
@@ -94,6 +115,17 @@ style_terms:
 
   - file: materials/advanced/O5_liveness.md
     match: "`fib_rec` が「(なし)」なのは"
+    check: hankaku-paren
     status: legitimate
     reason: >
       同上。`golden.py` の出力 `(なし)` を引用したもう1箇所。
+
+# codeexec チェック（T57-1）の除外リスト。code_example.md の C ブロックのうち、
+# 意図的に処理系へ通さないものがあれば、ブロック先頭行を match に書いて除外する。
+# 現状は空（全ブロックが構文検査・実行照合を通っている）。
+code_examples: []
+
+# ident チェック（T57-2）の除外リスト。規約文書が実装に無い名前をあえて挙げる
+# 場合（廃止済みの名前を「こう出たら旧版」と説明する等）に使う。
+# 現状は空（挙がっている名前はすべて実在する）。
+identifiers: []
