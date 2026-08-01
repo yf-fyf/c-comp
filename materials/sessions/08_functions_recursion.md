@@ -511,3 +511,5 @@ echo $?
 [B1](../../workbook/advanced/B1_fold_peephole/README.md)・[B2](../../workbook/advanced/B2_regalloc/README.md)・
 [B3](../../workbook/advanced/B3_tailcall/README.md)と、`&&`/`||` の短絡評価を仕様へ寄せる
 [S1](../../workbook/advanced/S1_shortcircuit/README.md) に着手できる。
+
+関数呼び出し前後で `ra` や引数レジスタがどう退避されるかを1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/sim.html) に貼り付ける。

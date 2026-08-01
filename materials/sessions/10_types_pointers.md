@@ -400,3 +400,5 @@ echo $?
 ポインタまで学んだので、`int` の演算が32bitで折り返さない点を仕様へ寄せる
 [S2](../../workbook/advanced/S2_int32/README.md) と、ポインタ同士の引き算に意味を足す
 [L1](../../workbook/advanced/L1_ptrdiff/README.md) に着手できる。
+
+生成したアセンブリでポインタ演算のアドレス計算を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/sim.html) に貼り付ける。

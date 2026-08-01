@@ -373,3 +373,5 @@ struct 値を入れ子にすることはできない（`struct Node *next` の�
 構造体まで学んだので、構造体の代入を仕様（不可）へ合わせる
 [S3](../../workbook/advanced/S3_struct/README.md) と、型検査パスを足す
 [Q1](../../workbook/advanced/Q1_typecheck/README.md) に着手できる。
+
+生成したアセンブリでメンバの offset 計算を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/sim.html) に貼り付ける。

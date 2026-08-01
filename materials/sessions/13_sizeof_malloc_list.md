@@ -334,3 +334,5 @@ echo $?
 
 `sizeof`・`malloc` まで学んだので、自前 `malloc`（バンプ割り当て → フリーリスト）を作る
 [R3](../../workbook/advanced/R3_malloc/README.md) に着手できる。
+
+生成したアセンブリで `malloc` が返すアドレスとリストの辿り方を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/sim.html) に貼り付ける。

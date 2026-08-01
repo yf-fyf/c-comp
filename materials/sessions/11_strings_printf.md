@@ -350,3 +350,5 @@ echo $?
 文字列・`printf` まで学んだので、libc なしで動かす
 [R1](../../workbook/advanced/R1_nolibc/README.md) と、可変長引数の定義に意味を足す
 [L3](../../workbook/advanced/L3_variadic/README.md) に着手できる。
+
+生成したアセンブリで `printf` の呼び出しと標準出力を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/sim.html) に貼り付ける。

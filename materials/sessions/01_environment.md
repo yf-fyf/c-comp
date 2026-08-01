@@ -77,6 +77,8 @@ python3 scaffold/parse_viewer.py sessions/02_interpreter/tests/add_mul.c
 `1 + 2 * 3` が `(add (num 1) (mul (num 2) (num 3)))` のように、
 掛け算が先にまとめられている（演算子の優先順位が正しく反映されている）ことを確認する。
 
+S 式ではなく木の形で見たいときは、[AST ビジュアライザ](../../tools/ast.html) に同じソースを貼るとブラウザ上に構文木が表示され、ノードとソース範囲の対応も確認できる。
+
 ## 編集するファイル
 
 - `hello.s`
