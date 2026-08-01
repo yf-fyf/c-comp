@@ -25,13 +25,15 @@
 | 呼び出し規約・スタックフレーム・命令の意味 | [`rv64_reference.md`](./rv64_reference.md) |
 | テストが落ちる / 終了コードが変 / 実行時に壊れる | [`debugging.md` の症状表](./debugging.md#症状から当たりをつける) |
 | `AttributeError` が出る / 昔取得したファイルがある | [`migration.md`](./migration.md) |
-| コマ16 のあと何をするか | [`getting_started.md` の「コマ16 のあと」](./getting_started.md#コマ16-のあと)・[`../advanced/README.md`](../advanced/README.md) |
+| コマ16 のあと何をするか | 次は[コマ17（発表・振り返り）](https://yf-fyf.github.io/c-comp/sessions/17_demo_review/)。[`getting_started.md` の「コマ16 のあと」](./getting_started.md#コマ16-のあと) |
+| 発表で何を話すか / 自分の実装をどう説明するか | [コマ17 の資料](https://yf-fyf.github.io/c-comp/sessions/17_demo_review/) |
+| 発展課題26トピックからどれを選ぶか | [コマ17 の資料](https://yf-fyf.github.io/c-comp/sessions/17_demo_review/)（選び方）・[`../advanced/README.md`](../advanced/README.md)（一覧と前提の出典） |
 
 ## 文書の一覧
 
 | 文書 | 内容 | 読みどき |
 |------|------|---------|
-| [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・読む順序・全16コマ一覧・コマ16 のあと | **最初に**（入口） |
+| [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・読む順序・全16コマ（01〜17。07 は欠番）一覧・コマ16 のあと | **最初に**（入口） |
 | [`conventions.md`](./conventions.md) | 実装の約束ごと（編集するファイル・`emit()`・命名） | コマ3 の前に一度。`codegen` / `codegen_lval` の分離はコマ4 で最小形を導入しコマ9 で拡張するので、両方の回に読み直す |
 | [`debugging.md`](./debugging.md) | 動かないときの確認手順と症状表 | 詰まったとき |
 | [`migration.md`](./migration.md) | 2026-08-01 の教材更新と、古いファイルとの非互換の一覧 | それより前に取得したファイルで作業しているとき |

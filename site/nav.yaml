@@ -18,7 +18,7 @@ repo_branch: dev
 sections:
   - slug: sessions
     title: 通常回
-    summary: コマ1〜16（07 は欠番）の15コマ。読んで実装し、その日のうちに動かして確認する粒度に分けてある。
+    summary: コマ1〜17（07 は欠番）の16コマ。読んで実装し、その日のうちに動かして確認する粒度に分けてある。最後のコマ17 だけは新しい実装をせず、発表と振り返りに充てる。
     pages:
       - materials/sessions/01_environment.md
       - materials/sessions/02_interpreter.md
@@ -35,6 +35,7 @@ sections:
       - materials/sessions/14_globals_scope.md
       - materials/sessions/15_preprocess_multifile.md
       - materials/sessions/16_integrate_mycc.md
+      - materials/sessions/17_demo_review.md
 
   - slug: advanced
     title: 発展課題
