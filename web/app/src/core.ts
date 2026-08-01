@@ -6,6 +6,7 @@ interface CoreApi {
   parse(source: string): string;
   astSexp(source: string, showLine: boolean): string;
   astDot(source: string, showLine: boolean): string;
+  compile(source: string, comments: boolean): string;
 }
 
 function core(): CoreApi {
@@ -31,3 +32,6 @@ export const astSexp = (source: string, showLine: boolean): TextResult =>
 
 export const astDot = (source: string, showLine: boolean): TextResult =>
   guard<TextResult>(() => core().astDot(source, showLine));
+
+export const compile = (source: string, comments: boolean): TextResult =>
+  guard<TextResult>(() => core().compile(source, comments));

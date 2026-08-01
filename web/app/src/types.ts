@@ -43,6 +43,7 @@ export interface Token {
 export interface ParseError {
   message: string;
   line: number; // 前処理後の行番号。0 = 不明
+  phase?: "preprocess" | "parse" | "typing"; // compile のみが付与する
 }
 
 export interface ParseResult {

@@ -2,11 +2,12 @@
 // スキーマを二重管理しない代わりに、代表入力でキーと型を全数チェックする。
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
-import type { AstNode, ParseResult, Token } from "../src/types";
+import type { AstNode, ParseResult, TextResult, Token } from "../src/types";
 
 interface CoreApi {
   parse(s: string): string;
   astSexp(s: string, l: boolean): string;
+  compile(s: string, comments: boolean): string;
 }
 
 // js_of_ocaml の Js.export は CommonJS では module.exports へ、
@@ -116,6 +117,20 @@ describe("myccCore", () => {
     };
     expect(r.ok).toBe(true);
     expect(r.text).toContain("(lt (num 2) (var \"x\"))");
+  });
+
+  it("compile の JSON が型定義どおり", () => {
+    const r = JSON.parse(core.compile("int main() { return 0; }", false)) as TextResult;
+    expect(r.ok).toBe(true);
+    expect(typeof r.text).toBe("string");
+    expect(r.text).toContain("main:");
+  });
+
+  it("compile のエラーは phase を持つ", () => {
+    const r = JSON.parse(core.compile("int main() { return }", false)) as TextResult;
+    expect(r.ok).toBe(false);
+    expect(["preprocess", "parse", "typing"]).toContain(r.errors![0]!.phase);
+    expect(typeof r.errors![0]!.line).toBe("number");
   });
 
   it("構文エラーはメッセージと行を返す", () => {
