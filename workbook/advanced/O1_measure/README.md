@@ -40,6 +40,9 @@ python3 ../../scaffold/test_runner.py \
     --compiler ../optcc.py --tests bench
 ```
 
+土台のコンパイラを差し替えたいときは環境変数 `OPTCC_COMPILER` を設定します
+（命名規則は [`../README.md`](../README.md) の「環境変数の名前」を参照）。
+
 ## 命令数の基準表
 
 O 系列の資料が出す「前 → 後」の表は、どれもこの回の資料にある

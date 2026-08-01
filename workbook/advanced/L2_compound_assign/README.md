@@ -40,3 +40,6 @@ python3 golden.py    # 複合代入のテスト + fixed17
 
 `tests/*.c` は標準トラックの字句では読めないソースなので、
 web の golden テストでは skip として数えられます（失敗ではありません）。
+
+土台のコンパイラを差し替えたいときは環境変数 `LANGCC_COMPILER` を設定します
+（命名規則は [`../README.md`](../README.md) の「環境変数の名前」を参照）。

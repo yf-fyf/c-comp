@@ -45,3 +45,6 @@ python3 golden.py    # fixed17 全通 + 命令数の before/after
 ```
 
 `golden.py` が全テスト PASS かつ命令数削減を報告したら完了です。
+
+土台のコンパイラを差し替えたいときは環境変数 `FOLDCC_COMPILER` を設定します
+（命名規則は [`../README.md`](../README.md) の「環境変数の名前」を参照）。

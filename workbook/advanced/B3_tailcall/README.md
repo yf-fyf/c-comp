@@ -36,3 +36,6 @@ python3 tccc.py tests/deep_sum.c | grep -c call    # call が減る
 python3 check.py     # Step ごとの単体テスト(未実装は SKIP)
 python3 golden.py    # 深い末尾再帰が通る + fixed17 が壊れない
 ```
+
+土台のコンパイラを差し替えたいときは環境変数 `TCCC_COMPILER` を設定します
+（命名規則は [`../README.md`](../README.md) の「環境変数の名前」を参照）。

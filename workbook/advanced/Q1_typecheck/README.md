@@ -39,3 +39,6 @@ python3 golden.py    # 正常系(講義のテスト入力101本で誤検出ゼ�
 ```
 
 `check.py` を全 PASS にしてから `golden.py` を回します。
+
+土台のコンパイラを差し替えたいときは環境変数 `CHECKCC_COMPILER` を設定します
+（命名規則は [`../README.md`](../README.md) の「環境変数の名前」を参照）。

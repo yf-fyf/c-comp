@@ -42,3 +42,7 @@ python3 check.py
 未実装は `hello.s` の `TODO(...)` コメントで表してあります。
 `check.py` は TODO が残っている間その Step を `[SKIP] 未実装: …` と報告し、
 実装したところから PASS / FAIL に変わります（SKIP は未達なので、完了条件は満たしていません）。
+
+`check.py` が Step 2 で使う土台のコンパイラは、環境変数 `R1_COMPILER` で差し替えられます
+（R 系列はラッパーが無いので、回 ID を接頭辞にする例外規則。詳しくは
+[`../README.md`](../README.md) の「環境変数の名前」を参照）。

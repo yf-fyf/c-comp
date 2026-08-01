@@ -51,3 +51,6 @@ python3 ../optcc.py            --passes isel,copyprop,dce $B
 python3 check.py     # 各関数の単体テスト(未実装は SKIP)
 python3 golden.py    # fixed17 + 4構成の比較表
 ```
+
+土台のコンパイラを差し替えたいときは環境変数 `OPTCC_COMPILER` を設定します
+（命名規則は [`../README.md`](../README.md) の「環境変数の名前」を参照）。

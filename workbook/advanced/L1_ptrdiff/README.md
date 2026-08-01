@@ -33,3 +33,6 @@
 python3 check.py     # 判定と生成命令列を確認(未実装は SKIP)
 python3 golden.py    # 修正なしで落ち、修正ありで通ること + fixed17
 ```
+
+土台のコンパイラを差し替えたいときは環境変数 `LANGCC_COMPILER` を設定します
+（命名規則は [`../README.md`](../README.md) の「環境変数の名前」を参照）。
