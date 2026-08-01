@@ -198,18 +198,17 @@ for node in prog:
 
 | ファイル | 実装するハンドラ・メソッド |
 |----------|----------------------------|
-| `mycc.py` | `Codegen15` クラス（`Codegen14` を継承）。`parse_file()` クラスメソッド、`collect_all_strings()` など |
+| `mycc.py` | `Codegen15` クラス（`Codegen14` を継承）。新規実装するのは複数ファイル対応の `main()` のみ。`parse_file()` クラスメソッドと `collect_all_strings()` はコマ14で提供済みなので、継承してそのまま使う |
 | (AST パーサ) | 変更不要（`'FuncProto'` ノードは既に存在する） |
 
 ## 実装手順
 
 1. コマ14の実装を `sessions/15_preprocess_multifile/mycc.py` に反映する<br>（スケルトンの `importlib` 継承により、前回の `Codegen14` クラスを継承する。新機能の handler だけを実装すればよい。）
-2. `Codegen15.parse_file(filename)` クラスメソッドを導入し、読込・前処理・字句解析・構文解析を1つのクラスメソッドにまとめる
-3. `main()` で、コマンドライン引数に指定された全 `.c` ファイルに対して `Codegen15.parse_file()` を呼び、AST リストを連結する
-4. `self.collect_globals()` を全ファイルの AST に対して適用する
-5. `self.collect_all_strings()` も全ファイルの AST に対して適用する
-6. `.text` セクションでは `'FuncDef'` だけを処理する
-7. `define_constants.c`、`multifile_math.c`、`multifile_global.c` を通す
+2. `main()` で、コマンドライン引数に指定された全 `.c` ファイルに対して、コマ14で提供済みの `Codegen15.parse_file()` を呼び、AST リストを連結する
+3. `self.collect_globals()` を全ファイルの AST に対して適用する
+4. コマ14で実装済みの `self.collect_all_strings()` も全ファイルの AST に対して適用する
+5. `.text` セクションでは `'FuncDef'` だけを処理する
+6. `define_constants.c`、`multifile_math.c`、`multifile_global.c` を通す
 
 ## tests/
 
