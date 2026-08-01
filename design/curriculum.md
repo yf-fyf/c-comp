@@ -29,7 +29,7 @@ Step 3（発展課題）: C 実装が動いたら、それ自体がコンパイ�
                → 自然にセルフホストへ（P1）
 ```
 
-### 提供物（前半の黒箱）
+### 提供物（前半のブラックボックス）
 
 前半では、以下をあらかじめ提供する。
 学習者が最初に取り組むのは「AST を受け取ってアセンブリを出力するコード生成器」だけでよい。
@@ -42,7 +42,7 @@ Step 3（発展課題）: C 実装が動いたら、それ自体がコンパイ�
   提供する宣言の一覧は `workbook/scaffold/lib.h` を唯一の出典とし、ここには列挙しない。
   `strcmp` / `strlen` 相当は提供せず、学習者が言語内で書く）
 
-標準トラックでは Lexer/Parser を黒箱として扱う。
+標準トラックでは Lexer/Parser をブラックボックスとして扱う。
 早く到達した学習者は、これらのコードを読解・移植し、発展課題（F 系列・P1）へ挑戦する。
 
 ### フェーズ構成
@@ -373,7 +373,7 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
 |--------|------|---------|----------|
 | `rv64_asm_handwritten` | 手書き RV64 アセンブリとレジスタ | 1 | — |
 | `toolchain_qemu_link` | アセンブル・リンク・qemu 実行と終了コード | 1 | — |
-| `provided_lexer_parser` | 提供 Lexer / Parser（黒箱） | 1 | — |
+| `provided_lexer_parser` | 提供 Lexer / Parser（ブラックボックス） | 1 | — |
 | `line_comment` | 行コメント `//` | 1 | `provided_lexer_parser` |
 | `keywords_identifiers` | 識別子とキーワード 12 語 | 1 | `provided_lexer_parser` |
 | `ast_node_structure` | `Node` の構造（`kind` と子ノード） | 2 | `provided_lexer_parser` |

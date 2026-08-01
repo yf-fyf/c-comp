@@ -112,42 +112,6 @@ style_terms:
       用語表の「「black box」の訳語」行。「誤（避ける）」列に「黒箱」を
       挙げているため、規約の説明として正当な出現。
 
-  - file: README.md
-    match: "Lexer/Parser は最初は黒箱"
-    check: kurobako
-    status: pending
-    reason: >
-      T98(黒箱→ブラックボックス置換)は materials/・workbook/ 配下のみを
-      対象に調査・置換した（Phase 1/3）。本チェック追加（Phase 4）で
-      README.md にも同じ逐語訳調の残存が見つかったが、調査済みの14箇所
-      には含まれておらず、Phase 4 のファイル排他（design/maintaining.md・
-      tools/check_docs.py・tools/doc_check_allowlist.yaml のみ編集可）の
-      対象外のため未修正。別タスクで置換要否を判断し、修正後にこの
-      エントリを削除する。
-
-  - file: design/curriculum.md
-    match: "### 提供物（前半の黒箱）"
-    check: kurobako
-    status: pending
-    reason: >
-      同上。design/curriculum.md にも調査済みの14箇所に含まれない「黒箱」
-      の残存が見つかった。Phase 4 のファイル排他の対象外のため未修正。
-      別タスクで置換要否を判断し、修正後にこのエントリを削除する。
-
-  - file: design/curriculum.md
-    match: "標準トラックでは Lexer/Parser を黒箱として扱う"
-    check: kurobako
-    status: pending
-    reason: >
-      同上。
-
-  - file: design/curriculum.md
-    match: "提供 Lexer / Parser（黒箱）"
-    check: kurobako
-    status: pending
-    reason: >
-      同上。
-
   - file: materials/advanced/O5_liveness.md
     match: "だから1回呼んでいても"
     check: hankaku-paren
