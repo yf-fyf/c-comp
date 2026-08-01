@@ -1,5 +1,17 @@
-; mycc_ref.exe は asm / emitter / codegen と一緒にリンクする
-(executables
- (names mycc_ref)
- (modules asm emitter codegen mycc_ref)
+; フロントエンドからコード生成までをライブラリにし、mycc_ref.exe はそれを呼ぶだけにする。
+; wrapped（(wrapped false) にしない）なので、support が公開している Parser / Lexer と
+; こちらの Parser / Lexer が衝突しない。外からは Refcomp.Compile のように書く。
+(library
+ (name refcomp)
+ (modules loc ctype diag ast lexer parser layout strings tast typing asm emitter codegen compile)
  (libraries support))
+
+(executable
+ (name mycc_ref)
+ (modules mycc_ref)
+ (libraries refcomp support))
+
+(ocamllex lexer)
+
+(menhir
+ (modules parser))

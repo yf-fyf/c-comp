@@ -152,12 +152,61 @@ def all_test_sources() -> list[Path]:
     return [src for d in dirs if d.is_dir() for src in sorted(d.glob("*.c"))]
 
 
+def _sorted_chunks(body: list[str]) -> list[str]:
+    """.data / .bss の中身を「ラベル 1 個ぶん」の塊に切り、塊ごと並べ替える。
+
+    塊は `.globl name` か、ラベル定義（行頭から始まり ':' で終わる行）で始まる
+    （.bss は `.globl` → ラベル → `.zero` の三つ組で 1 個）。塊の中身はそのまま
+    残すので、ラベル名・命令・行数の食い違いは並べ替えても消えない。
+    """
+    chunks: list[list[str]] = []
+    cur: list[str] = []
+    for line in body:
+        is_globl = line.strip().startswith(".globl")
+        is_label = line.endswith(":") and not line.startswith(" ")
+        # .globl の直後のラベルは、その .globl と同じ塊に入れる
+        starts_chunk = is_globl or (is_label and not (cur and cur[-1].strip().startswith(".globl")))
+        if starts_chunk and cur:
+            chunks.append(cur)
+            cur = []
+        cur.append(line)
+    if cur:
+        chunks.append(cur)
+    return [line for chunk in sorted(chunks) for line in chunk]
+
+
+def normalize_asm(text: str) -> list[str]:
+    """.data / .bss の並び順の違いだけを吸収する（.text はそのまま）。
+
+    文字列リテラルとグローバル変数をどの順に出すかは実装の自由で、
+    koma16 は Hashtbl の走査順、mycc_ref は定義順に出す。順序以外の違い
+    （ラベル番号・中身・個数）は下の並べ替えでは消えないので、比較は保たれる。
+    """
+    lines = text.splitlines()
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        if line.strip() in (".data", ".bss"):
+            j = i + 1
+            while j < len(lines) and lines[j].strip() not in (".data", ".bss", ".text"):
+                j += 1
+            out.extend(_sorted_chunks(lines[i + 1 : j]))
+            i = j
+            continue
+        i += 1
+    return out
+
+
 def run_equivalence_case(k16: Path, ref: Path, src: Path, timeout_s: int) -> str:
     """`koma16.exe` と `mycc_ref.exe --no-comments` の出力が一致することを確かめる。
 
-    mycc_ref は注記コメントを足しただけの別実装なので、素の出力は koma16 と
-    バイト単位で同じでなければならない。リファレンス側を書き換えたときに
-    生成コードが変わっていないことを、この比較で担保する。
+    mycc_ref は別実装（型付けパスを挟む作りに書き直してある）なので、
+    生成されるコードは koma16 と同じでなければならない。`.text` は 1 行の違いも
+    許さず、`.data` / `.bss` だけはラベル単位に並べ替えてから比べる（並び順は
+    実装の自由で、koma16 は Hashtbl の走査順、mycc_ref は定義順に出す）。
+    リファレンス側を書き換えたときに生成コードが変わっていないことを、この比較で担保する。
     """
     extras = extra_sources(src)
     if isinstance(extras, str):
@@ -175,9 +224,9 @@ def run_equivalence_case(k16: Path, ref: Path, src: Path, timeout_s: int) -> str
     if a.returncode != 0:
         # 両方が同じように失敗するケース（このコーパスには無い想定）は比較対象外
         return "SKIP"
-    if a.stdout != b.stdout:
-        expected = a.stdout.splitlines()
-        got = b.stdout.splitlines()
+    expected = normalize_asm(a.stdout)
+    got = normalize_asm(b.stdout)
+    if expected != got:
         for i, (x, y) in enumerate(zip(expected, got)):
             if x != y:
                 return f"FAIL: {i + 1} 行目が違う\n    koma16:   {x!r}\n    mycc_ref: {y!r}"
@@ -210,6 +259,69 @@ def run_equivalence(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, 
             nfail += 1
             print(f"  [{result}] {rel}")
     return (npass, nfail, nskip)
+
+
+# 受理してはいけない入力。koma16（support のフロントエンド）と mycc_ref
+# （reference の専用フロントエンド）は文法定義を別々に持つので、正しいプログラムの
+# 出力が一致するだけでは「同じ言語を受理する」ことの片側しか確かめられない。
+# ここは拒否側を突き合わせる（どちらも 0 以外で終わることだけを見る。
+# エラーの文言と終了コードは実装ごとに違ってよい）。
+REJECT_SOURCES = [
+    ("セミコロンがない", "int main() { return 1 }"),
+    ("void の変数宣言", "int main() { void v; return 0; }"),
+    ("引数リストの (void)", "int main(void) { return 0; }"),
+    ("struct 値の仮引数", "struct S { int a; };\nint f(struct S s) { return 0; }"),
+    ("入れ子ブロックでの宣言", "int main() { if (1) { int x; x = 0; } return 0; }"),
+    ("sizeof に式を渡す", "int main() { return sizeof(1 + 2); }"),
+    ("整数リテラルの先頭が 0", "int main() { return 08; }"),
+    ("2 文字の文字リテラル", "int main() { return 'ab'; }"),
+    ("未定義の変数", "int main() { undefined_name = 1; return 0; }"),
+    ("ループの外の break", "int main() { break; return 0; }"),
+]
+
+
+def run_reject_case(k16: Path, ref: Path, source: str, timeout_s: int) -> str:
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / "reject.c"
+        src.write_text(source, encoding="utf-8")
+        codes = []
+        for exe, argv in ((k16, []), (ref, ["--no-comments"])):
+            try:
+                proc = subprocess.run(
+                    [str(exe), *argv, str(src)], capture_output=True, text=True, timeout=timeout_s
+                )
+            except subprocess.TimeoutExpired:
+                return f"FAIL: {exe.name} が {timeout_s}s で終わらない"
+            codes.append(proc.returncode)
+    if codes[0] == 0 and codes[1] == 0:
+        return "FAIL: どちらも受理してしまった"
+    if codes[0] == 0:
+        return "FAIL: koma16 だけが受理した"
+    if codes[1] == 0:
+        return "FAIL: mycc_ref だけが受理した"
+    return "PASS"
+
+
+def run_reject(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, int, int]:
+    k16 = build_dir / "sessions" / "koma16.exe"
+    ref = build_dir / "reference" / "mycc_ref.exe"
+    print("\n--- 拒否側 (koma16.exe と mycc_ref.exe が揃って拒否する) ---")
+    for exe in (k16, ref):
+        if not exe.is_file():
+            print(f"  実行ファイルがない: {exe}", file=sys.stderr)
+            return (0, 1, 0)
+
+    npass = nfail = 0
+    for name, source in REJECT_SOURCES:
+        result = run_reject_case(k16, ref, source, timeout_s)
+        if result == "PASS":
+            npass += 1
+            if not quiet:
+                print(f"  [PASS] {name}")
+        else:
+            nfail += 1
+            print(f"  [{result}] {name}")
+    return (npass, nfail, 0)
 
 
 def main() -> int:
@@ -283,6 +395,10 @@ def main() -> int:
     if not args.no_equivalence:
         npass, nfail, nskip = run_equivalence(build_dir, args.timeout, args.quiet)
         rows.append(("等価性  ", npass, nfail, nskip))
+        for i, v in enumerate((npass, nfail, nskip)):
+            total[i] += v
+        npass, nfail, nskip = run_reject(build_dir, args.timeout, args.quiet)
+        rows.append(("拒否側  ", npass, nfail, nskip))
         for i, v in enumerate((npass, nfail, nskip)):
             total[i] += v
 

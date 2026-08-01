@@ -66,15 +66,18 @@ let string_of_note_line { line; note } last_owner =
   | Owner owner | Aside owner ->
       (Printf.sprintf "%-*s # %s" note_column text owner, owner)
 
-let print ~comments t =
+let to_string ~comments t =
+  let buf = Buffer.create 4096 in
+  let out line =
+    Buffer.add_string buf line;
+    Buffer.add_char buf '\n'
+  in
   let items = List.rev t.rev_items in
   if not comments then
-    List.iter (function Line { line; _ } -> print_endline (Asm.print_line line) | Heading _ -> ())
-      items
-  else
-    (* pending は「まだ命令が出ていない見出し」。初期化なしの Decl のように
-       1 命令も出さない文があるので、命令が出るまで印字を遅らせ、
-       次の見出しが来たら黙って捨てる。 *)
+    List.iter (function Line { line; _ } -> out (Asm.print_line line) | Heading _ -> ()) items
+  else begin
+    (* pending は「まだ命令が出ていない見出し」。空文のように 1 命令も出さない文が
+       あるので、命令が出るまで印字を遅らせ、次の見出しが来たら黙って捨てる。 *)
     let step (pending, last_owner) = function
       | Heading { text; depth } -> (Some (text, depth), last_owner)
       | Line nl ->
@@ -83,11 +86,16 @@ let print ~comments t =
             match pending with
             | None -> last_owner
             | Some (text, depth) ->
-                print_endline (heading_string text depth);
+                out (heading_string text depth);
                 ""
           in
           let text, last_owner = string_of_note_line nl last_owner in
-          print_endline text;
+          out text;
           (None, last_owner)
     in
     ignore (List.fold_left step (None, "") items)
+  end;
+  Buffer.contents buf
+
+(* 標準出力へ直接書く口。ライブラリとして使うときは to_string を呼ぶ *)
+let print ~comments t = print_string (to_string ~comments t)

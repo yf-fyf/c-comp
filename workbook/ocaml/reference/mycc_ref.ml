@@ -1,25 +1,23 @@
 (*
-   必修パート（コマ2〜16）の完成版リファレンス実装。
+   必修パート（コマ2〜16）の完成版リファレンス実装のコマンドライン。
 
    生成されるアセンブリは koma16 と同一である（run_tests.py の等価性テストで
    担保している）。違うのは実装の作りで、こちらは
 
-     asm.ml     アセンブリの命令・行を表す型と、その印字
-     emitter.ml 注記つきの行バッファ
-     codegen.ml コンパイラ本体
-     mycc_ref.ml（このファイル）コマンドラインとパースの駆動
+     ast.ml / lexer.mll / parser.mly  構文木と、それを作る字句・構文解析
+     layout.ml   型の大きさ・整列と struct のレイアウト
+     strings.ml  文字列リテラルの通し番号
+     tast.ml     型と変数の置き場を決め終えた木
+     typing.ml   構文木から型付き木を作る（型・変数解決・エラー検出）
+     asm.ml      アセンブリの命令・行を表す型と、その印字
+     emitter.ml  注記つきの行バッファ
+     codegen.ml  型付き木からアセンブリを出す
+     compile.ml  これらをつなぐ駆動
+     mycc_ref.ml（このファイル）コマンドラインの解釈と印字
 
    に分けてある。--no-comments を付けなければ、どの命令をどの生成関数が
    出したのかを示すコメントが付く。
 *)
-
-(* 見出しに元の C を出すため、前処理後ソースも一緒に返す。
-   span はこのソースへの位置なので、ファイルごとに対応付けておく必要がある。 *)
-let parse_file filename =
-  let source = Utils.read_file filename in
-  let preprocessed = Preprocess.preprocess source filename in
-  let prog = Frontend.parse_source ~already_preprocessed:true ~filename preprocessed in
-  (preprocessed, prog)
 
 let usage () =
   prerr_endline "使い方: dune exec ./mycc_ref.exe -- [--no-comments] <source.c> [...]";
@@ -31,11 +29,9 @@ let () =
   let comments = not (List.mem "--no-comments" args) in
   let files = List.filter (fun a -> a <> "--no-comments") args in
   if files = [] then usage ();
-  Struct_env.reset ();
-  let em = Emitter.create () in
-  let g = Codegen.create_genv em in
-  match Codegen.gen_program g (List.map parse_file files) with
-  | () -> Emitter.print ~comments em
-  | exception Codegen.Error { line; msg } ->
-      prerr_endline (Codegen.error_message line msg);
+  let units = List.map (fun file -> (file, Utils.read_file file)) files in
+  match Refcomp.Compile.compile_units ~comments units with
+  | Ok asm -> print_string asm
+  | Error e ->
+      prerr_endline (Refcomp.Diag.to_string e);
       exit 1
