@@ -328,6 +328,10 @@ Hello, World!
 |----------|------|--------|
 | `printf_hello.c` | 文字列だけを出力する | `Hello, World!` |
 | `printf_number.c` | `%d` に整数を渡す | `x=42` |
+| `str_control_flow.c` | `if` / `else` / `while` / `for` の中だけに置いた文字列を集める（文の走査） | `in if` / `in while`×2 / `in for`×2 |
+| `str_intern_dedup.c` | 同じ文字列は1ラベル・違う文字列は別ラベル（`_intern`） | `same` / `other` |
+| `str_in_expr.c` | 添字・ポインタ加算・間接参照・比較の奥にある文字列（式の走査） | 終了コード `42` |
+| `str_cond_select.c` | 三項演算子の両方の枝にある文字列（`Cond` の走査） | `big` / `else side` |
 | `strlen_literal.c` | 文字列を `strlen` に渡す | 終了コード `3` |
 | `file_stream.c` | `fdopen`/`fprintf`/`fopen`/`fread`/`fclose` | `stream ok` / 終了コード `42` |
 | `lib_exit.c` | `exit` で終了コードを指定して打ち切る | `before exit` / 終了コード `7` |
@@ -339,6 +343,10 @@ python3 scaffold/test_runner.py sessions/11_strings_printf
 ```
 
 `tests/printf_hello.c` が `Hello, World!` を出力すれば基本形は成功。
+
+`str_` で始まる4件は途中経過を確かめる中間テストである。
+走査（`collect_strings_*`）とラベル管理（`_intern`）のどこが抜けているかを
+機能単位で切り分けられるので、`printf_hello.c` が通らないときはこちらから当たる。
 
 個別に動かす場合は、次のようにする。
 
