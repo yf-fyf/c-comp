@@ -1,4 +1,4 @@
-% F4: フロントエンドの完全な置き換え — 黒箱はもうない
+% F4: フロントエンドの完全な置き換え — ブラックボックスはもうない
 \documentclass[border=8pt]{standalone}
 \input{figure-preamble}
 \begin{document}
@@ -7,11 +7,11 @@
     ghost/.style={cfgbox, minimum width=30mm, minimum height=9mm, dashed,
                   draw=TcGrayText, text=TcGrayText},
     ftxt/.style={font=\ttfamily\small, inner sep=1.5pt}]
-  % ---- 置き換えられた黒箱 ----
+  % ---- 置き換えられたブラックボックス ----
   \node[ghost] (g1) at (28mm, 20mm) {scaffold/lexer.py};
   \node[ghost] (g2) at (70mm, 20mm) {scaffold/parser.py};
   \node[annot, text=TcEmph, anchor=west] at (90mm, 20mm)
-      {黒箱は置き換え済み\\（golden test で同一を確認）};
+      {ブラックボックスは置き換え済み\\（golden test で同一を確認）};
   \draw[ptr, dashed] (g1.south) -- ($(g1.south)+(0,-4mm)$);
   \draw[ptr, dashed] (g2.south) -- ($(g2.south)+(0,-4mm)$);
 
