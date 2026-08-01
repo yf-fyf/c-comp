@@ -97,7 +97,7 @@ def main():
     print(f"  PASS: {pass_count}  FAIL: {fail_count}  (全 {pass_count + fail_count} ファイル)")
     print("=============================")
     if fail_count == 0:
-        print("scaffold と完全一致。Lexer(F1)とあわせて、黒箱の完全な置き換え達成!")
+        print("scaffold と完全一致。Lexer(F1)とあわせて、ブラックボックスの完全な置き換え達成!")
     return 1 if fail_count else 0
 
 

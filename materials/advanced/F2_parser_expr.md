@@ -99,7 +99,7 @@ def parse_land(self):
 | `parse_eq` | `{'==': ND_EQ, '!=': ND_NE}` |
 
 実は スキャフォールド の `parser.py` もまったく同じ `_parse_binary` を持っている。
-黒箱の中身は、いま自分が書いたものと同じである。
+ブラックボックスの中身は、いま自分が書いたものと同じである。
 
 ## 例外が1つ — parse_rel の swap
 

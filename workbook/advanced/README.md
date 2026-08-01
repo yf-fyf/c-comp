@@ -30,7 +30,7 @@
 | F1 | `F1_lexer/` | 字句解析: `scaffold/lexer.py` 読解 + Core lexer 自作 | 1 | F0 |
 | F2 | `F2_parser_expr/` | 再帰下降①: 式のパーサ（EBNF の階層 = 関数の階層） | 1 | F1 |
 | F3 | `F3_parser_stmt/` | 再帰下降②: 文・制御構文（dangling else） | 1 | F2 |
-| F4 | `F4_parser_decl/` | 再帰下降③: 宣言・型・`struct`・関数（黒箱の完全置き換え） | 1 | F3 |
+| F4 | `F4_parser_decl/` | 再帰下降③: 宣言・型・`struct`・関数（ブラックボックスの完全置き換え） | 1 | F3 |
 | B1 | `B1_fold_peephole/` | 最適化入門: 定数畳み込み + ピープホール | 1 | コマ8（着手）+ コマ16（`golden.py`） |
 | B2 | `B2_regalloc/` | 式の途中結果を t レジスタへ（スタックマシンを卒業する） | 1 | コマ8（着手）+ コマ16（`golden.py`） |
 | B3 | `B3_tailcall/` | 末尾呼び出し最適化（再帰をループに変える） | 1 | コマ8（着手）+ コマ16（`golden.py`） |
@@ -163,7 +163,7 @@ python3 ../final/mycc.py foo.c | python3 count_insns.py
 
 ## F: フロントエンド
 
-スキャフォールドで黒箱として使ってきた Lexer / Parser を、自分の手で理解し、作り、置き換える。
+スキャフォールドでブラックボックスとして使ってきた Lexer / Parser を、自分の手で理解し、作り、置き換える。
 
 - **F0** は独立した導入回。コンパイラ本編とは無関係で、前提はコマ2 まで
 - **F1 以降**は積み上げ式（F1 → F2 → F3 → F4）。最終目標は、自作の Lexer / Parser で `final/tests`（fixed17）を通すこと
