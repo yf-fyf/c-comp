@@ -8,8 +8,19 @@ F2 の式パーサを継承して、文（return / break / continue / if / while
 ブロック / 式文）の解析を追加する。
 37本の文コーパスで AST が スキャフォールド の Parser と完全一致すれば完了。
 
-前提は F2（`StmtParser` は自分の F2 `ExprParser` を importlib で継承する）。
-宣言と関数定義は F4 で扱う。
+## この回の位置づけ
+
+| 項目 | 内容 |
+|------|------|
+| 必須の前提 | F2 |
+| 推奨の前提 | — |
+| 改変しない | `mycc.py`、`scaffold/` |
+| 編集する | `myparser.py` |
+| 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が37本の文コーパスで AST の完全一致を報告する |
+| コマ数 | 1 |
+| 備考 | フロントエンド発展シリーズの第3回。F2 が未完成だとこの回のテストは動かない。宣言（`int x;` など）と関数定義は F4 で扱う |
+
+`StmtParser` は、自分が F2 で作った `ExprParser` を importlib で継承します。
 
 ## 編集するファイル
 
