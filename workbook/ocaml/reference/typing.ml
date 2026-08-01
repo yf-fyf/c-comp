@@ -24,7 +24,7 @@ type binding = { b_ref : Tast.var_ref; b_ty : Ctype.t }
 type genv = { layout : Layout.t; globals : binding Env.t; strings : Strings.t }
 type fenv = { locals : binding Env.t; in_loop : bool }
 
-let error (loc : Loc.t) fmt = Diag.error ~phase:Diag.Typing ~line:loc.line fmt
+let error (loc : Loc.t) fmt = Diag.error ~phase:Diag.Typing ~line:loc.line ~col:loc.col fmt
 
 let lookup g f name loc =
   match Env.find_opt name f.locals with

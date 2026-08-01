@@ -3,8 +3,23 @@
 ; こちらの Parser / Lexer が衝突しない。外からは Refcomp.Compile のように書く。
 (library
  (name refcomp)
- (modules loc ctype diag ast lexer parser layout strings tast typing asm emitter codegen compile)
- (libraries support))
+ (modules
+  loc
+  ctype
+  diag
+  ast
+  lexer
+  parser
+  parser_messages
+  layout
+  strings
+  tast
+  typing
+  asm
+  emitter
+  codegen
+  compile)
+ (libraries menhirLib support))
 
 (executable
  (name mycc_ref)
@@ -13,5 +28,40 @@
 
 (ocamllex lexer)
 
+; --table は menhir の incremental API（Parser.MenhirInterpreter）を出すために要る。
+; compile.ml がこの API 経由で構文解析し、エラー状態番号から parser.messages の
+; 日本語メッセージを引く。
 (menhir
- (modules parser))
+ (modules parser)
+ (flags --table))
+
+; parser.messages（エラー状態ごとの日本語メッセージ）を int -> string の関数へ落とす。
+; parser.mly を変更したら parser.messages の再生成が要る（README「構文エラーメッセージの保守」参照）。
+(rule
+ (targets parser_messages.ml)
+ (deps parser.messages parser.mly)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run menhir --compile-errors %{deps}))))
+
+; parser.messages が文法の現状と食い違っていないか（状態の過不足がないか）を検査する。
+; 文法から自動生成した一覧と突き合わせ、ずれていれば落ちる。dune build @check-messages で回す。
+(rule
+ (targets parser.auto.messages)
+ (deps parser.mly)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run menhir --list-errors %{deps}))))
+
+(rule
+ (alias check-messages)
+ (action
+  (run
+   menhir
+   %{dep:parser.mly}
+   --compare-errors
+   %{dep:parser.auto.messages}
+   --compare-errors
+   %{dep:parser.messages})))

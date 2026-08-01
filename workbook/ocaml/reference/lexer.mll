@@ -10,7 +10,8 @@
 open Parser
 
 let lex_error lexbuf fmt =
-  Diag.error ~phase:Diag.Parse ~line:lexbuf.Lexing.lex_curr_p.Lexing.pos_lnum fmt
+  let p = lexbuf.Lexing.lex_curr_p in
+  Diag.error ~phase:Diag.Parse ~line:p.Lexing.pos_lnum ~col:(Loc.col_of p) fmt
 
 let newline lexbuf =
   let p = lexbuf.Lexing.lex_curr_p in

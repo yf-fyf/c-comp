@@ -1,0 +1,1272 @@
+program: WHILE
+##
+## Ends in an error in state: 1.
+##
+## program -> top_list . EOF [ # ]
+## top_list -> top_list . top_item [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## top_list
+##
+
+トップレベルに置けるのは、グローバル変数の宣言・関数のプロトタイプ宣言・関数定義・struct 定義だけ。'int' 'char' 'void' 'struct' のどれかで始まるか、ファイルの終わりが来るはず。
+
+program: KW_STRUCT WHILE
+##
+## Ends in an error in state: 3.
+##
+## top_item -> KW_STRUCT . IDENT LBRACE field_list RBRACE SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> KW_STRUCT . IDENT SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## type_base -> KW_STRUCT . IDENT [ STAR IDENT ]
+##
+## The known suffix of the stack is as follows:
+## KW_STRUCT
+##
+
+'struct' の後には struct のタグ名（識別子）が来るはず。
+
+program: KW_STRUCT IDENT WHILE
+##
+## Ends in an error in state: 4.
+##
+## top_item -> KW_STRUCT IDENT . LBRACE field_list RBRACE SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> KW_STRUCT IDENT . SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## type_base -> KW_STRUCT IDENT . [ STAR IDENT ]
+##
+## The known suffix of the stack is as follows:
+## KW_STRUCT IDENT
+##
+
+'struct タグ名' の後は、struct 定義なら '{'、前方宣言なら ';'、struct 型の宣言なら '*' か宣言する名前が来るはず。
+
+program: KW_STRUCT IDENT LBRACE WHILE
+##
+## Ends in an error in state: 6.
+##
+## top_item -> KW_STRUCT IDENT LBRACE . field_list RBRACE SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## KW_STRUCT IDENT LBRACE
+##
+
+struct の '{' の後にはフィールドの宣言が来るはず。フィールドは 1 個以上必要で、'int' 'char' 'void' 'struct' のどれかで始まる型名から書く。
+
+program: KW_CHAR IDENT LPAREN KW_STRUCT WHILE
+##
+## Ends in an error in state: 7.
+##
+## type_base -> KW_STRUCT . IDENT [ STAR RPAREN IDENT ]
+##
+## The known suffix of the stack is as follows:
+## KW_STRUCT
+##
+
+仮引数の型に書いた 'struct' の後には、struct のタグ名（識別子）が来るはず。
+
+program: KW_CHAR WHILE
+##
+## Ends in an error in state: 12.
+##
+## decl_type -> type_base ptrs . [ RPAREN IDENT ]
+## ptrs -> ptrs . STAR [ STAR RPAREN IDENT ]
+##
+## The known suffix of the stack is as follows:
+## type_base ptrs
+##
+
+型名の後には、宣言する名前（識別子）か、ポインタにする '*' が来るはず。
+
+program: KW_STRUCT IDENT LBRACE KW_CHAR IDENT SEMI WHILE
+##
+## Ends in an error in state: 14.
+##
+## field_list -> field_list . field [ RBRACE KW_VOID KW_STRUCT KW_INT KW_CHAR ]
+## top_item -> KW_STRUCT IDENT LBRACE field_list . RBRACE SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## KW_STRUCT IDENT LBRACE field_list
+##
+
+struct の中では、続けてフィールドを宣言するか（'int' 'char' 'void' 'struct' で始まる）、'}' で struct を閉じるはず。
+
+program: KW_STRUCT IDENT LBRACE KW_CHAR IDENT SEMI RBRACE WHILE
+##
+## Ends in an error in state: 15.
+##
+## top_item -> KW_STRUCT IDENT LBRACE field_list RBRACE . SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## KW_STRUCT IDENT LBRACE field_list RBRACE
+##
+
+struct 定義を閉じた '}' の後には ';' が必要。
+
+program: KW_STRUCT IDENT LBRACE KW_CHAR RPAREN
+##
+## Ends in an error in state: 18.
+##
+## field -> decl_type . IDENT SEMI [ RBRACE KW_VOID KW_STRUCT KW_INT KW_CHAR ]
+##
+## The known suffix of the stack is as follows:
+## decl_type
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 12, spurious reduction of production decl_type -> type_base ptrs
+##
+
+struct フィールドの型名の後には、フィールド名（識別子）か、ポインタにする '*' が来るはず。
+
+program: KW_STRUCT IDENT LBRACE KW_CHAR IDENT WHILE
+##
+## Ends in an error in state: 19.
+##
+## field -> decl_type IDENT . SEMI [ RBRACE KW_VOID KW_STRUCT KW_INT KW_CHAR ]
+##
+## The known suffix of the stack is as follows:
+## decl_type IDENT
+##
+
+struct フィールドの宣言は ';' で終わるはず。
+
+program: KW_CHAR RPAREN
+##
+## Ends in an error in state: 24.
+##
+## top_item -> decl_type . IDENT LPAREN param_clause RPAREN SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> decl_type . IDENT LPAREN param_clause RPAREN func_body [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> decl_type . IDENT SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## decl_type
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 12, spurious reduction of production decl_type -> type_base ptrs
+##
+
+型名の後には、宣言する名前（識別子）か、ポインタにする '*' が来るはず。
+
+program: KW_CHAR IDENT WHILE
+##
+## Ends in an error in state: 25.
+##
+## top_item -> decl_type IDENT . LPAREN param_clause RPAREN SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> decl_type IDENT . LPAREN param_clause RPAREN func_body [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> decl_type IDENT . SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## decl_type IDENT
+##
+
+宣言した名前の後は、グローバル変数の宣言なら ';'、関数のプロトタイプ宣言・関数定義なら 仮引数を書き始める '(' が来るはず。
+
+program: KW_CHAR IDENT LPAREN WHILE
+##
+## Ends in an error in state: 27.
+##
+## top_item -> decl_type IDENT LPAREN . param_clause RPAREN SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> decl_type IDENT LPAREN . param_clause RPAREN func_body [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## decl_type IDENT LPAREN
+##
+
+仮引数並びの '(' の後には、仮引数の型名（'int' 'char' 'void' 'struct' で始まる）か、引数なしを表す ')' が来るはず。引数なしは '(void)' ではなく '()' と書く。
+
+program: KW_CHAR IDENT LPAREN KW_CHAR IDENT WHILE
+##
+## Ends in an error in state: 29.
+##
+## param_clause -> param_list . [ RPAREN ]
+## param_clause -> param_list . COMMA ELLIPSIS [ RPAREN ]
+## param_list -> param_list . COMMA parameter [ RPAREN COMMA ]
+##
+## The known suffix of the stack is as follows:
+## param_list
+##
+
+仮引数の後は、次の仮引数を続ける ',' か、仮引数並びを閉じる ')' が来るはず。
+
+program: KW_CHAR IDENT LPAREN KW_CHAR IDENT COMMA WHILE
+##
+## Ends in an error in state: 30.
+##
+## param_clause -> param_list COMMA . ELLIPSIS [ RPAREN ]
+## param_list -> param_list COMMA . parameter [ RPAREN COMMA ]
+##
+## The known suffix of the stack is as follows:
+## param_list COMMA
+##
+
+仮引数並びの ',' の後には、次の仮引数の型名か、可変長引数を表す '...' が来るはず。
+
+program: KW_CHAR IDENT LPAREN KW_CHAR RPAREN
+##
+## Ends in an error in state: 33.
+##
+## parameter -> decl_type . IDENT [ RPAREN COMMA ]
+##
+## The known suffix of the stack is as follows:
+## decl_type
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 12, spurious reduction of production decl_type -> type_base ptrs
+##
+
+仮引数は型名の後に名前（識別子）が必須。'*' でポインタにしてから名前を書いてもよい。
+
+program: KW_CHAR IDENT LPAREN KW_CHAR IDENT COMMA ELLIPSIS WHILE
+##
+## Ends in an error in state: 35.
+##
+## top_item -> decl_type IDENT LPAREN param_clause . RPAREN SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> decl_type IDENT LPAREN param_clause . RPAREN func_body [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## decl_type IDENT LPAREN param_clause
+##
+
+可変長引数の '...' は仮引数並びの最後にしか置けない。次は ')' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN WHILE
+##
+## Ends in an error in state: 36.
+##
+## top_item -> decl_type IDENT LPAREN param_clause RPAREN . SEMI [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## top_item -> decl_type IDENT LPAREN param_clause RPAREN . func_body [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+##
+## The known suffix of the stack is as follows:
+## decl_type IDENT LPAREN param_clause RPAREN
+##
+
+仮引数並びを閉じた ')' の後は、プロトタイプ宣言なら ';'、関数定義なら本体を開く '{' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE SLASH
+##
+## Ends in an error in state: 39.
+##
+## func_body -> LBRACE local_decls . stmt_list RBRACE [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## local_decls -> local_decls . local_decl [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE KW_VOID KW_STRUCT KW_INT KW_CHAR IF IDENT FOR CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## LBRACE local_decls
+##
+
+関数本体の中には、局所変数の宣言（'int' 'char' 'void' 'struct' で始まる）か、文（式文・';'・'{ ... }' のブロック・if・while・for・return・break・continue のいずれか）か、本体を閉じる '}' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE SEMI SLASH
+##
+## Ends in an error in state: 40.
+##
+## func_body -> LBRACE local_decls stmt_list . RBRACE [ KW_VOID KW_STRUCT KW_INT KW_CHAR EOF ]
+## stmt_list -> stmt_list . stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## LBRACE local_decls stmt_list
+##
+
+ここには文（式文・';'・'{ ... }' のブロック・if・while・for・return・break・continue のいずれか）か、関数本体を閉じる '}' が来るはず。局所変数の宣言は関数本体の先頭にしか置けないので、文を書き始めた後には宣言を置けない。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE WHILE WHILE
+##
+## Ends in an error in state: 41.
+##
+## stmt -> WHILE . LPAREN expr RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## WHILE
+##
+
+'while' の後には条件を囲む '(' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE WHILE LPAREN WHILE
+##
+## Ends in an error in state: 42.
+##
+## stmt -> WHILE LPAREN . expr RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## WHILE LPAREN
+##
+
+'while' の条件が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE STAR WHILE
+##
+## Ends in an error in state: 44.
+##
+## unary -> STAR . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## STAR
+##
+
+単項の '*'（ポインタの参照外し）には演算対象が要る。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE SIZEOF WHILE
+##
+## Ends in an error in state: 45.
+##
+## unary -> SIZEOF . LPAREN sizeof_type RPAREN [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## SIZEOF
+##
+
+'sizeof' の後には型名を囲む '(' が来るはず。この言語の sizeof は 'sizeof(型)' の形だけで、'sizeof 式' は書けない。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE SIZEOF LPAREN WHILE
+##
+## Ends in an error in state: 46.
+##
+## unary -> SIZEOF LPAREN . sizeof_type RPAREN [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## SIZEOF LPAREN
+##
+
+'sizeof(' の後には型名が来るはず（'int' 'char' 'void' 'struct タグ名' のいずれか、後ろに '*' を付けてもよい）。'sizeof(変数)' のように式を書くことはできない。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE SIZEOF LPAREN KW_CHAR IDENT
+##
+## Ends in an error in state: 47.
+##
+## unary -> SIZEOF LPAREN sizeof_type . RPAREN [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## SIZEOF LPAREN sizeof_type
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 12, spurious reduction of production decl_type -> type_base ptrs
+## In state 49, spurious reduction of production sizeof_type -> decl_type
+##
+
+'sizeof' の型名の後は、ポインタにする '*' を続けるか、')' で閉じるはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE PLUSPLUS WHILE
+##
+## Ends in an error in state: 50.
+##
+## unary -> PLUSPLUS . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## PLUSPLUS
+##
+
+前置の '++' には演算対象が要る。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE MINUSMINUS WHILE
+##
+## Ends in an error in state: 52.
+##
+## unary -> MINUSMINUS . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## MINUSMINUS
+##
+
+前置の '--' には演算対象が要る。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE MINUS WHILE
+##
+## Ends in an error in state: 53.
+##
+## unary -> MINUS . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## MINUS
+##
+
+単項の '-'（符号反転）には演算対象が要る。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE LPAREN WHILE
+##
+## Ends in an error in state: 54.
+##
+## primary -> LPAREN . expr RPAREN [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN
+##
+
+'(' で始めた括弧の中身が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IDENT WHILE
+##
+## Ends in an error in state: 55.
+##
+## primary -> IDENT . [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+## primary -> IDENT . LPAREN arg_list_opt RPAREN [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## IDENT
+##
+
+識別子の後に置けないトークンが来ている。関数呼び出しの '('、配列の添字の '['、メンバ参照の '.' '->'、演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）、または今書いている式を終える区切り（文の終わりなら ';'、括弧の中なら ')'、添字なら ']'、引数なら ','）が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IDENT LPAREN WHILE
+##
+## Ends in an error in state: 56.
+##
+## primary -> IDENT LPAREN . arg_list_opt RPAREN [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## IDENT LPAREN
+##
+
+関数呼び出しの '(' の後には、引数の式か、引数なしを表す ')' が来るはず。引数は式（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE BANG WHILE
+##
+## Ends in an error in state: 58.
+##
+## unary -> BANG . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## BANG
+##
+
+単項の '!'（論理否定）には演算対象が要る。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE AMP WHILE
+##
+## Ends in an error in state: 59.
+##
+## unary -> AMP . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## AMP
+##
+
+単項の '&'（アドレス取得）には演算対象が要る。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT WHILE
+##
+## Ends in an error in state: 62.
+##
+## postfix -> postfix . LBRACKET expr RBRACKET [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+## postfix -> postfix . ARROW IDENT [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+## postfix -> postfix . DOT IDENT [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+## unary -> postfix . [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## postfix
+##
+
+式の後に置けないトークンが来ている。配列の添字の '['、メンバ参照の '.' '->'、演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）、または今書いている式を終える区切り（文の終わりなら ';'、括弧の中なら ')'、添字なら ']'、引数なら ','）が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT LBRACKET WHILE
+##
+## Ends in an error in state: 63.
+##
+## postfix -> postfix LBRACKET . expr RBRACKET [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## postfix LBRACKET
+##
+
+'[' で始めた配列の添字が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT LT WHILE
+##
+## Ends in an error in state: 66.
+##
+## rel -> rel LT . add [ SEMI RPAREN RBRACKET QUESTION OROR NE LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## rel LT
+##
+
+'<' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE SIZEOF LPAREN KW_CHAR RPAREN WHILE
+##
+## Ends in an error in state: 67.
+##
+## add -> mul . [ SEMI RPAREN RBRACKET QUESTION PLUS OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . STAR unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . SLASH unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . PERCENT unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## mul
+##
+
+式はここまでで完成しているが、この位置にこのトークンは置けない。演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）を続けるか、今書いている式を終える区切り（文の終わりなら ';'、括弧の中なら ')'、添字なら ']'、引数なら ','）を書くはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT STAR WHILE
+##
+## Ends in an error in state: 68.
+##
+## mul -> mul STAR . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## mul STAR
+##
+
+'*'（掛け算）の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT SLASH WHILE
+##
+## Ends in an error in state: 70.
+##
+## mul -> mul SLASH . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## mul SLASH
+##
+
+'/'（割り算）の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT PERCENT WHILE
+##
+## Ends in an error in state: 72.
+##
+## mul -> mul PERCENT . unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## mul PERCENT
+##
+
+'%'（剰余）の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT PLUS WHILE
+##
+## Ends in an error in state: 75.
+##
+## add -> add PLUS . mul [ SEMI RPAREN RBRACKET QUESTION PLUS OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## add PLUS
+##
+
+'+' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT PLUS SIZEOF LPAREN KW_CHAR RPAREN WHILE
+##
+## Ends in an error in state: 76.
+##
+## add -> add PLUS mul . [ SEMI RPAREN RBRACKET QUESTION PLUS OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . STAR unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . SLASH unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . PERCENT unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## add PLUS mul
+##
+
+式はここまでで完成しているが、この位置にこのトークンは置けない。演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）を続けるか、今書いている式を終える区切り（文の終わりなら ';'、括弧の中なら ')'、添字なら ']'、引数なら ','）を書くはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT MINUS WHILE
+##
+## Ends in an error in state: 77.
+##
+## add -> add MINUS . mul [ SEMI RPAREN RBRACKET QUESTION PLUS OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## add MINUS
+##
+
+'-'（引き算）の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT MINUS SIZEOF LPAREN KW_CHAR RPAREN WHILE
+##
+## Ends in an error in state: 78.
+##
+## add -> add MINUS mul . [ SEMI RPAREN RBRACKET QUESTION PLUS OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . STAR unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . SLASH unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+## mul -> mul . PERCENT unary [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## add MINUS mul
+##
+
+式はここまでで完成しているが、この位置にこのトークンは置けない。演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）を続けるか、今書いている式を終える区切り（文の終わりなら ';'、括弧の中なら ')'、添字なら ']'、引数なら ','）を書くはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT LE WHILE
+##
+## Ends in an error in state: 79.
+##
+## rel -> rel LE . add [ SEMI RPAREN RBRACKET QUESTION OROR NE LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## rel LE
+##
+
+'<=' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT GT WHILE
+##
+## Ends in an error in state: 81.
+##
+## rel -> rel GT . add [ SEMI RPAREN RBRACKET QUESTION OROR NE LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## rel GT
+##
+
+'>' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT GE WHILE
+##
+## Ends in an error in state: 83.
+##
+## rel -> rel GE . add [ SEMI RPAREN RBRACKET QUESTION OROR NE LT LE GT GE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## rel GE
+##
+
+'>=' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT LBRACKET CHAR_LIT SEMI
+##
+## Ends in an error in state: 85.
+##
+## postfix -> postfix LBRACKET expr . RBRACKET [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## postfix LBRACKET expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+##
+
+配列の添字の式は ']' で閉じるはず。閉じる前なら 演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）を続けることもできる。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT NE WHILE
+##
+## Ends in an error in state: 88.
+##
+## eq -> eq NE . rel [ SEMI RPAREN RBRACKET QUESTION OROR NE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## eq NE
+##
+
+'!=' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT EQEQ WHILE
+##
+## Ends in an error in state: 91.
+##
+## eq -> eq EQEQ . rel [ SEMI RPAREN RBRACKET QUESTION OROR NE EQEQ COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## eq EQEQ
+##
+
+'==' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT QUESTION WHILE
+##
+## Ends in an error in state: 94.
+##
+## cond_e -> e_or QUESTION . expr COLON cond_e [ SEMI RPAREN RBRACKET COMMA COLON ASSIGN ]
+##
+## The known suffix of the stack is as follows:
+## e_or QUESTION
+##
+
+条件演算子 '?' の、条件が真のときの値が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT QUESTION CHAR_LIT SEMI
+##
+## Ends in an error in state: 95.
+##
+## cond_e -> e_or QUESTION expr . COLON cond_e [ SEMI RPAREN RBRACKET COMMA COLON ASSIGN ]
+##
+## The known suffix of the stack is as follows:
+## e_or QUESTION expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+##
+
+条件演算子は 'cond ? a : b' の形で書く。'?' の後の式に続けて ':' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT QUESTION CHAR_LIT COLON WHILE
+##
+## Ends in an error in state: 96.
+##
+## cond_e -> e_or QUESTION expr COLON . cond_e [ SEMI RPAREN RBRACKET COMMA COLON ASSIGN ]
+##
+## The known suffix of the stack is as follows:
+## e_or QUESTION expr COLON
+##
+
+条件演算子の ':' の後、条件が偽のときの値が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT ANDAND WHILE
+##
+## Ends in an error in state: 98.
+##
+## e_and -> e_and ANDAND . eq [ SEMI RPAREN RBRACKET QUESTION OROR COMMA COLON ASSIGN ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## e_and ANDAND
+##
+
+'&&' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT ASSIGN WHILE
+##
+## Ends in an error in state: 102.
+##
+## assign -> cond_e ASSIGN . assign [ SEMI RPAREN RBRACKET COMMA COLON ]
+##
+## The known suffix of the stack is as follows:
+## cond_e ASSIGN
+##
+
+'=' の右側（代入する値）が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT OROR WHILE
+##
+## Ends in an error in state: 105.
+##
+## e_or -> e_or OROR . e_and [ SEMI RPAREN RBRACKET QUESTION OROR COMMA COLON ASSIGN ]
+##
+## The known suffix of the stack is as follows:
+## e_or OROR
+##
+
+'||' の右側が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT DOT WHILE
+##
+## Ends in an error in state: 107.
+##
+## postfix -> postfix DOT . IDENT [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## postfix DOT
+##
+
+'.' の後にはフィールド名（識別子）が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT ARROW WHILE
+##
+## Ends in an error in state: 109.
+##
+## postfix -> postfix ARROW . IDENT [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## postfix ARROW
+##
+
+'->' の後にはフィールド名（識別子）が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IDENT LPAREN CHAR_LIT SEMI
+##
+## Ends in an error in state: 115.
+##
+## arg_list -> arg_list . COMMA expr [ RPAREN COMMA ]
+## arg_list_opt -> arg_list . [ RPAREN ]
+##
+## The known suffix of the stack is as follows:
+## arg_list
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+## In state 112, spurious reduction of production arg_list -> expr
+##
+
+引数の後は、次の引数を続ける ',' か、引数並びを閉じる ')' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IDENT LPAREN CHAR_LIT COMMA WHILE
+##
+## Ends in an error in state: 116.
+##
+## arg_list -> arg_list COMMA . expr [ RPAREN COMMA ]
+##
+## The known suffix of the stack is as follows:
+## arg_list COMMA
+##
+
+引数並びの ',' の後に、次の引数が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE LPAREN CHAR_LIT SEMI
+##
+## Ends in an error in state: 118.
+##
+## primary -> LPAREN expr . RPAREN [ STAR SLASH SEMI RPAREN RBRACKET QUESTION PLUS PERCENT OROR NE MINUS LT LE LBRACKET GT GE EQEQ DOT COMMA COLON ASSIGN ARROW ANDAND ]
+##
+## The known suffix of the stack is as follows:
+## LPAREN expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+##
+
+'(' で始めた括弧式は ')' で閉じるはず。閉じる前なら 演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）を続けることもできる。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE WHILE LPAREN CHAR_LIT SEMI
+##
+## Ends in an error in state: 124.
+##
+## stmt -> WHILE LPAREN expr . RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## WHILE LPAREN expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+##
+
+'while' の条件は ')' で閉じるはず。閉じる前なら 演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）を続けることもできる。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE WHILE LPAREN CHAR_LIT RPAREN SLASH
+##
+## Ends in an error in state: 125.
+##
+## stmt -> WHILE LPAREN expr RPAREN . stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## WHILE LPAREN expr RPAREN
+##
+
+'while (...)' の後には、繰り返す本体の文が要る。ここには文が来るはず（式文・';'・'{ ... }' のブロック・if・while・for・return・break・continue のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE RETURN WHILE
+##
+## Ends in an error in state: 127.
+##
+## stmt -> RETURN . SEMI [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+## stmt -> RETURN . expr SEMI [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## RETURN
+##
+
+'return' の後には、返す値の式か、値を返さないことを表す ';' が来るはず。返す値は式（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE RETURN CHAR_LIT RPAREN
+##
+## Ends in an error in state: 129.
+##
+## stmt -> RETURN expr . SEMI [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## RETURN expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+##
+
+'return 式' は ';' で終わるはず。';' が抜けていないか確認する。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE LBRACE SLASH
+##
+## Ends in an error in state: 132.
+##
+## block -> LBRACE stmt_list . RBRACE [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+## stmt_list -> stmt_list . stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## LBRACE stmt_list
+##
+
+ブロックの中には、文（式文・';'・'{ ... }' のブロック・if・while・for・return・break・continue のいずれか）か、ブロックを閉じる '}' が来るはず。局所変数の宣言は関数本体の先頭にしか置けず、入れ子のブロックの中には書けない。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IF WHILE
+##
+## Ends in an error in state: 134.
+##
+## stmt -> IF . LPAREN expr RPAREN stmt ELSE stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+## stmt -> IF . LPAREN expr RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## IF
+##
+
+'if' の後には条件を囲む '(' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IF LPAREN WHILE
+##
+## Ends in an error in state: 135.
+##
+## stmt -> IF LPAREN . expr RPAREN stmt ELSE stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+## stmt -> IF LPAREN . expr RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## IF LPAREN
+##
+
+'if' の条件が書かれていない。ここには式が来るはず（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IF LPAREN CHAR_LIT SEMI
+##
+## Ends in an error in state: 136.
+##
+## stmt -> IF LPAREN expr . RPAREN stmt ELSE stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+## stmt -> IF LPAREN expr . RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## IF LPAREN expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+##
+
+'if' の条件は ')' で閉じるはず。閉じる前なら 演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）を続けることもできる。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IF LPAREN CHAR_LIT RPAREN SLASH
+##
+## Ends in an error in state: 137.
+##
+## stmt -> IF LPAREN expr RPAREN . stmt ELSE stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+## stmt -> IF LPAREN expr RPAREN . stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## IF LPAREN expr RPAREN
+##
+
+'if (...)' の後には、条件が真のときに実行する文が要る。ここには文が来るはず（式文・';'・'{ ... }' のブロック・if・while・for・return・break・continue のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE FOR WHILE
+##
+## Ends in an error in state: 138.
+##
+## stmt -> FOR . LPAREN expr_opt SEMI expr_opt SEMI expr_opt RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## FOR
+##
+
+'for' の後には '(' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE FOR LPAREN WHILE
+##
+## Ends in an error in state: 139.
+##
+## stmt -> FOR LPAREN . expr_opt SEMI expr_opt SEMI expr_opt RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## FOR LPAREN
+##
+
+'for' の '(' の後には、初期化の式か、初期化を省略することを表す ';' が来るはず。式（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE FOR LPAREN CHAR_LIT RPAREN
+##
+## Ends in an error in state: 140.
+##
+## stmt -> FOR LPAREN expr_opt . SEMI expr_opt SEMI expr_opt RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## FOR LPAREN expr_opt
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+## In state 154, spurious reduction of production expr_opt -> expr
+##
+
+'for' の初期化の式の後は ';' で区切るはず。'for (初期化; 条件; 更新)' の 3 つの節はすべて ';' で区切る。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE FOR LPAREN SEMI WHILE
+##
+## Ends in an error in state: 141.
+##
+## stmt -> FOR LPAREN expr_opt SEMI . expr_opt SEMI expr_opt RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## FOR LPAREN expr_opt SEMI
+##
+
+'for' の 2 つ目の節には、継続条件の式か、条件を省略することを表す ';' が来るはず。式（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE FOR LPAREN SEMI CHAR_LIT RPAREN
+##
+## Ends in an error in state: 142.
+##
+## stmt -> FOR LPAREN expr_opt SEMI expr_opt . SEMI expr_opt RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## FOR LPAREN expr_opt SEMI expr_opt
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+## In state 154, spurious reduction of production expr_opt -> expr
+##
+
+'for' の条件の式の後は ';' で区切るはず。'for (初期化; 条件; 更新)' の 3 つの節はすべて ';' で区切る。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE FOR LPAREN SEMI SEMI WHILE
+##
+## Ends in an error in state: 143.
+##
+## stmt -> FOR LPAREN expr_opt SEMI expr_opt SEMI . expr_opt RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## FOR LPAREN expr_opt SEMI expr_opt SEMI
+##
+
+'for' の 3 つ目の節には、更新の式か、更新を省略して 'for' を閉じる ')' が来るはず。式（数値・文字リテラル・文字列リテラル・変数名・関数呼び出し・'(' で始まる括弧式・単項の '-' '!' '*' '&' '++' '--'・sizeof(型) のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE FOR LPAREN SEMI SEMI CHAR_LIT SEMI
+##
+## Ends in an error in state: 144.
+##
+## stmt -> FOR LPAREN expr_opt SEMI expr_opt SEMI expr_opt . RPAREN stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## FOR LPAREN expr_opt SEMI expr_opt SEMI expr_opt
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+## In state 154, spurious reduction of production expr_opt -> expr
+##
+
+'for' の 3 つの節を書き終えたら ')' で閉じるはず。閉じる前なら 演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）を続けることもできる。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE FOR LPAREN SEMI SEMI RPAREN SLASH
+##
+## Ends in an error in state: 145.
+##
+## stmt -> FOR LPAREN expr_opt SEMI expr_opt SEMI expr_opt RPAREN . stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## FOR LPAREN expr_opt SEMI expr_opt SEMI expr_opt RPAREN
+##
+
+'for (...)' の後には、繰り返す本体の文が要る。ここには文が来るはず（式文・';'・'{ ... }' のブロック・if・while・for・return・break・continue のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CONTINUE WHILE
+##
+## Ends in an error in state: 146.
+##
+## stmt -> CONTINUE . SEMI [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## CONTINUE
+##
+
+'continue' は ';' で終わるはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE BREAK WHILE
+##
+## Ends in an error in state: 148.
+##
+## stmt -> BREAK . SEMI [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## BREAK
+##
+
+'break' は ';' で終わるはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE CHAR_LIT RPAREN
+##
+## Ends in an error in state: 151.
+##
+## stmt -> expr . SEMI [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 62, spurious reduction of production unary -> postfix
+## In state 64, spurious reduction of production mul -> unary
+## In state 67, spurious reduction of production add -> mul
+## In state 90, spurious reduction of production rel -> add
+## In state 65, spurious reduction of production eq -> rel
+## In state 87, spurious reduction of production e_and -> eq
+## In state 97, spurious reduction of production e_or -> e_and
+## In state 93, spurious reduction of production cond_e -> e_or
+## In state 101, spurious reduction of production assign -> cond_e
+## In state 104, spurious reduction of production expr -> assign
+##
+
+式を文として書いたときは ';' で終わるはず。';' が抜けていないか、演算子（'+' '-' '*' '/' '%' '<' '>' '<=' '>=' '==' '!=' '&&' '||' '?' '='）の右側が抜けていないかを確認する。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IF LPAREN CHAR_LIT RPAREN SEMI SLASH
+##
+## Ends in an error in state: 155.
+##
+## stmt -> IF LPAREN expr RPAREN stmt . ELSE stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+## stmt -> IF LPAREN expr RPAREN stmt . [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## IF LPAREN expr RPAREN stmt
+##
+
+'if (...) 文' の後は、'else' を続けるか、次の文（式文・';'・'{ ... }' のブロック・if・while・for・return・break・continue のいずれか）を書くか、'}' でブロックを閉じるはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE IF LPAREN CHAR_LIT RPAREN SEMI ELSE SLASH
+##
+## Ends in an error in state: 156.
+##
+## stmt -> IF LPAREN expr RPAREN stmt ELSE . stmt [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE IF IDENT FOR ELSE CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## IF LPAREN expr RPAREN stmt ELSE
+##
+
+'else' の後には、条件が偽のときに実行する文が要る。ここには文が来るはず（式文・';'・'{ ... }' のブロック・if・while・for・return・break・continue のいずれか）。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE KW_CHAR RPAREN
+##
+## Ends in an error in state: 162.
+##
+## local_decl -> decl_type . IDENT SEMI [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE KW_VOID KW_STRUCT KW_INT KW_CHAR IF IDENT FOR CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## decl_type
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 12, spurious reduction of production decl_type -> type_base ptrs
+##
+
+局所変数の宣言では、型名の後に変数名（識別子）か、ポインタにする '*' が来るはず。
+
+program: KW_CHAR IDENT LPAREN RPAREN LBRACE KW_CHAR IDENT WHILE
+##
+## Ends in an error in state: 163.
+##
+## local_decl -> decl_type IDENT . SEMI [ WHILE STR STAR SIZEOF SEMI RETURN RBRACE PLUSPLUS NUM MINUSMINUS MINUS LPAREN LBRACE KW_VOID KW_STRUCT KW_INT KW_CHAR IF IDENT FOR CONTINUE CHAR_LIT BREAK BANG AMP ]
+##
+## The known suffix of the stack is as follows:
+## decl_type IDENT
+##
+
+局所変数の宣言は ';' で終わるはず。
+

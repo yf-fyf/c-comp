@@ -16,7 +16,8 @@ open Ast
 (* トップレベルの項目。struct 定義と宣言は別の並びに分けて Ast.program にする *)
 type item = Sdef of struct_def | Tdef of top | Nothing
 
-let parse_error pos fmt = Diag.error ~phase:Diag.Parse ~line:(Loc.line_of pos) fmt
+let parse_error pos fmt =
+  Diag.error ~phase:Diag.Parse ~line:(Loc.line_of pos) ~col:(Loc.col_of pos) fmt
 let loc = Loc.of_positions
 let mk_expr desc startpos endpos = { e_desc = desc; e_loc = loc startpos endpos }
 let mk_stmt desc startpos endpos = { s_desc = desc; s_loc = loc startpos endpos }

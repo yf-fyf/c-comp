@@ -20,6 +20,7 @@ Python 実装に詰まったときに、別言語での書き方と比較する�
 |----------|------|
 | `loc.ml` / `ctype.ml` / `diag.ml` | 位置・型・エラーという、どこからも使われる土台 |
 | `ast.ml` + `lexer.mll` / `parser.mly` | 構文木と、それを作る字句解析・構文解析。構文の形をそのまま写す |
+| `parser.messages` | 構文エラーの状態ごとの日本語メッセージ（下記「構文エラーメッセージの保守」） |
 | `layout.ml` | 型の大きさ・整列と struct のレイアウト。表は不変な Map |
 | `strings.ml` | 文字列リテラルの通し番号（`.LC`）。採番の規則はここだけに書いてある |
 | `tast.ml` / `typing.ml` | 型付き木と、それを作るパス。型・変数の置き場・フィールドの変位・ポインタ演算のスケールをここで決め、エラーもここで出す |
@@ -39,6 +40,44 @@ Python 版 `mycc.py` と `sessions/lecture16.ml` は、コード生成をしな�
 **完成相当の実装を含む。** Python 版をそのまま写すためではなく、
 自分の方針を考えた後に、AST の場合分け・状態管理・コード生成の流れを確認するために使う。
 まず各回の `mycc.py` の TODO を自分で検討してから参照すること。
+
+### 構文エラーメッセージの保守（`reference/parser.messages`）
+
+`compile.ml` の `parse` は menhir の incremental API（`--table` で生成される
+`Parser.MenhirInterpreter`）で構文解析する。エラーになったときは構文解析器の**状態番号**が
+取れるので、その番号で `parser.messages` を引き、「ここには X か Y が来るはず」という
+日本語メッセージを出す。載っていない状態は汎用の 1 文に落ちる。
+
+**`parser.mly` の文法を変えたら `parser.messages` の更新が必要である。**
+状態番号は文法から機械的に決まるので、規則を 1 つ足しただけでも番号がずれ、
+既存のメッセージが別の状態に付いてしまう。手順は次のとおり。
+
+```bash
+cd workbook/ocaml/reference
+tmp=$(mktemp -d)
+
+# 1. 既存のメッセージを新しい状態番号・新しい自動コメントへ移す
+menhir --update-errors parser.messages parser.mly > "$tmp/updated.messages"
+
+# 2. 文法が増えて新しく現れたエラー状態を、空メッセージ付きで足す
+menhir --list-errors parser.mly > "$tmp/auto.messages"
+menhir parser.mly --merge-errors "$tmp/auto.messages" \
+                  --merge-errors "$tmp/updated.messages" > "$tmp/merged.messages"
+
+mv "$tmp/merged.messages" parser.messages
+```
+
+ずれや抜けの検査は dune から回せる。
+
+```bash
+cd workbook/ocaml
+dune build @reference/check-messages   # 文法から生成した一覧と parser.messages を突き合わせる
+```
+
+このチェックが落ちたら、上の手順で `parser.messages` を作り直し、
+新しく現れた状態には日本語のメッセージを書く。メッセージは
+「その状態で実際に受理されうるトークン」を具体的に挙げること
+（`menhir --list-errors` が各状態の LR(1) 項目を併記するので、それを見て書く）。
 
 ## 前提
 

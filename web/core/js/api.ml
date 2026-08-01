@@ -73,6 +73,8 @@ let compile_json source comments =
                 [ JObj
                     [ ("message", JStr diag.msg);
                       ("line", JInt diag.line);
+                      (* 列は行頭からの UTF-8 バイト数（1 起点）。0 = 取れなかった *)
+                      ("col", JInt diag.col);
                       ("phase", JStr (phase_string diag.phase)) ]
                 ]) ]
   with e -> JObj [ ("ok", JBool false); ("errors", JList [ error_json e ]) ]

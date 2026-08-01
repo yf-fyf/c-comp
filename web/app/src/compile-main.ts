@@ -93,7 +93,11 @@ function runCompile(): void {
     if (hasOutput) out.classList.add("stale");
     const err = result.errors?.[0];
     // line は前処理後の行番号（TextResult に行対応表は無い）。0 = 不明。
-    const where = err && err.line ? `（${err.line} 行目）` : "";
+    // col は行頭からのバイト数（1 起点）で、取れないフェーズ（前処理）では 0 になる。
+    let where = "";
+    if (err && err.line) {
+      where = err.col ? `（${err.line} 行 ${err.col} 桁）` : `（${err.line} 行目）`;
+    }
     setStatus("err", `✗ ${err?.message ?? "エラー"}${where}`);
   }
 }
