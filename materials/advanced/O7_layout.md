@@ -13,7 +13,7 @@
 | 推奨の前提 | O3（命令選択）。実質必須に近い。「動かし方」も「測ってみると」も `--passes isel,layout` を O1 の全構成の基準表の `+isel` 列と比べるので、O3 が無いと基準がそろわない |
 | 改変しない | `mycc.py`、`scaffold/`、`optcc.py` |
 | 編集する | `layout.py` |
-| 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が `fixed17` 全通と動的命令数の削減を報告する |
+| 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が [`fixed17`](../../workbook/advanced/README.md#fixed17) 全通と動的命令数の削減を報告する |
 | コマ数 | 1 |
 | 備考 | 最適化発展シリーズの第7回。この回は静的命令数では効果が見えない。Step 3 の `remove_jump_to_next` は B1 の Step 3 と同名・同一の最適化である |
 

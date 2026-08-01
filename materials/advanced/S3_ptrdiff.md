@@ -10,7 +10,7 @@
 | 項目 | 内容 |
 |------|------|
 | 必須の前提 | コマ10（ポインタ演算）まで |
-| 推奨の前提 | コマ16（`golden.py` は `final/mycc.py` を土台に `fixed17` を回すため、未了だと安全網の確認まで進めない） |
+| 推奨の前提 | コマ16（`golden.py` は `final/mycc.py` を土台に [`fixed17`](../../workbook/advanced/README.md#fixed17) を回すため、未了だと安全網の確認まで進めない） |
 | 改変しない | `mycc.py`、`scaffold/`、ラッパー `semcc.py`（配布済み・完成品） |
 | 編集する | `ptrdiff.py` |
 | 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が「修正なしで落ち、修正ありで通る」ことと `fixed17` 全通を報告する |

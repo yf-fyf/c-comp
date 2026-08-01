@@ -143,6 +143,8 @@ make serve PORT=9000
 make serve HOST=tailscale   # 別端末から Tailscale 経由で見る
 make serve HOST=0.0.0.0     # 全インターフェース
 make check-links         # 内部リンク切れを検査
+make check-docs          # 原稿・配布物の整合（check-deps も一緒に走る）
+make check-deps          # 発展課題の依存関係の整合（下記）
 make figures             # 図の SVG を作り直す（図を触ったときだけ）
 make clean               # .site/ と .pages/ を消す（コミット済みの SVG は消さない）
 python3 tools/build_site.py --only 03_arith # 1ページだけ作り直す
@@ -201,8 +203,10 @@ python3 golden.py   # README で指定されている場合
    `\input` する）、`make figures` で SVG を生成してコミットする
 3. `workbook/` 側に README・starter・テストを追加する。README には資料ページへのリンクを入れる
 4. **`site/nav.yaml` の該当セクションに原稿のパスを1行足す**
-5. 発展教材なら `workbook/advanced/README.md` の全トピック表にも1行足す
-6. `make site && make check-links` で生成とリンクを確認する
+5. 発展教材なら `workbook/advanced/README.md` の全トピック表にも1行足す。
+   トピックの「## この回の位置づけ」の固定表（`必須の前提` ほか）を原稿と配布物の両方に置き、
+   `fixed17` の初出は原稿側から索引の定義（`#fixed17`）へ張る
+6. `make site && make check-links` で生成とリンクを確認し、`make check-docs` を通す
 7. [`quality_guide.md`](./quality_guide.md) に従いレビューする
 
 教材を改名・削除したときも 4・5 を忘れないこと。
@@ -217,6 +221,22 @@ found = {str(p) for p in pathlib.Path("materials").glob("*/*.md")}
 print("未掲載:", sorted(found - listed) or "なし")
 EOF
 ```
+
+### 発展課題の依存関係（`make check-deps`）
+
+`tools/check_advanced_deps.py` が、次の3つの情報源が互いに一致しているかを見る。
+手書きの依存図が実態からずれるのを止めるための検査で、`make check-docs` からも走る。
+
+| 情報源 | 場所 |
+|--------|------|
+| 一覧表 | `workbook/advanced/README.md` の「## 全トピック一覧」 |
+| 位置づけブロック | 各トピックの「## この回の位置づけ」（配布物と原稿の2部） |
+| 依存グラフ | 同 README の「### 依存関係」のコードブロック |
+
+依存グラフに描くのは**直接の前提だけ**である。ここでいう直接とは、
+位置づけブロックの「必須の前提」から作ったトピック間のグラフを**推移簡約**したもの、
+という機械的な定義になっている。間接の前提を図に描き足しても、直接の辺を消しても、
+どちらも検出される。前提を1つ書き換えたら、一覧表・原稿・配布物・図の4か所をそろえること。
 
 ---
 

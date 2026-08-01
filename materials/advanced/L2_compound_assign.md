@@ -10,7 +10,7 @@
 | 項目 | 内容 |
 |------|------|
 | 必須の前提 | コマ14（グローバル変数）まで |
-| 推奨の前提 | コマ16（`golden.py` は `final/mycc.py` を土台に `fixed17` を回すため、未了だと安全網の確認まで進めない） |
+| 推奨の前提 | コマ16（`golden.py` は `final/mycc.py` を土台に [`fixed17`](../../workbook/advanced/README.md#fixed17) を回すため、未了だと安全網の確認まで進めない） |
 | 改変しない | `mycc.py`、`scaffold/`（`lexer.py`・`parser.py` を含む）、ラッパー `langcc.py`（配布済み・完成品） |
 | 編集する | `compound.py` |
 | 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が複合代入のテストの通過と `fixed17` 全通を報告する |

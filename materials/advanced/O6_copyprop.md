@@ -13,7 +13,7 @@ O4 が残した `mv a0, s1` の連なりを消す。
 | 推奨の前提 | O3（命令選択）。実質必須に近い。資料の「測ってみると」の比較表が「isel だけ」を基準にしているので、O3 が無いと表と突き合わせられない |
 | 改変しない | `mycc.py`、`scaffold/`、`optcc.py` |
 | 編集する | `copyprop.py`、`dce.py` |
-| 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が `fixed17` 全通と4構成の比較表を報告する |
+| 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が [`fixed17`](../../workbook/advanced/README.md#fixed17) 全通と4構成の比較表を報告する |
 | コマ数 | 2 |
 | 備考 | 最適化発展シリーズの第6回。コマ1は `copyprop.py`（Step 1〜3）、コマ2は `dce.py`（Step 4〜6） |
 

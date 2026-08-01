@@ -79,7 +79,8 @@ make serve        # 生成して配信。原稿を保存すると作り直して
 make check-links  # 内部リンク切れを検査
 
 # 原稿・配布物の整合の機械チェック（除外リストは tools/doc_check_allowlist.yaml）
-make check-docs                              # 全チェック
+make check-docs                              # 全チェック（check-deps も一緒に走る）
+make check-deps                              # 発展課題の索引・位置づけブロック・依存グラフの三者一致
 python3 tools/check_docs.py --only ident     # 1つだけ
 python3 tools/check_docs.py --list-kinds     # 除外リストに書ける検出種別
 # code_example.md の C コードを実際に処理系へ通し、期待する終了コードまで照合する
