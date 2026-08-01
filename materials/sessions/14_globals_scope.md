@@ -1,3 +1,24 @@
+---
+introduces:
+  - global_var
+  - bss_section
+  - global_zero_init
+  - global_address_la
+  - global_struct_var
+  - var_scope_lookup
+  - local_shadows_global
+  - logical_not
+  - logical_and_or
+  - eval_order_no_shortcircuit
+requires:
+  - local_var_decl
+  - alloc_local
+  - bool_result_int01
+  - codegen_lval_split
+  - data_section
+  - struct_definition
+---
+
 # コマ14: グローバル変数・スコープ管理
 
 ## 今日のゴール

@@ -143,8 +143,9 @@ make serve PORT=9000
 make serve HOST=tailscale   # 別端末から Tailscale 経由で見る
 make serve HOST=0.0.0.0     # 全インターフェース
 make check-links         # 内部リンク切れを検査
-make check-docs          # 原稿・配布物の整合（check-deps も一緒に走る）
+make check-docs          # 原稿・配布物の整合（check-deps・check-concepts も一緒に走る）
 make check-deps          # 発展課題の依存関係の整合（下記）
+make check-concepts      # 概念導入台帳と原稿 frontmatter の整合（下記）
 make figures             # 図の SVG を作り直す（図を触ったときだけ）
 make clean               # .site/ と .pages/ を消す（コミット済みの SVG は消さない）
 python3 tools/build_site.py --only 03_arith # 1ページだけ作り直す
@@ -237,6 +238,18 @@ EOF
 位置づけブロックの「必須の前提」から作ったトピック間のグラフを**推移簡約**したもの、
 という機械的な定義になっている。間接の前提を図に描き足しても、直接の辺を消しても、
 どちらも検出される。前提を1つ書き換えたら、一覧表・原稿・配布物・図の4か所をそろえること。
+
+### 概念導入台帳（`make check-concepts`）
+
+通常回の原稿は先頭に YAML frontmatter を持ち、`introduces:`（その回が新しく導入する概念）と
+`requires:`（前提となる概念）を列挙する。frontmatter は pandoc がメタデータとして消費するので
+生成ページには出ない。単一の出典は
+[`curriculum.md` の「9. 概念導入台帳」](./curriculum.md#9-概念導入台帳introduces--requires)である。
+
+`tools/check_concepts.py` が、台帳と全回の frontmatter が一致しているかを見る。
+`requires:` は台帳からの**導出値**（各概念の前提の和集合 − 同じ回で導入する概念）なので、
+手で足し引きしてはならない。概念を1つ足すときは台帳に1行足し、
+`make check-concepts` が示す差分どおりに原稿の frontmatter を直す。
 
 ---
 

@@ -1,3 +1,13 @@
+---
+introduces:
+  - rv64_asm_handwritten
+  - toolchain_qemu_link
+  - provided_lexer_parser
+  - line_comment
+  - keywords_identifiers
+requires: []
+---
+
 # コマ1: 環境構築 + RV64 手書きアセンブリ
 
 ## 今日のゴール

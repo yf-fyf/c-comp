@@ -1,3 +1,19 @@
+---
+introduces:
+  - codegen_a0_contract
+  - func_prologue_epilogue
+  - int_type
+  - int_literal
+  - arith_ops
+  - div_mod_rounding
+  - stack_temporaries
+  - return_stmt
+  - main_function
+requires:
+  - rv64_asm_handwritten
+  - eval_ast_interpreter
+---
+
 # コマ3: 算術式コード生成
 
 ## 今日のゴール

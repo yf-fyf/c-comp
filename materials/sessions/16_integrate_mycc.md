@@ -1,3 +1,15 @@
+---
+introduces:
+  - mycc_integration
+  - final_test_suite
+  - code_review_criteria
+requires:
+  - linked_list_traversal
+  - local_shadows_global
+  - define_object_macro
+  - multifile_compile
+---
+
 # コマ16: Python 版総合演習・mycc.py 統合
 
 ## 今日のゴール

@@ -1,3 +1,17 @@
+---
+introduces:
+  - while_stmt
+  - for_stmt
+  - break_continue
+  - loop_label_stack
+  - prefix_incr_decr_int
+  - empty_stmt
+requires:
+  - assign_op
+  - gen_stmt_dispatch
+  - label_generation
+---
+
 # コマ6: while / for / break / continue
 
 ## 今日のゴール

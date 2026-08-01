@@ -326,7 +326,7 @@ void exit(int code);
 | 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
 |------|---------|-----------|------|------|
 | ローカル変数宣言(初期化子なし) | コマ4 | `sessions/04_variables/tests/single.c` | 標準 | 関数本体の先頭のみ |
-| 入れ子ブロックが新しいスコープを作らない | コマ7 | `sessions/07_functions_abi/tests/nested_block.c` | 標準 | 2 層スコープ |
+| 入れ子ブロックが新しいスコープを作らない | コマ5 | `sessions/05_if_else/tests/nested_block.c` | 標準 | 2 層スコープ |
 | グローバル変数(0 初期化) | コマ14 | `sessions/14_globals_scope/tests/global_init.c` | 標準 | |
 | ローカルによるグローバルの隠蔽 | コマ14 | `sessions/14_globals_scope/tests/global_local_shadow.c` | 標準 | 隠蔽はこの 1 種類だけ |
 | 再宣言・再定義規則、仮引数との名前衝突 | コマ14 | — | 標準 | コンパイルエラーの診断。下の「テストを持たない項目」を参照 |

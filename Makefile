@@ -1,4 +1,4 @@
-.PHONY: site serve check-links check-docs check-deps check-code-examples figures web web-test sim-test ocaml-test pages clean
+.PHONY: site serve check-links check-docs check-deps check-concepts check-code-examples figures web web-test sim-test ocaml-test pages clean
 
 HOST ?= 127.0.0.1
 PORT ?= 8000
@@ -23,10 +23,15 @@ check-links:
 check-deps:
 	python3 tools/check_advanced_deps.py
 
+# 概念導入台帳（design/curriculum.md の第9節）と各回の原稿 frontmatter の
+# introduces: / requires: が一致しているか検査する。
+check-concepts:
+	python3 tools/check_concepts.py
+
 # 原稿・配布物の整合を機械的に検査する（テスト表の実体・旧仕様語・nav.yaml 掲載漏れ・
 # code_example.md のコード・規約文書が挙げる識別子の実在）。
 # 除外リストは tools/doc_check_allowlist.yaml（理由つき）。
-check-docs: check-deps
+check-docs: check-deps check-concepts
 	python3 tools/check_docs.py
 
 # code_example.md の C コードを実際に処理系へ通し、期待する終了コード・標準出力まで

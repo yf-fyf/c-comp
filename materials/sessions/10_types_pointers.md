@@ -1,3 +1,29 @@
+---
+introduces:
+  - char_type
+  - char_literal
+  - type_table_ty_str
+  - type_sizes
+  - size_of_ty_str
+  - elem_ty_str
+  - sizeof_typename
+  - pointer_arith
+  - subscript
+  - load_store_by_type
+  - char_promotion
+  - multi_level_pointer
+  - malloc_call
+  - prefix_incr_pointer
+  - main_argv
+requires:
+  - int_type
+  - prefix_incr_decr_int
+  - func_params
+  - func_call
+  - pointer_type
+  - deref
+---
+
 # コマ10: Type + ポインタ演算
 
 ## 今日のゴール

@@ -74,9 +74,19 @@ class Page:
         return "../" * self.depth
 
 
+def strip_frontmatter(lines: list[str]) -> list[str]:
+    """先頭の YAML frontmatter(introduces / requires の台帳)を落とす"""
+    if not lines or lines[0].strip() != "---":
+        return lines
+    for i, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            return lines[i + 1:]
+    return lines
+
+
 def read_title(path: Path) -> str | None:
     """原稿の先頭 H1 をタイトルとして読む(Markdown 記法は落とす)"""
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in strip_frontmatter(path.read_text(encoding="utf-8").splitlines()):
         line = line.strip()
         if line.startswith("# "):
             return re.sub(r"[`*_]", "", line[2:]).strip()

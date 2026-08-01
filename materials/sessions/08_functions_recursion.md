@@ -1,3 +1,20 @@
+---
+introduces:
+  - func_definition
+  - func_params
+  - func_call
+  - rv64_calling_convention
+  - call_stack_align_16
+  - recursion
+  - func_prototype
+  - mutual_recursion
+requires:
+  - func_prologue_epilogue
+  - alloc_local
+  - frame_align_16
+  - gen_stmt_dispatch
+---
+
 # コマ8: 関数呼び出し・再帰
 
 ## 今日のゴール

@@ -1,3 +1,12 @@
+---
+introduces:
+  - ast_node_structure
+  - ast_recursive_traversal
+  - eval_ast_interpreter
+requires:
+  - provided_lexer_parser
+---
+
 # コマ2: AST + インタープリター
 
 ## 今日のゴール

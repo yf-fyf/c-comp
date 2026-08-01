@@ -1,3 +1,23 @@
+---
+introduces:
+  - local_var_decl
+  - stack_frame_offsets
+  - alloc_local
+  - decl_collection
+  - frame_align_16
+  - lvalue_rvalue_distinction
+  - codegen_lval_var
+  - var_reference
+  - assign_op
+  - gen_stmt_dispatch
+  - expr_stmt
+requires:
+  - codegen_a0_contract
+  - func_prologue_epilogue
+  - int_type
+  - stack_temporaries
+---
+
 # コマ4: 変数・代入・シンボルテーブル
 
 ## 今日のゴール

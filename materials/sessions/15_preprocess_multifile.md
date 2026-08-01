@@ -1,3 +1,18 @@
+---
+introduces:
+  - preprocess_provided
+  - include_user_header
+  - define_object_macro
+  - multifile_compile
+  - prototype_vs_definition
+  - include_cycle_error
+requires:
+  - provided_lexer_parser
+  - func_prototype
+  - include_libh
+  - global_var
+---
+
 # コマ15: 複数ファイル・前処理の概念
 
 ## 今日のゴール

@@ -1,3 +1,23 @@
+---
+introduces:
+  - sizeof_struct
+  - malloc_struct
+  - void_ptr_conversion
+  - self_referential_struct
+  - struct_tag_scope
+  - null_macro
+  - linked_list_traversal
+requires:
+  - while_stmt
+  - pointer_type
+  - sizeof_typename
+  - malloc_call
+  - include_libh
+  - struct_definition
+  - size_of_ty_str_struct
+  - member_access_arrow
+---
+
 # コマ13: sizeof + malloc + 連結リスト
 
 ## 今日のゴール

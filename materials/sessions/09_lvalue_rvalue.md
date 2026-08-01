@@ -1,3 +1,22 @@
+---
+introduces:
+  - codegen_lval_split
+  - pointer_type
+  - addr_of
+  - deref
+  - assign_through_pointer
+  - pointer_param
+  - void_return_type
+requires:
+  - int_type
+  - lvalue_rvalue_distinction
+  - codegen_lval_var
+  - assign_op
+  - common_epilogue
+  - func_definition
+  - func_params
+---
+
 # コマ9: lvalue / rvalue + ポインタ
 
 ## 今日のゴール

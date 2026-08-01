@@ -1,3 +1,26 @@
+---
+introduces:
+  - string_literal
+  - data_section
+  - string_label
+  - codegen_str
+  - varargs_call
+  - printf_call
+  - include_libh
+  - opaque_struct_pointer
+  - stream_api
+  - exit_call
+  - stdout_test
+requires:
+  - rv64_asm_handwritten
+  - label_generation
+  - func_call
+  - rv64_calling_convention
+  - func_prototype
+  - pointer_type
+  - char_type
+---
+
 # コマ11: 文字列リテラル + printf
 
 ## 今日のゴール

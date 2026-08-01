@@ -1,3 +1,22 @@
+---
+introduces:
+  - comparison_ops
+  - equality_ops
+  - bool_result_int01
+  - label_generation
+  - if_else
+  - block_stmt
+  - nested_block_no_scope
+  - ternary_op
+  - common_epilogue
+requires:
+  - func_prologue_epilogue
+  - arith_ops
+  - return_stmt
+  - local_var_decl
+  - gen_stmt_dispatch
+---
+
 # コマ5: if/else + 比較演算
 
 ## 今日のゴール

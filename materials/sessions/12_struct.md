@@ -1,3 +1,23 @@
+---
+introduces:
+  - struct_definition
+  - struct_layout_padding
+  - struct_defs_table
+  - size_of_ty_str_struct
+  - member_access_dot
+  - member_access_arrow
+  - struct_pointer_param
+requires:
+  - int_type
+  - codegen_lval_split
+  - pointer_type
+  - deref
+  - pointer_param
+  - char_type
+  - type_sizes
+  - size_of_ty_str
+---
+
 # コマ12: 構造体（struct / . / ->）
 
 ## 今日のゴール
