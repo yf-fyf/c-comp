@@ -17,9 +17,13 @@ let keywords =
   [ "int"; "char"; "void"; "struct"; "if"; "else"; "while"; "for";
     "break"; "continue"; "return"; "sizeof" ]
 
-let pp_error msg filename line =
-  eprintf "%s:%d: 前処理エラー: %s\n" filename line msg;
-  exit 1
+(* 前処理エラーは位置つき例外として投げる。既存の入口（preprocess /
+   preprocess_with_map）はこれを捕まえて、従来どおりその場で印字して
+   終了する薄い包みのままにする。例外のまま受け取りたい呼び出し元
+   （reference/）は preprocess_exn / preprocess_with_map_exn を使う。 *)
+exception Pp_error of { filename : string; line : int; msg : string }
+
+let pp_error msg filename line = raise (Pp_error { filename; line; msg })
 
 type map_segment = {
   generated_start : int;
@@ -218,12 +222,24 @@ let rec preprocess_internal ?defines ?include_dirs ?(active = []) ~map_source so
     chunks;
   { value = Buffer.contents text_buf; origins }
 
-let preprocess_with_map ?defines ?include_dirs source filename =
+(* 例外のまま受け取る入口。reference/ 側はこちらを使い、Diag.Preprocess に
+   載せ替えて他フェーズと同じ経路でエラーを扱う。 *)
+let preprocess_with_map_exn ?defines ?include_dirs source filename =
   let active = if Sys.file_exists filename then [ abs_path filename ] else [] in
   let mapped =
     preprocess_internal ?defines ?include_dirs ~active ~map_source:true source filename
   in
   { text = mapped.value; segments = segments_of_origins mapped.origins }
+
+let preprocess_exn ?defines ?include_dirs source filename =
+  (preprocess_with_map_exn ?defines ?include_dirs source filename).text
+
+(* 現行の入口。従来と同じ文言・同じ終了コードで終わる薄い包み。 *)
+let preprocess_with_map ?defines ?include_dirs source filename =
+  try preprocess_with_map_exn ?defines ?include_dirs source filename
+  with Pp_error { filename; line; msg } ->
+    eprintf "%s:%d: 前処理エラー: %s\n" filename line msg;
+    exit 1
 
 let preprocess ?defines ?include_dirs source filename =
   (preprocess_with_map ?defines ?include_dirs source filename).text

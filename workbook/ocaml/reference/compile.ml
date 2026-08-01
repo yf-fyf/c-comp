@@ -18,8 +18,12 @@ let parse ~filename source =
   with Parser.Error ->
     Diag.error ~phase:Diag.Parse ~line:lexbuf.lex_curr_p.pos_lnum "この形は構文として解釈できない"
 
-(* units は (ファイル名, ソース) の並び。前処理は support のものをそのまま使う
-   （前処理エラーは support 側がその場で印字して終了する）。 *)
+(* units は (ファイル名, ソース) の並び。前処理は support のものをそのまま使う。
+   reference/ は例外のまま受け取る preprocess_exn を使い、Diag.Preprocess に
+   載せ替えて他フェーズ（Parse / Typing）と同じ経路でエラーを扱う。
+   sessions/koma*.ml と web/core は従来どおり Preprocess.preprocess /
+   preprocess_with_map（その場で印字して終了する）を使い続けるため、
+   ここでの変更は reference/ の内部だけに閉じている。 *)
 let compile_units ~comments units =
   try
     let parsed =
@@ -27,7 +31,11 @@ let compile_units ~comments units =
         (fun (filename, source) ->
           (* 見出しに元の C を出すため、前処理後ソースも一緒に持ち回る。
              位置はこのソースへのものなので、ファイルごとに対応付けておく必要がある *)
-          let preprocessed = Preprocess.preprocess source filename in
+          let preprocessed =
+            try Preprocess.preprocess_exn source filename with
+            | Preprocess.Pp_error { line; msg; _ } ->
+                Diag.error ~phase:Diag.Preprocess ~line "%s" msg
+          in
           (preprocessed, parse ~filename preprocessed))
         units
     in
