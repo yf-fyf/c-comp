@@ -121,7 +121,11 @@ int main() {
 
 `malloc(sizeof(struct Node))` は、`sizeof(struct Node)` の結果を引数として `malloc` を呼び出すだけである。
 `lib.h` の宣言は `void *malloc(int size);` である。`void *` は任意の `T *` へ暗黙変換されるので、
-そのまま `struct Node *n` に代入できる。
+そのまま `struct Node *n` に代入できる。逆向き（`T *` から `void *`）も同じく暗黙変換で、
+`void *v;` のような変数や `int f(void *p)` のような仮引数も書ける
+（`void` 単独の変数は書けない。`*` を伴う形だけである）。
+この言語にキャスト `(type)expr` は無いので、ポインタの型を変える手段はこの暗黙変換だけである。
+どちらもサイズ 8 のポインタなので、変換のために命令を出す必要はない。
 
 ## sizeof のコード生成
 
@@ -264,6 +268,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 4. `sizeof(struct Node)` が `malloc` の引数として使えることを確認する
 5. `malloc(sizeof(struct Node))` が通常の関数呼び出しとして動くことを確認する
 6. `list_sum.c` まで通す
+7. `void_ptr.c` を通す<br>（`void *` と任意の `T *` の相互変換。`void *` の変数・仮引数も書ける。ポインタ同士なのでサイズは常に 8 で、変換のための命令は要らない。）
 
 ## テスト
 
@@ -278,3 +283,4 @@ python3 scaffold/test_runner.py sessions/13_sizeof_malloc_list
 | `sizeof_test.c` | `sizeof(int) + sizeof(char)` | `5` |
 | `malloc_struct.c` | `malloc(sizeof(struct Box))` と `->` | `17` |
 | `list_sum.c` | `struct Node` の連結リスト走査 | `60` |
+| `void_ptr.c` | `void *` と `T *` のキャストなしの相互変換 | `47` |

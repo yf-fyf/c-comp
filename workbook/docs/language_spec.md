@@ -242,7 +242,9 @@ void exit(int code);
 
 ---
 
-## 到達範囲（標準トラックと発展）
+<a id="feature-map"></a>
+
+## 到達範囲: 機能 → 導入コマ → 検証テスト
 
 | 区分 | 範囲 |
 |------|------|
@@ -256,6 +258,145 @@ void exit(int code);
   短絡する `&&` / `||` は発展 S1 が本仕様の意味論を C のそれへ寄せる題材である。
 - セルフホスト(発展課題 P1)の自己記述ソースは本仕様の機能だけで書く。
   L2 を実装した場合にかぎり、自分のソースで複合代入を使ってもよい。
+
+そのうえで、本仕様の各機能を「どのコマで導入し、どのテストで検証するか」に
+1 対 1 で対応させたのが以下の表である。**この表がこの対応の唯一の出典**であり、
+`getting_started.md` の全体の流れと `code_example.md` の付録は、
+コマ単位の要約としてこの表を参照する。
+
+読み方:
+
+- **導入コマ**は、その機能を原稿が初めて説明する回である。
+- **代表テスト**のパスは `workbook/` からの相対パス。
+  `python3 scaffold/test_runner.py sessions/NN_xxx` で回の分をまとめて実行できる。
+- `final/tests/` の 17 本(`fixed17`)はコマ16 の総合判定であり、
+  個々の機能の代表テストとしては挙げない(型対応の前置 `++` だけは例外)。
+- **区分**が「発展」の行は本仕様の外側であり、標準トラックの実装対象ではない。
+
+### 字句とリテラル
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| 行コメント `//` | コマ1 | `sessions/03_arithmetic_codegen/tests/div_round.c` | 標準 | Lexer は提供済み |
+| 識別子・キーワード 12 語 | コマ1 | 全テスト | 標準 | Lexer は提供済み。例外 E2 |
+| 整数リテラル | コマ3 | `sessions/03_arithmetic_codegen/tests/add.c` | 標準 | 10 進のみ |
+| 文字リテラル `'a'` | コマ10 | `sessions/10_types_pointers/tests/char_var.c` | 標準 | `'\0'` は `sessions/11_strings_printf/tests/strlen_literal.c` |
+| 文字列リテラルとエスケープ | コマ11 | `sessions/11_strings_printf/tests/printf_hello.c` | 標準 | 静的領域に置く |
+
+### 型
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| `int` | コマ3 | `sessions/03_arithmetic_codegen/tests/add.c` | 標準 | |
+| `char`(昇格と縮小を含む) | コマ10 | `sessions/10_types_pointers/tests/char_var.c` | 標準 | `lb` / `sb` |
+| `T *`(単段) | コマ9 | `sessions/09_lvalue_rvalue/tests/deref_read.c` | 標準 | |
+| 多段ポインタ `int **` | コマ10 | `sessions/10_types_pointers/tests/ptr_to_ptr.c` | 標準 | `elem_ty_str` を重ねるだけ |
+| `void *` と `T *` の暗黙変換 | コマ13 | `sessions/13_sizeof_malloc_list/tests/void_ptr.c` | 標準 | キャストが無いのでこれが唯一の手段 |
+| 戻り値型 `void` | コマ9 | `sessions/09_lvalue_rvalue/tests/void_func.c` | 標準 | `return;` と末尾到達 |
+| `struct Tag` の定義・変数・フィールド | コマ12 | `sessions/12_struct/tests/dot_access.c` | 標準 | ファイルスコープのみ |
+| struct の自己参照・前方宣言 | コマ13 | `sessions/13_sizeof_malloc_list/tests/list_sum.c` | 標準 | 不完全型 `struct FILE` はコマ11 の `file_stream.c` |
+| struct 値の代入・実引数・戻り値 | — | — | 仕様外 | 本仕様が禁止。ポインタで受け渡す |
+
+### 演算子
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| 算術 `+ - * / %`・単項 `-`・括弧 | コマ3 | `sessions/03_arithmetic_codegen/tests/prec.c` | 標準 | |
+| `/` `%` の丸め(0 方向へ切り捨て) | コマ3 | `sessions/03_arithmetic_codegen/tests/div_round.c` | 標準 | 剰余の符号は被除数と同じ |
+| 関係 `< > <= >=` | コマ5 | `sessions/05_if_else/tests/compare.c` | 標準 | `>` `>=` は Parser が正規化 |
+| 等値 `== !=` | コマ5 | `sessions/05_if_else/tests/compare.c` | 標準 | ポインタと `0` の比較は `sessions/13_sizeof_malloc_list/tests/list_sum.c` |
+| 比較・論理演算の結果が int の `0` / `1` | コマ5 | `sessions/05_if_else/tests/rel_value.c` | 標準 | |
+| 論理 `&&` `\|\|`(短絡しない) | コマ14 | `sessions/14_globals_scope/tests/logical_ops.c` | 標準 | 例外 E3 |
+| 単項 `!` | コマ14 | `sessions/14_globals_scope/tests/logical_ops.c` | 標準 | |
+| 条件 `? :` | コマ5 | `sessions/05_if_else/tests/ternary.c` | 標準 | 選ばれた腕だけを評価する |
+| 代入 `=` | コマ4 | `sessions/04_variables/tests/chain_assign.c` | 標準 | 右結合。左辺は lvalue |
+| 前置 `++` `--`(int) | コマ6 | `sessions/06_loops/tests/incr_loop.c` | 標準 | |
+| 前置 `++`(ポインタ、型対応) | コマ10 | `final/tests/f17_incr.c` | 標準 | 指し先型のサイズだけ進む |
+| `&`(アドレス取得)・`*`(間接参照) | コマ9 | `sessions/09_lvalue_rvalue/tests/deref_write.c` | 標準 | |
+| ポインタ ± int(尺度は指し先型) | コマ10 | `sessions/10_types_pointers/tests/ptr_arith.c` | 標準 | |
+| 添字 `p[i]` | コマ10 | `sessions/10_types_pointers/tests/ptr_sum.c` | 標準 | `*(p + i)` の略記 |
+| `.` と `->` | コマ12 | `sessions/12_struct/tests/arrow_access.c` | 標準 | |
+| 関数呼出し `f(args)` | コマ8 | `sessions/08_functions_recursion/tests/call_add.c` | 標準 | 識別子直呼びのみ |
+| `sizeof(型名)` | コマ10 | `sessions/10_types_pointers/tests/ptr_sum.c` | 標準 | struct への適用はコマ13 の `sizeof_test.c`。例外 E1 |
+| 複合代入 `+= -= *= /= %=` | 発展 L2 | `advanced/L2_compound_assign/tests/` | 発展 | 本仕様の外 |
+| 短絡する `&&` `\|\|` | 発展 S1 | `advanced/S1_shortcircuit/tests/` | 発展 | 本仕様の外 |
+
+### 宣言とスコープ
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| ローカル変数宣言(初期化子なし) | コマ4 | `sessions/04_variables/tests/single.c` | 標準 | 関数本体の先頭のみ |
+| 入れ子ブロックが新しいスコープを作らない | コマ7 | `sessions/07_functions_abi/tests/nested_block.c` | 標準 | 2 層スコープ |
+| グローバル変数(0 初期化) | コマ14 | `sessions/14_globals_scope/tests/global_init.c` | 標準 | |
+| ローカルによるグローバルの隠蔽 | コマ14 | `sessions/14_globals_scope/tests/global_local_shadow.c` | 標準 | 隠蔽はこの 1 種類だけ |
+| 再宣言・再定義規則、仮引数との名前衝突 | コマ14 | — | 標準 | コンパイルエラーの診断。下の「テストを持たない項目」を参照 |
+
+### 文と制御構造
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| `if` / `else` / `else if` | コマ5 | `sessions/05_if_else/tests/if_elseif.c` | 標準 | `else` は最も内側の `if` に結合 |
+| ブロック `{ }` | コマ5 | `sessions/05_if_else/tests/nested.c` | 標準 | |
+| `while` | コマ6 | `sessions/06_loops/tests/while_sum.c` | 標準 | |
+| `for` | コマ6 | `sessions/06_loops/tests/for_count.c` | 標準 | 宣言は書けない |
+| `break` | コマ6 | `sessions/06_loops/tests/break_loop.c` | 標準 | |
+| `continue` | コマ6 | `sessions/06_loops/tests/continue_odd.c` | 標準 | step へ合流 |
+| `return expr;` | コマ3 | `sessions/03_arithmetic_codegen/tests/add.c` | 標準 | 共通エピローグはコマ5 |
+| `return;`(void 関数) | コマ9 | `sessions/09_lvalue_rvalue/tests/void_func.c` | 標準 | |
+| 空文 `;`・`for` の 3 式の省略 | コマ6 | — | 標準 | 文法上は書けるが単独のテストは無い |
+
+### 関数
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| 関数定義・仮引数・戻り値 | コマ8 | `sessions/08_functions_recursion/tests/call_add.c` | 標準 | 引数なしは `()` |
+| プロトタイプ宣言・相互再帰 | コマ8 | `sessions/08_functions_recursion/tests/mutual_rec.c` | 標準 | |
+| 再帰 | コマ8 | `sessions/08_functions_recursion/tests/fib_rec.c` | 標準 | |
+| 可変長引数の外部プロトタイプと呼出し | コマ11 | `sessions/11_strings_printf/tests/printf_number.c` | 標準 | 定義は書けない |
+| `int main()` | コマ3 | 全テスト | 標準 | |
+| `int main(int argc, char **argv)` | コマ10 | `sessions/10_types_pointers/tests/main_argv.c` | 標準 | |
+
+### プリプロセッサ
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| `#include "..."` | コマ11(`lib.h`)・コマ15(自作ヘッダ・入れ子) | `sessions/15_preprocess_multifile/tests/multifile_math.c` | 標準 | 前処理はスキャフォールド提供 |
+| `#define`(1 段置換) | コマ15 | `sessions/15_preprocess_multifile/tests/define_min.c` | 標準 | |
+| 複数ソースファイルの同時コンパイル | コマ15 | `sessions/15_preprocess_multifile/tests/multifile_global.c` | 標準 | |
+| 循環取込み・マクロ多段参照のエラー | コマ15 | — | 標準 | 診断。下の「テストを持たない項目」を参照 |
+
+### 標準ライブラリ（`lib.h`）
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| `printf` | コマ11 | `sessions/11_strings_printf/tests/printf_number.c` | 標準 | |
+| `fprintf` / `fdopen` / `fopen` / `fread` / `fclose` | コマ11 | `sessions/11_strings_printf/tests/file_stream.c` | 標準 | `struct FILE *` は不透明ポインタ |
+| `malloc` | コマ10 | `sessions/10_types_pointers/tests/ptr_sum.c` | 標準 | |
+| `exit` | コマ11 | `sessions/11_strings_printf/tests/lib_exit.c` | 標準 | |
+| `NULL` | コマ13 | `sessions/13_sizeof_malloc_list/tests/list_sum.c` | 標準 | `#define NULL 0` |
+| `strcmp` / `strlen` 相当 | — | `sessions/11_strings_printf/tests/strlen_literal.c` | 標準 | 提供しない。必要なら自作する |
+
+### 実行時の意味
+
+| 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
+|------|---------|-----------|------|------|
+| 型のサイズと整列・struct レイアウト | コマ12 | `sessions/13_sizeof_malloc_list/tests/malloc_struct.c` | 標準 | サイズは `sizeof_test.c` |
+| グローバルの 0 初期化 | コマ14 | `sessions/14_globals_scope/tests/global_init.c` | 標準 | |
+| 文字列リテラルの静的配置 | コマ11 | `sessions/11_strings_printf/tests/printf_hello.c` | 標準 | 内容の変更は未定義 |
+| 評価順序(`&&` `\|\|` が両辺を評価する) | コマ14 | `sessions/14_globals_scope/tests/logical_ops.c` | 標準 | 例外 E3 |
+| 未定義動作 8 種 | — | — | 対象外 | 「動作を定めない」ことを定めた項目なので、動作を確かめるテストは置かない |
+
+### テストを持たない項目
+
+上の表で代表テストが `—` の行は、次のいずれかの理由による。
+標準トラックの実装対象からは外れない。
+
+| 項目 | 理由 |
+|------|------|
+| 再宣言・再定義規則、仮引数との名前衝突、循環取込み、マクロ多段参照 | いずれも**コンパイルエラーの診断**である。テストランナーの判定手段は「終了コード」と「標準出力」の 2 つで、コンパイルが失敗すること自体を期待値にする仕組みを持たない |
+| 空文 `;`・`for` の 3 式の省略 | 文法上は書けるが、他の機能と独立に観測できる振舞いがないため単独のテストを置いていない |
+| 未定義動作 8 種 | 動作を定めない項目であり、どの結果になっても仕様違反にならない |
+| struct 値の代入・実引数・戻り値 | 仕様が受理しない書き方であり、機能として存在しない |
 
 ---
 

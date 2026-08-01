@@ -21,6 +21,7 @@ printf("x=%d\n", 42);
 |------|----|
 | 文字列リテラル | `"hello"` |
 | 外部関数呼び出し | `printf("hi\n")` |
+| ストリーム操作 | `fdopen` / `fprintf` / `fopen` / `fread` / `fclose` |
 | 標準出力テスト | `tests/foo.stdout` |
 
 この回では、`printf` 自体は実装しない。
@@ -193,6 +194,47 @@ int printf(char *fmt, ...);
 この講義の Parser は外部関数宣言に限って `...` を読み飛ばす。
 呼び出し側では、通常の関数呼び出しと同じように引数を左から評価すればよい。
 
+## `lib.h` の残りの関数: ストリーム
+
+`lib.h` には `printf` のほかにストリーム操作の宣言もある。
+言語仕様の「標準ライブラリ」節に載っている関数はこれで全部で、
+どれも libc にそのままリンクされる。
+
+```c
+struct FILE;                                    // 不透明型。中身は見ない
+int fprintf(struct FILE *f, char *fmt, ...);
+struct FILE *fdopen(int fd, char *mode);
+struct FILE *fopen(char *path, char *mode);
+int fread(void *buf, int size, int n, struct FILE *f);
+int fclose(struct FILE *f);
+```
+
+`struct FILE` は**前方宣言だけがあって定義がない**型である。
+フィールドを持たないので `.` や `->` は書けず、使い方は `struct FILE *` という
+ポインタを受け渡すことに限られる。ポインタのサイズは指し先の中身によらず 8 バイトなので、
+構造体そのものを扱えるようになる**コマ12 を待たずにこの回で使える**。
+コード生成としては、コマ8 の関数呼び出しとコマ10 の `ty_str` 管理がそのまま働く。
+
+用途は主に 2 つある。
+
+| やりたいこと | 書き方 |
+|--------------|--------|
+| 標準エラーへ出す | `fdopen(2, "w")` でストリームを作り、そこへ `fprintf` する |
+| ファイルを読む | `fopen` → `fread` → `fclose`。`fopen` は失敗すると `NULL` を返す |
+
+残る `exit(code)` は、指定した終了コードでその場でプログラムを終わらせる。
+戻ってこないので、`exit` の後に書いた文は実行されない。
+これで `lib.h` の宣言は全部使ったことになる（`malloc` はコマ10 で使っている）。
+
+自作コンパイラのエラーメッセージを標準エラーへ出す形は、
+発展課題 P1（セルフホスト）で実際に使うことになる。
+
+```c
+struct FILE *err;
+err = fdopen(2, "w");
+fprintf(err, "error: unexpected token\n");
+```
+
 ## 標準出力テスト
 
 これまでのテストは、主に終了コードを `.ans` で確認してきた。
@@ -236,6 +278,7 @@ Hello, World!
 6. `self._type_of_expr(node)` で `ND_STR` を `char *` にする
 7. `ND_STR` のハンドラメソッドで `la a0, label` を出す
 8. `printf_hello.c` と `printf_number.c` の stdout テストを通す
+9. `file_stream.c` と `lib_exit.c` を通す<br>（`lib.h` のストリーム関数一式と `exit`。`struct FILE *` は 8 バイトのポインタなので、7 までができていれば新しく書く処理はない。）
 
 ## テスト
 
@@ -250,3 +293,5 @@ python3 scaffold/test_runner.py sessions/11_strings_printf
 | `printf_hello.c` | 文字列だけを出力する | `Hello, World!` |
 | `printf_number.c` | `%d` に整数を渡す | `x=42` |
 | `strlen_literal.c` | 文字列を `strlen` に渡す | 終了コード `3` |
+| `file_stream.c` | `fdopen`/`fprintf`/`fopen`/`fread`/`fclose` | `stream ok` / 終了コード `42` |
+| `lib_exit.c` | `exit` で終了コードを指定して打ち切る | `before exit` / 終了コード `7` |

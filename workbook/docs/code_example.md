@@ -594,6 +594,10 @@ int main() {
 
 > 標準判定用テストは `final/tests/` に配置されている。`python3 scaffold/test_runner.py` で一括実行できる。
 
+`fixed17` は総合判定であって、仕様の全機能を 1 対 1 で覆う集合ではない。
+機能ごとの代表テストは各コマの `sessions/NN_xxx/tests/` にあり、
+その対応は [`language_spec.md` の対応表](./language_spec.md#feature-map)にまとめてある。
+
 固定テストセットの代表例（malloc + ポインタ + 関数の複合）:
 
 ```c
@@ -625,24 +629,13 @@ int main() {
 
 ---
 
-## 付録: コマ別機能追加サマリー
+## 付録: 機能とコマの対応
 
-| コマ | 追加機能 | 代表的な新出構文 |
-|------|---------|----------------|
-| 3 | 算術式 | `1 + 2 * 3` |
-| 4 | ローカル変数 | `int a; a = 3;` |
-| 5 | 条件分岐・三項演算子 | `if (a > b) { ... } else { ... }` / `a > b ? a : b` |
-| 6 | ループ・前置 `++` | `while (i < 10) { ... }` / `for (i = 0; i < n; ++i)` |
-| 7 | スタックフレーム整備 | 多変数プログラムの安定動作 |
-| 8 | 関数定義・再帰 | `int fib(int n) { return fib(n-1) + ...; }` |
-| 9 | lvalue/rvalue 設計 | `int *p; p = &x; return *p;` |
-| 10 | ポインタ操作 + 型サイズ管理 | `*p = *p + 5;` / `p[i]` / `malloc(sizeof(int) * 5)` |
-| 11 | 文字列リテラル・printf | `printf("hello\n")` / `#include "lib.h"` |
-| 12 | 構造体 | `struct Point { ... }; struct Point p;` |
-| 13 | sizeof + malloc + 連結リスト | `n = malloc(sizeof(struct Node));` |
-| 14 | グローバル変数 | `int count;`（関数外） |
-| 15 | 複数ファイル・前処理 | `#include "f.h"` / `#define N 10` |
-| 16 | 統合確認 | 標準トラック完成（`fixed17` 全通が目安） |
+どの機能をどのコマで導入し、どのテストで検証するかは
+[`language_spec.md` の対応表](./language_spec.md#feature-map)にまとめてある。
+仕様の全機能を行に持つ表なので、この文書のコマ別の節と併せて使う
+（この文書は「各コマの終わりに何が動くか」を実例で示し、対応表は
+「仕様のどの項目がどこで埋まるか」を網羅する）。
 
 コマ16 のあとは選択制の発展課題（`../advanced/README.md`）に進む。
 C 移植・セルフホスト（P1）の進め方は [`../advanced/P1_selfhost/README.md`](../advanced/P1_selfhost/README.md) にある。

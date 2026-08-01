@@ -282,7 +282,7 @@ int main() {
 5. `self.lookup_var_ty()` を `self._locals` → `self._globals` の順にする
 6. `self.codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
 7. `codegen_Not()` / `codegen_And()` / `codegen_Or()` を実装する（`&&` `||` は短絡しない）
-8. `global_counter.c`、`global_init.c`、`global_local_shadow.c`、`global_struct.c` を通す
+8. `global_counter.c`、`global_init.c`、`global_local_shadow.c`、`global_struct.c`、`logical_ops.c` を通す
 
 ## 編集するファイル
 
@@ -307,3 +307,4 @@ python3 scaffold/test_runner.py sessions/14_globals_scope
 | `global_init.c` | 0 初期化保証（代入せず読み始められる） | `12` |
 | `global_local_shadow.c` | ローカル変数がグローバル変数を隠す | `5` |
 | `global_struct.c` | グローバル構造体変数と `.` / `&` | `30` |
+| `logical_ops.c` | `!` `&&` `\|\|` の結果が 0/1 であること・短絡しないこと | `40` |

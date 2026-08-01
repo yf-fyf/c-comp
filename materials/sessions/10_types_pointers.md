@@ -284,6 +284,27 @@ def _store_ty(self, ty):
 
 コマ9では常に `ld` / `sd` でよかったが、この回からは型サイズを見て命令を選ぶ。
 
+### `char` の昇格と縮小
+
+`char` 変数は、この `_load_ty` / `_store_ty` を型サイズ 1 で通せばそのまま動く。
+言語仕様上の約束は次の 2 つで、どちらも命令の選択だけで自然に満たされる。
+
+| 場面 | 仕様 | 生成 |
+|------|------|------|
+| `char` を読む | int へ昇格する（値を保存する） | `lb`（符号拡張して 64 ビットに載る） |
+| `char` へ代入する | int から下位 8 ビットへ縮小する | `sb`（下位 1 バイトだけを書く） |
+
+算術そのものは常に int で行うので、`d = c + 2` のような式に特別な処理は要らない。
+`c + 2` を int として計算し、代入のところで `sb` を出せばよい。
+
+### 多段ポインタ
+
+`int **pp;` のような多段ポインタも、`ty_str` の末尾の `*` を 1 つ剥がす
+`elem_ty_str()` がそのまま働くので、専用の処理は要らない。
+`elem_ty_str("int**")` は `"int*"` で、そのサイズは 8 である。
+`*pp` は 8 バイトを読み、`**pp` はさらにその先の 4 バイトを読む、という具合に
+段数ぶん `_load_ty` が重なるだけである。
+
 ## 編集するファイル
 
 - `mycc.py`
@@ -328,6 +349,7 @@ def _store_ty(self, ty):
 6. `codegen(node)` の `'SizeofType'` handler を実装する（翻訳時定数）
 7. `codegen(node)` の `'Add'` / `'Sub'` handler でポインタ演算を実装する
 8. `codegen_PreInc` / `codegen_PreDec` を型対応にする
+9. `char_var.c`（`char` 変数）・`ptr_to_ptr.c`（多段ポインタ）・`main_argv.c`（`main(int argc, char **argv)`）を通す<br>（2〜3 が正しくできていれば新しく書く処理はない。取りこぼしの検出用である。）
 
 ## テスト
 
@@ -341,3 +363,6 @@ python3 scaffold/test_runner.py sessions/10_types_pointers
 |--------|------|--------|
 | `ptr_sum.c` | malloc 領域を `a[i]` で合計 | `15` |
 | `ptr_arith.c` | `*(p + 2)` と `*(p + 3)` | `70` |
+| `char_var.c` | `char` 変数の読み書き（`lb`/`sb`）・int への昇格・代入時の縮小 | `67` |
+| `ptr_to_ptr.c` | 多段ポインタ `int **`（`&`/`*` の重ね掛けと 8 バイト尺度） | `20` |
+| `main_argv.c` | `int main(int argc, char **argv)` 形のエントリポイント | `41` |
