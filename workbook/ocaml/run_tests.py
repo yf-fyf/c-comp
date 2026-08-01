@@ -277,6 +277,11 @@ REJECT_SOURCES = [
     ("2 文字の文字リテラル", "int main() { return 'ab'; }"),
     ("未定義の変数", "int main() { undefined_name = 1; return 0; }"),
     ("ループの外の break", "int main() { break; return 0; }"),
+    ("可変長引数を持つ関数定義", "int f(int a, ...) { return 0; }\nint main() { return 0; }"),
+    ("struct 値の戻り値", "struct S { int a; };\nstruct S f() { struct S s; return s; }\nint main() { return 0; }"),
+    ("void 単独のフィールド", "struct S { void v; };\nint main() { return 0; }"),
+    ("6 種以外のエスケープ", "int main() { char c = '\\a'; return 0; }"),
+    ("INT_MAX を超える整数リテラル", "int main() { return 2147483648; }"),
 ]
 
 
