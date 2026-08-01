@@ -114,3 +114,10 @@ make sim-test   # RV64 シミュレータを qemu と突き合わせる
 補助ウェブアプリの AST 表示は `workbook/scaffold/parse_viewer.py` の出力が正である。
 `scaffold/`（lexer・parser・parse_viewer）や `workbook/ocaml/support/` を変更したら
 `make web-test`（パーサの一致）と `make ocaml-test`（コード生成の回帰）の両方で確認する。
+
+文法の定義は `workbook/scaffold/parser.py`・`workbook/ocaml/support/parser.mly`・
+`workbook/ocaml/reference/parser.mly` の3系統に分かれている（`reference/` は
+`support/` を借りず自前の字句解析・構文解析を持つ）。`workbook/docs/language_spec.md`
+で言語仕様を変えるときは、この3系統すべてに反映する。確認は `workbook/ocaml/run_tests.py`
+の**等価性テスト(受理側)と拒否側テストの両方**で行う（`--no-equivalence` で等価性テストのみ
+飛ばせるが、拒否側は文法が2系統あることの担保なので省略しない）。
