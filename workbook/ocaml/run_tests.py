@@ -2,7 +2,7 @@
 """
 OCaml 参考実装の回帰テストランナー
 
-各回の `komaNN.exe` を、対応する `sessions/NN_xxx/tests/` に掛ける。
+各回の `lectureNN.exe` を、対応する `sessions/NN_xxx/tests/` に掛ける。
 テストケースの規約は `scaffold/test_runner.py` と同じ（`.ans` / `.stdout` / `.files`）。
 
 判定の流れも Python 版と揃えているが、qemu 実行に**タイムアウトを設けている**点だけ
@@ -12,7 +12,7 @@ OCaml 参考実装の回帰テストランナー
 `評価結果: N` の印字を `.ans` と直接比較する。
 
 最後に等価性テストを回す。`reference/mycc_ref.exe --no-comments` の出力が
-`koma16.exe` の出力とバイト単位で一致することを、全テストソースで確かめる。
+`lecture16.exe` の出力とバイト単位で一致することを、全テストソースで確かめる。
 
 使い方:
     cd workbook/ocaml
@@ -179,7 +179,7 @@ def normalize_asm(text: str) -> list[str]:
     """.data / .bss の並び順の違いだけを吸収する（.text はそのまま）。
 
     文字列リテラルとグローバル変数をどの順に出すかは実装の自由で、
-    koma16 は Hashtbl の走査順、mycc_ref は定義順に出す。順序以外の違い
+    lecture16 は Hashtbl の走査順、mycc_ref は定義順に出す。順序以外の違い
     （ラベル番号・中身・個数）は下の並べ替えでは消えないので、比較は保たれる。
     """
     lines = text.splitlines()
@@ -199,13 +199,13 @@ def normalize_asm(text: str) -> list[str]:
     return out
 
 
-def run_equivalence_case(k16: Path, ref: Path, src: Path, timeout_s: int) -> str:
-    """`koma16.exe` と `mycc_ref.exe --no-comments` の出力が一致することを確かめる。
+def run_equivalence_case(lec16: Path, ref: Path, src: Path, timeout_s: int) -> str:
+    """`lecture16.exe` と `mycc_ref.exe --no-comments` の出力が一致することを確かめる。
 
     mycc_ref は別実装（型付けパスを挟む作りに書き直してある）なので、
-    生成されるコードは koma16 と同じでなければならない。`.text` は 1 行の違いも
+    生成されるコードは lecture16 と同じでなければならない。`.text` は 1 行の違いも
     許さず、`.data` / `.bss` だけはラベル単位に並べ替えてから比べる（並び順は
-    実装の自由で、koma16 は Hashtbl の走査順、mycc_ref は定義順に出す）。
+    実装の自由で、lecture16 は Hashtbl の走査順、mycc_ref は定義順に出す）。
     リファレンス側を書き換えたときに生成コードが変わっていないことを、この比較で担保する。
     """
     extras = extra_sources(src)
@@ -213,14 +213,14 @@ def run_equivalence_case(k16: Path, ref: Path, src: Path, timeout_s: int) -> str
         return extras
     argv = [str(src), *(str(p) for p in extras)]
     try:
-        a = subprocess.run([str(k16), *argv], capture_output=True, text=True, timeout=timeout_s)
+        a = subprocess.run([str(lec16), *argv], capture_output=True, text=True, timeout=timeout_s)
         b = subprocess.run(
             [str(ref), "--no-comments", *argv], capture_output=True, text=True, timeout=timeout_s
         )
     except subprocess.TimeoutExpired:
         return f"FAIL: コンパイルが {timeout_s}s で終わらない"
     if a.returncode != b.returncode:
-        return f"FAIL: 終了コードが違う koma16={a.returncode} mycc_ref={b.returncode}"
+        return f"FAIL: 終了コードが違う lecture16={a.returncode} mycc_ref={b.returncode}"
     if a.returncode != 0:
         # 両方が同じように失敗するケース（このコーパスには無い想定）は比較対象外
         return "SKIP"
@@ -229,23 +229,23 @@ def run_equivalence_case(k16: Path, ref: Path, src: Path, timeout_s: int) -> str
     if expected != got:
         for i, (x, y) in enumerate(zip(expected, got)):
             if x != y:
-                return f"FAIL: {i + 1} 行目が違う\n    koma16:   {x!r}\n    mycc_ref: {y!r}"
-        return f"FAIL: 行数が違う koma16={len(expected)} mycc_ref={len(got)}"
+                return f"FAIL: {i + 1} 行目が違う\n    lecture16:   {x!r}\n    mycc_ref: {y!r}"
+        return f"FAIL: 行数が違う lecture16={len(expected)} mycc_ref={len(got)}"
     return "PASS"
 
 
 def run_equivalence(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, int, int]:
-    k16 = build_dir / "sessions" / "koma16.exe"
+    lec16 = build_dir / "sessions" / "lecture16.exe"
     ref = build_dir / "reference" / "mycc_ref.exe"
-    print("\n--- 等価性 (koma16.exe == mycc_ref.exe --no-comments) ---")
-    for exe in (k16, ref):
+    print("\n--- 等価性 (lecture16.exe == mycc_ref.exe --no-comments) ---")
+    for exe in (lec16, ref):
         if not exe.is_file():
             print(f"  実行ファイルがない: {exe}", file=sys.stderr)
             return (0, 1, 0)
 
     npass = nfail = nskip = 0
     for src in all_test_sources():
-        result = run_equivalence_case(k16, ref, src, timeout_s)
+        result = run_equivalence_case(lec16, ref, src, timeout_s)
         rel = src.relative_to(WORKBOOK)
         if result == "PASS":
             npass += 1
@@ -261,7 +261,7 @@ def run_equivalence(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, 
     return (npass, nfail, nskip)
 
 
-# 受理してはいけない入力。koma16（support のフロントエンド）と mycc_ref
+# 受理してはいけない入力。lecture16（support のフロントエンド）と mycc_ref
 # （reference の専用フロントエンド）は文法定義を別々に持つので、正しいプログラムの
 # 出力が一致するだけでは「同じ言語を受理する」ことの片側しか確かめられない。
 # ここは拒否側を突き合わせる（どちらも 0 以外で終わることだけを見る。
@@ -285,12 +285,12 @@ REJECT_SOURCES = [
 ]
 
 
-def run_reject_case(k16: Path, ref: Path, source: str, timeout_s: int) -> str:
+def run_reject_case(lec16: Path, ref: Path, source: str, timeout_s: int) -> str:
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp) / "reject.c"
         src.write_text(source, encoding="utf-8")
         codes = []
-        for exe, argv in ((k16, []), (ref, ["--no-comments"])):
+        for exe, argv in ((lec16, []), (ref, ["--no-comments"])):
             try:
                 proc = subprocess.run(
                     [str(exe), *argv, str(src)], capture_output=True, text=True, timeout=timeout_s
@@ -301,24 +301,24 @@ def run_reject_case(k16: Path, ref: Path, source: str, timeout_s: int) -> str:
     if codes[0] == 0 and codes[1] == 0:
         return "FAIL: どちらも受理してしまった"
     if codes[0] == 0:
-        return "FAIL: koma16 だけが受理した"
+        return "FAIL: lecture16 だけが受理した"
     if codes[1] == 0:
         return "FAIL: mycc_ref だけが受理した"
     return "PASS"
 
 
 def run_reject(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, int, int]:
-    k16 = build_dir / "sessions" / "koma16.exe"
+    lec16 = build_dir / "sessions" / "lecture16.exe"
     ref = build_dir / "reference" / "mycc_ref.exe"
-    print("\n--- 拒否側 (koma16.exe と mycc_ref.exe が揃って拒否する) ---")
-    for exe in (k16, ref):
+    print("\n--- 拒否側 (lecture16.exe と mycc_ref.exe が揃って拒否する) ---")
+    for exe in (lec16, ref):
         if not exe.is_file():
             print(f"  実行ファイルがない: {exe}", file=sys.stderr)
             return (0, 1, 0)
 
     npass = nfail = 0
     for name, source in REJECT_SOURCES:
-        result = run_reject_case(k16, ref, source, timeout_s)
+        result = run_reject_case(lec16, ref, source, timeout_s)
         if result == "PASS":
             npass += 1
             if not quiet:
@@ -333,17 +333,17 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="OCaml 参考実装の回帰テスト")
     ap.add_argument("sessions", nargs="*", type=int, help="コマ番号（省略時は全回）")
     ap.add_argument("--build-dir", default=str(OCAML_DIR / "_build" / "default"),
-                    help="komaNN.exe があるディレクトリ")
+                    help="lectureNN.exe があるディレクトリ")
     ap.add_argument("--timeout", type=int, default=15, help="1件あたりの制限秒数")
     ap.add_argument("-q", "--quiet", action="store_true", help="PASS を表示しない")
     ap.add_argument("--no-equivalence", action="store_true",
-                    help="koma16 と mycc_ref の出力一致テストを飛ばす")
+                    help="lecture16 と mycc_ref の出力一致テストを飛ばす")
     args = ap.parse_args()
 
     build_dir = Path(args.build_dir).resolve()
-    available = sorted(int(p.stem[4:]) for p in (OCAML_DIR / "sessions").glob("koma[0-9][0-9].ml"))
+    available = sorted(int(p.stem[7:]) for p in (OCAML_DIR / "sessions").glob("lecture[0-9][0-9].ml"))
     if not available:
-        print("komaNN.ml が見つからない", file=sys.stderr)
+        print("lectureNN.ml が見つからない", file=sys.stderr)
         return 2
     wanted = args.sessions or available
     unknown = [n for n in wanted if n not in available]
@@ -361,7 +361,7 @@ def main() -> int:
     rows: list[tuple[str, int, int, int]] = []
     total = [0, 0, 0]
     for num in wanted:
-        exe = build_dir / "sessions" / f"koma{num:02d}.exe"
+        exe = build_dir / "sessions" / f"lecture{num:02d}.exe"
         tests = tests_dir_for(num)
         label = tests.relative_to(WORKBOOK) if tests else "対象テストなし"
         print(f"\n--- コマ{num:02d} ({label}) ---")

@@ -19,7 +19,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const APP = join(HERE, "..");
 const DEV = join(APP, "../..");
 const WORKBOOK = join(DEV, "workbook");
-const KOMA16 = join(WORKBOOK, "ocaml/_build/default/sessions/koma16.exe");
+const KOMA16 = join(WORKBOOK, "ocaml/_build/default/sessions/lecture16.exe");
 const GCC = process.env.GCC ?? "riscv64-linux-gnu-gcc";
 const QEMU = process.env.QEMU ?? "qemu-riscv64";
 

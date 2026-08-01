@@ -3,9 +3,9 @@
 このディレクトリには、コマ2〜16 の各回の完成形に相当する OCaml 版実装をまとめて置いている。
 Python 実装に詰まったときに、別言語での書き方と比較するための言語横断ヒントである。
 
-- `sessions/komaNN.ml`: コマ NN の正解に相当する OCaml 実装
+- `sessions/lectureNN.ml`: コマ NN の正解に相当する OCaml 実装
 - `reference/`: 必修パート（コマ2〜16）の完成版リファレンス実装。
-  **生成されるアセンブリは koma16 と同一である**（テストで担保している）が、
+  **生成されるアセンブリは lecture16 と同一である**（テストで担保している）が、
   実装は OCaml らしい設計で書き直した別実装であり、どの命令をどの生成関数が
   出したかを示すアセンブリコメントを付けられる
 - `support/`: `sessions/` 全回で共通のフロントエンド（Lexer / Parser / AST 定義 / 前処理）。
@@ -28,7 +28,7 @@ Python 実装に詰まったときに、別言語での書き方と比較する�
 | `codegen.ml` | 型付き木をなぞって命令を出す。型も変数も決まった後なので、場合分けは「どの順に命令を出すか」だけ |
 | `compile.ml` / `mycc_ref.ml` | 駆動（前処理 → 構文解析 → 型付け → コード生成）と、コマンドラインの解釈 |
 
-Python 版 `mycc.py` と `sessions/koma16.ml` は、コード生成をしながらその場で型を計算する。
+Python 版 `mycc.py` と `sessions/lecture16.ml` は、コード生成をしながらその場で型を計算する。
 こちらは **型付けを独立したパスに分けてある**のが最大の違いで、`codegen.ml` には
 型の計算も変数表もない（`typing.ml` が済ませている）。生成関数の名前
 （`codegen` / `codegen_lval` / `gen_stmt` / `gen_func`）と命令を出す順番は
@@ -54,7 +54,7 @@ dune build
 
 ## 実行例
 
-各回の実行ファイルは `sessions/komaNN.exe` という名前でビルドされる。
+各回の実行ファイルは `sessions/lectureNN.exe` という名前でビルドされる。
 入力には各回の `../sessions/NN_xxx/tests/`（workbook/sessions/、こちらは Python 版の教材ディレクトリ）
 の C ファイルをそのまま使える。
 
@@ -62,19 +62,19 @@ dune build
 cd workbook/ocaml
 
 # コマ2: インタープリター
-dune exec sessions/koma02.exe -- ../sessions/02_interpreter/tests/add_mul.c
+dune exec sessions/lecture02.exe -- ../sessions/02_interpreter/tests/add_mul.c
 
 # コマ4: 変数・代入
-dune exec sessions/koma04.exe -- ../sessions/04_variables/tests/target.c
+dune exec sessions/lecture04.exe -- ../sessions/04_variables/tests/target.c
 
 # コマ16: 統合版（final/tests も入力にできる）
-dune exec sessions/koma16.exe -- ../final/tests/f01_arith.c
+dune exec sessions/lecture16.exe -- ../final/tests/f01_arith.c
 ```
 
 ## 出力アセンブリのコメント（mycc_ref）
 
 `mycc_ref.exe` は、どの命令をどの生成関数が出したのかを示すコメントを付けて出力する。
-コメントを外した出力（`--no-comments`）は `koma16.exe` の出力とバイト単位で同じである。
+コメントを外した出力（`--no-comments`）は `lecture16.exe` の出力とバイト単位で同じである。
 
 ```asm
 # ── i = 1;  [gen_stmt: Expr]
@@ -95,7 +95,7 @@ dune exec sessions/koma16.exe -- ../final/tests/f01_arith.c
   `mycc.py` と同じなので、そのまま読み替えられる。一方**ノードの名前は型付き木のもの**で、
   Python 版の `ND_*` とは一対一ではない（`Num` は `Const`、変数の読み出しは
   `Rval Var "i"`、ポインタ加算は `PtrAdd` のように、型付けで決まった形が出る）
-- **コメントを出すのは OCaml 版の `mycc_ref` だけ**であり、`koma16.exe` 自体は
+- **コメントを出すのは OCaml 版の `mycc_ref` だけ**であり、`lecture16.exe` 自体は
   コメントなしで出力する
 
 素のアセンブリが欲しいときは `--no-comments` を付ける。発展課題で生成結果を
@@ -118,12 +118,12 @@ python3 run_tests.py 13        # コマ13 だけ
 python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 ```
 
-各回のテストに加えて、**等価性テスト**（`koma16.exe` の出力 ==
+各回のテストに加えて、**等価性テスト**（`lecture16.exe` の出力 ==
 `mycc_ref.exe --no-comments` の出力）を全テストソースに掛ける。
 `reference/` を書き換えても生成コードが変わっていないことは、これで担保している
 （切りたいときは `--no-equivalence`）。`.text` は 1 行の違いも許さないが、
 `.data` と `.bss` だけはラベル単位に並べ替えてから比べる。どの順に置くかは実装の自由で、
-`koma16.exe` は表の走査順、`mycc_ref.exe` は定義順に出すためである。
+`lecture16.exe` は表の走査順、`mycc_ref.exe` は定義順に出すためである。
 
 続けて**拒否側のテスト**も回る。`reference/` は `support/` とは別に文法定義を持つので、
 正しいプログラムの出力が一致するだけでは「同じ言語を受理する」ことの片側しか確かめられない。
@@ -136,21 +136,21 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 
 ## コマ番号と対応するテーマ
 
-コマ7 は廃止したので `koma07.ml` は無い（番号は 07 を欠番として残す）。
+コマ7 は廃止したので `lecture07.ml` は無い（番号は 07 を欠番として残す）。
 
 | 実装 | 対応するコマ | テーマ |
 |------|--------------|--------|
-| `sessions/koma02.ml` | 02_interpreter | AST インタープリター |
-| `sessions/koma03.ml` | 03_arithmetic_codegen | 算術式のコード生成 |
-| `sessions/koma04.ml` | 04_variables | 変数・代入・シンボルテーブル |
-| `sessions/koma05.ml` | 05_if_else | if / else |
-| `sessions/koma06.ml` | 06_loops | while / for / break / continue |
-| `sessions/koma08.ml` | 08_functions_recursion | 関数呼び出し・再帰 |
-| `sessions/koma09.ml` | 09_lvalue_rvalue | lvalue / rvalue と `&` / `*` |
-| `sessions/koma10.ml` | 10_types_pointers | 型・ポインタ演算 |
-| `sessions/koma11.ml` | 11_strings_printf | 文字列リテラル・`printf` |
-| `sessions/koma12.ml` | 12_struct | struct / `.` / `->` |
-| `sessions/koma13.ml` | 13_sizeof_malloc_list | `sizeof` / `malloc` / 連結リスト |
-| `sessions/koma14.ml` | 14_globals_scope | グローバル変数・スコープ |
-| `sessions/koma15.ml` | 15_preprocess_multifile | 前処理・複数ファイル |
-| `sessions/koma16.ml` | 16_integrate_mycc | 統合版（全機能） |
+| `sessions/lecture02.ml` | 02_interpreter | AST インタープリター |
+| `sessions/lecture03.ml` | 03_arithmetic_codegen | 算術式のコード生成 |
+| `sessions/lecture04.ml` | 04_variables | 変数・代入・シンボルテーブル |
+| `sessions/lecture05.ml` | 05_if_else | if / else |
+| `sessions/lecture06.ml` | 06_loops | while / for / break / continue |
+| `sessions/lecture08.ml` | 08_functions_recursion | 関数呼び出し・再帰 |
+| `sessions/lecture09.ml` | 09_lvalue_rvalue | lvalue / rvalue と `&` / `*` |
+| `sessions/lecture10.ml` | 10_types_pointers | 型・ポインタ演算 |
+| `sessions/lecture11.ml` | 11_strings_printf | 文字列リテラル・`printf` |
+| `sessions/lecture12.ml` | 12_struct | struct / `.` / `->` |
+| `sessions/lecture13.ml` | 13_sizeof_malloc_list | `sizeof` / `malloc` / 連結リスト |
+| `sessions/lecture14.ml` | 14_globals_scope | グローバル変数・スコープ |
+| `sessions/lecture15.ml` | 15_preprocess_multifile | 前処理・複数ファイル |
+| `sessions/lecture16.ml` | 16_integrate_mycc | 統合版（全機能） |

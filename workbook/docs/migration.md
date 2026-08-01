@@ -12,6 +12,7 @@
 | 発展課題に取り組んでいる／これから始める | あわせて「発展課題の変更」を読む |
 | 発展課題の `S3_ptrdiff/` または `L1_struct/` で作業していた | 「発展課題 `S3` と `L1` は中身が入れ替わった」を読む（取得時期を問わず影響する） |
 | コマ7 に取り組んでいた／これから取り組む予定だった | 「コマ7 は廃止した」を読む |
+| `workbook/ocaml/` の OCaml 参考実装（`komaNN.ml` / `komaNN.exe`）を使っていた | 「`komaNN.{ml,exe}` → `lectureNN.{ml,exe}`」を読む（取得時期を問わず影響する） |
 
 手元がどちらか分からないときは、`sessions/06_loops/mycc.py` を開いて
 `_continue_stack` と書いてあれば新しい版、`_cont_stack` なら古い版である。
@@ -320,3 +321,34 @@ python3 scaffold/test_runner.py --compiler advanced/S3_struct/semcc.py  --tests 
 | コマ14 で `logical_ops.c` が落ちる | `&&` / `\|\|` / `!` の実装を見直す。取り直しの手順は関係ない |
 
 追加したテストは、各回の資料のテスト一覧にも載せてある。
+
+---
+
+## OCaml 参考実装の変更
+
+### 11. `komaNN.{ml,exe}` → `lectureNN.{ml,exe}`
+
+`workbook/ocaml/sessions/` にある OCaml 版の参考実装（コマ2〜16、Python 実装と比べるための
+言語横断ヒント）は、ファイル名を `komaNN.ml` から `lectureNN.ml` に改名した。
+`ocaml/` ディレクトリ自体がすでに `sessions/` という名前で、
+`workbook/sessions/lectureNN...` と `workbook/ocaml/sessions/komaNN.ml` のように
+「回」を指す語が２通りある状態を解消するための改名である。番号の振り方は変えていない
+（07 が欠番のままなのも同じで、`koma07.ml` が無かったのと同様に `lecture07.ml` も無い）。
+
+実行ファイル名・`dune` のターゲット名・`run_tests.py` が読む名前も、すべて同じ規則で変わる。
+
+| 旧 | 新 |
+|----|----|
+| `sessions/koma02.ml` 〜 `sessions/koma16.ml`（07 は欠番） | `sessions/lecture02.ml` 〜 `sessions/lecture16.ml`（07 は欠番のまま） |
+| `dune exec sessions/koma16.exe -- ...` | `dune exec sessions/lecture16.exe -- ...` |
+| `python3 run_tests.py --build-dir DIR`（DIR の中の `sessions/komaNN.exe` を探す） | 同じコマンドで `sessions/lectureNN.exe` を探すようになる |
+
+| そのままにすると | 対処 |
+|------------------|------|
+| 手元に残した `komaNN.ml` を編集していても、新しい `dune build` はそれを見に行かない（`dune` の対象が `lectureNN` に変わっているため） | 書いた内容を新しい `sessions/lectureNN.ml` へ移す |
+| `dune exec sessions/koma16.exe -- ...` は「そのようなターゲットはない」で止まる | `dune exec sessions/lecture16.exe -- ...` に読み替える |
+| 独自スクリプトから `sessions/komaNN.exe` のパスを直接叩いていた | `sessions/lectureNN.exe` に読み替える |
+
+`workbook/ocaml/README.md` の実行例・対応表もすべて新しい名前に更新済みである。
+`support/` と `reference/` はファイル名も内容も変えていない
+（コメント中で「komaNN」を参照していた箇所だけ「lectureNN」に直した）。
