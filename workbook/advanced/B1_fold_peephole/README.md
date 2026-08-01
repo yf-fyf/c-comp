@@ -21,8 +21,8 @@
 
 ## 編集するファイル
 
-- `fold.py`（Step 1: 定数畳み込みの演算部分）
-- `peephole.py`（Step 2〜3: 3つの置換規則）
+- `fold.py`（Step 1: `fold_binary` / `fold_unary`）
+- `peephole.py`（Step 2: `fuse_push_const_pop`、Step 3: `remove_jump_to_next` / `remove_branch_to_next`）
 
 Step 3 の `remove_jump_to_next` は、**O7 の Step 3 と同名・同一の最適化**です。
 片方を書いたら、もう片方へそのまま持ち込めます。

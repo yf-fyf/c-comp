@@ -21,7 +21,7 @@
 
 ## 編集するファイル
 
-- `regstack.py`（Step 1: push_a0 / pop_into、Step 2: spill / reload）
+- `regstack.py`（Step 1: push_a0 / pop_into、Step 2: spill_before_call / reload_after_call）
 
 この回がレジスタに載せるのは**式の途中結果**（`t0`〜`t6`）です。
 **局所変数**を `s1`〜`s11` に載せるのは O4 で、別の無駄を消しています
