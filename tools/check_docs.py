@@ -95,7 +95,7 @@ def load_style_allowlist() -> list[dict]:
 ALLOWLIST_KINDS: dict[str, set[str]] = {
     "legacy_terms": {"array", "typedef", "union", "enum", "fixed15"},
     "style_terms": {
-        "dai-kai", "koma-zero-pad", "koma-space", "gakusei",
+        "dai-kai", "koma-zero-pad", "koma-space", "gakusei", "kurobako",
         "hatten-xn", "sentakusei", "backend-series",
         "hankaku-paren", "scaffold-hyoki",
     },
@@ -416,6 +416,7 @@ def check_libh_sync() -> list[Violation]:
 # design/maintaining.md の「用語と表記の統一」節が定める規約のうち、機械的に
 # 検出できるものを検査する: 回の呼称は「コマN」（ゼロ埋めなし・空白なし）に
 # 統一し「第NN回」は使わない。人の呼称は「学習者」に統一し「学生」は使わない。
+# 「black box」の訳語は「ブラックボックス」に統一し「黒箱」は使わない。
 #
 # 対象: materials/, workbook/ 配下の Markdown（*.md）のみ。原稿とスケルトン
 # コード（*.py / *.ml）のコメント・docstring は対象外（コード中の記述であり、
@@ -443,6 +444,7 @@ STYLE_DAI_KAI_RE = re.compile(r"第[0-9]{1,2}回")
 STYLE_KOMA_ZERO_RE = re.compile(r"コマ0[0-9]")
 STYLE_KOMA_SPACE_RE = re.compile(r"コマ[ 　][0-9]")
 STYLE_GAKUSEI_RE = re.compile(r"学生")
+STYLE_KUROBAKO_RE = re.compile(r"黒箱")
 
 STYLE_HATTEN_XN_RE = re.compile(r"発展 [A-Z][0-9]")
 STYLE_SENTAKUSEI_RE = re.compile(r"（選択制）")
@@ -597,6 +599,11 @@ def _check_style_terms_in_file(
                 and not allowlist.matches(rel, line, "gakusei")):
             violations.append(Violation(
                 path, i, f"「学生」表記の残存（「学習者」を使う）: {line.strip()}",
+            ))
+        if (STYLE_KUROBAKO_RE.search(line)
+                and not allowlist.matches(rel, line, "kurobako")):
+            violations.append(Violation(
+                path, i, f"「黒箱」表記の残存（「ブラックボックス」を使う）: {line.strip()}",
             ))
     if advanced:
         _check_advanced_style_in_file(path, lines, violations, allowlist, rel)
