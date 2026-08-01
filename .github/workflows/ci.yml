@@ -59,9 +59,15 @@ jobs:
 
   workbook-tests:
     runs-on: ubuntu-24.04
-    # 配布スケルトンは未実装の演習用コードなので、各回のテストは常に FAIL が正常な状態
-    # （teacher/quality/records/phase-1.md で確認済み）。ここでは「テストハーネスと
-    # RV64 ツールチェーンが壊れていないか」を可視化する情報用ジョブとし、ブロックはしない。
+    # 配布スケルトンは未実装の演習用コードなので、各回のテストが 0 PASS / 全 FAIL に
+    # なるのが正常な状態（teacher/quality/records/phase-1.md で確認済み）。
+    # ここでは「テストハーネスと RV64 ツールチェーンが壊れていないか」を見る情報用
+    # ジョブとし、ブロックはしない。
+    #
+    # ただし全 FAIL をそのまま非ゼロ終了にすると毎回赤バッジが出て、本当の故障と
+    # 区別できない。そこで「未実装由来の想定内 FAIL」だけを成功とみなし、それ以外
+    # （ツールチェーン不在・test_runner.py の異常終了・未実装以外の失敗）を検出した
+    # ときだけ落とす。
     continue-on-error: true
     steps:
       - uses: actions/checkout@v5
@@ -72,16 +78,66 @@ jobs:
       - name: Run each session's tests
         working-directory: workbook
         run: |
+          set -u
+          log="$(mktemp)"
           status=0
+
+          # 想定内の FAIL は次の 2 種類だけ。
+          #   - スケルトンの NotImplementedError（各回の演習箇所）
+          #   - final/mycc.py の「コマ16の統合先」案内（統合前は必ずこれになる）
+          # それ以外の FAIL 行はハーネス・ツールチェーン・テストデータ側の異常とみなす。
+          expected_fail_re='FAIL: compile — (NotImplementedError:|final/mycc\.py is the integration target)'
+
+          check_run() {
+            label="$1"
+            rc="$2"
+            local_bad=0
+
+            # exit 2 は test_runner.py が自分で出す環境不備（compiler / tests / gcc / qemu が無い）。
+            if [ "$rc" -ge 2 ]; then
+              echo "::error::$label: test_runner.py が環境不備または異常で終了しました (exit=$rc)"
+              local_bad=1
+            fi
+
+            # 集計行が無い＝ test_runner.py 自体がクラッシュした（未捕捉例外も exit 1 なので、
+            # 終了コードだけでは通常の FAIL と区別できない）。
+            if ! grep -q '^  PASS: ' "$log"; then
+              echo "::error::$label: 集計行が出力されていません（test_runner.py 自体の異常）"
+              local_bad=1
+            fi
+
+            unexpected="$(grep '^\[FAIL' "$log" | grep -Ev "$expected_fail_re" || true)"
+            if [ -n "$unexpected" ]; then
+              echo "::error::$label: 未実装由来ではない失敗があります"
+              printf '%s\n' "$unexpected"
+              local_bad=1
+            fi
+
+            if [ "$local_bad" -ne 0 ]; then
+              status=1
+            fi
+          }
+
           for session in sessions/*/; do
             session="${session%/}"
             if [ -f "$session/mycc.py" ] && [ -d "$session/tests" ]; then
               echo "=== $session ==="
-              python3 scaffold/test_runner.py "$session" || status=1
+              rc=0
+              python3 scaffold/test_runner.py "$session" >"$log" 2>&1 || rc=$?
+              cat "$log"
+              check_run "$session" "$rc"
             fi
           done
+
           echo "=== final (bare invocation, covers session 16) ==="
-          python3 scaffold/test_runner.py || status=1
+          rc=0
+          python3 scaffold/test_runner.py >"$log" 2>&1 || rc=$?
+          cat "$log"
+          check_run "final" "$rc"
+
+          if [ "$status" -eq 0 ]; then
+            echo "全セッションの FAIL は未実装由来のみ。ハーネスと RV64 ツールチェーンは正常。"
+          fi
           exit "$status"
 
   web-app:
