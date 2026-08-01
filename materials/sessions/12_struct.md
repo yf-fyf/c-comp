@@ -27,9 +27,8 @@ struct Point {
 | ポインタ経由メンバアクセス | `p->x` |
 | 構造体ポインタ引数 | `int f(struct Point *p)` |
 
-言語仕様どおり、構造体のフィールドは `int`、`char`、ポインタに限られる
-（struct 値の入れ子はない）。構造体代入は言語仕様にないため扱わず、
-グローバル構造体変数はコマ14で扱う。
+言語仕様どおり、構造体のフィールドは `int`、`char`、ポインタに限られる。
+扱わない範囲（struct 値の入れ子、構造体代入、グローバル構造体変数）は「注意」節にまとめた。
 
 ## AST を確認する: `.`
 
@@ -288,6 +287,33 @@ if node.kind == ND_MEMBER and node.is_arrow:
 `.` と `->` で構造体型名の求め方が違うだけなので、
 スケルトンではこの分岐を `self._member_struct_type(node)` に切り出してある。
 
+## 編集するファイル
+
+- `mycc.py`
+
+`importlib` でコマ11 の `Codegen11` を継承した `Codegen12` に、以下の機能を追加する。
+
+スケルトンに**あらかじめ書かれている**ものは次の通りで、実装対象ではない。
+
+| 提供済み | 役割 |
+|----------|------|
+| `parse_struct_defs(source)` / `parse_field_decls(body)` | ソースから構造体定義を集める |
+| `align_of_ty_str(ty)` / `is_struct_ty_str(ty, defs)` | 境界と struct 判定 |
+| `field_offset(...)` / `field_ty(...)` | フィールドのオフセットと型 |
+| `_member_struct_type(node)` の呼び出し口 | `.` と `->` の分岐をまとめる場所 |
+
+実装対象は次の通りである。
+
+| 実装対象 | 役割 |
+|----------|------|
+| `_member_struct_type(node)` | `.` と `->` の違いを踏まえて対象の構造体型名を返す |
+| `alloc_local` / `_scale_index` / `_load_ty` / `_store_ty` | `size_of_ty_str` に `self._struct_defs` を渡す |
+| `_load_ty(ty)` の struct 分岐 | struct 型はロードせずアドレスのまま扱う |
+| `type_of_expr_Member` / `type_of_lval_Member` | メンバの型を `field_ty` で求める |
+| `codegen_lval_Member(node)` | ベースアドレス + `field_offset` |
+| `codegen_Member(node)` | 左辺値アドレスを作り、メンバ型でロードする |
+| `collect_strings_expr_Member(node)` | `Member` の operand も文字列収集の対象にする |
+
 ## 実装手順
 
 1. スケルトンの `importlib` 継承によりコマ11の Codegen クラスを引き継ぐ（あらかじめ書かれている）
@@ -297,15 +323,47 @@ if node.kind == ND_MEMBER and node.is_arrow:
 5. `alloc_local()` / `_scale_index()` / `_load_ty()` / `_store_ty()` の `size_of_ty_str` 呼び出しに `self._struct_defs` を渡す
 6. `_load_ty()` は `struct` 型のときロードせず、アドレスのまま扱う（`is_struct_ty_str` で判定）
 
+## tests/
+
+| ファイル | 内容 | 期待値 |
+|----------|------|--------|
+| `dot_access.c` | `p.x`, `p.y` の読み書き | `7` |
+| `arrow_access.c` | `struct Point *p` に対する `p->x` | `25` |
+
 ## テスト
 
 ```bash
 python3 scaffold/test_runner.py sessions/12_struct
 ```
 
-この回の主要テストは次の通り。
+`tests/dot_access.c` がコンパイルでき、終了コード `7` になれば基本形は成功。
 
-| テスト | 内容 | 期待値 |
-|--------|------|--------|
-| `dot_access.c` | `p.x`, `p.y` の読み書き | `7` |
-| `arrow_access.c` | `struct Point *p` に対する `p->x` | `25` |
+個別に動かす場合は、次のようにする。
+
+```bash
+python3 sessions/12_struct/mycc.py sessions/12_struct/tests/dot_access.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+## 注意
+
+構造体代入は言語仕様にないため扱わない。
+`struct Point a; a = b;` のように構造体そのものを代入することはできず、
+フィールドを1つずつ代入するか、ポインタで渡す。
+関数の引数・戻り値も同じで、構造体を値で受け渡すことはしない（`struct Point *` を渡す）。
+
+フィールドに書けるのは `int`、`char`、ポインタだけである。
+struct 値を入れ子にすることはできない（`struct Node *next` のようなポインタは書ける）。
+
+`.` と `->` の違いは、対象の構造体アドレスをどう得るかだけである。
+`.` は構造体変数のアドレス（`codegen_lval`）、`->` はポインタの値（`codegen`）を使う。
+どちらもその後は「+ フィールドオフセット」で同じ計算になる。
+
+`struct Point` のサイズが 8 なのは `int` を2つ並べた結果であって、
+フィールド間に余白（パディング）が入る例はこの回には出てこない。
+自然な境界に合わせるための余白はコマ13 の `struct Node` で出てくる。
+
+グローバルな構造体変数はコマ14 で扱う。この回はローカル変数と引数だけである。

@@ -52,13 +52,8 @@ python3 sessions/01_environment/check.py
 
 ### Step 4: もっと複雑な計算
 
-| ファイル | 内容 | 期待値 |
-|----------|------|--------|
-| `tests/hello.s` | `addi a0, zero, 42` で戻り値 42 を返す | 42 |
-| `tests/sub.s` | `50 + (-8)` で減算相当 | 42 |
-| `tests/three_numbers.s` | `10 + 20 + 12` で 3 数の和 | 42 |
-
-これら2件は完成済みの命令例であり、編集対象ではない。`addi` / `li` / `add` などの基本命令の組み合わせを確認する。
+`tests/` には完成済みの命令例が置いてある（一覧は後の「tests/」節を参照）。
+編集対象ではないので、`addi` / `li` / `add` などの基本命令の組み合わせを読んで確認する。
 
 ## スキャフォールドの動作確認
 
@@ -88,6 +83,16 @@ python3 scaffold/parse_viewer.py sessions/02_interpreter/tests/add_mul.c
 
 最初に `addi a0, zero, 0` を終了コード `42` を返す命令へ変更する。
 
+## tests/
+
+| ファイル | 内容 | 期待値 |
+|----------|------|--------|
+| `hello.s` | `addi a0, zero, 42` で戻り値 42 を返す（編集する `hello.s` の完成形） | 42 |
+| `sub.s` | `50 + (-8)` で減算相当 | 42 |
+| `three_numbers.s` | `10 + 20 + 12` で 3 数の和 | 42 |
+
+`sub.s` と `three_numbers.s` は完成済みの命令例であり、編集対象ではない。
+
 ## テスト
 
 ```bash
@@ -96,7 +101,23 @@ python3 sessions/01_environment/check.py
 
 このコマンドは、編集した `hello.s`、完成済みの追加例2件、`1 + 2 * 3` の AST 構造をまとめて確認する。
 
-## 次回予告
+個別に動かす場合は、次のようにする。
 
-次回は AST を走査して式を評価する「インタープリター」を書く。
-コード生成に入る前に、AST の各ノードが何を意味するかを体で理解する。
+```bash
+riscv64-linux-gnu-gcc -static sessions/01_environment/hello.s -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+終了コードが `42` になれば成功である。
+
+## 注意
+
+この回ではコンパイラのコードは書かない。`mycc.py` を書き始めるのはコマ2 からである。
+
+終了コードは 0〜255 の範囲しか返せない。
+`echo $?` の値が合わないときは、`a0` に値を入れる命令が `ret` より前にあるか、
+`ret` を書き忘れていないかを確認する。
+
+`.global main` を消すとリンクに失敗する。libc の起動処理が `main` を呼ぶためである。

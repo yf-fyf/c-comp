@@ -278,18 +278,42 @@ void swap(int *a, int *b) {
 6. `swap.c` まで通ることを確認する
 7. `void_func.c` を通す（`Return` の `operand` が `None` のとき、値を計算せずエピローグへ飛ぶ）
 
+## tests/
+
+| ファイル | 内容 | 期待値 |
+|----------|------|--------|
+| `deref_read.c` | `p = &x; return *p;` | `42` |
+| `deref_write.c` | `*p = 20; return a;` | `20` |
+| `ptr_ops.c` | ポインタ先の値を読み書きする | `55` |
+| `swap.c` | ポインタ引数で値を入れ替える | `37` |
+| `void_func.c` | 戻り値のない関数（`return;` と末尾到達の両方） | `15` |
+
 ## テスト
 
 ```bash
 python3 scaffold/test_runner.py sessions/09_lvalue_rvalue
 ```
 
-この回の主要テストは次の通り。
+`tests/deref_read.c` がコンパイルでき、終了コード `42` になれば基本形は成功。
 
-| テスト | 内容 | 期待値 |
-|--------|------|--------|
-| `deref_read.c` | `p = &x; return *p;` | `42` |
-| `deref_write.c` | `*p = 20; return a;` | `20` |
-| `ptr_ops.c` | ポインタ先の値を読み書きする | `55` |
-| `swap.c` | ポインタ引数で値を入れ替える | `37` |
-| `void_func.c` | 戻り値のない関数（`return;` と末尾到達の両方） | `15` |
+個別に動かす場合は、次のようにする。
+
+```bash
+python3 sessions/09_lvalue_rvalue/mycc.py sessions/09_lvalue_rvalue/tests/deref_read.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+## 注意
+
+この回では、ポインタも整数もすべて8バイト値として扱う。
+読み書きは常に `ld` / `sd` でよい。
+型サイズに応じたロード・ストアとポインタ演算はコマ10 で扱う。
+
+`codegen_lval()` を呼んでよいのは、書き込み先になれるノードだけである。
+この回では変数 `a` と間接参照 `*p` の2つで、`&(a + 1)` のような式にアドレスはない。
+
+`void` 関数は戻り値を持たないので、`a0` に何を残すかを決める必要はない。
+呼び出し側が `void` 関数の値を使うことはない。

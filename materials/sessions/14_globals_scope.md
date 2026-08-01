@@ -273,6 +273,15 @@ int main() {
 比較演算子と同じ「両辺を評価してから合成する」形で書ける。
 短絡する版は発展課題 S1 で扱う。
 
+## 編集するファイル
+
+`sessions/14_globals_scope/` 以下のスケルトンファイルを編集する。
+
+| ファイル | 実装するハンドラ・メソッド |
+|----------|----------------------------|
+| `mycc.py` | `Codegen14` クラス。`collect_globals()`、`lookup_var_ty()`、`codegen_lval_Var()`、`emit_bss_section()`、`gen_program()` など（`_is_local()` は提供済み） |
+| (AST パーサ) | 変更不要（`'Decl'` ノードはコマ13から存在する） |
+
 ## 実装手順
 
 1. コマ13の実装を `sessions/14_globals_scope/mycc.py` に反映する<br>（スケルトンの `importlib` 継承により、前回の `Codegen` クラスを継承する。新機能の handler だけを実装すればよい。）
@@ -284,14 +293,17 @@ int main() {
 7. `codegen_Not()` / `codegen_And()` / `codegen_Or()` を実装する（`&&` `||` は短絡しない）
 8. `global_counter.c`、`global_init.c`、`global_local_shadow.c`、`global_struct.c`、`logical_ops.c` を通す
 
-## 編集するファイル
+## tests/
 
-`sessions/14_globals_scope/` 以下のスケルトンファイルを編集する。
-
-| ファイル | 実装するハンドラ・メソッド |
-|----------|----------------------------|
-| `mycc.py` | `Codegen14` クラス。`collect_globals()`、`lookup_var_ty()`、`codegen_lval_Var()`、`emit_bss_section()`、`gen_program()` など（`_is_local()` は提供済み） |
-| (AST パーサ) | 変更不要（`'Decl'` ノードはコマ13から存在する） |
+| ファイル | 内容 | 期待値 |
+|----------|------|--------|
+| `global_min.c` | グローバル `total` を関数から更新する最小形 | `30` |
+| `global_counter.c` | グローバル `call_count` / `total` と `printf` | stdout `60`, exit `3` |
+| `global_init.c` | 0 初期化保証（代入せず読み始められる） | `12` |
+| `shadow_min.c` | 同名のローカル変数とグローバル変数の最小形 | `5` |
+| `global_local_shadow.c` | ローカル変数がグローバル変数を隠す | `5` |
+| `global_struct.c` | グローバル構造体変数と `.` / `&` | `30` |
+| `logical_ops.c` | `!` `&&` `\|\|` の結果が 0/1 であること・短絡しないこと | `40` |
 
 ## テスト
 
@@ -299,12 +311,30 @@ int main() {
 python3 scaffold/test_runner.py sessions/14_globals_scope
 ```
 
-この回の主要テストは次の通り。
+`tests/global_min.c` がコンパイルでき、終了コード `30` になれば基本形は成功。
 
-| テスト | 内容 | 期待値 |
-|--------|------|--------|
-| `global_counter.c` | グローバル `call_count` / `total` と `printf` | stdout `60`, exit `3` |
-| `global_init.c` | 0 初期化保証（代入せず読み始められる） | `12` |
-| `global_local_shadow.c` | ローカル変数がグローバル変数を隠す | `5` |
-| `global_struct.c` | グローバル構造体変数と `.` / `&` | `30` |
-| `logical_ops.c` | `!` `&&` `\|\|` の結果が 0/1 であること・短絡しないこと | `40` |
+個別に動かす場合は、次のようにする。
+
+```bash
+python3 sessions/14_globals_scope/mycc.py sessions/14_globals_scope/tests/global_min.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+## 注意
+
+言語仕様に初期化子はない。`int total = 0;` とは書けず、グローバル変数は `.bss` に置いて
+すべて 0 に初期化される（ポインタなら null）。初期値が必要なら代入文で設定する。
+
+変数表の探索順は `self._locals` → `self._globals` の順に固定する。
+同名のローカル変数があればそちらが優先され、グローバル変数は隠される。
+
+アドレスの作り方が2通りになる。ローカル変数は `s0` からのオフセット、
+グローバル変数は `la a0, name` である。`codegen_lval_Var()` で `self._is_local()` を見て分ける。
+
+`&&` と `||` は**短絡しない**（`language_spec.md` 例外 E3）。
+左辺が偽でも右辺を必ず評価するので、`p != 0 && p->val > 0` のような書き方はできない。
+分岐は作らず、比較演算子と同じ「両辺を評価してから合成する」形で書く。
+`!` `&&` `||` の結果は必ず `0` か `1` にする。

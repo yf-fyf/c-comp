@@ -177,6 +177,15 @@ for node in prog:
         self.gen_func(node)
 ```
 
+## 編集するファイル
+
+`sessions/15_preprocess_multifile/` 以下のスケルトンファイルを編集する。
+
+| ファイル | 実装するハンドラ・メソッド |
+|----------|----------------------------|
+| `mycc.py` | `Codegen15` クラス（`Codegen14` を継承）。`parse_file()` クラスメソッド、`collect_all_strings()` など |
+| (AST パーサ) | 変更不要（`'FuncProto'` ノードは既に存在する） |
+
 ## 実装手順
 
 1. コマ14の実装を `sessions/15_preprocess_multifile/mycc.py` に反映する<br>（スケルトンの `importlib` 継承により、前回の `Codegen14` クラスを継承する。新機能の handler だけを実装すればよい。）
@@ -187,14 +196,21 @@ for node in prog:
 6. `.text` セクションでは `'FuncDef'` だけを処理する
 7. `define_constants.c`、`multifile_math.c`、`multifile_global.c` を通す
 
-## 編集するファイル
+## tests/
 
-`sessions/15_preprocess_multifile/` 以下のスケルトンファイルを編集する。
+| ファイル | 内容 | 期待値 |
+|----------|------|--------|
+| `define_min.c` | `#define` 1個だけの最小形 | `8` |
+| `define_constants.c` | `#define` の定数置換 | `12` |
+| `multifile_math.c` | 複数ファイル + `#include` + `#define` | `64` |
+| `multifile_global.c` | 複数ファイル + グローバル変数共有 | `63` |
 
-| ファイル | 実装するハンドラ・メソッド |
-|----------|----------------------------|
-| `mycc.py` | `Codegen15` クラス（`Codegen14` を継承）。`parse_file()` クラスメソッド、`collect_all_strings()` など |
-| (AST パーサ) | 変更不要（`'FuncProto'` ノードは既に存在する） |
+複数ファイルのテストは、一緒にコンパイルする `.c` を同名の `.files` に書いてある。
+
+| ファイル | 役割 |
+|----------|------|
+| `math_util.c` / `math_util.h` | `multifile_math.c` から使う関数と、そのプロトタイプ |
+| `stat_lib.c` / `stat_lib.h` | `multifile_global.c` から使う関数と、そのプロトタイプ（グローバル変数は `stat_lib.c` 側にある） |
 
 ## テスト
 
@@ -202,10 +218,43 @@ for node in prog:
 python3 scaffold/test_runner.py sessions/15_preprocess_multifile
 ```
 
-この回の主要テストは次の通り。
+`tests/define_min.c` がコンパイルでき、終了コード `8` になれば基本形は成功。
 
-| テスト | 内容 | 期待値 |
-|--------|------|--------|
-| `define_constants.c` | `#define` の定数置換 | `12` |
-| `multifile_math.c` | 複数ファイル + `#include` + `#define` | `64` |
-| `multifile_global.c` | 複数ファイル + グローバル変数共有 | `63` |
+個別に動かす場合は、次のようにする。
+
+```bash
+python3 sessions/15_preprocess_multifile/mycc.py sessions/15_preprocess_multifile/tests/define_min.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+複数ファイルのテストは、`.files` に書かれた `.c` を並べて渡す。
+
+```bash
+python3 sessions/15_preprocess_multifile/mycc.py \
+  sessions/15_preprocess_multifile/tests/multifile_math.c \
+  sessions/15_preprocess_multifile/tests/math_util.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+## 注意
+
+`#define` は単純な定数置換だけを扱う。関数形式マクロ（`#define MAX(a,b) ...`）や
+条件コンパイル（`#ifdef` など）は扱わない。
+
+置換は前処理の段階で終わるので、`#define` した名前は AST に残らない。
+`define_min.c` の `N` は、最初から `7` と書いてあったのと同じ AST になる。
+
+`#include` は `"..."` 形式だけを扱う。展開するのは宣言だけで、
+ヘッダに関数定義を書くと、そのヘッダを読んだファイルの数だけ定義が重複する。
+
+複数ファイルは、全ファイルの AST を1つにまとめてから一度にアセンブリを出力する。
+関数定義の重複チェックは行わないので、同名の関数を2つ書くと同じラベルが2回出る。
+
+グローバル変数と文字列リテラルの収集は、**全ファイルの AST をまとめてから**行う。
+ファイルごとに `.bss` / `.data` を出すと、同じ変数が二重に定義される。

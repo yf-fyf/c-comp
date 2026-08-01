@@ -351,18 +351,46 @@ def _store_ty(self, ty):
 8. `codegen_PreInc` / `codegen_PreDec` を型対応にする
 9. `char_var.c`（`char` 変数）・`ptr_to_ptr.c`（多段ポインタ）・`main_argv.c`（`main(int argc, char **argv)`）を通す<br>（2〜3 が正しくできていれば新しく書く処理はない。取りこぼしの検出用である。）
 
+## tests/
+
+| ファイル | 内容 | 期待値 |
+|----------|------|--------|
+| `ptr_sum.c` | malloc 領域を `a[i]` で合計 | `15` |
+| `ptr_arith.c` | `*(p + 2)` と `*(p + 3)` | `70` |
+| `char_var.c` | `char` 変数の読み書き（`lb`/`sb`）・int への昇格・代入時の縮小 | `67` |
+| `ptr_to_ptr.c` | 多段ポインタ `int **`（`&`/`*` の重ね掛けと 8 バイト尺度） | `20` |
+| `main_argv.c` | `int main(int argc, char **argv)` 形のエントリポイント | `41` |
+
 ## テスト
 
 ```bash
 python3 scaffold/test_runner.py sessions/10_types_pointers
 ```
 
-この回の主要テストは次の通り。
+`tests/ptr_sum.c` がコンパイルでき、終了コード `15` になれば基本形は成功。
 
-| テスト | 内容 | 期待値 |
-|--------|------|--------|
-| `ptr_sum.c` | malloc 領域を `a[i]` で合計 | `15` |
-| `ptr_arith.c` | `*(p + 2)` と `*(p + 3)` | `70` |
-| `char_var.c` | `char` 変数の読み書き（`lb`/`sb`）・int への昇格・代入時の縮小 | `67` |
-| `ptr_to_ptr.c` | 多段ポインタ `int **`（`&`/`*` の重ね掛けと 8 バイト尺度） | `20` |
-| `main_argv.c` | `int main(int argc, char **argv)` 形のエントリポイント | `41` |
+個別に動かす場合は、次のようにする。
+
+```bash
+python3 sessions/10_types_pointers/mycc.py sessions/10_types_pointers/tests/ptr_sum.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+## 注意
+
+この言語に配列はない。`int a[10];` のような宣言は書けず、`p[i]` も `*(p + i)` の略記でしかない。
+連続した領域が必要なときは `malloc(sizeof(int) * N)` で確保し、ポインタで指して使う。
+
+`char` は 1 バイトだが、読み出すと int へ昇格する。
+`lb` は符号拡張して 64 ビットレジスタに載せるので、負の値を入れた `char` は負のまま読める。
+`char` への代入は `sb` で下位 8 ビットだけを書く（縮小）。
+算術そのものは常に int で行うため、`d = c + 2` に特別な処理は要らない。
+
+`_load_ty` / `_store_ty` の判定は型サイズだけで行う。
+ポインタはどの型を指していても 8 バイトなので、`ld` / `sd` になる。
+
+この回の `size_of_ty_str(ty)` は引数が1つでよい。
+構造体サイズを引くために `self._struct_defs` を渡す2引数版になるのはコマ12 からである。

@@ -268,6 +268,25 @@ return 0;
 Hello, World!
 ```
 
+## 編集するファイル
+
+- `mycc.py`
+
+`importlib` でコマ10 の `Codegen10` を継承した `Codegen11` に、以下の機能を追加する（クラスの骨組みはスケルトンにあらかじめ書かれている）。
+
+| 実装対象 | 役割 |
+|----------|------|
+| `_intern(value)` | 同じ文字列を重複登録せず `.LCn` ラベルを割り当てる |
+| `collect_strings_stmt_*` | 文の中を再帰的にたどる（`Decl` / `ExprStmt` / `Return` / `Block` / `If` / `While` / `For`） |
+| `collect_strings_expr_*` | 式の中を再帰的にたどる（二項演算・単項演算・`Cond`・`Index`・`Call` など） |
+| `collect_strings_expr_Str(node)` | `node.sval` を `_intern` する |
+| `emit_data_section()` | 登録済みの文字列を `.data` に `.byte` 列として出力する |
+| `type_of_expr_Str(node)` | 文字列リテラルの型を返す |
+| `codegen_Str(node)` | `la a0, ラベル` で文字列の先頭アドレスをロードする |
+
+`collect_strings_stmt()` の呼び出しと `emit_data_section()` の呼び出し自体は `main()` に書かれている。
+実装するのは、呼ばれる側のハンドラの中身である。
+
 ## 実装手順
 
 1. スケルトンの `importlib` 継承によりコマ10の Codegen クラスを引き継ぐ（あらかじめ書かれている）
@@ -280,18 +299,48 @@ Hello, World!
 8. `printf_hello.c` と `printf_number.c` の stdout テストを通す
 9. `file_stream.c` と `lib_exit.c` を通す<br>（`lib.h` のストリーム関数一式と `exit`。`struct FILE *` は 8 バイトのポインタなので、7 までができていれば新しく書く処理はない。）
 
+## tests/
+
+| ファイル | 内容 | 期待値 |
+|----------|------|--------|
+| `printf_hello.c` | 文字列だけを出力する | `Hello, World!` |
+| `printf_number.c` | `%d` に整数を渡す | `x=42` |
+| `strlen_literal.c` | 文字列を `strlen` に渡す | 終了コード `3` |
+| `file_stream.c` | `fdopen`/`fprintf`/`fopen`/`fread`/`fclose` | `stream ok` / 終了コード `42` |
+| `lib_exit.c` | `exit` で終了コードを指定して打ち切る | `before exit` / 終了コード `7` |
+
 ## テスト
 
 ```bash
 python3 scaffold/test_runner.py sessions/11_strings_printf
 ```
 
-この回の主要テストは次の通り。
+`tests/printf_hello.c` が `Hello, World!` を出力すれば基本形は成功。
 
-| テスト | 内容 | 期待 |
-|--------|------|------|
-| `printf_hello.c` | 文字列だけを出力する | `Hello, World!` |
-| `printf_number.c` | `%d` に整数を渡す | `x=42` |
-| `strlen_literal.c` | 文字列を `strlen` に渡す | 終了コード `3` |
-| `file_stream.c` | `fdopen`/`fprintf`/`fopen`/`fread`/`fclose` | `stream ok` / 終了コード `42` |
-| `lib_exit.c` | `exit` で終了コードを指定して打ち切る | `before exit` / 終了コード `7` |
+個別に動かす場合は、次のようにする。
+
+```bash
+python3 sessions/11_strings_printf/mycc.py sessions/11_strings_printf/tests/printf_hello.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+標準出力を伴う回なので、`echo $?` の前に出力そのものも目で確認する。
+
+## 注意
+
+`printf` はこの回でも実装しない。
+`riscv64-linux-gnu-gcc -static` でリンクしたとき、libc の `printf` が使われる。
+`lib.h` が与えるのは宣言だけである。
+
+文字列リテラルは `.data` に置く読み出し専用のデータとして扱う。
+同じ内容の文字列は `_intern()` が1つのラベルにまとめるので、
+同じ文字列を2回書いても `.data` には1つしか出ない。
+
+`ND_STR` の値は文字列そのものではなく先頭アドレスである。型は `char *` になる。
+文字列リテラルの中身を書き換える操作はこの回では扱わない。
+
+`.stdout` を置いたテストは、終了コード（`.ans`）と標準出力の両方が一致して初めて通る。
+末尾の改行の有無まで一致させる必要がある。

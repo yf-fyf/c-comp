@@ -148,8 +148,50 @@ python3 scaffold/test_runner.py --compiler final/mycc.py --tests final/tests
 Python の `dict` を C の連結リストへ、Python のクラスを C の `struct` へ写す
 長期チャレンジである。
 
+## 編集するファイル
+
+- `final/mycc.py`
+
+`sessions/16_integrate_mycc/` に `mycc.py` は無い。
+この回だけは、編集先が `sessions/NN_xxx/mycc.py` ではなく `final/mycc.py` である。
+コマ15までの完成版をここに反映し、以後の修正もこのファイルに対して行う。
+
+## tests/
+
+この回は専用のテストを持たない（`sessions/16_integrate_mycc/tests/` は空である）。
+使うのは `final/tests/` の17本で、内訳は前の「final/tests の位置づけ」節の表の通りである。
+テストごとに `.ans`（期待する終了コード）があり、`f14_string.c` には `.stdout` も付く。
+
 ## テスト
 
 ```bash
 python3 scaffold/test_runner.py
 ```
+
+省略形の `test_runner.py` は、デフォルトで `final/mycc.py` と `final/tests/` を使う。
+
+個別に動かす場合は、次のようにする。
+
+```bash
+python3 final/mycc.py final/tests/f01_arith.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+## 注意
+
+この回では新しい構文を追加しない。
+`language_spec.md` の全機能はコマ15までで実装済みで、仕様にあって実装しない機能は無い。
+`&&` / `||` が短絡しないことも、複合代入 `+=` が無いことも、仕様どおりの状態である。
+
+`final/mycc.py` のスケルトンは、通常回と違って `importlib` による継承を持たない。
+コマ15までの実装は前の回のクラスを継承した差分の積み重ねなので、
+そのまま置いても動かない。継承の連鎖をたどって1つのファイルにまとめる必要がある。
+
+テストが落ちたら、いきなり `final/tests/` の入力を読まず、
+対応するコマの小さいテストへ降りて切り分ける（「テストが落ちたときの切り分け」節）。
+
+`final/tests/` の17本は標準トラック到達の参考指標であって、
+言語仕様の全機能を網羅した検査ではない。

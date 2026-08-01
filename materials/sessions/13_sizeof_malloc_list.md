@@ -260,6 +260,20 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 `head` はスタック上のローカル変数だが、各ノードは `malloc` で確保したヒープ上にある。
 `head = head->next` は、`head` の指す先を矢印1つぶん右のノードへ進める。
 
+## 編集するファイル
+
+- `mycc.py`
+
+`importlib` でコマ12 の Codegen クラスを継承した `Codegen13` に、以下の機能を追加する。
+
+| 実装対象 | 役割 |
+|----------|------|
+| `type_of_expr_SizeofType(node)` | `sizeof(型名)` の型は `int` |
+| `codegen_SizeofType(node)` | `node.ty_str` のサイズを求め、`li a0, <size>` を出力する |
+
+この回で新しく書くコードはこの2つだけである。
+`malloc` も自己参照構造体も、コマ8 の関数呼び出しとコマ12 の構造体処理がそのまま働く。
+
 ## 実装手順
 
 1. スケルトンの `importlib` 継承によりコマ12の Codegen クラスを引き継ぐ（あらかじめ書かれている）
@@ -270,17 +284,48 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 6. `list_sum.c` まで通す
 7. `void_ptr.c` を通す<br>（`void *` と任意の `T *` の相互変換。`void *` の変数・仮引数も書ける。ポインタ同士なのでサイズは常に 8 で、変換のための命令は要らない。）
 
+## tests/
+
+| ファイル | 内容 | 期待値 |
+|----------|------|--------|
+| `sizeof_test.c` | `sizeof(int) + sizeof(char)` | `5` |
+| `malloc_struct.c` | `malloc(sizeof(struct Box))` と `->` | `17` |
+| `list_min.c` | `malloc` した1ノードを `->` で読む最小形 | `10` |
+| `list_sum.c` | `struct Node` の連結リスト走査 | `60` |
+| `void_ptr.c` | `void *` と `T *` のキャストなしの相互変換 | `47` |
+
 ## テスト
 
 ```bash
 python3 scaffold/test_runner.py sessions/13_sizeof_malloc_list
 ```
 
-この回の主要テストは次の通り。
+`tests/sizeof_test.c` がコンパイルでき、終了コード `5` になれば基本形は成功。
 
-| テスト | 内容 | 期待値 |
-|--------|------|--------|
-| `sizeof_test.c` | `sizeof(int) + sizeof(char)` | `5` |
-| `malloc_struct.c` | `malloc(sizeof(struct Box))` と `->` | `17` |
-| `list_sum.c` | `struct Node` の連結リスト走査 | `60` |
-| `void_ptr.c` | `void *` と `T *` のキャストなしの相互変換 | `47` |
+個別に動かす場合は、次のようにする。
+
+```bash
+python3 sessions/13_sizeof_malloc_list/mycc.py sessions/13_sizeof_malloc_list/tests/sizeof_test.c \
+  | riscv64-linux-gnu-gcc -x assembler -static - -o out
+
+qemu-riscv64 ./out
+echo $?
+```
+
+## 注意
+
+`sizeof` は翻訳時に値が決まる。生成されるのは `li a0, <サイズ>` の1命令だけで、
+実行時に型を調べる処理は出てこない。
+扱うのは `sizeof(型名)` の形だけで、`sizeof(式)` は扱わない。
+
+`malloc` は自作しない。`lib.h` の宣言を使い、リンク時に libc の `malloc` に解決する。
+`free` を呼ばないので、確保した領域はプログラム終了まで残る。
+
+構造体には境界合わせの余白が入ることがある。
+`struct Node { int val; struct Node *next; }` では `next` を8バイト境界に置くため
+`val` の後に4バイトの余白が入り、`sizeof(struct Node)` は 16 になる。
+`4 + 8 = 12` と数えて `malloc` に渡すと、`next` の書き込みが領域外に出る。
+サイズは必ず `sizeof` で求める。
+
+`struct Node *next` はポインタなので、`struct Node` のサイズが確定していなくても
+8バイトとして扱える。自己参照構造体が書けるのはこのためである。
