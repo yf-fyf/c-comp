@@ -395,13 +395,23 @@ def _store_ty(self, ty):
 
 ## tests/
 
-| ファイル | 内容 | 期待値 |
-|----------|------|--------|
-| `ptr_sum.c` | malloc 領域を `a[i]` で合計 | `15` |
-| `ptr_arith.c` | `*(p + 2)` と `*(p + 3)` | `70` |
-| `char_var.c` | `char` 変数の読み書き（`lb`/`sb`）・int への昇格・代入時の縮小 | `67` |
-| `ptr_to_ptr.c` | 多段ポインタ `int **`（`&`/`*` の重ね掛けと 8 バイト尺度） | `20` |
-| `main_argv.c` | `int main(int argc, char **argv)` 形のエントリポイント | `41` |
+この回は実装量が多いので、機能単位で切ったテストを先に置いてある。
+上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。ただし `collect_decls_Decl` / `_alloc_params` /
+関数プロローグの退避はどのテストでも必要なので、そこだけは最初に埋めておく。
+
+| ファイル | 内容 | 主に見る実装 | 通る目安 | 期待値 |
+|----------|------|--------------|----------|--------|
+| `load_store_ty.c` | `char`/`int`/ポインタの読み書きだけ（ポインタ演算も添字も使わない） | `_load_ty` / `_store_ty` / `type_of_*` | 手順2〜3 | `30` |
+| `index_scale.c` | `a[i]` のアドレス計算を要素サイズ 1/4/8 で確かめる | `_scale_index` / `codegen_lval_Index` / `codegen_Index` | 手順4〜5 | `42` |
+| `sizeof_type.c` | `sizeof(型名)` だけを単体で確かめる | `codegen_SizeofType` | 手順6 | `40` |
+| `ptr_sum.c` | malloc 領域を `a[i]` で合計 | 添字＋ループ | 手順7 | `15` |
+| `ptr_arith.c` | `*(p + 2)` と `*(p + 3)` | `codegen_Add` / `codegen_Sub` | 手順7 | `70` |
+| `ptr_incdec.c` | `++`/`--` が `int *` は4、`char *` は1、`int` は1だけ動くこと | `codegen_PreInc` / `codegen_PreDec` | 手順8 | `104` |
+| `typed_params.c` | `char`/`int`/ポインタの引数が各幅で退避・読み戻しできること | `_alloc_params` / 関数プロローグ | 手順8 | `75` |
+| `char_var.c` | `char` 変数の読み書き（`lb`/`sb`）・int への昇格・代入時の縮小 | 取りこぼし検出 | 手順9 | `67` |
+| `ptr_to_ptr.c` | 多段ポインタ `int **`（`&`/`*` の重ね掛けと 8 バイト尺度） | 取りこぼし検出 | 手順9 | `20` |
+| `main_argv.c` | `int main(int argc, char **argv)` 形のエントリポイント | 取りこぼし検出 | 手順9 | `41` |
 
 ## テスト
 
