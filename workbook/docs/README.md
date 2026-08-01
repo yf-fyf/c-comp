@@ -25,5 +25,6 @@
 | 場所 | 内容 |
 |------|------|
 | [`../advanced/README.md`](../advanced/README.md) | 発展課題 26 トピックの一覧と依存関係(C 移植・セルフホスト P1 を含む) |
+| [`../ocaml/README.md`](../ocaml/README.md) | 各回の完成形に相当する OCaml 版参考実装(完成相当なので、自分の方針を考えたあとの確認に) |
 | [`../docker/rv64/README.md`](../docker/rv64/README.md) | Docker 環境の詳細設定とトラブルシュート |
 | `design/curriculum.md`（開発リポジトリ） | 教材の設計思想（なぜこの順序・なぜ RV64 なのか） |
