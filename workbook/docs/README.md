@@ -6,7 +6,7 @@
 
 | 文書 | 内容 | いつ |
 |------|------|------|
-| [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・全17コマ一覧・コマ16 のあと | **最初に** |
+| [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・全16コマ一覧・コマ16 のあと | **最初に** |
 | [`conventions.md`](./conventions.md) | 実装の約束ごと（`codegen` / `codegen_lval` の分離など） | コマ3 の前に一度 |
 | [`debugging.md`](./debugging.md) | 動かないときの確認手順 | 詰まったとき |
 | [`migration.md`](./migration.md) | 2026-08-01 の教材更新と、古いファイルとの非互換の一覧 | それより前に取得したファイルで作業しているとき |
@@ -18,7 +18,7 @@
 | [`language_spec.md`](./language_spec.md) | Core プロファイルの言語仕様（型・演算子・EBNF・除外機能・標準/発展の到達範囲） |
 | [`rv64_reference.md`](./rv64_reference.md) | 呼び出し規約・スタックフレーム・よく使う命令 |
 | [`testing.md`](./testing.md) | `test_runner` の使い方・テストケースの形式 |
-| [`code_example.md`](./code_example.md) | 各コマ終了時点でコンパイルできるプログラム（コマ1〜16） |
+| [`code_example.md`](./code_example.md) | 各コマ終了時点でコンパイルできるプログラム（コマ1〜16。07 は欠番） |
 
 ## この外にあるもの
 

@@ -31,7 +31,7 @@ bash workbook/docker/rv64/run.sh python3 sessions/01_environment/check.py
 
 読む順序:
 
-1. [`workbook/docs/getting_started.md`](./workbook/docs/getting_started.md) — 進め方ガイド（環境の用意・全17コマ一覧）
+1. [`workbook/docs/getting_started.md`](./workbook/docs/getting_started.md) — 進め方ガイド（環境の用意・全16コマ一覧）
 2. [コマ1の資料](https://yf-fyf.github.io/c-comp/sessions/01_environment/) — 資料サイトを順に読み進める
 3. [`workbook/docs/language_spec.md`](./workbook/docs/language_spec.md) — 対象言語（Core プロファイル）の仕様
 

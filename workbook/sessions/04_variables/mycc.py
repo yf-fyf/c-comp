@@ -106,15 +106,25 @@ class Codegen04(prev.Codegen03):
         match node.kind:
             case 'Decl':
                 self.collect_decls_Decl(node)
+            case 'Block':
+                self.collect_decls_Block(node)
             case _:
                 pass
+
+    def collect_decls_Block(self, node: Node) -> None:
+        # 関数本体は Block ノードなので、1 段だけ開いて中の文を見る。
+        # 宣言を書けるのは関数本体の先頭だけ（language_spec.md「宣言」節）なので、
+        # ここから先へ降りる必要はない。
+        for stmt in node.stmts:
+            self.collect_decls(stmt)
 
     def collect_decls_Decl(self, node: Node) -> None:
         # TODO: 宣言名を alloc_local に渡し、スタック上の保存場所を確保する。
         raise NotImplementedError("collect_decls: Decl を実装してください")
 
     def _reset_func_state(self, node: Node) -> int:
-        # TODO: _locals/_stack_offset を初期化し、関数直下の宣言を収集して frame_size を返す。
+        # TODO: _locals/_stack_offset を初期化し、関数本体 node.body を
+        # collect_decls に渡して宣言を収集し、frame_size を返す。
         # frame_size は align_to(self._stack_offset, 16) で 16 バイト境界にそろえる。
         raise NotImplementedError("関数ごとの変数状態初期化を実装してください")
 

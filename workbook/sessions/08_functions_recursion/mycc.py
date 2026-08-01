@@ -4,8 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
-_PREV = Path(__file__).resolve().parents[1] / '07_functions_abi' / 'mycc.py'
-_SPEC = importlib.util.spec_from_file_location('_session07', _PREV)
+_PREV = Path(__file__).resolve().parents[1] / '06_loops' / 'mycc.py'
+_SPEC = importlib.util.spec_from_file_location('_session06', _PREV)
 prev = importlib.util.module_from_spec(_SPEC)
 assert _SPEC.loader is not None
 _SPEC.loader.exec_module(prev)

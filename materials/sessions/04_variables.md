@@ -276,6 +276,42 @@ addi s0, sp, frame_size + 16
 コマ3 では `_reset_func_state()` が `0` を返し、フレームサイズが固定だった。
 コマ4 では `_reset_func_state()` を実装し、宣言された変数の数に応じて可変にする。
 
+## 宣言収集 — 関数本体は Block ノード
+
+フレームサイズを決めるには、関数に入る前に「この関数がローカル変数を何個使うか」を
+知っておく必要がある。そのために、コード生成の前に一度だけ AST を見て回り、
+`Decl` を見つけるたびに `alloc_local()` する。この走査を `collect_decls()` と呼ぶ。
+
+`gen_func()` が受け取る `FuncDef` ノードの `body` は、文の並びではなく
+1 つの `Block` ノードである（先ほどの S 式の `(block (decl "a") ... (return (var "c")))`）。
+そこで `_reset_func_state()` は、`node.body` を**そのまま** `collect_decls()` に渡す。
+
+```text
+1. self._locals をクリアする
+2. self._stack_offset を 0 にする
+3. self.collect_decls(node.body) で宣言を収集する
+4. align_to(self._stack_offset, 16) を frame_size として返す
+```
+
+`collect_decls()` は `match node.kind` で処理を分ける。
+
+| `node.kind` | 処理 |
+|-------------|------|
+| `'Decl'` | `collect_decls_Decl(node)` — `alloc_local` で変数を登録する |
+| `'Block'` | `collect_decls_Block(node)` — `stmts` を 1 つずつ `collect_decls` に渡す |
+| その他 | 何もしない |
+
+`'Block'` を開くのは、関数本体そのものが `Block` だからである。
+1 段だけ開けば、関数本体の先頭に並んだ `Decl` が全部見える。
+
+そこから先へ降りる必要はない。この言語で宣言を書けるのは**ファイルスコープと
+関数本体の先頭だけ**で、`if` や `while` の中には文しか書けないからである
+（`language_spec.md` の「宣言」節）。
+`collect_decls_Block()` はこの 1 段の展開だけなので、スケルトンに書いてある。
+
+入れ子のブロックは新しいスコープを作らないので、関数内のローカル変数は
+すべて関数全体のフレームへ一律に確保してよい。
+
 ## alloc_local の役割
 
 `self.alloc_local(name)` は、新しいローカル変数にスタック上の位置を割り当てるメソッドである。
@@ -399,10 +435,13 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 | `gen_stmt_ExprStmt(node)` | 式文を処理 |
 | `gen_stmt_Return(node)` | コマ3 の TODO を埋める |
 | `collect_decls_Decl(node)` | `alloc_local` を呼ぶ |
-| `_reset_func_state` | 関数ごとに変数表を初期化し、frame_size を計算 |
+| `_reset_func_state` | 関数ごとに変数表を初期化し、`node.body` を `collect_decls` に渡して frame_size を計算 |
 | `_emit_func_prologue` / `_emit_func_body` / `_emit_func_epilogue` | コマ3 の TODO を埋める |
 
 コマ3 で未実装だった TODO も合わせて埋める。
+
+`collect_decls()` のディスパッチ部分と `collect_decls_Block()`（関数本体の `Block` を
+1 段開くだけの処理）は、スケルトンにあらかじめ書かれている。
 
 ## tests/
 
@@ -416,6 +455,9 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 | `add_vars.c` | 複数変数の加算 | 対応する `.ans` を参照 |
 | `expr_chain.c` | 変数を含む式の連鎖 | 対応する `.ans` を参照 |
 | `multi_expr.c` | 複数変数と複数式 | 対応する `.ans` を参照 |
+| `many_locals.c` | 6変数の総和 | 21 |
+| `eight_locals.c` | 8変数（アラインメント境界） | 36 |
+| `minimal.c` | 最小関数（ローカル変数なし） | 42 |
 
 代入の前にローカル変数の宣言が必要である。宣言と同時に初期値を書くことはできず、初期値は代入文で設定する。
 
@@ -426,6 +468,9 @@ python3 scaffold/test_runner.py sessions/04_variables
 ```
 
 `tests/target.c` がコンパイルでき、終了コード `8` になれば基本形は成功。
+
+`eight_locals.c` はフレームサイズが 16 バイト境界に揃っているかを見るテストで、
+`minimal.c` はローカル変数が 0 個でも正しく動くかを見るテストである。
 
 個別に動かす場合は、次のようにする。
 
@@ -442,4 +487,5 @@ echo $?
 この回では、同じ関数内で同じ名前の変数を2回宣言するケースは扱わない。
 
 コマ4 ではローカル変数の数に応じて可変フレームを使う。
-`_reset_func_state()` で `collect_decls()` を呼び、`align_to(self._stack_offset, 16)` で 16 バイト境界に調整する。
+`_reset_func_state()` で `collect_decls(node.body)` を呼び、`align_to(self._stack_offset, 16)` で 16 バイト境界に調整する。
+ここで作った `_reset_func_state()` と `collect_decls()` の形は、以降のコマでもそのまま使う。

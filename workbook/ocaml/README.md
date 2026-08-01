@@ -114,6 +114,8 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 
 ## コマ番号と対応するテーマ
 
+コマ7 は廃止したので `koma07.ml` は無い（番号は 07 を欠番として残す）。
+
 | 実装 | 対応するコマ | テーマ |
 |------|--------------|--------|
 | `sessions/koma02.ml` | 02_interpreter | AST インタープリター |
@@ -121,7 +123,6 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 | `sessions/koma04.ml` | 04_variables | 変数・代入・シンボルテーブル |
 | `sessions/koma05.ml` | 05_if_else | if / else |
 | `sessions/koma06.ml` | 06_loops | while / for / break / continue |
-| `sessions/koma07.ml` | 07_functions_abi | 再帰的な変数宣言収集 |
 | `sessions/koma08.ml` | 08_functions_recursion | 関数呼び出し・再帰 |
 | `sessions/koma09.ml` | 09_lvalue_rvalue | lvalue / rvalue と `&` / `*` |
 | `sessions/koma10.ml` | 10_types_pointers | 型・ポインタ演算 |
