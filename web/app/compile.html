@@ -15,9 +15,6 @@
         プリセット:
         <select id="example-select"></select>
       </label>
-      <label id="opt-comments-label">
-        <input type="checkbox" id="opt-comments" checked /> 注記コメント
-      </label>
       <span id="font-buttons">
         文字:
         <button data-size="m" class="active">標準</button>
@@ -27,8 +24,20 @@
     </header>
     <main id="layout">
       <section id="left">
+        <div id="compile-bar">
+          <button id="btn-compile" type="button" title="このソースをコンパイルする (Ctrl+Enter)">
+            コンパイル
+          </button>
+          <span class="key-hint">Ctrl+Enter</span>
+          <label id="opt-comments-label">
+            <input type="checkbox" id="opt-comments" checked /> 注記コメント
+          </label>
+          <label id="opt-auto-label">
+            <input type="checkbox" id="opt-auto" /> 自動コンパイル
+          </label>
+        </div>
         <div id="editor"></div>
-        <div id="status"></div>
+        <div id="status" aria-live="polite"></div>
       </section>
       <section id="right">
         <pre id="asm-output"></pre>

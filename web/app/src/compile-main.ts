@@ -2,6 +2,8 @@
 // 左: エディタ + プリセット、右: 生成された RV64 アセンブリ。
 // 出すのは OCaml 参照実装の出力で、学生自身のコンパイラの出力ではない。
 import { EditorView, basicSetup } from "codemirror";
+import { keymap } from "@codemirror/view";
+import { Prec } from "@codemirror/state";
 import { cpp } from "@codemirror/lang-cpp";
 import { compile } from "./core";
 import { el as $, mountShell } from "./shell";
@@ -10,51 +12,110 @@ import "./style.css";
 
 mountShell("compile.html");
 
+// 自動コンパイルの設定は文字サイズ（shell.ts の mycc-font-size）と同じ流儀で持ち越す
+const AUTO_KEY = "mycc-auto-compile";
+const PLACEHOLDER =
+  "ここに生成された RV64 アセンブリが出ます。\n［コンパイル］（Ctrl+Enter）を押してください。";
+
 const editor = new EditorView({
   parent: $("editor"),
   extensions: [
+    // basicSetup の defaultKeymap も Mod-Enter を使う（insertBlankLine）ので優先度で勝たせる
+    Prec.highest(
+      keymap.of([
+        {
+          key: "Mod-Enter",
+          run: () => {
+            runCompile();
+            return true;
+          },
+        },
+      ]),
+    ),
     basicSetup,
     cpp(),
     EditorView.updateListener.of((u) => {
-      if (u.docChanged) scheduleCompile();
+      if (u.docChanged) markDirty();
     }),
   ],
 });
 
 // ---- コンパイルと表示 ----
 
+const autoBox = $<HTMLInputElement>("opt-auto");
+const button = $<HTMLButtonElement>("btn-compile");
+let auto = localStorage.getItem(AUTO_KEY) === "1";
+// 一度でもコンパイル結果を出したか。まだなら右ペインは案内文のまま
+let hasOutput = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
-function scheduleCompile(): void {
+
+function setStatus(cls: string, text: string): void {
+  const status = $("status");
+  status.className = cls;
+  status.textContent = text;
+}
+
+/** ソースまたはオプションが変わった。自動コンパイルが入なら走らせ、切なら「未反映」を示す */
+function markDirty(): void {
+  if (auto) {
+    clearTimeout(timer);
+    timer = setTimeout(runCompile, 250);
+    return;
+  }
   clearTimeout(timer);
-  timer = setTimeout(runCompile, 250);
+  button.classList.add("dirty");
+  if (hasOutput) {
+    // 表示中のアセンブリは今のソースの出力ではない、と分かるようにする
+    $("asm-output").classList.add("stale");
+    setStatus("pending", "● 変更あり — ［コンパイル］（Ctrl+Enter）で更新");
+  } else {
+    setStatus("pending", "［コンパイル］（Ctrl+Enter）でアセンブリを生成します");
+  }
 }
 
 function runCompile(): void {
+  clearTimeout(timer);
+  button.classList.remove("dirty");
   const src = editor.state.doc.toString();
-  const comments = ($("opt-comments") as HTMLInputElement).checked;
+  const comments = $<HTMLInputElement>("opt-comments").checked;
   const result = compile(src, comments);
-  const status = $("status");
   const out = $("asm-output");
   if (result.ok) {
     const text = result.text ?? "";
     out.textContent = text;
-    out.classList.remove("stale");
+    out.classList.remove("stale", "placeholder");
+    hasOutput = true;
     const lines = text === "" ? 0 : text.split("\n").length;
-    status.textContent = `✓ コンパイル成功（${lines} 行）`;
-    status.className = "ok";
+    setStatus("ok", `✓ コンパイル成功（${lines} 行）`);
   } else {
     // 直前の成功結果は消さずに薄く残す。入力途中の一時的なエラーで
     // 右ペインが点滅しないようにしつつ、古い出力だと分かるようにする。
-    out.classList.add("stale");
+    if (hasOutput) out.classList.add("stale");
     const err = result.errors?.[0];
     // line は前処理後の行番号（TextResult に行対応表は無い）。0 = 不明。
     const where = err && err.line ? `（${err.line} 行目）` : "";
-    status.textContent = `✗ ${err?.message ?? "エラー"}${where}`;
-    status.className = "err";
+    setStatus("err", `✗ ${err?.message ?? "エラー"}${where}`);
   }
 }
 
-$("opt-comments").addEventListener("change", runCompile);
+button.addEventListener("click", runCompile);
+$("opt-comments").addEventListener("change", markDirty);
+
+autoBox.checked = auto;
+autoBox.addEventListener("change", () => {
+  auto = autoBox.checked;
+  localStorage.setItem(AUTO_KEY, auto ? "1" : "0");
+  if (auto) runCompile();
+});
+
+// エディタ外（プリセット等）にフォーカスがあるときの Ctrl+Enter。
+// エディタ内は上の keymap が処理し preventDefault 済みなので二重に走らせない
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.defaultPrevented) {
+    e.preventDefault();
+    runCompile();
+  }
+});
 
 // ---- プリセット（workbook/**/tests/*.c からビルド時生成。A1 と同じ examples.json） ----
 
@@ -104,9 +165,16 @@ async function loadExamples(): Promise<void> {
   }
 }
 
+// 初期表示は案内文にする。読み込んだだけでアセンブリが出ていると
+// 「プログラムと出力を並べただけの表」に見え、コンパイルしている実感が出ないため。
+// 自動コンパイルを入にしている人だけ、その設定どおり読み込み時にも走る。
+$("asm-output").textContent = PLACEHOLDER;
+$("asm-output").classList.add("placeholder");
+
 void loadExamples().then(() => {
   if (editor.state.doc.length === 0) {
     setSource("int main() {\n    return 1 + 2 * 3;\n}\n");
   }
-  runCompile();
+  if (auto) runCompile();
+  else markDirty();
 });

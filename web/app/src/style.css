@@ -95,6 +95,8 @@ body {
 }
 #status.ok { color: var(--ok); }
 #status.err { color: var(--err); }
+/* 未コンパイル（成功でも失敗でもない中立の状態） */
+#status.pending { color: #57606a; }
 
 #right { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 #tabs {
@@ -109,11 +111,40 @@ body {
 
 /* ================= C コンパイラ ================= */
 
+/* 主操作（コンパイル）はエディタの直上に置く。ヘッダに混ぜると
+   文字「特大」でヘッダが折り返し、教員デモ時に操作列が画面外へ流れる */
+#compile-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+#btn-compile {
+  font-size: 0.9rem;
+  font-weight: bold;
+  padding: 0.25rem 1.1rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#btn-compile:hover { filter: brightness(1.1); }
+/* 未反映の変更があるとき、押すべきボタンだと分かるようにする */
+#btn-compile.dirty { box-shadow: 0 0 0 3px #cfe4fb; }
+#compile-bar .key-hint { color: #57606a; font-size: 0.78rem; }
+#opt-auto-label { margin-left: auto; font-size: 0.85rem; }
+
 /* #right（flex 列）直下の pre。pre の flex:1 と合わせて右ペインをスクロール域にする。
    min-height:0 が無いと内容の高さが下限になり縦にはみ出す */
 #asm-output { min-height: 0; }
 /* 直前の成功結果を残したまま「今のソースの出力ではない」ことを示す */
 #asm-output.stale { opacity: 0.45; }
+/* まだ一度もコンパイルしていないときの案内文 */
+#asm-output.placeholder { color: #57606a; white-space: pre-wrap; }
 
 .pane { flex: 1; min-height: 0; display: none; overflow: auto; }
 .pane.active { display: flex; flex-direction: column; }
