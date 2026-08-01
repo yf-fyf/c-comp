@@ -9,8 +9,8 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ8 まで |
-| 推奨の前提 | コマ16（`golden.py` は `final/mycc.py` を土台に [`fixed17`](../../workbook/advanced/README.md#fixed17) を回すため、未了だと安全網の確認まで進めない） |
+| 必須の前提 | コマ12（構造体）まで。短絡の考え方そのものは関数呼び出しまでで足りるが、`tests/null_guard.c` が `struct` を使う（短絡が要る代表例の `p != 0 && p->val > 0` がポインタとフィールド参照そのものなので避けられない）。完了条件のうち `golden.py` は完成した `final/mycc.py` を土台に [`fixed17`](../../workbook/advanced/README.md#fixed17) を回すので、やり切るにはコマ16 も要る |
+| 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、ラッパー `semcc.py`（配布済み・完成品） |
 | 編集する | `shortcircuit.py` |
 | 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が短絡の要るテストの通過と `fixed17` 全通を報告する |

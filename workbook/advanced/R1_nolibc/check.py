@@ -7,9 +7,14 @@
 
 Step 1: hello.s が "Hello, no libc!" を表示し、終了コード 42 を返す
 Step 2: mycc がコンパイルした C を syscall.s とリンクして libc なしで動かす
+
+編集対象がアセンブリなので、未実装は `TODO(...)` コメントで表してある。
+TODO が残っている間は、その Step を SKIP として報告する（他系列で
+`NotImplementedError` を SKIP にしているのと同じ扱い）。
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +32,38 @@ COMPILER = Path(os.environ.get("R1_COMPILER", WORKBOOK / "final" / "mycc.py"))
 
 pass_count = 0
 fail_count = 0
+skip_count = 0
+
+TODO_RE = re.compile(r"TODO\(([^)]*)\)")
+
+
+def remaining_todos(path):
+    """未実装マーカー `TODO(...)` の見出しを、現れた順に重複なく返す。
+
+    `TODO(Step 1, Step 2)` のように1つのマーカーが複数の Step を指すことがあるので、
+    読点で割ってから重複を落とす。
+    """
+    labels = []
+    for group in TODO_RE.findall(path.read_text(encoding="utf-8")):
+        for label in re.split(r"[,、]", group):
+            label = label.strip()
+            if label and label not in labels:
+                labels.append(label)
+    return labels
+
+
+def skip(label, detail):
+    global skip_count
+    print(f"  [SKIP] 未実装: {label} — {detail}")
+    skip_count += 1
+
+
+def exit_detail(code):
+    """終了コードの説明。負の値はシグナルによる異常終了である。"""
+    if code < 0:
+        return (f"実際は {code}(シグナル {-code} で異常終了。"
+                "終了コードを返す前に落ちている)")
+    return f"実際は {code}"
 
 
 def check(label, ok, detail=""):
@@ -65,11 +102,15 @@ print("--- Step 1: hello.s(libc なしの Hello World)---")
 hello = src_dir / "hello.s"
 if not hello.is_file():
     check("hello.s がある", False, f"{hello} が見つからない")
+elif remaining_todos(hello):
+    skip("hello.s",
+         f"{hello.name} に TODO が残っている({', '.join(remaining_todos(hello))})。"
+         "ecall を1つも発行しないので、実行してもシグナルで落ちるだけになる")
 else:
     got = build_and_run([hello], "hello.s")
     if got is not None:
         code, out = got
-        check("終了コードが 42", code == 42, f"実際は {code}")
+        check("終了コードが 42", code == 42, exit_detail(code))
         check("Hello, no libc! と表示される",
               out.strip() == "Hello, no libc!", f"実際の出力: {out!r}")
 
@@ -99,16 +140,19 @@ else:
         if got is None:
             continue
         code, out = got
-        check(f"{csrc.name} の終了コードが {ans}", code == ans, f"実際は {code}")
+        check(f"{csrc.name} の終了コードが {ans}", code == ans, exit_detail(code))
         if expected_out:
             check(f"{csrc.name} の出力", out == expected_out,
                   f"実際の出力: {out!r}")
 
 print()
 print("=============================")
-print(f"  PASS: {pass_count}  FAIL: {fail_count}")
+print(f"  PASS: {pass_count}  FAIL: {fail_count}  SKIP: {skip_count}")
 print("=============================")
-if fail_count == 0:
+if fail_count == 0 and skip_count == 0:
     print("libc なしで動いた! gcc とライブラリに任せていた部分が1つ減った。")
-if fail_count > 0:
+if skip_count > 0:
+    print("未実装の Step が残っている。SKIP は未達なので、完了条件は満たしていない。")
+    print("hello.s の TODO を埋めてから、もう一度 check.py を回す。")
+if fail_count > 0 or skip_count > 0:
     raise SystemExit(1)

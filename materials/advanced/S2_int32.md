@@ -9,8 +9,8 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ10（型サイズ）まで |
-| 推奨の前提 | コマ16（`golden.py` は `final/mycc.py` を土台に [`fixed17`](../../workbook/advanced/README.md#fixed17) を回すため、未了だと安全網の確認まで進めない） |
+| 必須の前提 | コマ13（`malloc`）まで。折り返しの考え方そのものは型サイズまでで足りるが、安全網の `tests/pointer_ok.c` が `struct` と `malloc` を使う。完了条件のうち `golden.py` は完成した `final/mycc.py` を土台に [`fixed17`](../../workbook/advanced/README.md#fixed17) を回すので、やり切るにはコマ16 も要る |
+| 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、ラッパー `semcc.py`（配布済み・完成品） |
 | 編集する | `narrow.py` |
 | 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が折り返しのテストの通過と `fixed17` 全通を報告する |

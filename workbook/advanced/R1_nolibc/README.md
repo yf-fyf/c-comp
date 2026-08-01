@@ -11,8 +11,8 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ11（`printf`）まで |
-| 推奨の前提 | コマ16（`check.py` の Step 2 は `final/mycc.py` の出力をリンクするので、無いとそこが SKIP になる） |
+| 必須の前提 | 着手はコマ11（`printf`）まで。完了条件の `check.py` は Step 2 で完成した `final/mycc.py` の出力をリンクする（無い間はそこが SKIP になる）ので、やり切るにはコマ16 も要る |
+| 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、`syscall.s`（配布済み・完成品） |
 | 編集する | `hello.s` |
 | 完了条件 | `check.py` の全 Step が PASS になる（このトピックに `golden.py` は無い） |
@@ -37,3 +37,8 @@ qemu-riscv64 ./hello; echo $?      # → Hello, no libc! / 42
 ```bash
 python3 check.py
 ```
+
+未実装のうちは SKIP になります。この回の編集対象はアセンブリなので、
+未実装は `hello.s` の `TODO(...)` コメントで表してあります。
+`check.py` は TODO が残っている間その Step を `[SKIP] 未実装: …` と報告し、
+実装したところから PASS / FAIL に変わります（SKIP は未達なので、完了条件は満たしていません）。

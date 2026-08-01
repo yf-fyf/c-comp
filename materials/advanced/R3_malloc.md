@@ -10,8 +10,8 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ13（`malloc` と連結リスト）まで |
-| 推奨の前提 | コマ16（実質必須に近い。`check.py` が `final/mycc.py` で `tests/*.c` をコンパイルするので、無いと実行できない） |
+| 必須の前提 | コマ13（`malloc` と連結リスト）まで、およびコマ16。`check.py` が完成した `final/mycc.py` で `mymalloc.c` と `tests/*.c` をコンパイルするので、コマ16 が無いと1件も実行できない |
+| 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/` |
 | 編集する | `mymalloc.c` |
 | 完了条件 | `check.py` の全 Step が PASS になる（このトピックに `golden.py` は無い） |
@@ -137,6 +137,10 @@ python3 check.py
 | `exhaust.c` | プールを使い切ったら `0`（NULL）を返して止まる |
 
 `exhaust.c` は「無限に確保できてしまう」バグ（終端チェック忘れ）を検出する。
+
+この回の編集対象は C なので、未実装は `NotImplementedError` ではなく
+`mymalloc.c` の `TODO(...)` コメントで表してある。`check.py` は TODO が残っている間、
+テストを回さず `[SKIP] 未実装: …` と報告する。SKIP は未達なので、完了条件は満たしていない。
 
 ::: important
 

@@ -7,9 +7,14 @@
 
 各テストは、tests/*.c と mymalloc.c を自作コンパイラで一緒にコンパイルし、
 qemu で実行して終了コードを .ans と比較する。
+
+編集対象が C なので、未実装は `TODO(...)` コメントで表してある。
+TODO が残っている間は、テストを回さず SKIP として報告する（他系列で
+`NotImplementedError` を SKIP にしているのと同じ扱い）。
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -33,6 +38,33 @@ HINTS = {
 
 pass_count = 0
 fail_count = 0
+skip_count = 0
+
+TODO_RE = re.compile(r"TODO\(([^)]*)\)")
+
+
+def remaining_todos(path):
+    """未実装マーカー `TODO(...)` の見出しを、現れた順に重複なく返す。
+
+    `TODO(Step 1, Step 2)` のように1つのマーカーが複数の Step を指すことがあるので、
+    読点で割ってから重複を落とす。
+    """
+    labels = []
+    for group in TODO_RE.findall(path.read_text(encoding="utf-8")):
+        for label in re.split(r"[,、]", group):
+            label = label.strip()
+            if label and label not in labels:
+                labels.append(label)
+    return labels
+
+
+def exit_detail(code):
+    """終了コードの説明。負の値はシグナルによる異常終了である。"""
+    if code < 0:
+        return (f"実際 {code}(シグナル {-code} で異常終了。"
+                "終了コードを返す前に落ちている)")
+    return f"実際 {code}"
+
 
 for tool in (GCC, QEMU):
     if shutil.which(tool) is None:
@@ -48,8 +80,15 @@ if not COMPILER.is_file():
     print(f"コンパイラが見つかりません: {COMPILER}", file=sys.stderr)
     raise SystemExit(2)
 
+todos = remaining_todos(impl)
+
 for csrc in sorted(TESTS.glob("*.c")):
     label = csrc.name
+    if todos:
+        print(f"  [SKIP] 未実装: {label} — {impl.name} に TODO が残っている"
+              f"({', '.join(todos)})")
+        skip_count += 1
+        continue
     expected = int(csrc.with_suffix(".ans").read_text().strip())
 
     r = subprocess.run([sys.executable, str(COMPILER), str(csrc), str(impl)],
@@ -77,15 +116,18 @@ for csrc in sorted(TESTS.glob("*.c")):
         pass_count += 1
     else:
         hint = HINTS.get(run.returncode, "")
-        print(f"  [FAIL] {label} — 期待 {expected}, 実際 {run.returncode}"
+        print(f"  [FAIL] {label} — 期待 {expected}, {exit_detail(run.returncode)}"
               + (f" ({hint})" if hint else ""))
         fail_count += 1
 
 print()
 print("=============================")
-print(f"  PASS: {pass_count}  FAIL: {fail_count}")
+print(f"  PASS: {pass_count}  FAIL: {fail_count}  SKIP: {skip_count}")
 print("=============================")
-if fail_count == 0:
+if fail_count == 0 and skip_count == 0:
     print("自前 malloc が動いた! ヒープの管理が自分のものになった。")
-if fail_count > 0:
+if skip_count > 0:
+    print("未実装の Step が残っている。SKIP は未達なので、完了条件は満たしていない。")
+    print(f"{impl.name} の TODO を埋めてから、もう一度 check.py を回す。")
+if fail_count > 0 or skip_count > 0:
     raise SystemExit(1)

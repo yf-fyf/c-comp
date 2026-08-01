@@ -41,8 +41,13 @@ def ensure_base(compiler: Path, env_var: str) -> None:
         return
 
     print(problem, file=sys.stderr)
-    print("コマ16 で final/mycc.py に統合してから、この回に取り組む。", file=sys.stderr)
-    print(f"コマ16 を待たずに試すなら、土台を差し替える:", file=sys.stderr)
-    print(f"  {env_var}=../../sessions/08_functions_recursion/mycc.py python3 golden.py",
-          file=sys.stderr)
+    print("golden.py は fixed17（final/tests の17件）を回すので、", file=sys.stderr)
+    print("コマ16 で完成させた final/mycc.py が土台に要る。", file=sys.stderr)
+    print("fixed17 には struct や malloc を使うテストが含まれるため、", file=sys.stderr)
+    print("コマ15 までの mycc.py で代用することはできない。", file=sys.stderr)
+    print(file=sys.stderr)
+    print("コマ16 が済んでいないなら、check.py を全 PASS にするところまで進める", file=sys.stderr)
+    print("（check.py は土台のコンパイラを使わない）。", file=sys.stderr)
+    print("別の場所に完成した mycc.py があるなら、土台を差し替えられる:", file=sys.stderr)
+    print(f"  {env_var}=/path/to/completed/mycc.py python3 golden.py", file=sys.stderr)
     raise SystemExit(2)

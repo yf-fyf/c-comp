@@ -10,8 +10,8 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ11（`printf`）まで |
-| 推奨の前提 | コマ16（`check.py` の Step 2 は `final/mycc.py` の出力をリンクするので、無いとそこが SKIP になる） |
+| 必須の前提 | 着手はコマ11（`printf`）まで。完了条件の `check.py` は Step 2 で完成した `final/mycc.py` の出力をリンクする（無い間はそこが SKIP になる）ので、やり切るにはコマ16 も要る |
+| 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、`syscall.s`（配布済み・完成品） |
 | 編集する | `hello.s` |
 | 完了条件 | `check.py` の全 Step が PASS になる（このトピックに `golden.py` は無い） |
@@ -163,6 +163,11 @@ python3 check.py
 ```
 
 Step 1（`hello.s` の表示と終了コード）と Step 2（`tests/*.c` の実行）を続けて確認する。
+
+この回の編集対象はアセンブリなので、未実装は `NotImplementedError` ではなく
+`hello.s` の `TODO(...)` コメントで表してある。`check.py` は TODO が残っている間、
+その Step を `[SKIP] 未実装: …` と報告する（実装前に一度回しても、
+原因の分からないシグナル終了にはならない）。SKIP は未達なので、完了条件は満たしていない。
 
 ## 発展課題
 

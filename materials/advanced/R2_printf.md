@@ -9,8 +9,8 @@ libc の `printf` を使わずに、自分で `print_str` / `print_int` / `print
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | R1（`sys_write` が使える状態） |
-| 推奨の前提 | コマ16（実質必須に近い。`check.py` が `final/mycc.py` で `tests/*.c` をコンパイルするので、無いと実行できない） |
+| 必須の前提 | R1（`sys_write` が使える状態）とコマ16。`check.py` が完成した `final/mycc.py` で `myprintf.c` と `tests/*.c` をコンパイルするので、コマ16 が無いと1件も実行できない |
+| 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、`syscall.s`（R1 のもの。配布済み・完成品） |
 | 編集する | `myprintf.c` |
 | 完了条件 | `check.py` の全 Step が PASS になる（このトピックに `golden.py` は無い） |
@@ -153,6 +153,10 @@ python3 check.py
 
 `tests/*.c` を自作コンパイラでコンパイルし、`myprintf.c` と `syscall.s` と
 リンクして実行し、標準出力と終了コードを確認する。**libc は一切使わない。**
+
+この回の編集対象は C なので、未実装は `NotImplementedError` ではなく
+`myprintf.c` の `TODO(...)` コメントで表してある。`check.py` は TODO が残っている間、
+テストを回さず `[SKIP] 未実装: …` と報告する。SKIP は未達なので、完了条件は満たしていない。
 
 ## 発展課題
 
