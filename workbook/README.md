@@ -2,11 +2,12 @@
 
 この教材では、Python で C 言語サブセットの簡易コンパイラを作る。
 標準トラックの最終成果物は `final/mycc.py` である。
-必要な Python バージョンは [`docs/getting_started.md`](./docs/getting_started.md) の
-「環境を用意する」節を参照。
 
-**まず [`docs/getting_started.md`](./docs/getting_started.md) を読む。**
-環境の用意から各回の進め方まで、始めるのに必要なことがまとまっている。
+## 最初にすること
+
+**[`docs/getting_started.md`](./docs/getting_started.md) を読む。ここが唯一の入口である。**
+必要な Python バージョン・環境の用意・読む順序・各回の進め方・全16コマ一覧は、
+すべてその文書にまとまっている。この README の残りは、あとから場所を確かめるための一覧である。
 
 > **2026-08-01 より前に取得したファイルで作業している場合**は、先に
 > [`docs/migration.md`](./docs/migration.md) を読むこと。
@@ -16,7 +17,7 @@
 
 | パス | 内容 |
 |------|------|
-| [`docs/`](./docs/README.md) | 進め方・言語仕様・RV64 リファレンス・テスト・デバッグ |
+| [`docs/`](./docs/README.md) | 学習者向け文書の逆引き索引（進め方・言語仕様・RV64 リファレンス・テスト・デバッグ） |
 | `sessions/NN_xxx/` | 各回の作業指示・`mycc.py`・テスト（資料は[サイト](https://yf-fyf.github.io/c-comp/)） |
 | `final/` | コマ16 で作る最終統合版と `fixed17` テスト |
 | [`advanced/`](./advanced/README.md) | 選択制の発展課題 26 トピック（C 移植・セルフホストを含む） |

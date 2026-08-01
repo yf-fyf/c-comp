@@ -70,7 +70,7 @@ sections:
 
   - slug: docs
     title: 仕様・参考文書
-    summary: 「読むもの」と「引くもの」に分かれている。
+    summary: 知りたいことから引く索引と、仕様・参考文書の本体。
     pages:
       - workbook/docs/README.md
       - workbook/docs/getting_started.md

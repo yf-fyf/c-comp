@@ -10,6 +10,19 @@
 作るコンパイラが対象とする言語は [`language_spec.md`](./language_spec.md)（第 2 版、2026 年改訂）で
 凍結してある。「この機能は書けるのか」で迷ったら、その文書が最終的な答えになる。
 
+## 読む順序
+
+**この文書がスタート地点である。** 上から順に進めればよい。
+
+1. **この文書**（進め方ガイド）— 「環境を用意する」まで読んで環境を作る
+2. [コマ1の資料](https://yf-fyf.github.io/c-comp/sessions/01_environment/) — 以降は資料サイトを回ごとに読み進める
+3. [`conventions.md`](./conventions.md) — 実装の約束ごと。コマ3 に入る前に一度目を通す
+4. [`language_spec.md`](./language_spec.md) — 対象言語の仕様。通読せず、迷ったときに引く
+
+途中で詰まったら [`debugging.md`](./debugging.md)、
+何をどこで調べるか自体が分からなくなったら
+[`README.md`（逆引き索引）](./README.md) を見る。
+
 ---
 
 ## 到達目標
@@ -54,7 +67,7 @@ bash docker/rv64/run.sh python3 scaffold/test_runner.py
 
 ## 各回の進め方
 
-1. [サイトの資料](https://yf-fyf.github.io/c-comp/sessions/) の該当する回を読む（**まずこれ**）
+1. [サイトの資料](https://yf-fyf.github.io/c-comp/sessions/) の該当する回を読む（**その回で最初にやること**）
 2. `sessions/NN_xxx/README.md` の作業指示を見る
 3. `sessions/NN_xxx/mycc.py` を編集する
 4. テストを走らせる

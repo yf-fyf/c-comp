@@ -27,7 +27,7 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 | `design/quality_guide.md` | 教材品質管理（制作・AIレビュー・改善ワークフロー） |
 | `design/ai_usage.md` | AIモデルの使い分け・セッション分離・調査範囲の基本方針 |
 | `design/webapps.md` | 補助ウェブアプリの企画書（アプリ案カタログ・実装方針。企画段階） |
-| `workbook/docs/README.md` | 学習者向けドキュメントの索引（読むもの / 引くもの） |
+| `workbook/docs/README.md` | 学習者向けドキュメントの逆引き索引（知りたいこと → 該当節） |
 | `workbook/docs/getting_started.md` | 進め方ガイド（環境の用意・全コマ一覧・到達目標） |
 | `workbook/docs/language_spec.md` | Core プロファイル（言語仕様・型システム・演算子） |
 | `workbook/docs/conventions.md` | Python 実装の約束ごと（`codegen` / `codegen_lval` の分離など） |
@@ -45,7 +45,7 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 
 | パス | 役割 |
 |------|------|
-| `workbook/README.md` | 学習者向け配布物の入口 |
+| `workbook/README.md` | 学習者向け配布物の入口（本文は `workbook/docs/getting_started.md` へ一本化） |
 | `workbook/sessions/` | 通常回の配布教材。各回の `README.md` を入口とする |
 | `materials/sessions/` | 通常回の資料の Markdown 原稿 |
 | `workbook/scaffold/` | 共通のフロントエンド、AST、テスト基盤 |

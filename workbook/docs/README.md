@@ -1,24 +1,44 @@
-# 学習者向けドキュメント
+# 学習者向けドキュメント — 逆引き索引
 
-「読むもの」と「引くもの」に分かれている。
+**始めるときは [`getting_started.md`](./getting_started.md) から。** ここは入口ではなく、
+「知りたいことがどの文書のどこにあるか」を引くための索引である。
 
-## 読むもの
+## 知りたいことから引く
 
-| 文書 | 内容 | いつ |
-|------|------|------|
-| [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・全16コマ一覧・コマ16 のあと | **最初に** |
-| [`conventions.md`](./conventions.md) | 実装の約束ごと（`codegen` / `codegen_lval` の分離など） | コマ3 の前に一度 |
-| [`debugging.md`](./debugging.md) | 動かないときの確認手順 | 詰まったとき |
+| 知りたいこと・キーワード | 行き先 |
+|------------------------|--------|
+| 環境を作りたい / Docker / Python のバージョン | [`getting_started.md` の「環境を用意する」](./getting_started.md#環境を用意する) |
+| 何をどの順に読めばいいか | [`getting_started.md` の「読む順序」](./getting_started.md#読む順序) |
+| 今日は何をするのか / コマの一覧・到達目標 | [`getting_started.md` の「全体の流れ」](./getting_started.md#全体の流れ) |
+| コマ7 が無いのはなぜか | [`getting_started.md`](./getting_started.md) 末尾・[`migration.md`](./migration.md) |
+| この機能は書けるのか（`switch`・`+=`・後置 `++`・ビット演算 など） | [`language_spec.md` の除外機能の一覧](./language_spec.md#excluded) |
+| 使える型・演算子・優先順位 | [`language_spec.md` の型](./language_spec.md#types)・[演算子](./language_spec.md#operators) |
+| 構文が通らない / EBNF を確かめたい | [`language_spec.md` の形式文法](./language_spec.md#grammar) |
+| この機能はどのコマで導入されるか | [`language_spec.md` の対応表](./language_spec.md#feature-map) |
+| 除算の丸め方向・評価順序・未定義動作 | [`language_spec.md` の実行時の意味](./language_spec.md#semantics) |
+| gcc で通る C との違い | [`language_spec.md` の ISO C との関係](./language_spec.md#isoc) |
+| `printf` / `malloc` の宣言 | [`language_spec.md` の標準ライブラリ](./language_spec.md#stdlib) |
+| どこまで書けるコンパイラになったか / 具体例が見たい | [`code_example.md` の目次](./code_example.md) |
+| `codegen` と `codegen_lval` の分け方 | [`conventions.md` の「守ってほしい設計」](./conventions.md#守ってほしい設計) |
+| 関数名・変数名をどう付けるか / 名前を変えてよいか | [`conventions.md` の「命名の目安」](./conventions.md#命名の目安) |
+| テストの走らせ方・テストケースの書き方 | [`testing.md`](./testing.md) |
+| 呼び出し規約・スタックフレーム・命令の意味 | [`rv64_reference.md`](./rv64_reference.md) |
+| テストが落ちる / 終了コードが変 / 実行時に壊れる | [`debugging.md` の症状表](./debugging.md#症状から当たりをつける) |
+| `AttributeError` が出る / 昔取得したファイルがある | [`migration.md`](./migration.md) |
+| コマ16 のあと何をするか | [`getting_started.md` の「コマ16 のあと」](./getting_started.md#コマ16-のあと)・[`../advanced/README.md`](../advanced/README.md) |
+
+## 文書の一覧
+
+| 文書 | 内容 | 読みどき |
+|------|------|---------|
+| [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・読む順序・全16コマ一覧・コマ16 のあと | **最初に**（入口） |
+| [`conventions.md`](./conventions.md) | 実装の約束ごと（編集するファイル・`emit()`・命名） | コマ3 の前に一度。`codegen` / `codegen_lval` の分離はコマ9 で導入するので、その回に読み直す |
+| [`debugging.md`](./debugging.md) | 動かないときの確認手順と症状表 | 詰まったとき |
 | [`migration.md`](./migration.md) | 2026-08-01 の教材更新と、古いファイルとの非互換の一覧 | それより前に取得したファイルで作業しているとき |
-
-## 引くもの
-
-| 文書 | 内容 |
-|------|------|
-| [`language_spec.md`](./language_spec.md) | Core プロファイルの言語仕様（型・演算子・EBNF・除外機能・標準/発展の到達範囲） |
-| [`rv64_reference.md`](./rv64_reference.md) | 呼び出し規約・スタックフレーム・よく使う命令 |
-| [`testing.md`](./testing.md) | `test_runner` の使い方・テストケースの形式 |
-| [`code_example.md`](./code_example.md) | 各コマ終了時点でコンパイルできるプログラム（コマ1〜16。07 は欠番） |
+| [`language_spec.md`](./language_spec.md) | Core プロファイルの言語仕様（型・演算子・EBNF・除外機能・標準/発展の到達範囲） | 引くもの。冒頭に目次がある |
+| [`rv64_reference.md`](./rv64_reference.md) | 呼び出し規約・スタックフレーム・よく使う命令 | 引くもの |
+| [`testing.md`](./testing.md) | `test_runner` の使い方・テストケースの形式 | 引くもの |
+| [`code_example.md`](./code_example.md) | 各コマ終了時点でコンパイルできるプログラム（コマ1〜16。07 は欠番） | 引くもの。冒頭に目次がある |
 
 ## この外にあるもの
 
