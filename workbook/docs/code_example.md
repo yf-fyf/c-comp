@@ -39,13 +39,14 @@ qemu-riscv64 ./hello; echo $?   # → 42
 コンパイラはまだ存在しない。教員提供の Lexer/Parser が返す AST を Python で評価する。
 
 ```python
-# 学習者が書くインタープリター
+# 学習者が書くインタープリター(除算はゼロ方向切り捨て。教員提供の c_div を使う。
+# Python の // は床除算で丸め方向が異なるため使わない)
 def eval_ast(node):
     if node.kind == 'Num':  return node.val
     if node.kind == 'Add':  return eval_ast(node.lhs) + eval_ast(node.rhs)
     if node.kind == 'Sub':  return eval_ast(node.lhs) - eval_ast(node.rhs)
     if node.kind == 'Mul':  return eval_ast(node.lhs) * eval_ast(node.rhs)
-    if node.kind == 'Div':  return eval_ast(node.lhs) // eval_ast(node.rhs)  # 前期は非負数のみ扱うためCと挙動一致
+    if node.kind == 'Div':  return c_div(eval_ast(node.lhs), eval_ast(node.rhs))
 ```
 
 評価できる式の例:
