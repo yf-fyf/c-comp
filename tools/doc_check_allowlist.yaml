@@ -8,7 +8,7 @@
 # 1行足し引きしただけで除外が外れて誤検出になり、逆にずれた先に別の違反が
 # あれば黙って握り潰す。
 #
-# check には検出種別を書く（T77）。1行が複数の種別に引っかかることがある
+# check には検出種別を書く。1行が複数の種別に引っかかることがある
 # （例: `コマ 08` はゼロ埋めと空白の両方）ので、行の内容だけで除外すると
 # 許すつもりのない違反まで黙る。名指しした種別だけを除外する。
 # 複数を許すときは配列で書く（check: [koma-zero-pad, koma-space]）。
@@ -77,7 +77,7 @@ legacy_terms:
     reason: >
       同上。引用ブロック内の例示プロンプト本文（「配列 a[3] の宣言を...」）。
 
-# style チェック（T59）の除外リスト。design/maintaining.md の用語表そのものが
+# style チェックの除外リスト。design/maintaining.md の用語表そのものが
 # 「誤（避ける）」列に旧表記の実例を挙げているため自己検出してしまう箇所を除く。
 style_terms:
   - file: design/maintaining.md
@@ -109,7 +109,7 @@ style_terms:
     check: hankaku-paren
     status: legitimate
     reason: >
-      T59 後半（advanced 括弧統一）で追加。`workbook/advanced/O5_liveness/golden.py`
+      advanced/ 配下の括弧表記統一のため追加。`workbook/advanced/O5_liveness/golden.py`
       が実際に印字する `(なし)` という半角括弧のリテラル出力を「」で引用した文。
       数値・コマンド例・実出力は変更しない方針のため、括弧も統一の対象外。
 
@@ -120,12 +120,12 @@ style_terms:
     reason: >
       同上。`golden.py` の出力 `(なし)` を引用したもう1箇所。
 
-# codeexec チェック（T57-1）の除外リスト。code_example.md の C ブロックのうち、
+# codeexec チェックの除外リスト。code_example.md の C ブロックのうち、
 # 意図的に処理系へ通さないものがあれば、ブロック先頭行を match に書いて除外する。
 # 現状は空（全ブロックが構文検査・実行照合を通っている）。
 code_examples: []
 
-# ident チェック（T57-2）の除外リスト。規約文書が実装に無い名前をあえて挙げる
+# ident チェックの除外リスト。規約文書が実装に無い名前をあえて挙げる
 # 場合（廃止済みの名前を「こう出たら旧版」と説明する等）に使う。
 # 現状は空（挙がっている名前はすべて実在する）。
 identifiers: []

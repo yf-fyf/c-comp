@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-発展課題の依存関係の整合を機械的に検査する（T63 / T57-8）。
+発展課題の依存関係の整合を機械的に検査する。
 
 使い方:
     python3 tools/check_advanced_deps.py            # 全チェックを実行
@@ -43,9 +43,9 @@ MATERIALS_ADVANCED = ROOT / "materials" / "advanced"
 # 索引の「### 依存関係」に描く系列。O 系列だけがトピック間で積み上がる。
 GRAPH_FAMILY = "O"
 
-# 位置づけブロックに必ずある行（T62 が全26本にそろえた固定表）。
+# 位置づけブロックに必ずある行（全26本にそろえた固定表）。
 REQUIRED_ROWS = ("必須の前提", "推奨の前提", "改変しない", "編集する", "完了条件", "コマ数")
-# S / L 系列だけに必須の行（T64）。
+# S / L 系列だけに必須の行。
 SPEC_ROW = "仕様との関係"
 
 TOPIC_ID = re.compile(r"\b([FBORSLQP][0-9])\b")

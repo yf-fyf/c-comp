@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-原稿・配布物の整合を機械的に検査する（T57）。
+原稿・配布物の整合を機械的に検査する。
 
 使い方:
     python3 tools/check_docs.py                # 全チェックを実行
@@ -14,10 +14,10 @@
     nav       site/nav.yaml に載っていない materials/ 原稿を検出する
               （design/maintaining.md のワンライナーと同じロジック）
     libh      workbook/scaffold/lib.h の宣言一覧と language_spec.md の
-              「標準ライブラリ」節のコードブロックが一致しているか（T55）
-    style     design/maintaining.md の用語表（T59）で決めた表記に反していないか
+              「標準ライブラリ」節のコードブロックが一致しているか
+    style     design/maintaining.md の用語表で決めた表記に反していないか
               （第NN回・ゼロ埋め・コマとNの間の空白・「学生」表記）。
-              workbook/advanced/・materials/advanced/ も対象（T59 後半で統一した
+              workbook/advanced/・materials/advanced/ も対象（advanced 配下で統一した
               全角/半角括弧・「発展課題 XN」・B ファミリの呼称・「（選択制）」の
               全廃・スキャフォールド表記も、advanced 配下限定であわせて検査する）
     exc       language_spec.md の「N 件の例外」宣言と例外見出しの数の一致
@@ -89,7 +89,7 @@ def load_style_allowlist() -> list[dict]:
     return _load_allowlist_section("style_terms")
 
 
-# 除外リストに書ける検出種別（T77）。セクションごとに閉じた集合として持ち、
+# 除外リストに書ける検出種別。セクションごとに閉じた集合として持ち、
 # 綴り違いをその場で違反にする。ここに無い種別を書いた除外は「効かない除外」に
 # なるが、それは死んだ除外としてしか現れず原因が分かりにくいので明示的に弾く。
 ALLOWLIST_KINDS: dict[str, set[str]] = {
@@ -114,7 +114,7 @@ class Allowlist:
     さらに、1行が複数の検出種別に引っかかることがある（例: `コマ 08` は
     ゼロ埋めと空白の両方）。行の内容だけで照合すると、片方を許すつもりの除外が
     もう片方まで黙らせてしまう。そこで `check`（検出種別。文字列またはその配列）
-    を必須にし、名指しした種別だけを除外する（T77）。
+    を必須にし、名指しした種別だけを除外する。
 
     一度も一致しなかったエントリは「死んだ除外」として違反にする。本文を直して
     対象語が消えたのにエントリだけ残る状態を、このチェック自身が見つけるため。
@@ -333,7 +333,7 @@ def check_nav_listing() -> list[Violation]:
     ]
 
 
-# ── チェック4: lib.h と仕様書の宣言一致（T55） ──
+# ── チェック4: lib.h と仕様書の宣言一致 ──
 #
 # workbook/docs/language_spec.md の「標準ライブラリ」節は workbook/scaffold/lib.h
 # の宣言一覧を（読みやすさのため）そのまま書き下している。二重管理なので放置
@@ -411,7 +411,7 @@ def check_libh_sync() -> list[Violation]:
     )]
 
 
-# ── チェック5: 用語・表記の統一（T59） ──
+# ── チェック5: 用語・表記の統一 ──
 #
 # design/maintaining.md の「用語と表記の統一」節が定める規約のうち、機械的に
 # 検出できるものを検査する: 回の呼称は「コマN」（ゼロ埋めなし・空白なし）に
@@ -421,12 +421,12 @@ def check_libh_sync() -> list[Violation]:
 # コード（*.py / *.ml）のコメント・docstring は対象外（コード中の記述であり、
 # 進行中の授業で既に配布済みのファイルを書き換える実利が薄いため）。
 #
-# materials/advanced/, workbook/advanced/ も対象に含める（T59 後半）。ただし
+# materials/advanced/, workbook/advanced/ も対象に含める。ただし
 # 「第N回」チェックだけは advanced 側で除外する: advanced の「Xシリーズの
 # 第N回」（F/O/S/R/Q/B の各ファミリ内での位置）は、コマ1〜16 を指す「第NN回」
 # とは無関係な別の数え方であり、正当な出現のため。
 #
-# advanced 配下限定の追加規約（T59 後半でこの節から統一したもの）:
+# advanced 配下限定の追加規約:
 #   - 全角/半角括弧: 地の文の丸括弧は全角（）に統一する。ただし Big-O 記法
 #     （例: O(n³)）・LL(1) のような確立した記法、Markdown リンク／画像の
 #     `](...)`、インラインコード・コードブロックの中身は対象外
@@ -465,7 +465,8 @@ _STYLE_SCAFFOLD_RE = re.compile(r"\bscaffold\b(?!/)")
 #
 # language_spec.md の冒頭は「N 件の例外(後述)を除き」と件数を宣言している。
 # 例外を1つ足したのに冒頭の件数を直し忘れると、規範文書が自分自身と矛盾する
-# （実際に T53 で E3 を足したとき「2 件」のまま残った）。両者を突き合わせる。
+# （実際に例外を1つ追加した際、冒頭の件数表記が古いまま取り残されたことがあった）。
+# 両者を突き合わせる。
 
 EXC_COUNT_RE = re.compile(r"(\d+)\s*件の例外")
 EXC_HEADING_RE = re.compile(r"^\*\*例外 E(\d+) —")
@@ -626,7 +627,7 @@ def check_style_terms() -> list[Violation]:
     return violations
 
 
-# ── チェック7: code_example.md の C コードブロックを処理系に通す（T57-1） ──
+# ── チェック7: code_example.md の C コードブロックを処理系に通す ──
 #
 # code_example.md は「各コマ終了時点でコンパイルできる最も複雑なプログラム」を
 # 示す文書で、各例に期待する終了コード・標準出力まで書いてある。人手では検算
@@ -883,7 +884,7 @@ def check_code_examples() -> list[Violation]:
     return violations
 
 
-# ── チェック8: 規約文書が挙げる識別子の実在確認（T57-2） ──
+# ── チェック8: 規約文書が挙げる識別子の実在確認 ──
 #
 # conventions.md の「命名の目安」表・debugging.md の症状表・scaffold/README.md の
 # ファイル一覧は、実装側の名前を名指しする。名前が変わったのに文書が古いままだと、
@@ -1000,10 +1001,10 @@ CHECKS = {
     "terms": ("旧仕様語の検出", check_legacy_terms),
     "nav": ("nav.yaml 未掲載の検出", check_nav_listing),
     "libh": ("lib.h と仕様書の宣言一致", check_libh_sync),
-    "style": ("用語・表記の統一（T59）", check_style_terms),
+    "style": ("用語・表記の統一", check_style_terms),
     "exc": ("ISO C 例外の件数と見出しの一致", check_exception_count),
-    "codeexec": ("code_example.md のコード実行（T57-1）", check_code_examples),
-    "ident": ("規約文書が挙げる識別子の実在（T57-2）", check_identifiers),
+    "codeexec": ("code_example.md のコード実行", check_code_examples),
+    "ident": ("規約文書が挙げる識別子の実在", check_identifiers),
 }
 
 
