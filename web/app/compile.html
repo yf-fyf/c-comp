@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>C コンパイラ — 実践・Cコンパイラ演習</title>
+    <!-- OCaml コア（js_of_ocaml 出力）。globalThis.myccCore を定義する -->
+    <script src="./core/api.bc.js"></script>
+  </head>
+  <body>
+    <header id="topbar">
+      <h1>C コンパイラ</h1>
+      <nav id="app-nav"></nav>
+      <label id="example-label">
+        プリセット:
+        <select id="example-select"></select>
+      </label>
+      <label id="opt-comments-label">
+        <input type="checkbox" id="opt-comments" checked /> 注記コメント
+      </label>
+      <span id="font-buttons">
+        文字:
+        <button data-size="m" class="active">標準</button>
+        <button data-size="l">大</button>
+        <button data-size="xl">特大</button>
+      </span>
+    </header>
+    <main id="layout">
+      <section id="left">
+        <div id="editor"></div>
+        <div id="status"></div>
+      </section>
+      <section id="right">
+        <pre id="asm-output"></pre>
+      </section>
+    </main>
+    <script type="module" src="/src/compile-main.ts"></script>
+  </body>
+</html>

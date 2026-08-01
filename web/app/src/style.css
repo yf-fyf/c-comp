@@ -105,6 +105,15 @@ body {
   border-bottom: 1px solid var(--border);
 }
 #opt-line-label { margin-left: auto; font-size: 0.85rem; }
+#opt-comments-label { font-size: 0.85rem; }
+
+/* ================= C コンパイラ ================= */
+
+/* #right（flex 列）直下の pre。pre の flex:1 と合わせて右ペインをスクロール域にする。
+   min-height:0 が無いと内容の高さが下限になり縦にはみ出す */
+#asm-output { min-height: 0; }
+/* 直前の成功結果を残したまま「今のソースの出力ではない」ことを示す */
+#asm-output.stale { opacity: 0.45; }
 
 .pane { flex: 1; min-height: 0; display: none; overflow: auto; }
 .pane.active { display: flex; flex-direction: column; }

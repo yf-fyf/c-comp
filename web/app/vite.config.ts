@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, "index.html"),
         ast: resolve(__dirname, "ast.html"),
+        compile: resolve(__dirname, "compile.html"),
         sim: resolve(__dirname, "sim.html"),
       },
     },

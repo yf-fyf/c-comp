@@ -11,6 +11,7 @@ export interface AppLink {
 export const APPS: AppLink[] = [
   { href: "./index.html", label: "ツール一覧" },
   { href: "./ast.html", label: "AST ビジュアライザ" },
+  { href: "./compile.html", label: "C コンパイラ" },
   { href: "./sim.html", label: "RV64 シミュレータ" },
 ];
 
