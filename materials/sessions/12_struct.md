@@ -367,3 +367,9 @@ struct 値を入れ子にすることはできない（`struct Node *next` の�
 自然な境界に合わせるための余白はコマ13 の `struct Node` で出てくる。
 
 グローバルな構造体変数はコマ14 で扱う。この回はローカル変数と引数だけである。
+
+## ここまでで着手できる発展課題
+
+構造体まで学んだので、構造体の代入を仕様（不可）へ合わせる
+[S3](../../workbook/advanced/S3_struct/README.md) と、型検査パスを足す
+[Q1](../../workbook/advanced/Q1_typecheck/README.md) に着手できる。

@@ -504,3 +504,10 @@ echo $?
 
 `main` 以外の関数の `return` も、コマ5と同じく共通エピローグラベルへジャンプする。
 各関数が独立した `_ret_label` を持つことに注意する。
+
+## ここまでで着手できる発展課題
+
+関数呼び出しまで学んだので、測定基盤なしで始められる最適化入門
+[B1](../../workbook/advanced/B1_fold_peephole/README.md)・[B2](../../workbook/advanced/B2_regalloc/README.md)・
+[B3](../../workbook/advanced/B3_tailcall/README.md)と、`&&`/`||` の短絡評価を仕様へ寄せる
+[S1](../../workbook/advanced/S1_shortcircuit/README.md) に着手できる。

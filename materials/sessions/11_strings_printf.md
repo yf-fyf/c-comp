@@ -344,3 +344,9 @@ echo $?
 
 `.stdout` を置いたテストは、終了コード（`.ans`）と標準出力の両方が一致して初めて通る。
 末尾の改行の有無まで一致させる必要がある。
+
+## ここまでで着手できる発展課題
+
+文字列・`printf` まで学んだので、libc なしで動かす
+[R1](../../workbook/advanced/R1_nolibc/README.md) と、可変長引数の定義に意味を足す
+[L3](../../workbook/advanced/L3_variadic/README.md) に着手できる。

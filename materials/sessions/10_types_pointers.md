@@ -394,3 +394,9 @@ echo $?
 
 この回の `size_of_ty_str(ty)` は引数が1つでよい。
 構造体サイズを引くために `self._struct_defs` を渡す2引数版になるのはコマ12 からである。
+
+## ここまでで着手できる発展課題
+
+ポインタまで学んだので、`int` の演算が32bitで折り返さない点を仕様へ寄せる
+[S2](../../workbook/advanced/S2_int32/README.md) と、ポインタ同士の引き算に意味を足す
+[L1](../../workbook/advanced/L1_ptrdiff/README.md) に着手できる。

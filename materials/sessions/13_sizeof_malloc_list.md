@@ -329,3 +329,8 @@ echo $?
 
 `struct Node *next` はポインタなので、`struct Node` のサイズが確定していなくても
 8バイトとして扱える。自己参照構造体が書けるのはこのためである。
+
+## ここまでで着手できる発展課題
+
+`sizeof`・`malloc` まで学んだので、自前 `malloc`（バンプ割り当て → フリーリスト）を作る
+[R3](../../workbook/advanced/R3_malloc/README.md) に着手できる。

@@ -201,3 +201,8 @@ python3 sessions/02_interpreter/mycc.py sessions/02_interpreter/tests/add_mul.c
 
 また、この回では負数を含む割り算・剰余は扱わない。
 Python の `//` や `%` は、負数を含む場合に C の整数除算・剰余と挙動が異なるためである。
+
+## ここまでで着手できる発展課題
+
+AST とインタープリターまで作ったので、字句解析・構文解析とは何かを CYK 法で体験する
+[F0](../../workbook/advanced/F0_cyk/README.md)（コンパイラ本編と独立、前提はこのコマまで）に着手できる。
