@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""S3 golden test — ポインタ差のテストが通ること + fixed17 が壊れないこと
+"""S3 golden test — 構造体の代入が動くこと + fixed17 が壊れないこと
 
 使い方:
     python3 golden.py
@@ -31,21 +31,19 @@ def run_tests(comp, tests):
 def main():
     tests = DIR / "tests"
 
-    print("=== 1. 修正なし(いまの mycc)では落ちることを確認 ===")
+    print("=== 1. コピーなし(いまの mycc)では壊れることを確認 ===")
     ok_plain, out_plain = run_tests(compiler, tests)
-    tail = out_plain.strip().splitlines()[-2:-1]
-    print("\n".join(tail) if tail else out_plain.strip()[-200:])
     if ok_plain:
-        print("(すでにポインタ差が実装されているコンパイラのようです)")
+        print("(すでに構造体コピーが実装されているコンパイラのようです)")
     else:
-        print("→ 要素サイズで割らないとバイト差が返る。期待どおり")
+        print("コピーなし: FAIL — 8バイトしか写らず値が壊れる。期待どおり")
 
     print()
-    print("=== 2. 修正ありで全テストが通る ===")
-    ok_sc, out_sc = run_tests(DIR / "semcc.py", tests)
-    print("\n".join(out_sc.strip().splitlines()[-3:]))
-    if not ok_sc:
-        if "NotImplementedError" in out_sc:
+    print("=== 2. コピーありで全テストが通る ===")
+    ok, out = run_tests(DIR / "semcc.py", tests)
+    print("\n".join(out.strip().splitlines()[-3:]))
+    if not ok:
+        if "NotImplementedError" in out:
             print("(未実装の Step がある。先に check.py を全 PASS にする)")
         return 1
 
@@ -54,11 +52,11 @@ def main():
     ok_fixed, out_fixed = run_tests(DIR / "semcc.py", WORKBOOK / "final" / "tests")
     print("\n".join(out_fixed.strip().splitlines()[-3:]))
     if not ok_fixed:
-        print("\nポインタ − 整数(p - 3)の生成を壊していないか確認する。")
+        print("\nint やポインタの代入まで構造体扱いしていないか確認する。")
         return 1
 
     print()
-    print("ポインタ差が要素数になり、既存のテストも壊れていない!")
+    print("構造体の代入が動き、既存のテストも壊れていない!")
     return 0
 
 

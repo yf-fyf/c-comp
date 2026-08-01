@@ -10,6 +10,7 @@
 | 2026-08-01 以降に配布物を取得した | 読まなくてよい |
 | それより前に取得したファイルで作業中 | 「まずやること」を読む |
 | 発展課題に取り組んでいる／これから始める | あわせて「発展課題の変更」を読む |
+| 発展課題の `S3_ptrdiff/` または `L1_struct/` で作業していた | 「発展課題 `S3` と `L1` は中身が入れ替わった」を読む（取得時期を問わず影響する） |
 | コマ7 に取り組んでいた／これから取り組む予定だった | 「コマ7 は廃止した」を読む |
 
 手元がどちらか分からないときは、`sessions/06_loops/mycc.py` を開いて
@@ -209,11 +210,70 @@ qemu が翻訳したブロックを翻訳時に1度だけ表示するものな�
 `-d in_asm` で数えた値を手元のノートに書いてあるなら、**捨てて測り直すこと**。
 自分で測った値と資料の数値が食い違うときは、まず O1 の基準表と突き合わせる。
 
+### 8. 発展課題 `S3` と `L1` は中身が入れ替わった
+
+**`S3_ptrdiff/` と `L1_struct/` は無くなった。** それぞれ `L1_ptrdiff/` と `S3_struct/` になっている。
+
+S ファミリと L ファミリの分かれ目は「その回で作る振る舞いの正解が
+`language_spec.md` に書いてあるかどうか」である
+（[`../advanced/README.md`](../advanced/README.md) の「S と L の判定基準」）。
+この2本だけ判定と ID が食い違っていたので、ID とディレクトリ名を実際に合わせた。
+番号は入れ替えで、欠番は作っていない。
+
+| 2026-08-01 より前 | 現在 | ラッパー | 環境変数 |
+|-------------------|------|----------|----------|
+| `advanced/S3_ptrdiff/` | `advanced/L1_ptrdiff/` | `semcc.py` → `langcc.py` | `SEMCC_*` → `LANGCC_*` |
+| `advanced/L1_struct/` | `advanced/S3_struct/` | `langcc.py` → `semcc.py` | `LANGCC_*` → `SEMCC_*` |
+
+公開 URL も同じように変わる。
+
+| 2026-08-01 より前 | 現在 |
+|-------------------|------|
+| `https://yf-fyf.github.io/c-comp/advanced/S3_ptrdiff/` | `https://yf-fyf.github.io/c-comp/advanced/L1_ptrdiff/` |
+| `https://yf-fyf.github.io/c-comp/advanced/L1_struct/` | `https://yf-fyf.github.io/c-comp/advanced/S3_struct/` |
+
+**いちばん危ないのは、番号そのものは両方とも残っていることである。**
+`S3` は「ポインタ差」ではなく「構造体の代入」を、
+`L1` は「構造体の代入」ではなく「ポインタ差」を指すようになった。
+古いブックマークや手元のメモの `S3` / `L1` は、**別の回を指す名前として生き続ける**。
+
+### 手元でどうするか
+
+**書いた `ptrdiff.py` / `structcopy.py` の中身は変わっていない。**
+学習者が実装する範囲（Step の切り方、関数名、期待値、テスト）はどれも同じで、
+変わったのは置き場所とラッパーの名前だけである。
+
+| 状況 | 対応 |
+|------|------|
+| どちらもまだ始めていない | 何もしなくてよい。新しい配布物のディレクトリ名で始める |
+| `S3_ptrdiff/ptrdiff.py` を書きかけ・実装済み | 書いた `ptrdiff.py` を新しい `advanced/L1_ptrdiff/` へコピーする。`python3 semcc.py ...` は `python3 langcc.py ...` に読み替える |
+| `L1_struct/structcopy.py` を書きかけ・実装済み | 書いた `structcopy.py` を新しい `advanced/S3_struct/` へコピーする。`python3 langcc.py ...` は `python3 semcc.py ...` に読み替える |
+| `SEMCC_*` / `LANGCC_*` を設定して走らせていた | ラッパーが入れ替わったので接頭辞も入れ替わる。**旧名はエラーにならず黙って無視される**（上の 5 と同じ症状） |
+
+```bash
+# 旧: advanced/S3_ptrdiff/ で
+python3 semcc.py tests/count.c
+
+# 新: advanced/L1_ptrdiff/ で
+python3 langcc.py tests/count.c
+```
+
+`test_runner.py` に渡すパスも変わる。
+
+```bash
+# workbook/ から
+python3 scaffold/test_runner.py --compiler advanced/L1_ptrdiff/langcc.py --tests final/tests
+python3 scaffold/test_runner.py --compiler advanced/S3_struct/semcc.py  --tests final/tests
+```
+
+他の発展課題（F・B・O・R・Q・P 系列と S1・S2・L2・L3）の ID・ディレクトリ名・
+公開 URL は変えていない。
+
 ---
 
 ## 資料の記述の変更
 
-### 8. コマ11: 実装手順の説明が古かった（配線は最初から提供）
+### 9. コマ11: 実装手順の説明が古かった（配線は最初から提供）
 
 原稿の実装手順3〜5は、文字列収集の走査・`.data` セクション出力・`.text` セクション出力を、
 学習者自身が `main()` から呼び出すよう指示する書き方になっていた。

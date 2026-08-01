@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""langcc — 構造体コピーつきコンパイララッパー(完成済み。編集しない)
+"""langcc — ポインタ差つきコンパイララッパー(完成済み。編集しない)
 
-mycc.py には手を入れず、コード生成器の codegen を包んで
-'Assign' が構造体同士なら structcopy.py の実装に回す。
+mycc.py には手を入れず、次を差し込む。
+
+    codegen        'Sub' がポインタ同士なら ptrdiff.py の実装に回す
+    _type_of_expr  ポインタ同士の引き算の型を int にする
+    size_of_ty_str クラスから呼べるようにする(ptrdiff.py 用)
 
 使い方:
     python3 langcc.py file.c
-    python3 scaffold/test_runner.py --compiler advanced/L1_struct/langcc.py
+    python3 scaffold/test_runner.py --compiler advanced/L1_ptrdiff/langcc.py
 
 環境変数:
     LANGCC_COMPILER  ベースにするコンパイラ(既定: workbook/final/mycc.py)
-    LANGCC_PASSES    structcopy.py のあるディレクトリ(既定: このファイルの場所)
+    LANGCC_PASSES    ptrdiff.py のあるディレクトリ(既定: このファイルの場所)
 """
 
 import importlib.util
@@ -44,15 +47,29 @@ def find_codegen_class(mod):
     return best
 
 
-def patch(cls, sc):
+def patch(cls, mycc, pd):
     orig_codegen = cls.codegen
+    orig_type_of_expr = cls._type_of_expr
+
+    # ptrdiff.py から型サイズを引けるようにする
+    cls.size_of_ty_str = staticmethod(mycc.size_of_ty_str)
 
     def codegen(self, node):
-        if node is not None and sc.is_struct_assign(self, node):
-            return sc.gen_struct_copy(self, node)
+        if node is not None and pd.is_ptr_diff(self, node):
+            return pd.gen_ptr_diff(self, node)
         return orig_codegen(self, node)
 
+    def _type_of_expr(self, node):
+        # p - q の型は int(ポインタではない)
+        if node is not None and node.kind == 'Sub':
+            lt = orig_type_of_expr(self, node.lhs)
+            rt = orig_type_of_expr(self, node.rhs)
+            if lt.endswith('*') and rt.endswith('*'):
+                return 'int'
+        return orig_type_of_expr(self, node)
+
     cls.codegen = codegen
+    cls._type_of_expr = _type_of_expr
 
 
 def main():
@@ -68,9 +85,9 @@ def main():
         raise SystemExit(2)
 
     sys.path.insert(0, str(SCAFFOLD))
-    sc = load_module("langcc_structcopy", passes_dir / "structcopy.py")
+    pd = load_module("langcc_ptrdiff", passes_dir / "ptrdiff.py")
     mycc = load_module("mycc_under_langcc", compiler)
-    patch(find_codegen_class(mycc), sc)
+    patch(find_codegen_class(mycc), mycc, pd)
 
     sys.argv = [str(compiler)] + srcs
     buf = io.StringIO()

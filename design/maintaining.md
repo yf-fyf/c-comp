@@ -310,9 +310,19 @@ workflow はテスト、Web ビルド、公開物の許可リスト検査、ZIP 
 | `b1_fold_peephole` | `B1_fold_peephole` | | `o1_measure`〜`o7_layout` | `O1_measure`〜`O7_layout`（大文字化のみ） |
 | `b2_regalloc` | `B2_regalloc` | | `f0_cyk`〜`f4_parser_decl` | `F0_cyk`〜`F4_parser_decl`（大文字化のみ） |
 | `b3_tailcall` | `B3_tailcall` | | `q1_typecheck` | `Q1_typecheck` |
-| `d3_struct` | `L1_struct` | | `r1_nolibc`〜`r3_malloc` | `R1_nolibc`〜`R3_malloc`（大文字化のみ） |
+| `d3_struct` | `S3_struct` | | `r1_nolibc`〜`r3_malloc` | `R1_nolibc`〜`R3_malloc`（大文字化のみ） |
 | `d4_initializer` | `L2_compound_assign`（主題変更） | | `m1_shortcircuit` | `S1_shortcircuit` |
-| `v1_variadic` | `L3_variadic` | | `m2_int32` / `m3_ptrdiff` | `S2_int32` / `S3_ptrdiff` |
+| `v1_variadic` | `L3_variadic` | | `m2_int32` / `m3_ptrdiff` | `S2_int32` / `L1_ptrdiff` |
+
+2026-08-01 に、S / L の判定基準（索引の「S と L の判定基準」節）に合わせて2本を移した。
+番号は入れ替えで、欠番は作っていない。公開 URL とディレクトリ名も同時に変わる。
+
+| 2026-08-01 より前 | 現在 | ラッパー |
+|-------------------|------|----------|
+| `S3_ptrdiff` | `L1_ptrdiff` | `semcc.py` → `langcc.py`（環境変数も `SEMCC_*` → `LANGCC_*`） |
+| `L1_struct` | `S3_struct` | `langcc.py` → `semcc.py`（環境変数も `LANGCC_*` → `SEMCC_*`） |
+
+学習者向けの案内は `workbook/docs/migration.md` にある。
 
 ---
 

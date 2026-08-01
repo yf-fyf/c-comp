@@ -61,8 +61,8 @@ sections:
       - materials/advanced/R3_malloc.md
       - materials/advanced/S1_shortcircuit.md
       - materials/advanced/S2_int32.md
-      - materials/advanced/S3_ptrdiff.md
-      - materials/advanced/L1_struct.md
+      - materials/advanced/S3_struct.md
+      - materials/advanced/L1_ptrdiff.md
       - materials/advanced/L2_compound_assign.md
       - materials/advanced/L3_variadic.md
       - materials/advanced/Q1_typecheck.md

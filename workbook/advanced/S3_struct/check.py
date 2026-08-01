@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""L1 確認スクリプト — structcopy.py を Step ごとにテストする
+"""S3 確認スクリプト — structcopy.py を Step ごとにテストする
 
 使い方:
     python3 check.py                      # 同じディレクトリの structcopy.py
@@ -15,7 +15,7 @@ WORKBOOK = DIR.parents[1]
 SCAFFOLD = WORKBOOK / "scaffold"
 passes_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else DIR
 
-spec = importlib.util.spec_from_file_location("L1_structcopy",
+spec = importlib.util.spec_from_file_location("S3_structcopy",
                                               passes_dir / "structcopy.py")
 sc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sc)
