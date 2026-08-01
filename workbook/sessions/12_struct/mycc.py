@@ -144,36 +144,45 @@ class Codegen12(prev.Codegen11):
 
     def alloc_local(self, name: str, ty_str: str = 'int') -> None:
         # TODO: self._struct_defs を渡して struct のサイズで領域確保する。
-        sz = self.align_to(self.size_of_ty_str(ty_str), 8)
-        self._stack_offset += sz
-        self._locals[name] = (-(16 + self._stack_offset), ty_str)
+        #       コマ11 版は次の形だった。size_of_ty_str に self._struct_defs を足す。
+        #           sz = self.align_to(self.size_of_ty_str(ty_str), 8)
+        #           self._stack_offset += sz
+        #           self._locals[name] = (-(16 + self._stack_offset), ty_str)
+        raise NotImplementedError("alloc_local を実装してください")
 
     def _scale_index(self, elem_ty: str) -> None:
         # TODO: struct へのポインタでは self._struct_defs を渡して要素サイズを計算する。
-        sz = self.size_of_ty_str(elem_ty)
-        if sz != 1:
-            self.emit(f'  li a1, {sz}')
-            self.emit('  mul a0, a0, a1')
+        #       コマ11 版は次の形だった。
+        #           sz = self.size_of_ty_str(elem_ty)
+        #           if sz != 1:
+        #               self.emit(f'  li a1, {sz}')
+        #               self.emit('  mul a0, a0, a1')
+        raise NotImplementedError("_scale_index を実装してください")
 
     def _load_ty(self, ty_str: str) -> None:
-        # TODO: struct 型はロードせず、アドレスのまま扱う（is_struct_ty_str で判定）。
-        sz = self.size_of_ty_str(ty_str)
-        if sz == 1:
-            self.emit('  lb a0, 0(a0)')
-        elif sz == 4:
-            self.emit('  lw a0, 0(a0)')
-        else:
-            self.emit('  ld a0, 0(a0)')
+        # TODO: self._struct_defs を渡してサイズを求め、
+        #       struct 型はロードせずアドレスのまま扱う（is_struct_ty_str で判定）。
+        #       コマ11 版は次の形だった。
+        #           sz = self.size_of_ty_str(ty_str)
+        #           if sz == 1:
+        #               self.emit('  lb a0, 0(a0)')
+        #           elif sz == 4:
+        #               self.emit('  lw a0, 0(a0)')
+        #           else:
+        #               self.emit('  ld a0, 0(a0)')
+        raise NotImplementedError("_load_ty を実装してください")
 
     def _store_ty(self, ty_str: str) -> None:
         # TODO: struct のサイズを引けるよう self._struct_defs を渡す。
-        sz = self.size_of_ty_str(ty_str)
-        if sz == 1:
-            self.emit('  sb a0, 0(a1)')
-        elif sz == 4:
-            self.emit('  sw a0, 0(a1)')
-        else:
-            self.emit('  sd a0, 0(a1)')
+        #       コマ11 版は次の形だった。
+        #           sz = self.size_of_ty_str(ty_str)
+        #           if sz == 1:
+        #               self.emit('  sb a0, 0(a1)')
+        #           elif sz == 4:
+        #               self.emit('  sw a0, 0(a1)')
+        #           else:
+        #               self.emit('  sd a0, 0(a1)')
+        raise NotImplementedError("_store_ty を実装してください")
 
     def type_of_expr_Member(self, node: Node) -> str:
         # TODO: Member は左辺値型と同じ型を返す。

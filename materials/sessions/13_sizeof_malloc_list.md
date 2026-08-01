@@ -334,21 +334,25 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 
 `importlib` でコマ12 の Codegen クラスを継承した `Codegen13` に、以下の機能を追加する。
 
-| 実装対象 | 役割 |
-|----------|------|
-| `type_of_expr_SizeofType(node)` | `sizeof(型名)` の型は `int` |
-| `codegen_SizeofType(node)` | `node.ty_str` のサイズを求め、`li a0, <size>` を出力する |
+実装対象は、スケルトンの `raise NotImplementedError` が置かれている次の2個である。
 
-この回で新しく書くコードはこの2つだけである。
+| # | 実装対象 | 役割 |
+|---|----------|------|
+| 1 | `type_of_expr_SizeofType(node)` | `sizeof(型名)` の型は `int` |
+| 2 | `codegen_SizeofType(node)` | `node.ty_str` のサイズを求め、`li a0, <size>` を出力する |
+
+`_type_of_expr()` と `codegen()` の `'SizeofType'` ディスパッチはスケルトンに書かれているので、
+書くのは上の2つのハンドラだけである。
+この回で新しく書くコードもこの2つだけである。
 `malloc` も自己参照構造体も、コマ8 の関数呼び出しとコマ12 の構造体処理がそのまま働く。
 
 ## 実装手順
 
 1. スケルトンの `importlib` 継承によりコマ12の Codegen クラスを引き継ぐ（あらかじめ書かれている）
-2. `parse_struct_defs()` が自己参照フィールド（`struct Node *next`）を扱えることを確認する（ポインタは中身を知らなくてもサイズ 8 で確定する）
-3. `self.size_of_ty_str("struct Node", self._struct_defs)` が構造体サイズを返すことを確認する
-4. `sizeof(struct Node)` が `malloc` の引数として使えることを確認する
-5. `malloc(sizeof(struct Node))` が通常の関数呼び出しとして動くことを確認する
+2. `type_of_expr_SizeofType(node)` を実装する（`'int'` を返すだけでよい）
+3. `codegen_SizeofType(node)` を実装する（`self.size_of_ty_str(node.ty_str, self._struct_defs)` の値を `li a0, <size>` で出す。`self._struct_defs` を渡し忘れると `struct` のサイズが 4 になる）
+4. `sizeof_test.c` を通す（`sizeof(int) + sizeof(char)`）
+5. `malloc_struct.c` / `list_min.c` を通す<br>（`parse_struct_defs()` は自己参照フィールド `struct Node *next` をそのまま扱える。ポインタは中身を知らなくてもサイズ 8 で確定するからである。`malloc(sizeof(struct Node))` はコマ8 の関数呼び出しがそのまま働くので、追加の実装は要らない。）
 6. `list_sum.c` まで通す
 7. `void_ptr.c` を通す<br>（`void *` と任意の `T *` の相互変換。`void *` の変数・仮引数も書ける。ポインタ同士なのでサイズは常に 8 で、変換のための命令は要らない。）
 

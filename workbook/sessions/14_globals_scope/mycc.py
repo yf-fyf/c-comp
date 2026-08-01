@@ -233,8 +233,10 @@ class Codegen14(prev.Codegen13):
                 self.collect_strings_expr_Str(node)
             case 'Num' | 'Var' | 'SizeofType':
                 return
-            case 'Neg' | 'Addr' | 'Deref' | 'Member' | 'PreInc' | 'PreDec':
+            case 'Neg' | 'Addr' | 'Deref' | 'PreInc' | 'PreDec':
                 self.collect_strings_expr_Neg(node)
+            case 'Member':
+                self.collect_strings_expr_Member(node)
             case 'Not':
                 self.collect_strings_expr_Not(node)
             case 'Assign' | 'Add' | 'Sub' | 'Mul' | 'Div' | 'Mod' | 'Eq' | 'Ne' | 'Lt' | 'Le' | 'Index':
@@ -250,9 +252,7 @@ class Codegen14(prev.Codegen13):
             case _:
                 raise RuntimeError(f'collect_strings_expr: コマ14で未対応の式です (kind={node.kind!r})')
 
-    def emit_data_section(self) -> None:
-        # TODO: 文字列リテラルを .data に出力する。
-        raise NotImplementedError("emit_data_section を実装してください")
+    # emit_data_section() はコマ11 で実装したものを継承して使う（この回では書き直さない）。
 
     def emit_bss_section(self) -> None:
         # TODO: すべてのグローバル変数を .bss に出力する（.zero で 0 初期化）。

@@ -294,25 +294,79 @@ int main() {
 比較演算子と同じ「両辺を評価してから合成する」形で書ける。
 短絡する版は発展課題 S1 で扱う。
 
+## 文字列収集とプログラム全体の出力
+
+この回はグローバル変数を扱うため、`main()` の処理が「文字列を集める → `.data` → `.bss` → `.text`」
+という並びになる。そこで、コマ11 まで `main()` に直接書いていた
+「各 `FuncDef` の本体から文字列を集める」ループを `collect_all_strings(prog)` に、
+セクションを順に出す部分を `gen_program(prog)` に切り出す。
+
+`emit_data_section()` はコマ11 で実装したものをそのまま継承して使う。
+この回で書き直す必要はない（スケルトンにも再宣言は無い）。
+グローバル変数のための `.bss` は `emit_bss_section()` として新しく書く。
+
+もう1つ、`collect_strings_expr()` のディスパッチをこの回で整理する。
+`!` `&&` `||` が増えて二項演算のハンドラがさらに2つ必要になるが、
+`Assign` / `Add` / … / `Index` / `And` / `Or` の走査はどれも
+「`node.lhs` と `node.rhs` を再帰的に見る」という同じ形である。
+そこで、この形のものを `_collect_strings_binary_expr(node)` 1つにまとめ、
+ディスパッチをそこへ振り替えてある。
+
+この整理により、コマ11 で書いた二項演算ごとのハンドラ
+（`collect_strings_expr_Add` など）はコマ14 以降は呼ばれなくなる。
+削除はしなくてよい（継承したまま残しておいて構わない）。
+`collect_strings_expr_Str` / `_Neg` / `_Cond` / `_Call`（コマ11）と
+`collect_strings_expr_Member`（コマ12）は、形が違うのでこれまで通り使われる。
+
 ## 編集するファイル
 
 `sessions/14_globals_scope/` 以下のスケルトンファイルを編集する。
 
 | ファイル | 実装するハンドラ・メソッド |
 |----------|----------------------------|
-| `mycc.py` | `Codegen14` クラス。`collect_globals()`、`lookup_var_ty()`、`codegen_lval_Var()`、`emit_bss_section()`、`gen_program()` など（`_is_local()` は提供済み） |
+| `mycc.py` | `Codegen14` クラスと `main()`。下の一覧の11個 |
 | (AST パーサ) | 変更不要（`'Decl'` ノードはコマ13から存在する） |
+
+実装対象は、スケルトンの `raise NotImplementedError` が置かれている次の11個である。
+
+| # | 実装対象 | 役割 |
+|---|----------|------|
+| 1 | `lookup_var_ty(name, line)` | `self._locals` → `self._globals` の順に型を引く |
+| 2 | `codegen_lval_Var(node)` | ローカルは `s0` からのオフセット、グローバルは `la` |
+| 3 | `codegen_Not(node)` | operand を評価し `seqz` |
+| 4 | `codegen_And(node)` | 両辺を評価し、`snez` してから `and`（短絡しない） |
+| 5 | `codegen_Or(node)` | 両辺を評価して `or` を取り、`snez`（短絡しない） |
+| 6 | `collect_globals(prog)` | トップレベルの `'Decl'` の名前と型を `self._globals` に登録する |
+| 7 | `collect_all_strings(prog)` | 各 `FuncDef` の本体から文字列を集める |
+| 8 | `_collect_strings_binary_expr(node)` | 二項演算の `node.lhs` / `node.rhs` を走査する |
+| 9 | `emit_bss_section()` | グローバル変数を `.bss` に出力する（`.zero` で 0 初期化） |
+| 10 | `gen_program(prog)` | `.data` → `.bss` → `.text` の順に出し、`FuncDef` だけ `gen_func()` する |
+| 11 | `main()` | `parse_file()` で AST を作り、6・7・10 を呼ぶ |
+
+スケルトンに**あらかじめ書かれている**ものは次の通りで、実装対象ではない。
+
+| 提供済み | 役割 |
+|----------|------|
+| `parse_file(filename)` | 前処理・構造体定義の収集・字句解析・構文解析をまとめて行う |
+| `_is_local(name)` | 変数がローカルかどうかの判定 |
+| `type_of_expr_Var` / `type_of_lval_Var` / `type_of_expr_Not` / `_And` / `_Or` | 型は `lookup_var_ty` に任せるか `int` を返すだけなので提供済み |
+| `collect_strings_expr_Not` / `_And` / `_Or` | 8 番のハンドラ等へ振り分けるだけ |
+| `_type_of_expr()` / `_type_of_lval()` / `codegen_lval()` / `codegen()` / `collect_strings_expr()` のディスパッチ | 新しいノード種別の分岐は既に書かれている |
+| `emit_data_section()` | コマ11 で実装済み。継承してそのまま使う |
 
 ## 実装手順
 
 1. コマ13の実装を `sessions/14_globals_scope/mycc.py` に反映する<br>（スケルトンの `importlib` 継承により、前回の `Codegen` クラスを継承する。新機能の handler だけを実装すればよい。）
-2. `self._globals` と `self._locals` を追加する（スケルトンにあらかじめ書かれている）
-3. トップレベルの `'Decl'` ノードを `self.collect_globals()` で集める（覚えるのは名前と型だけでよい）
-4. グローバル変数を `.bss` に出力する（全て 0 初期化）
-5. `self.lookup_var_ty()` を `self._locals` → `self._globals` の順にする
-6. `self.codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
-7. `codegen_Not()` / `codegen_And()` / `codegen_Or()` を実装する（`&&` `||` は短絡しない）
-8. `global_counter.c`、`global_init.c`、`global_local_shadow.c`、`global_struct.c`、`logical_ops.c` を通す
+2. `self._globals` と `self._locals` を確認する（`self._globals` の追加はスケルトンにあらかじめ書かれている）
+3. トップレベルの `'Decl'` ノードを `collect_globals()` で集める（覚えるのは名前と型だけでよい）
+4. `lookup_var_ty()` を `self._locals` → `self._globals` の順にする
+5. `codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
+6. `emit_bss_section()` でグローバル変数を `.bss` に出力する（全て 0 初期化）
+7. `collect_all_strings()` と `_collect_strings_binary_expr()` を実装する（文字列収集の入口と、二項演算の走査）
+8. `gen_program()` で `.data` → `.bss` → `.text` の順に出力する（`.data` は継承した `emit_data_section()` を呼ぶだけでよい）
+9. `main()` から `parse_file()` → `collect_globals()` → `collect_all_strings()` → `gen_program()` を呼ぶ
+10. `codegen_Not()` / `codegen_And()` / `codegen_Or()` を実装する（`&&` `||` は短絡しない）
+11. `global_min.c`、`global_counter.c`、`global_init.c`、`shadow_min.c`、`global_local_shadow.c`、`global_struct.c`、`logical_ops.c` を通す
 
 ## tests/
 

@@ -274,15 +274,17 @@ self.size_of_ty_str("struct Point")                      # 4（渡し忘れ）
 address(p.x) = address(p) + offset(x)
 ```
 
-したがって `codegen_lval()` では次のようにする。
+`'Member'` ノードの lvalue を作るのは `codegen_lval_Member(node)` ハンドラである
+（`codegen_lval()` のディスパッチはスケルトンに書かれているので、書くのはハンドラだけでよい）。
+`.` の場合、対象の構造体型は operand の左辺値型そのものである。
 
 ```python
-if node.kind == ND_MEMBER and not node.is_arrow:
+def codegen_lval_Member(self, node):
+    # . の場合
     self.codegen_lval(node.operand)
-    struct_ty = self._type_of_lval(node.operand)
+    struct_ty = self._type_of_lval(node.operand)     # "struct Point"
     offset = self.field_offset(struct_ty, node.name, self._struct_defs, node.line)
     self.emit(f"  addi a0, a0, {offset}")
-    return
 ```
 
 ## `->` のコード生成
@@ -295,17 +297,19 @@ address(p->x) = value(p) + offset(x)
 ```
 
 ```python
-if node.kind == ND_MEMBER and node.is_arrow:
+def codegen_lval_Member(self, node):
+    # -> の場合
     self.codegen(node.operand)
     ptr_ty = self._type_of_expr(node.operand)        # e.g. "struct Point*"
     struct_ty = self.elem_ty_str(ptr_ty)             # "struct Point"
     offset = self.field_offset(struct_ty, node.name, self._struct_defs, node.line)
     self.emit(f"  addi a0, a0, {offset}")
-    return
 ```
 
-`.` と `->` で構造体型名の求め方が違うだけなので、
-スケルトンではこの分岐を `self._member_struct_type(node)` に切り出してある。
+`.` と `->` で違うのは、アドレスの求め方（`codegen_lval` か `codegen` か）と
+構造体型名の求め方だけである。後者はスケルトンで `self._member_struct_type(node)` に
+切り出してあるので、`codegen_lval_Member` は `node.is_arrow` による分岐と
+`_member_struct_type` の呼び出しで書ける。
 
 ## 編集するファイル
 
@@ -318,30 +322,41 @@ if node.kind == ND_MEMBER and node.is_arrow:
 | 提供済み | 役割 |
 |----------|------|
 | `parse_struct_defs(source)` / `parse_field_decls(body)` | ソースから構造体定義を集める |
-| `align_of_ty_str(ty)` / `is_struct_ty_str(ty, defs)` | 境界と struct 判定 |
+| `size_of_ty_str(ty, defs=None)` / `align_of_ty_str(ty)` / `is_struct_ty_str(ty, defs)` | サイズ・境界と struct 判定 |
 | `field_offset(...)` / `field_ty(...)` | フィールドのオフセットと型 |
-| `_member_struct_type(node)` の呼び出し口 | `.` と `->` の分岐をまとめる場所 |
+| `_type_of_expr()` / `_type_of_lval()` / `codegen_lval()` / `codegen()` / `collect_strings_expr()` のディスパッチ | `'Member'` の分岐は既に書かれている。書くのは飛び先のハンドラだけである |
 
-実装対象は次の通りである。
+実装対象は、スケルトンの `raise NotImplementedError` が置かれている次の10個である。
 
-| 実装対象 | 役割 |
-|----------|------|
-| `_member_struct_type(node)` | `.` と `->` の違いを踏まえて対象の構造体型名を返す |
-| `alloc_local` / `_scale_index` / `_load_ty` / `_store_ty` | `size_of_ty_str` に `self._struct_defs` を渡す |
-| `_load_ty(ty)` の struct 分岐 | struct 型はロードせずアドレスのまま扱う |
-| `type_of_expr_Member` / `type_of_lval_Member` | メンバの型を `field_ty` で求める |
-| `codegen_lval_Member(node)` | ベースアドレス + `field_offset` |
-| `codegen_Member(node)` | 左辺値アドレスを作り、メンバ型でロードする |
-| `collect_strings_expr_Member(node)` | `Member` の operand も文字列収集の対象にする |
+| # | 実装対象 | 役割 |
+|---|----------|------|
+| 1 | `_member_struct_type(node)` | `.` と `->` の違いを踏まえて対象の構造体型名を返す |
+| 2 | `alloc_local(name, ty_str)` | `size_of_ty_str` に `self._struct_defs` を渡し、struct のサイズで領域を確保する |
+| 3 | `_scale_index(elem_ty)` | 同上。struct へのポインタの添字で要素サイズを正しく求める |
+| 4 | `_load_ty(ty_str)` | 同上。加えて struct 型はロードせずアドレスのまま扱う（`is_struct_ty_str` で判定） |
+| 5 | `_store_ty(ty_str)` | 同上。struct のサイズを引けるようにする |
+| 6 | `type_of_expr_Member(node)` | `Member` の型は左辺値型と同じ |
+| 7 | `type_of_lval_Member(node)` | `_member_struct_type` と `field_ty` でメンバの型を求める |
+| 8 | `codegen_lval_Member(node)` | ベースアドレス + `field_offset` |
+| 9 | `codegen_Member(node)` | 左辺値アドレスを作り、メンバ型でロードする |
+| 10 | `collect_strings_expr_Member(node)` | `Member` の operand も文字列収集の対象にする |
+
+2〜5 の4つは、コマ11 まで動いていたコードに `self._struct_defs` を足すだけの修正である。
+ただし直し忘れに気づけるよう、スケルトンでは4つとも `raise NotImplementedError` を置き、
+コマ11 版のコードは TODO コメントの中に残してある。
 
 ## 実装手順
 
 1. スケルトンの `importlib` 継承によりコマ11の Codegen クラスを引き継ぐ（あらかじめ書かれている）
-2. `CodegenNN.parse_struct_defs(source)` で構造体定義をパースし `self._struct_defs` に渡す
-3. `self._type_of_lval()` に `ND_MEMBER` を追加する（フィールドの型は `self._struct_defs` から引く）
-4. `self.codegen_lval()` に `ND_MEMBER` ハンドラを追加する（`self._struct_defs` からフィールドオフセットを引く）
-5. `alloc_local()` / `_scale_index()` / `_load_ty()` / `_store_ty()` の `size_of_ty_str` 呼び出しに `self._struct_defs` を渡す
-6. `_load_ty()` は `struct` 型のときロードせず、アドレスのまま扱う（`is_struct_ty_str` で判定）
+2. `Codegen12.parse_struct_defs(source)` で構造体定義をパースし、コンストラクタで `self._struct_defs` に渡す（あらかじめ書かれている）
+3. `alloc_local()` / `_scale_index()` / `_load_ty()` / `_store_ty()` の `size_of_ty_str` 呼び出しに `self._struct_defs` を渡す
+4. `_load_ty()` は `struct` 型のときロードせず、アドレスのまま扱う（`is_struct_ty_str` で判定）
+5. `_member_struct_type(node)` を実装する（`.` は `_type_of_lval`、`->` は `_type_of_expr` + `elem_ty_str`）
+6. `type_of_lval_Member(node)` と `type_of_expr_Member(node)` を実装する（フィールドの型は `field_ty` で引く）
+7. `codegen_lval_Member(node)` を実装する（ベースアドレスに `field_offset` を足す）
+8. `codegen_Member(node)` を実装する（`codegen_lval_Member` のアドレスを `_load_ty` でロードする）
+9. `collect_strings_expr_Member(node)` を実装する（`Member` の operand を走査する）
+10. `dot_access.c` を通し、続けて `arrow_access.c` を通す
 
 ## tests/
 
