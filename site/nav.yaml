@@ -40,6 +40,7 @@ sections:
       - materials/sessions/11b_expr_walk_libc.md
       - materials/sessions/12_struct.md
       - materials/sessions/13_sizeof_malloc_list.md
+      - materials/sessions/12plus13_struct_malloc_list.md
       - materials/sessions/14_globals_scope.md
       - materials/sessions/15_preprocess_multifile.md
       - materials/sessions/16_integrate_mycc.md
