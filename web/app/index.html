@@ -18,21 +18,20 @@
       </span>
     </header>
     <main id="cards">
-      <a class="card" href="./ast.html">
-        <h2>AST ビジュアライザ</h2>
-        <p>C のソースを入れて、資料と同じ構文木・S 式・トークン列を見る。</p>
-        <p class="card-meta">コマ1・2 と、各回の「AST を確認する」で使う</p>
-      </a>
-      <a class="card" href="./compile.html">
-        <h2>C コンパイラ</h2>
+      <a class="card" href="./app.html?mode=build">
+        <h2>作る</h2>
         <p>
-          C のソースを入れて、RV64 アセンブリに変換する。
+          C のソースを入れて、資料と同じ構文木・S 式・トークン列を見る。
+          同じソースを RV64 アセンブリに変換することもできる。
           演習の OCaml 参照実装がそのままブラウザで動くので、ツールチェーンの用意は要らない。
         </p>
-        <p class="card-meta">出るのは参照実装の出力。自分のコンパイラの出力と見比べるのに使う</p>
+        <p class="card-meta">
+          コマ1・2 と、各回の「AST を確認する」で使う。
+          出るアセンブリは参照実装の出力なので、自分のコンパイラの出力と見比べるのに使える
+        </p>
       </a>
-      <a class="card" href="./sim.html">
-        <h2>RV64 シミュレータ</h2>
+      <a class="card" href="./app.html?mode=run">
+        <h2>動かす</h2>
         <p>
           自分のコンパイラが出したアセンブリを貼って、1命令ずつ実行する。
           レジスタ・スタック・標準出力を並べて確かめられる。

@@ -318,7 +318,7 @@ body.landing { display: block; height: auto; }
 #asm-view {
   flex: 1;
   overflow: auto;
-  /* 行の offsetTop をこの枠基準にする（sim-main.ts の scrollLineIntoPane） */
+  /* 行の offsetTop をこの枠基準にする（app-run-view.ts の scrollLineIntoPane） */
   position: relative;
   /* 端まで送ったスクロールをページへ連鎖させない */
   overscroll-behavior: contain;
@@ -426,3 +426,117 @@ tr.below-sp { opacity: 0.45; }
 #warning-list { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; line-height: 1.5; }
 #warning-list li { margin-bottom: 0.5rem; cursor: pointer; }
 .warn-symptom { color: #7d4e00; font-size: 0.8rem; }
+
+/* ================= 統合ページ（app.html / T136） ================= */
+/* 旧3ページ（ast/compile/sim）と同じ規則を共有するため、
+   既存セレクタは変更せずここに追記だけする。 */
+
+/* body（flex 列）と #layout / #sim-layout（flex:1）の間に挟まるので、
+   ここで flex の連鎖を受け渡さないと中身の高さが決まらない */
+.mode {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* 上の display:flex は UA の [hidden] { display: none } に勝つので明示的に打ち消す
+   （#asm-editor[hidden] と同じ理由） */
+.mode[hidden] { display: none; }
+
+/* モード切替。#tabs / #font-buttons と同じ見た目にそろえる */
+#mode-tabs {
+  display: flex;
+  gap: 0.4rem;
+}
+#mode-tabs button {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.9rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+  cursor: pointer;
+}
+#mode-tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* プリセットはモードごとに別物なので、ヘッダではなく各モードの上端に置く */
+.mode-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.example-label { font-size: 0.85rem; }
+.example-select { max-width: 18rem; font-size: 0.9rem; }
+
+/* モードの性格の違い（AST は自動更新・アセンブリと実行は明示操作）は
+   切替時ではなく各所に常掲する。目立たせすぎない注記として扱う */
+.mode-bar .pane-note { margin-left: auto; }
+
+/* --- 作るモード: AST ペインの中のサブタブ（木 / トークン / S 式） --- */
+/* 外側タブ（AST / アセンブリ）と名前空間を分けるため、
+   #tabs / .pane ではなく #ast-tabs / .ast-pane を使う。規則は同じ */
+#ast-tabs {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+#ast-tabs button {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+  cursor: pointer;
+}
+#ast-tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.ast-pane { flex: 1; min-height: 0; display: none; overflow: auto; }
+.ast-pane.active { display: flex; flex-direction: column; }
+#ast-pane-tree { position: relative; }
+
+/* --- 作るモード: アセンブリペイン --- */
+/* 状態表示は #status ではなく専用の #asm-status（#status は AST の解析結果が使う） */
+.asm-note {
+  flex: none;
+  margin: 0;
+  padding: 0.3rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+#asm-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.3rem 0.8rem;
+  border-top: 1px solid var(--border);
+}
+#btn-send-run {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.8rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+  cursor: pointer;
+}
+#btn-send-run:disabled { opacity: 0.4; cursor: default; }
+#asm-status { font-size: 0.85rem; min-height: 1.2rem; }
+#asm-status.ok { color: var(--ok); }
+#asm-status.err { color: var(--err); }
+#asm-status.pending { color: #57606a; }
+
+/* --- 動かすモード --- */
+/* 旧 sim.html で #sim-head が受け持っていた「縮めない」を .mode 直下で引き取る */
+#mode-run > #toolbar { flex: none; }

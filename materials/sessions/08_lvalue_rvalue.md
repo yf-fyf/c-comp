@@ -331,6 +331,6 @@ echo $?
 `void` 関数は戻り値を持たないので、`a0` に何を残すかを決める必要はない。
 呼び出し側が `void` 関数の値を使うことはない。
 
-`codegen()` と `codegen_lval()` のどちらが呼ばれているかを1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/sim.html) に生成アセンブリを貼り付ける。
+`codegen()` と `codegen_lval()` のどちらが呼ばれているかを1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/app.html?mode=run) に生成アセンブリを貼り付ける。
 
 この回の完成形に相当する OCaml 版参考実装が [`../../workbook/ocaml/README.md`](../../workbook/ocaml/README.md) にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。

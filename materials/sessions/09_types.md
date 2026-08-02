@@ -254,6 +254,6 @@ echo $?
 型サイズを扱えるようになったので、`int` の演算が32bitで折り返さない点を仕様へ寄せる
 [S2](../../workbook/advanced/S2_int32/README.md) に着手できる。
 
-生成したアセンブリで `lb` / `lw` / `ld` の選択を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/sim.html) に貼り付ける。
+生成したアセンブリで `lb` / `lw` / `ld` の選択を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/app.html?mode=run) に貼り付ける。
 
 この回の完成形に相当する OCaml 版参考実装が [`../../workbook/ocaml/README.md`](../../workbook/ocaml/README.md) にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。

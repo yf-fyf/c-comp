@@ -389,6 +389,6 @@ echo $?
 [R1](../../workbook/advanced/R1_nolibc/README.md) と、可変長引数の定義に意味を足す
 [L3](../../workbook/advanced/L3_variadic/README.md) に着手できる。
 
-生成したアセンブリで `printf` の呼び出しと標準出力を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/sim.html) に貼り付ける。
+生成したアセンブリで `printf` の呼び出しと標準出力を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/app.html?mode=run) に貼り付ける。
 
 この回の完成形に相当する OCaml 版参考実装が [`../../workbook/ocaml/README.md`](../../workbook/ocaml/README.md) にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。

@@ -10,9 +10,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: resolve(__dirname, "index.html"),
-        ast: resolve(__dirname, "ast.html"),
-        compile: resolve(__dirname, "compile.html"),
-        sim: resolve(__dirname, "sim.html"),
+        app: resolve(__dirname, "app.html"),
       },
     },
   },

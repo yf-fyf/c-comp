@@ -3,10 +3,14 @@
 教材のウェブ公開に併設する学習支援アプリ。設計方針とアプリ案の全体像は
 [`../design/webapps.md`](../design/webapps.md) を参照。
 
-| アプリ | ページ | 内容 |
-|--------|--------|------|
-| A1 AST ビジュアライザ | `ast.html` | C ソース → 構文木 / S 式 / トークン。ノードから対応するソース範囲を強調。資料の図と同じ木 |
-| A2 RV64 シミュレータ | `sim.html` | アセンブリを1命令ずつ実行。レジスタ・スタック・標準出力・教育的警告 |
+アプリは1ページ（`app.html`）に統合してあり、URL の `?mode=` で二部屋を切り替える。
+
+| モード | URL | 内容 |
+|--------|-----|------|
+| 作る | `app.html?mode=build` | C ソース → 構文木 / S 式 / トークン（A1）と RV64 アセンブリ（A5）。ノードから対応するソース範囲を強調。資料の図と同じ木 |
+| 動かす | `app.html?mode=run` | アセンブリを1命令ずつ実行（A2）。レジスタ・スタック・標準出力・教育的警告 |
+
+`index.html` は両モードへの入口を並べるだけのトップページ。
 
 ## 構成
 
@@ -21,9 +25,10 @@ web/
 │   └── golden_test.py   # parse_viewer.py とのバイト一致検査
 ├── examples/asm/    # シミュレータの手書きサンプル（README.md に置く理由あり）
 └── app/             # TypeScript + Vite フロントエンド
-    ├── index.html / ast.html / sim.html
+    ├── index.html / app.html
+    ├── src/app-*.ts # 統合ページ（app-main / ast-view / asm-view / run-view）
     ├── src/sim/     # シミュレータ（assembler / machine / libc / checks）
-    ├── src/shell.ts # 共通ヘッダ（アプリ間ナビ・文字サイズ）
+    ├── src/shell.ts # 共通ヘッダ（ページ間ナビ・文字サイズ）
     ├── test/        # vitest と qemu 照合スクリプト
     └── public/      # 生成物置き場（core/api.bc.js と *-examples.json。コミットしない）
 ```

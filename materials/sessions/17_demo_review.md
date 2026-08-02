@@ -21,7 +21,7 @@ requires:
 
 この回では新しい構文もコードも追加しない。
 使うのはすべて手元にあるもの — 自分の `final/mycc.py`、`final/tests/` の17本（fixed17）、
-[RV64 シミュレータ](../../tools/sim.html) だけである。
+[RV64 シミュレータ](../../tools/app.html?mode=run) だけである。
 
 コマ16 で「動くコンパイラ」は完成した。
 この回でやるのは、それを「説明できるコンパイラ」に変えることである。
@@ -77,7 +77,7 @@ requires:
 python3 final/mycc.py final/tests/f09_recur.c > f09.s
 ```
 
-出力した `f09.s` を [RV64 シミュレータ](../../tools/sim.html) に貼り付けると、
+出力した `f09.s` を [RV64 シミュレータ](../../tools/app.html?mode=run) に貼り付けると、
 1命令ずつ進めながらレジスタとスタックの変化を見られる。
 
 読み下すときは、次の問いに順に答える。
