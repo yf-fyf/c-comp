@@ -22,7 +22,7 @@ sections:
   - slug: sessions
     title: 通常回
     group: 教材
-    summary: コマ1〜17（07 は欠番）の16コマ。読んで実装し、その日のうちに動かして確認する粒度に分けてある。最後のコマ17 だけは新しい実装をせず、発表と振り返りに充てる。
+    summary: コマ1〜17 の17コマ。読んで実装し、その日のうちに動かして確認する粒度に分けてある。最後のコマ17 だけは新しい実装をせず、発表と振り返りに充てる。
     pages:
       - materials/sessions/01_environment.md
       - materials/sessions/02_interpreter.md
@@ -30,17 +30,13 @@ sections:
       - materials/sessions/04_variables.md
       - materials/sessions/05_if_else.md
       - materials/sessions/06_loops.md
-      - materials/sessions/08_functions_recursion.md
-      - materials/sessions/09_lvalue_rvalue.md
-      - materials/sessions/10_types_pointers.md
-      - materials/sessions/10a_types.md
-      - materials/sessions/10b_pointer_arith.md
-      - materials/sessions/11_strings_printf.md
-      - materials/sessions/11a_strings_data_section.md
-      - materials/sessions/11b_expr_walk_libc.md
-      - materials/sessions/12_struct.md
-      - materials/sessions/13_sizeof_malloc_list.md
-      - materials/sessions/12plus13_struct_malloc_list.md
+      - materials/sessions/07_functions_recursion.md
+      - materials/sessions/08_lvalue_rvalue.md
+      - materials/sessions/09_types.md
+      - materials/sessions/10_pointer_arith.md
+      - materials/sessions/11_strings_data_section.md
+      - materials/sessions/12_expr_walk_libc.md
+      - materials/sessions/13_struct_malloc_list.md
       - materials/sessions/14_globals_scope.md
       - materials/sessions/15_preprocess_multifile.md
       - materials/sessions/16_integrate_mycc.md

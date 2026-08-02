@@ -1,5 +1,5 @@
 (*
-    コマ 8: lvalue / rvalue — アドレス演算子 & と間接演算子 *
+    コマ 7: 関数② — 引数受け取り + 関数呼び出し
 *)
 
 open Ast_def
@@ -48,6 +48,11 @@ let rec collect_decls = function
   | While { body; _ } | For { body; _ } -> collect_decls body
   | _ -> ()
 
+let codegen_lval = function
+  | Var { name; line; _ } ->
+      emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
+  | e -> error ~line:(line_of_expr e) "lvalue でない式です"
+
 let push_a0 () =
   emit "  addi sp, sp, -8";
   emit "  sd a0, 0(sp)";
@@ -58,24 +63,18 @@ let pop_into reg =
   emit "  addi sp, sp, 8";
   decr depth
 
-let rec codegen_lval = function
-  | Var { name; line; _ } ->
-      emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
-  | Unary { op = Deref; operand; _ } ->
-      codegen operand
-  | e -> error ~line:(line_of_expr e) "lvalue でない式です"
-
-and codegen = function
+let rec codegen = function
   | Num { value; _ } ->
       emit (Printf.sprintf "  li a0, %d" value)
   | Var _ as v ->
       codegen_lval v;
       emit "  ld a0, 0(a0)"
-  | Unary { op = Addr; operand; _ } ->
-      codegen_lval operand
-  | Unary { op = Deref; operand; _ } ->
-      codegen operand;
-      emit "  ld a0, 0(a0)"
+  | Assign { lhs; rhs; _ } ->
+      codegen_lval lhs;
+      push_a0 ();
+      codegen rhs;
+      pop_into "a1";
+      emit "  sd a0, 0(a1)"
   | Unary { op = Neg; operand; _ } ->
       codegen operand;
       emit "  neg a0, a0"
@@ -91,12 +90,6 @@ and codegen = function
       emit "  addi a1, a1, -1";
       emit "  sd a1, 0(a0)";
       emit "  mv a0, a1"
-  | Assign { lhs; rhs; _ } ->
-      codegen_lval lhs;
-      push_a0 ();
-      codegen rhs;
-      pop_into "a1";
-      emit "  sd a0, 0(a1)"
   | Call { name; args; _ } -> gen_call name args
   | Binary { op; lhs; rhs; _ } ->
       codegen lhs;
@@ -113,7 +106,7 @@ and codegen = function
       | Ne -> emit "  sub a0, a1, a0"; emit "  snez a0, a0"
       | Lt -> emit "  slt a0, a1, a0"
       | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
-      | _ -> error "コマ8で未対応の二項演算です")
+      | _ -> error "コマ7で未対応の二項演算です")
   | Cond { cond; then_; else_; _ } ->
       let label_else = new_label () in
       let label_end = new_label () in
@@ -124,7 +117,7 @@ and codegen = function
       emit (label_else ^ ":");
       codegen else_;
       emit (label_end ^ ":")
-  | e -> error ~line:(line_of_expr e) "コマ8で未対応の式です"
+  | e -> error ~line:(line_of_expr e) "コマ7で未対応の式です"
 
 and gen_call name args =
   let n = List.length args in
@@ -135,8 +128,8 @@ and gen_call name args =
   if n > 0 then (
     emit (Printf.sprintf "  addi sp, sp, %d" (n * 8));
     depth := !depth - n);
-  (* 呼び出しを囲む式が積んでいる一時値は 1 個 8 バイト。
-     奇数個なら sp が 16 バイト境界からずれているので詰める。 *)
+  (* ここで sp は「呼び出しを囲む式が積んだ一時値」の分だけフレームから下がっている。
+     一時値は 1 個 8 バイトなので、奇数個なら 16 バイト境界からずれている。 *)
   let pad = if !depth mod 2 <> 0 then 8 else 0 in
   if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, -%d" pad);
   emit (Printf.sprintf "  call %s" name);
@@ -233,7 +226,7 @@ let gen_func = function
 
 let () =
   if Array.length Sys.argv < 2 then (
-    prerr_endline "使い方: dune exec ./lecture08.exe -- <source.c>";
+    prerr_endline "使い方: dune exec ./lecture07.exe -- <source.c>";
     exit 1);
   let filename = Sys.argv.(1) in
   let source = Utils.read_file filename in

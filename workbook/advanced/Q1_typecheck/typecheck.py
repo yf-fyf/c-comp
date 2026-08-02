@@ -116,7 +116,7 @@ class TypeChecker:
     def check_assign(self, node):
         """Step 3: 代入 node の左辺が lvalue かを調べる。
 
-        方針: 代入先にできるのは次の4種類だけ(コマ9 の codegen_lval が
+        方針: 代入先にできるのは次の4種類だけ(コマ8 の codegen_lval が
         扱えるもの)。それ以外なら
         f"代入先にできない式です（{左辺の kind}）" を報告する。
             ND_VAR / ND_DEREF / ND_INDEX / ND_MEMBER

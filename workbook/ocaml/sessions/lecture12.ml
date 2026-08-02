@@ -1,5 +1,5 @@
 (*
-    コマ 12: struct / . / -> — 構造体の型システムとメンバアクセス
+    コマ 12: 式の走査と libc 活用 — intern_string, .data section
 *)
 
 open Ast_def
@@ -12,6 +12,8 @@ let error ?(line = 0) msg =
   prerr_endline (Printf.sprintf "[line %d] %s" line msg);
   exit 1
 
+(* 宣言時の型を offset と一緒に覚える。ポインタ演算の幅も load / store の
+   命令幅も型で決まるので、型が分からないと判断できない。 *)
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
@@ -81,34 +83,15 @@ let intern_string s =
       Hashtbl.replace string_literals s label;
       label
 
-(* ── 構造体レイアウト ──
-   struct 定義は support の構文解析時に Struct_env へ登録される。
-   ここではタグ名からフィールドのオフセットと型を引くだけでよい。 *)
-
-let field_info struct_ty name line =
-  match struct_ty with
-  | TyStruct tag -> (
-      match Struct_env.find tag with
-      | None -> error ~line (Printf.sprintf "未定義の構造体: 'struct %s'" tag)
-      | Some info -> (
-          match List.assoc_opt name info.Struct_env.fields with
-          | Some fi -> fi
-          | None -> error ~line (Printf.sprintf "構造体にフィールド '%s' がありません" name)))
-  | _ -> error ~line "構造体型ではありません"
-
-let field_ty struct_ty name line = (field_info struct_ty name line).Struct_env.ty
-let field_offset struct_ty name line = (field_info struct_ty name line).Struct_env.offset
-
-(* ── 文字列収集（printf 等のため） ── *)
-
 let rec collect_strings_expr = function
   | StrLit { value; _ } -> ignore (intern_string value)
-  | Assign { lhs; rhs; _ } | Binary { lhs; rhs; _ } | Index { base = lhs; index = rhs; _ } -> collect_strings_expr lhs; collect_strings_expr rhs
-  | Unary { operand; _ } | Member { base = operand; _ } -> collect_strings_expr operand
+  | Assign { lhs; rhs; _ } | Binary { lhs; rhs; _ } | Index { base = lhs; index = rhs; _ } ->
+      collect_strings_expr lhs; collect_strings_expr rhs
+  | Unary { operand; _ } -> collect_strings_expr operand
   | Cond { cond; then_; else_; _ } ->
       collect_strings_expr cond; collect_strings_expr then_; collect_strings_expr else_
   | Call { args; _ } -> List.iter collect_strings_expr args
-  | Num _ | Var _ | SizeofType _ -> ()
+  | Num _ | Var _ | SizeofType _ | Member _ -> ()
 
 let rec collect_strings_stmt = function
   | Block { stmts; _ } -> List.iter collect_strings_stmt stmts
@@ -128,8 +111,6 @@ let emit_data_section () =
       emit "  .byte 0")
     string_literals
 
-(* ── コード生成 ── *)
-
 let rec codegen_lval = function
   | Var { name; line; _ } ->
       emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
@@ -137,36 +118,27 @@ let rec codegen_lval = function
       codegen operand
   | Index { base; index; _ } ->
       let elem_ty = match type_of_expr base with
-        | TyPtr e -> e | _ -> TyInt in
-      codegen base; push_a0 (); codegen index; scale_index elem_ty; pop_into "a1"; emit "  add a0, a1, a0"
-  | Member { base; name; is_arrow; line; _ } ->
-      let struct_ty =
-        if is_arrow then (
-          match type_of_expr base with
-          | TyPtr (TyStruct _ as s) -> codegen base; s
-          | _ -> error ~line "-> の対象が構造体ポインタではありません")
-        else (
-          match type_of_lval base with
-          | TyStruct _ as s -> codegen_lval base; s
-          | _ -> error ~line ". の対象が構造体ではありません")
+        | TyPtr e -> e
+        | _ -> TyInt
       in
-      let offset = field_offset struct_ty name line in
-      if offset <> 0 then emit (Printf.sprintf "  addi a0, a0, %d" offset)
+      codegen base;
+      push_a0 ();
+      codegen index;
+      scale_index elem_ty;
+      pop_into "a1";
+      emit "  add a0, a1, a0"
   | e -> error ~line:(line_of_expr e) "lvalue でない式です"
 
+(* lvalue が指す先の型。codegen_lval が a0 に置いたアドレスを
+   何バイト読み書きすればよいかは、この型で決まる。 *)
 and type_of_lval = function
   | Var { name; line; _ } -> lookup_local_ty name line
   | Unary { op = Deref; operand; _ } -> (
-      match type_of_expr operand with TyPtr base -> base | _ -> error ~line:(line_of_expr operand) "* の対象がポインタではありません")
+      match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
   | Index { base; _ } -> (
-      match type_of_expr base with TyPtr e -> e | _ -> TyInt)
-  | Member { base; name; is_arrow; line; _ } ->
-      let struct_ty =
-        if is_arrow then
-          match type_of_expr base with TyPtr (TyStruct _ as s) -> s | _ -> error ~line "-> の対象が構造体ポインタではありません"
-        else
-          match type_of_lval base with TyStruct _ as s -> s | _ -> error ~line ". の対象が構造体ではありません"
-      in field_ty struct_ty name line
+      match type_of_expr base with
+      | TyPtr e -> e
+      | _ -> TyInt)
   | _ -> TyInt
 
 and type_of_expr = function
@@ -174,15 +146,15 @@ and type_of_expr = function
   | StrLit _ -> TyPtr TyChar
   | Var { name; line; _ } -> lookup_local_ty name line
   | Unary { op = Addr; operand; _ } -> TyPtr (type_of_lval operand)
-  | Unary { op = Deref; operand; _ } -> (match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
-  | Index _ as e -> type_of_lval e
+  | Unary { op = Deref; operand; _ } -> (
+      match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
   | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
       type_of_lval operand
   | Cond { then_; _ } -> type_of_expr then_
-  | Member _ as e -> type_of_lval e
-  | Assign { lhs; _ } -> type_of_lval lhs
+  | Index _ as e -> type_of_lval e
   | Binary { op = Add; lhs; rhs; _ } ->
-      let lt = type_of_expr lhs in if is_ptr_ty lt then lt else type_of_expr rhs
+      let lt = type_of_expr lhs in
+      if is_ptr_ty lt then lt else type_of_expr rhs
   | _ -> TyInt
 
 and lookup_local_ty name line =
@@ -191,14 +163,24 @@ and lookup_local_ty name line =
   | None -> error ~line (Printf.sprintf "未定義の変数: '%s'" name)
 
 and codegen = function
-  | Num { value; _ } -> emit (Printf.sprintf "  li a0, %d" value)
-  | StrLit { value; _ } -> emit (Printf.sprintf "  la a0, %s" (intern_string value))
-  | Var _ as v -> let ty = type_of_expr v in codegen_lval v; load ty
-  | Unary { op = Addr; operand; _ } -> codegen_lval operand
+  | Num { value; _ } ->
+      emit (Printf.sprintf "  li a0, %d" value)
+  | StrLit { value; _ } ->
+      emit (Printf.sprintf "  la a0, %s" (intern_string value))
+  | Var _ as v ->
+      (* lval としてアドレスを求めてから、型に応じた幅で読み出す。 *)
+      let ty = type_of_expr v in
+      codegen_lval v;
+      load ty
+  | Unary { op = Addr; operand; _ } ->
+      codegen_lval operand
   | Unary { op = Deref; operand; _ } ->
       let ty = type_of_expr operand in
-      codegen operand; (match ty with TyPtr t -> load t | _ -> load TyInt)
-  | Unary { op = Neg; operand; _ } -> codegen operand; emit "  neg a0, a0"
+      codegen operand;
+      (match ty with TyPtr t -> load t | _ -> load TyInt)
+  | Unary { op = Neg; operand; _ } ->
+      codegen operand;
+      emit "  neg a0, a0"
   | Unary { op = PreInc; operand; _ } ->
       let ty = type_of_lval operand in
       let delta = match ty with TyPtr e -> size_of_ty e | _ -> 1 in
@@ -219,15 +201,23 @@ and codegen = function
       store ty
   | SizeofType { ty; _ } ->
       emit (Printf.sprintf "  li a0, %d" (size_of_ty ty))
-  | Index _ as e -> let ty = type_of_expr e in codegen_lval e; load ty
-  | Member _ as e -> let ty = type_of_expr e in codegen_lval e; load ty
+  | Index _ as e ->
+      let ty = type_of_expr e in
+      codegen_lval e;
+      load ty
   | Assign { lhs; rhs; _ } ->
       let ty = type_of_lval lhs in
-      codegen_lval lhs; push_a0 (); codegen rhs; pop_into "a1"; store ty
+      codegen_lval lhs;
+      push_a0 ();
+      codegen rhs;
+      pop_into "a1";
+      store ty
   | Call { name; args; _ } ->
       let n = List.length args in
       List.iter (fun arg -> codegen arg; push_a0 ()) args;
-      for i = 0 to n - 1 do emit (Printf.sprintf "  ld a%d, %d(sp)" i ((n - 1 - i) * 8)) done;
+      for i = 0 to n - 1 do
+        emit (Printf.sprintf "  ld a%d, %d(sp)" i ((n - 1 - i) * 8))
+      done;
       if n > 0 then (
         emit (Printf.sprintf "  addi sp, sp, %d" (n * 8));
         depth := !depth - n);
@@ -240,23 +230,50 @@ and codegen = function
   | Binary { op = Add; lhs; rhs; _ } ->
       let lt = type_of_expr lhs and rt = type_of_expr rhs in
       if is_ptr_ty lt || is_ptr_ty rt then (
-        let ptr_expr, int_expr, ptr_ty = if is_ptr_ty lt then (lhs, rhs, lt) else (rhs, lhs, rt) in
+        let ptr_expr, int_expr, ptr_ty =
+          if is_ptr_ty lt then (lhs, rhs, lt) else (rhs, lhs, rt) in
         let elem_ty = match ptr_ty with TyPtr e -> e | _ -> TyInt in
-        codegen ptr_expr; push_a0 (); codegen int_expr; scale_index elem_ty; pop_into "a1"; emit "  add a0, a1, a0")
-      else (codegen lhs; push_a0 (); codegen rhs; pop_into "a1"; emit "  add a0, a1, a0")
+        codegen ptr_expr;
+        push_a0 ();
+        codegen int_expr;
+        scale_index elem_ty;
+        pop_into "a1";
+        emit "  add a0, a1, a0")
+      else (
+        codegen lhs;
+        push_a0 ();
+        codegen rhs;
+        pop_into "a1";
+        emit "  add a0, a1, a0")
   | Binary { op = Sub; lhs; rhs; _ } ->
       let lt = type_of_expr lhs in
       if is_ptr_ty lt then (
         let elem_ty = match lt with TyPtr e -> e | _ -> TyInt in
-        codegen lhs; push_a0 (); codegen rhs; scale_index elem_ty; pop_into "a1"; emit "  sub a0, a1, a0")
-      else (codegen lhs; push_a0 (); codegen rhs; pop_into "a1"; emit "  sub a0, a1, a0")
+        codegen lhs;
+        push_a0 ();
+        codegen rhs;
+        scale_index elem_ty;
+        pop_into "a1";
+        emit "  sub a0, a1, a0")
+      else (
+        codegen lhs;
+        push_a0 ();
+        codegen rhs;
+        pop_into "a1";
+        emit "  sub a0, a1, a0")
   | Binary { op; lhs; rhs; _ } ->
-      codegen lhs; push_a0 (); codegen rhs; pop_into "a1";
+      codegen lhs;
+      push_a0 ();
+      codegen rhs;
+      pop_into "a1";
       (match op with
-      | Mul -> emit "  mul a0, a1, a0" | Div -> emit "  div a0, a1, a0" | Mod -> emit "  rem a0, a1, a0"
+      | Mul -> emit "  mul a0, a1, a0"
+      | Div -> emit "  div a0, a1, a0"
+      | Mod -> emit "  rem a0, a1, a0"
       | Eq -> emit "  sub a0, a1, a0"; emit "  seqz a0, a0"
       | Ne -> emit "  sub a0, a1, a0"; emit "  snez a0, a0"
-      | Lt -> emit "  slt a0, a1, a0" | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
+      | Lt -> emit "  slt a0, a1, a0"
+      | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
       | _ -> error "コマ12で未対応の二項演算です")
   | Cond { cond; then_; else_; _ } ->
       let label_else = new_label () in
@@ -273,47 +290,98 @@ and codegen = function
 (* gen_stmt — unchanged *)
 let rec gen_stmt = function
   | Decl _ -> ()
-  | ExprStmt { expr = Some e; _ } -> codegen e | ExprStmt _ -> ()
-  | Return { expr; _ } -> Option.iter codegen expr; emit (Printf.sprintf "  j %s" !ret_label)
+  | ExprStmt { expr = Some e; _ } -> codegen e
+  | ExprStmt _ -> ()
+  | Return { expr; _ } ->
+      Option.iter codegen expr;
+      emit (Printf.sprintf "  j %s" !ret_label)
   | Block { stmts; _ } -> List.iter gen_stmt stmts
   | If { cond; then_; else_; _ } ->
-      let label_else = new_label () in codegen cond; emit (Printf.sprintf "  beqz a0, %s" label_else); gen_stmt then_;
-      (match else_ with Some e -> let le = new_label () in emit (Printf.sprintf "  j %s" le); emit (label_else ^ ":"); gen_stmt e; emit (le ^ ":") | None -> emit (label_else ^ ":"))
+      let label_else = new_label () in
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_else);
+      gen_stmt then_;
+      (match else_ with
+      | Some else_stmt ->
+          let label_end = new_label () in
+          emit (Printf.sprintf "  j %s" label_end);
+          emit (label_else ^ ":");
+          gen_stmt else_stmt;
+          emit (label_end ^ ":")
+      | None -> emit (label_else ^ ":"))
   | While { cond; body; _ } ->
-      let lc = new_label () in let le = new_label () in push break_stack le; push cont_stack lc;
-      emit (lc ^ ":"); codegen cond; emit (Printf.sprintf "  beqz a0, %s" le); gen_stmt body;
-      emit (Printf.sprintf "  j %s" lc); emit (le ^ ":"); pop break_stack; pop cont_stack
+      let label_cond = new_label () in
+      let label_end = new_label () in
+      push break_stack label_end;
+      push cont_stack label_cond;
+      emit (label_cond ^ ":");
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_end);
+      gen_stmt body;
+      emit (Printf.sprintf "  j %s" label_cond);
+      emit (label_end ^ ":");
+      pop break_stack;
+      pop cont_stack
   | For { init; cond; step; body; _ } ->
-      let lc = new_label () in let ls = new_label () in let le = new_label () in push break_stack le; push cont_stack ls;
-      Option.iter codegen init; emit (lc ^ ":"); Option.iter (fun c -> codegen c; emit (Printf.sprintf "  beqz a0, %s" le)) cond;
-      gen_stmt body; emit (ls ^ ":"); Option.iter codegen step; emit (Printf.sprintf "  j %s" lc); emit (le ^ ":"); pop break_stack; pop cont_stack
+      let label_cond = new_label () in
+      let label_step = new_label () in
+      let label_end = new_label () in
+      push break_stack label_end;
+      push cont_stack label_step;
+      Option.iter codegen init;
+      emit (label_cond ^ ":");
+      Option.iter (fun c -> codegen c; emit (Printf.sprintf "  beqz a0, %s" label_end)) cond;
+      gen_stmt body;
+      emit (label_step ^ ":");
+      Option.iter codegen step;
+      emit (Printf.sprintf "  j %s" label_cond);
+      emit (label_end ^ ":");
+      pop break_stack;
+      pop cont_stack
   | Break _ -> emit (Printf.sprintf "  j %s" (peek break_stack))
   | Continue _ -> emit (Printf.sprintf "  j %s" (peek cont_stack))
 
 let gen_func = function
   | FuncDef { name; params; body; _ } ->
-      Hashtbl.clear locals; stack_offset := 0; depth := 0; ret_label := new_label (); break_stack := []; cont_stack := [];
+      Hashtbl.clear locals;
+      stack_offset := 0;
+      depth := 0;
+      ret_label := new_label ();
+      break_stack := [];
+      cont_stack := [];
       List.iter (fun (p : param) -> Option.iter (fun n -> alloc_local n p.ty) p.name) params;
       collect_decls body;
       let frame_size = align_to !stack_offset 16 in
-      emit (Printf.sprintf "  .globl %s" name); emit (name ^ ":");
+      emit (Printf.sprintf "  .globl %s" name);
+      emit (name ^ ":");
       emit (Printf.sprintf "  addi sp, sp, -%d" (frame_size + 16));
       emit (Printf.sprintf "  sd ra, %d(sp)" (frame_size + 8));
       emit (Printf.sprintf "  sd s0, %d(sp)" frame_size);
       emit (Printf.sprintf "  addi s0, sp, %d" (frame_size + 16));
-      List.iteri (fun i (p : param) -> match p.name with Some pname when i < 8 -> (match Hashtbl.find_opt locals pname with Some (offset, _) -> emit (Printf.sprintf "  sd a%d, %d(s0)" i offset) | None -> ()) | _ -> ()) params;
+      List.iteri
+        (fun i (p : param) ->
+          match p.name with
+          | Some pname when i < 8 ->
+              (match Hashtbl.find_opt locals pname with
+              | Some (offset, _) -> emit (Printf.sprintf "  sd a%d, %d(s0)" i offset)
+              | None -> ())
+          | _ -> ())
+        params;
       gen_stmt body;
-      emit (!ret_label ^ ":"); emit (Printf.sprintf "  ld s0, %d(sp)" frame_size); emit (Printf.sprintf "  ld ra, %d(sp)" (frame_size + 8));
-      emit (Printf.sprintf "  addi sp, sp, %d" (frame_size + 16)); emit "  ret"
+      emit (!ret_label ^ ":");
+      emit (Printf.sprintf "  ld s0, %d(sp)" frame_size);
+      emit (Printf.sprintf "  ld ra, %d(sp)" (frame_size + 8));
+      emit (Printf.sprintf "  addi sp, sp, %d" (frame_size + 16));
+      emit "  ret"
   | _ -> ()
 
 let () =
-  if Array.length Sys.argv < 2 then (prerr_endline "使い方: dune exec ./lecture12.exe -- <source.c>"; exit 1);
-  Struct_env.reset ();
+  if Array.length Sys.argv < 2 then (
+    prerr_endline "使い方: dune exec ./lecture12.exe -- <source.c>";
+    exit 1);
   let filename = Sys.argv.(1) in
   let source = Utils.read_file filename in
-  let preprocessed = Preprocess.preprocess source filename in
-  let prog = Frontend.parse_source ~already_preprocessed:true ~filename preprocessed in
+  let prog = Frontend.parse_source ~filename source in
   List.iter (function FuncDef { body; _ } -> collect_strings_stmt body | _ -> ()) prog;
   emit_data_section ();
   emit "  .text";
