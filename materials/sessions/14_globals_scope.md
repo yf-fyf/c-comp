@@ -229,10 +229,10 @@ def codegen_lval_Var(self, node):
 ```python
 # インスタンス変数として持つ
 self._globals: dict[str, str]                      # name → ty_str（コマ14で追加）
-self._locals: dict[str, tuple[int, str]]           # name → (offset, ty_str)（コマ10 のまま）
+self._locals: dict[str, tuple[int, str]]           # name → (offset, ty_str)（コマ9 のまま）
 ```
 
-`self._locals` の形はコマ10 で `(offset, ty_str)` のタプルになって以来変わらない。
+`self._locals` の形はコマ9 で `(offset, ty_str)` のタプルになって以来変わらない。
 グローバル変数はスタック上に置かないのでオフセットを持たず、型だけを覚える。
 
 `self._globals` はプログラム全体で1つだけ持つ。トップレベルの宣言を `self.collect_globals(prog)` で集めてからコード生成に入る。
@@ -312,18 +312,18 @@ int main() {
 そこで、この形のものを `_collect_strings_binary_expr(node)` 1つにまとめ、
 ディスパッチをそこへ振り替えてある。
 
-この整理により、コマ11 で書いた二項演算ごとのハンドラ
+この整理により、コマ12 で書いた二項演算ごとのハンドラ
 （`collect_strings_expr_Add` など）はコマ14 以降は呼ばれなくなる。
 削除はしなくてよい（継承したまま残しておいて構わない）。
-`collect_strings_expr_Str` / `_Neg` / `_Cond` / `_Call`（コマ11）と
-`collect_strings_expr_Member`（コマ12）は、形が違うのでこれまで通り使われる。
+`collect_strings_expr_Str` / `_Neg` / `_Cond` / `_Call`（コマ11〜12）と
+`collect_strings_expr_Member`（コマ13）は、形が違うのでこれまで通り使われる。
 
 この教材は普段、前回までのハンドラをそのまま継承し新しいノード種別の分だけ
 書き足す「積み上げ」で進める。ここはその方針の部分的な例外である。
-コマ11では `collect_strings_expr_Add` / `_Sub` / `_Mul` / … と種類ごとに
+コマ12では `collect_strings_expr_Add` / `_Sub` / `_Mul` / … と種類ごとに
 1つずつハンドラを書いたが、コマ14 で `&&` `||` が増えて同じ形の走査が
 さらに2つ必要になった時点で、「形が同じものは重複させずに1箇所へまとめる」
-判断を優先した。結果として、コマ11 で書いた15個の per-kind ハンドラ
+判断を優先した。結果として、コマ12 で書いた15個の per-kind ハンドラ
 （`Assign` / `Add` / `Sub` / `Mul` / `Div` / `Mod` / `Eq` / `Ne` / `Lt` / `Le` / `Index`
 など二項演算に対応するもの）は、`collect_strings_expr()` のディスパッチが
 `_collect_strings_binary_expr()` を直接呼ぶように書き換わったことで、
