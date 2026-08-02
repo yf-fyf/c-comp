@@ -19,7 +19,6 @@ OCaml 参考実装の回帰テストランナー
     dune build
     python3 run_tests.py               # 全回
     python3 run_tests.py 13            # コマ13 だけ
-    python3 run_tests.py 10a           # 分割した前半の回だけ
     python3 run_tests.py 12 13 16      # 複数指定
     python3 run_tests.py --build-dir DIR   # 別ビルド（変更前版との比較用）
     python3 run_tests.py --no-equivalence  # 等価性テストを飛ばす
@@ -46,16 +45,12 @@ QEMU = os.environ.get("QEMU", "qemu-riscv64")
 RESULT_RE = re.compile(r"^評価結果:\s*(-?\d+)$", re.MULTILINE)
 
 
-def tests_dir_for(key: str) -> Path | None:
-    """コマ番号からテストディレクトリを引く（対応表は持たず番号で照合する）。
-
-    番号は `10` のような 2 桁のほか、回を前後に分けた `10a` / `11a` も取る。
-    ディレクトリ名の接頭辞（`10a_types` など）と同じ綴りで引ける。
-    """
-    if key == "16":
+def tests_dir_for(num: int) -> Path | None:
+    """コマ番号からテストディレクトリを引く（対応表は持たず番号で照合する）"""
+    if num == 16:
         # コマ16 は統合版。自前の tests を持たず final/tests を使う
         return WORKBOOK / "final" / "tests"
-    matches = sorted(WORKBOOK.glob(f"sessions/{key}_*/tests"))
+    matches = sorted(WORKBOOK.glob(f"sessions/{num:02d}_*/tests"))
     return matches[0] if matches else None
 
 
@@ -336,7 +331,7 @@ def run_reject(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, int, 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="OCaml 参考実装の回帰テスト")
-    ap.add_argument("sessions", nargs="*", help="コマ番号（省略時は全回。10a のような枝番も取る）")
+    ap.add_argument("sessions", nargs="*", type=int, help="コマ番号（省略時は全回）")
     ap.add_argument("--build-dir", default=str(OCAML_DIR / "_build" / "default"),
                     help="lectureNN.exe があるディレクトリ")
     ap.add_argument("--timeout", type=int, default=15, help="1件あたりの制限秒数")
@@ -346,16 +341,11 @@ def main() -> int:
     args = ap.parse_args()
 
     build_dir = Path(args.build_dir).resolve()
-    # `lecture10.ml` は "10"、`lecture10a.ml` は "10a"。どちらも 2 桁始まりなので
-    # 辞書順に並べれば 10 → 10a → 11 → 11a の順になる。
-    available = sorted(
-        p.stem[7:] for p in (OCAML_DIR / "sessions").glob("lecture[0-9][0-9]*.ml")
-    )
+    available = sorted(int(p.stem[7:]) for p in (OCAML_DIR / "sessions").glob("lecture[0-9][0-9].ml"))
     if not available:
         print("lectureNN.ml が見つからない", file=sys.stderr)
         return 2
-    # `4` のような 1 桁指定も `04` として受ける
-    wanted = [n.zfill(2) if n.isdigit() else n for n in args.sessions] or available
+    wanted = args.sessions or available
     unknown = [n for n in wanted if n not in available]
     if unknown:
         print(f"該当する実装がない: {unknown}（あるのは {available}）", file=sys.stderr)
@@ -370,23 +360,23 @@ def main() -> int:
 
     rows: list[tuple[str, int, int, int]] = []
     total = [0, 0, 0]
-    for key in wanted:
-        exe = build_dir / "sessions" / f"lecture{key}.exe"
-        tests = tests_dir_for(key)
+    for num in wanted:
+        exe = build_dir / "sessions" / f"lecture{num:02d}.exe"
+        tests = tests_dir_for(num)
         label = tests.relative_to(WORKBOOK) if tests else "対象テストなし"
-        print(f"\n--- コマ{key} ({label}) ---")
+        print(f"\n--- コマ{num:02d} ({label}) ---")
         if not exe.is_file():
             print(f"  実行ファイルがない: {exe}", file=sys.stderr)
-            rows.append((f"コマ{key}", 0, 1, 0))
+            rows.append((f"コマ{num:02d}", 0, 1, 0))
             total[1] += 1
             continue
         if tests is None or not tests.is_dir():
             print("  対象テストがないので飛ばす")
-            rows.append((f"コマ{key}", 0, 0, 0))
+            rows.append((f"コマ{num:02d}", 0, 0, 0))
             continue
 
         npass = nfail = nskip = 0
-        runner = run_interpreter_case if key == "02" else run_compiler_case
+        runner = run_interpreter_case if num == 2 else run_compiler_case
         for src in sorted(tests.glob("*.c")):
             # コマ15 の math_util.c のように、他のテストから include される
             # 補助ソースは .ans を持たないので SKIP に落ちる
@@ -403,7 +393,7 @@ def main() -> int:
             else:
                 nfail += 1
                 print(f"  [{result}] {rel}")
-        rows.append((f"コマ{key}", npass, nfail, nskip))
+        rows.append((f"コマ{num:02d}", npass, nfail, nskip))
         for i, v in enumerate((npass, nfail, nskip)):
             total[i] += v
 
@@ -417,7 +407,7 @@ def main() -> int:
         for i, v in enumerate((npass, nfail, nskip)):
             total[i] += v
 
-    # 行頭のラベルは全角と半角が混ざる（コマ10a と 等価性 など）ので、
+    # 行頭のラベルは全角と半角が混ざる（コマ9 と 等価性 など）ので、
     # 文字数ではなく表示幅で揃える
     def pad(label: str, width: int = 8) -> str:
         shown = sum(2 if ord(ch) > 0x2E80 else 1 for ch in label)

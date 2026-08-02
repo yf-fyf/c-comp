@@ -3,7 +3,7 @@
 > 対象: C言語既習・コンパイラ理論未習の学習者
 > 到達目標: Python 版 C サブセットコンパイラの完遂。以降は選択制の発展課題（`workbook/advanced/`）
 > ターゲット: RISC-V RV64IM（C拡張なし）、代替候補 x86-64
-> 構成: 全16コマ（Phase 0〜2 の15コマ + 発表・振り返りのコマ17。番号は 01〜17 で 07 は欠番）
+> 構成: 全17コマ（Phase 0〜2 の16コマ + 発表・振り返りのコマ17。番号は 01〜17 の連番）
 
 この文書は教材全体の設計思想を説明する。
 学習者向けの進め方は [`workbook/docs/getting_started.md`](../workbook/docs/getting_started.md) を参照。
@@ -49,8 +49,8 @@ Step 3（発展課題）: C 実装が動いたら、それ自体がコンパイ�
 
 ```
 Phase 0 [ 2コマ]  環境 + AST 理解
-Phase 1 [ 8コマ]  Python 版ミニコンパイラを完成させる（コマ3〜11。07 は欠番）
-Phase 2 [ 5コマ]  Python 版標準機能を完成させる
+Phase 1 [10コマ]  Python 版ミニコンパイラを完成させる（コマ3〜12）
+Phase 2 [ 4コマ]  Python 版標準機能を完成させる
 最終デモ [ 1コマ]  発表・振り返り（コマ17。新しい機能は入れず、既存資産だけを使う）
 ```
 
@@ -120,7 +120,7 @@ def codegen(node):
         emit("  add a0, a1, a0")
 ```
 
-### Phase 1: Python 版ミニコンパイラを完成させる（コマ3〜11）
+### Phase 1: Python 版ミニコンパイラを完成させる（コマ3〜12）
 
 各コマの形式: 15分講義 + 75分実装 + 10分デモ
 
@@ -140,20 +140,22 @@ Phase 1 の最後までに、構造体などの重い機能を除いた「小さ
 | 4 | ローカル変数のスタックオフセット管理。関数本体（`Block` ノード）からの宣言収集とフレームサイズ計算を `_reset_func_state()` にまとめる |
 | 5 | ラベル生成。Python の `str` でラベルを管理する。三項演算子 `?:`（`ND_COND`）も同回で導入する |
 | 6 | ループ開始/終了ラベル、`break` / `continue` のジャンプ先管理（ラベルスタック）。前置 `++`/`--`（`preinc`/`predec`）も同回で導入する |
-| 8 | `a0`〜`a7` での引数受け渡し、引数のスタック退避、`call` 前の16バイトアラインメント（奇数個引数の padding） |
-| 9 | **`codegen()` / `codegen_lval()` の分離**。全ポインタ操作の根幹で、この設計なしに先へ進めない |
-| 10 | `ty_str` 文字列による型サイズ管理（`size_of_ty_str` / `elem_ty_str`）。ポインタ演算に型サイズが要るため |
+| 7 | `a0`〜`a7` での引数受け渡し、引数のスタック退避、`call` 前の16バイトアラインメント（奇数個引数の padding） |
+| 8 | **`codegen()` / `codegen_lval()` の分離**。全ポインタ操作の根幹で、この設計なしに先へ進めない |
+| 9 | `ty_str` 文字列による型サイズ管理（`size_of_ty_str` / `elem_ty_str`）と型別のロード / ストア |
+| 10 | 型サイズを尺度に使うポインタ演算・添字・`sizeof(型名)` |
 | 11 | `.data` セクションへの出力とラベル参照。`#include "lib.h"` を使い始める |
+| 12 | 文字列を集める走査を式全体へ広げる。`lib.h` の残りの外部関数を使う |
 
 > **アラインメントの注意点（コマ4 以降）**: 16バイトアラインメント違反は無音クラッシュを招く。
 > `align_to(n, 16)` ヘルパーをスケルトンで提供し、アラインメント計算を自動化する
-> （コマ4 でフレームサイズ、コマ8 で `call` 前のスタックに適用する）。
+> （コマ4 でフレームサイズ、コマ7 で `call` 前のスタックに適用する）。
 >
 > **デバッグ演習**: 意図的にアラインメントを1バイトずらしたコードを生成し、
 > `gdb-multiarch` で `Illegal instruction` の発生箇所を特定する演習を行う。
 
 ```python
-# コマ9 で設計させる2関数の構造
+# コマ8 で設計させる2関数の構造
 def codegen(node):
     """rvalue を a0 に返す"""
     if node.kind == 'Deref':
@@ -168,12 +170,11 @@ def codegen_lval(node):
         codegen(node.child)        # ポインタ値（= アドレス）を a0 に
 ```
 
-### Phase 2: Python 版標準機能を完成させる（コマ12〜16）
+### Phase 2: Python 版標準機能を完成させる（コマ13〜16）
 
 | コマ | 導入する設計 |
 |------|-------------|
-| 12 | 構造体情報（サイズ・フィールドオフセット）を `self._struct_defs` の `dict` で管理する |
-| 13 | `sizeof(type)` は `size_of_ty_str()` でコンパイル時に定数化する |
+| 13 | 構造体情報（サイズ・フィールドオフセット）を `self._struct_defs` の `dict` で管理する。`sizeof(type)` は `size_of_ty_str()` でコンパイル時に定数化する |
 | 14 | `self._locals` → `self._globals` の2段階探索で隠蔽を実現する |
 | 15 | スキャフォールドの `preprocess()` で展開する。`#define` の自前実装は発展課題扱い |
 | 16 | 新しい機能は入れない。統合と可読性の作り込みに充てる |
@@ -302,7 +303,7 @@ workbook/
 **エラーメッセージが原因を指さない**。学習者が自力で辿り着くのは難しい種類のバグである。
 
 対策として `align_to(n, 16)` をスケルトン側で提供し、アラインメント計算を
-学習者に手計算させない。適用箇所はコマ4（フレームサイズ）とコマ8（`call` 前の `sp`）の2つ。
+学習者に手計算させない。適用箇所はコマ4（フレームサイズ）とコマ7（`call` 前の `sp`）の2つ。
 
 さらにコマ4 では、意図的にアラインメントを崩したコードを生成して
 `gdb-multiarch` で発生箇所を特定する演習を入れている。
@@ -364,24 +365,10 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
 - 学習者向けの「機能 → 導入コマ → 検証テスト」の対応は
   [`workbook/docs/language_spec.md`](../workbook/docs/language_spec.md) の「到達範囲」節にある。
   こちらは仕様上の機能単位、本表は実装上の概念単位（設計要素を含む）で粒度が異なる。
-- 07 は欠番なので、導入コマに 7 は現れない。
-
-### 分割回・統合回の扱い
-
-コマ10 を 10a / 10b に、コマ11 を 11a / 11b に分割し、コマ12 とコマ13 を1回に統合した。
-**台帳の導入コマは分割前・統合前のコマ番号のまま**にしてある。番号を細分すると
-導入コマの列が数値でなくなり、後戻り検査（前提概念の導入コマ比較）が書けなくなるためである。
-
-分割・統合後のどの回がどの概念を担うかは、**その回の原稿の `introduces:` が持つ**。
-`tools/check_concepts.py` は、分割回の `introduces:` を合わせると元のコマの概念と
-ちょうど一致すること（欠落・重複・順序の乱れが無いこと）と、分割・統合を反映した並び
-（… → 10a → 10b → 11a → 11b → 12+13 → 14 …）でも `requires:` が先行導入になっていることを
-検査する。`requires:` の導出規則は分割前と同じである。
-
-`include_libh` の導入コマは **11**（分割後は 11a）である。`#include "lib.h"` の行自体は
-コマ10 のテストにも現れるが、そこでは「そう書くもの」として置くだけで、
-`#include` が何をするかはコマ11 で初めて説明する（コマ10 の原稿がそう明記している）。
-台帳の導入コマは「原稿が初めて説明する回」なので、実初出の行の位置ではなく 11 を取る。
+- `include_libh` の導入コマは **11** である。`#include "lib.h"` の行自体はコマ10 の
+  テストにも現れるが、そこでは「そう書くもの」として置くだけで、`#include` が
+  何をするかはコマ11 で初めて説明する（コマ10 の原稿がそう明記している）。
+  台帳の導入コマは「原稿が初めて説明する回」なので、実初出の行の位置ではなく 11 を取る。
 
 ### 台帳
 
@@ -430,32 +417,32 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
 | `loop_label_stack` | ループラベルスタックによる飛び先管理 | 6 | `break_continue` |
 | `prefix_incr_decr_int` | 前置 `++` `--`（int） | 6 | `assign_op` |
 | `empty_stmt` | 空文 `;` と `for` の3式の省略 | 6 | `gen_stmt_dispatch` |
-| `func_definition` | 関数定義 | 8 | `func_prologue_epilogue`, `gen_stmt_dispatch` |
-| `func_params` | 仮引数の受け取りとスタック退避 | 8 | `func_definition`, `alloc_local` |
-| `func_call` | 関数呼出し `f(args)` | 8 | `func_definition` |
-| `rv64_calling_convention` | RV64 呼出し規約（`a0`〜`a7`・`ra`） | 8 | `func_call` |
-| `call_stack_align_16` | `call` 前のスタック16バイト整列 | 8 | `rv64_calling_convention`, `frame_align_16` |
-| `recursion` | 再帰呼び出し | 8 | `func_call` |
-| `func_prototype` | プロトタイプ宣言 | 8 | `func_definition` |
-| `mutual_recursion` | 相互再帰 | 8 | `func_prototype`, `recursion` |
-| `codegen_lval_split` | `codegen()` / `codegen_lval()` の分離（`'Deref'` へ拡張） | 9 | `codegen_lval_var`, `lvalue_rvalue_distinction` |
-| `pointer_type` | ポインタ型 `T *`（単段） | 9 | `int_type` |
-| `addr_of` | アドレス取得 `&` | 9 | `codegen_lval_split` |
-| `deref` | 間接参照 `*` | 9 | `codegen_lval_split`, `pointer_type` |
-| `assign_through_pointer` | ポインタ経由の書き込み `*p = v;` | 9 | `deref`, `assign_op` |
-| `pointer_param` | ポインタ引数 | 9 | `addr_of`, `func_params` |
-| `void_return_type` | 戻り値型 `void` と `return;` | 9 | `func_definition`, `common_epilogue` |
-| `char_type` | `char` 型 | 10 | `int_type` |
-| `char_literal` | 文字リテラル `'a'` | 10 | `char_type` |
-| `type_table_ty_str` | ローカル変数表の型情報（`ty_str`） | 10 | `pointer_type`, `char_type` |
-| `type_sizes` | 型サイズ（`int` 4 / `char` 1 / `T *` 8） | 10 | `type_table_ty_str` |
-| `size_of_ty_str` | `size_of_ty_str()` | 10 | `type_sizes` |
-| `elem_ty_str` | `elem_ty_str()`（指し先の型） | 10 | `type_table_ty_str` |
+| `func_definition` | 関数定義 | 7 | `func_prologue_epilogue`, `gen_stmt_dispatch` |
+| `func_params` | 仮引数の受け取りとスタック退避 | 7 | `func_definition`, `alloc_local` |
+| `func_call` | 関数呼出し `f(args)` | 7 | `func_definition` |
+| `rv64_calling_convention` | RV64 呼出し規約（`a0`〜`a7`・`ra`） | 7 | `func_call` |
+| `call_stack_align_16` | `call` 前のスタック16バイト整列 | 7 | `rv64_calling_convention`, `frame_align_16` |
+| `recursion` | 再帰呼び出し | 7 | `func_call` |
+| `func_prototype` | プロトタイプ宣言 | 7 | `func_definition` |
+| `mutual_recursion` | 相互再帰 | 7 | `func_prototype`, `recursion` |
+| `codegen_lval_split` | `codegen()` / `codegen_lval()` の分離（`'Deref'` へ拡張） | 8 | `codegen_lval_var`, `lvalue_rvalue_distinction` |
+| `pointer_type` | ポインタ型 `T *`（単段） | 8 | `int_type` |
+| `addr_of` | アドレス取得 `&` | 8 | `codegen_lval_split` |
+| `deref` | 間接参照 `*` | 8 | `codegen_lval_split`, `pointer_type` |
+| `assign_through_pointer` | ポインタ経由の書き込み `*p = v;` | 8 | `deref`, `assign_op` |
+| `pointer_param` | ポインタ引数 | 8 | `addr_of`, `func_params` |
+| `void_return_type` | 戻り値型 `void` と `return;` | 8 | `func_definition`, `common_epilogue` |
+| `char_type` | `char` 型 | 9 | `int_type` |
+| `char_literal` | 文字リテラル `'a'` | 9 | `char_type` |
+| `type_table_ty_str` | ローカル変数表の型情報（`ty_str`） | 9 | `pointer_type`, `char_type` |
+| `type_sizes` | 型サイズ（`int` 4 / `char` 1 / `T *` 8） | 9 | `type_table_ty_str` |
+| `size_of_ty_str` | `size_of_ty_str()` | 9 | `type_sizes` |
+| `elem_ty_str` | `elem_ty_str()`（指し先の型） | 9 | `type_table_ty_str` |
+| `load_store_by_type` | 型に応じたロード / ストア（`_load_ty` / `_store_ty`） | 9 | `type_sizes`, `deref` |
+| `char_promotion` | `char` の昇格と縮小（`lb` / `sb`） | 9 | `load_store_by_type`, `char_type` |
 | `sizeof_typename` | `sizeof(型名)`（`int` / `char` / ポインタ） | 10 | `size_of_ty_str` |
 | `pointer_arith` | ポインタ ± int（尺度は指し先型） | 10 | `elem_ty_str`, `size_of_ty_str` |
 | `subscript` | 添字 `p[i]`（`*(p + i)` の略記） | 10 | `pointer_arith`, `deref` |
-| `load_store_by_type` | 型に応じたロード / ストア（`_load_ty` / `_store_ty`） | 10 | `type_sizes`, `deref` |
-| `char_promotion` | `char` の昇格と縮小（`lb` / `sb`） | 10 | `load_store_by_type`, `char_type` |
 | `multi_level_pointer` | 多段ポインタ `int **` | 10 | `elem_ty_str` |
 | `malloc_call` | `malloc` によるヒープ確保 | 10 | `func_call`, `pointer_type` |
 | `prefix_incr_pointer` | 前置 `++`（ポインタ、型対応） | 10 | `prefix_incr_decr_int`, `pointer_arith` |
@@ -467,17 +454,17 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
 | `varargs_call` | 可変長引数の外部プロトタイプと呼出し | 11 | `rv64_calling_convention` |
 | `printf_call` | `printf` 呼び出し | 11 | `varargs_call`, `string_literal` |
 | `include_libh` | `#include "lib.h"` による外部宣言の取り込み | 11 | `func_prototype` |
-| `opaque_struct_pointer` | 不透明ポインタ `struct FILE *` | 11 | `pointer_type`, `include_libh` |
-| `stream_api` | `fdopen` / `fprintf` / `fopen` / `fread` / `fclose` | 11 | `opaque_struct_pointer`, `include_libh` |
-| `exit_call` | `exit` | 11 | `include_libh`, `func_call` |
 | `stdout_test` | 標準出力テスト（`tests/foo.stdout`） | 11 | `printf_call` |
-| `struct_definition` | `struct タグ { ... };` の定義と構造体変数 | 12 | `int_type`, `char_type`, `pointer_type` |
-| `struct_layout_padding` | 構造体のレイアウトとパディング | 12 | `struct_definition`, `type_sizes` |
-| `struct_defs_table` | 構造体情報表（サイズ・フィールドオフセット） | 12 | `struct_definition` |
-| `size_of_ty_str_struct` | `size_of_ty_str()` の struct 対応（引数追加） | 12 | `struct_defs_table`, `size_of_ty_str` |
-| `member_access_dot` | 直接メンバアクセス `.` | 12 | `struct_defs_table`, `codegen_lval_split` |
-| `member_access_arrow` | ポインタ経由メンバアクセス `->` | 12 | `member_access_dot`, `deref` |
-| `struct_pointer_param` | 構造体ポインタ引数 | 12 | `member_access_arrow`, `pointer_param` |
+| `opaque_struct_pointer` | 不透明ポインタ `struct FILE *` | 12 | `pointer_type`, `include_libh` |
+| `stream_api` | `fdopen` / `fprintf` / `fopen` / `fread` / `fclose` | 12 | `opaque_struct_pointer`, `include_libh` |
+| `exit_call` | `exit` | 12 | `include_libh`, `func_call` |
+| `struct_definition` | `struct タグ { ... };` の定義と構造体変数 | 13 | `int_type`, `char_type`, `pointer_type` |
+| `struct_layout_padding` | 構造体のレイアウトとパディング | 13 | `struct_definition`, `type_sizes` |
+| `struct_defs_table` | 構造体情報表（サイズ・フィールドオフセット） | 13 | `struct_definition` |
+| `size_of_ty_str_struct` | `size_of_ty_str()` の struct 対応（引数追加） | 13 | `struct_defs_table`, `size_of_ty_str` |
+| `member_access_dot` | 直接メンバアクセス `.` | 13 | `struct_defs_table`, `codegen_lval_split` |
+| `member_access_arrow` | ポインタ経由メンバアクセス `->` | 13 | `member_access_dot`, `deref` |
+| `struct_pointer_param` | 構造体ポインタ引数 | 13 | `member_access_arrow`, `pointer_param` |
 | `sizeof_struct` | `sizeof(struct タグ)` | 13 | `sizeof_typename`, `size_of_ty_str_struct` |
 | `malloc_struct` | 構造体のヒープ確保 | 13 | `malloc_call`, `sizeof_struct` |
 | `void_ptr_conversion` | `void *` と `T *` の暗黙変換 | 13 | `malloc_call`, `pointer_type` |
@@ -511,8 +498,8 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
 
 ### 台帳から読み取れる設計上の判断
 
-- `codegen_lval` はコマ4 で `'Var'` だけの最小形として入れ、コマ9 で `'Deref'` へ
-  拡張する。台帳ではこれを `codegen_lval_var`（4）と `codegen_lval_split`（9）に
+- `codegen_lval` はコマ4 で `'Var'` だけの最小形として入れ、コマ8 で `'Deref'` へ
+  拡張する。台帳ではこれを `codegen_lval_var`（4）と `codegen_lval_split`（8）に
   分けて表す。「導入は1箇所」の原則を保ちながら段階導入を表現するための書き方である。
 - `sizeof` も同様に `sizeof_typename`（10）と `sizeof_struct`（13）に分ける。
   コマ13 は `sizeof` そのものの導入回ではなく、struct への適用の導入回である。

@@ -247,7 +247,7 @@ and codegen = function
       | _ -> error "コマ10で未対応の二項演算です")
   | e -> error ~line:(line_of_expr e) "コマ10で未対応の式です"
 
-(* gen_stmt — unchanged from lecture09 *)
+(* gen_stmt — unchanged from lecture08 *)
 let rec gen_stmt = function
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e

@@ -1,6 +1,6 @@
 # 発展課題
 
-通常回（コマ1〜16。07 は欠番）を終えた人向けの発展課題を置く。ここが発展教材の入口である。
+通常回（コマ1〜16）を終えた人向けの発展課題を置く。ここが発展教材の入口である。
 
 いずれも**選択制**で、1トピック = 1ディレクトリになっている。
 `advanced/<回ID>_<内容>/` の形で、`README.md`・スケルトン・`check.py`（および多くは `golden.py`）が
@@ -12,7 +12,7 @@
 | 頭文字 | カテゴリ | 内容 |
 |--------|----------|------|
 | **F** | フロントエンド | 字句解析・構文解析を自分で作り、スキャフォールドを置き換える |
-| **B** | 最適化入門 | 測定基盤なしで始められる軽量な最適化（着手はコマ8 から） |
+| **B** | 最適化入門 | 測定基盤なしで始められる軽量な最適化（着手はコマ7 から） |
 | **O** | 最適化 | 測定 → 解析 → 変換を積み上げる本格版（前提はコマ16） |
 | **R** | ランタイム | libc なしで動かす、`printf` / `malloc` の自作 |
 | **S** | 意味論（仕様の内側） | 仕様が意味を決めている構文について、仕様と実際の振る舞いのずれを埋める |
@@ -31,9 +31,9 @@
 | F2 | [`F2_parser_expr/`](../../materials/advanced/F2_parser_expr.md) | 再帰下降①: 式のパーサ（EBNF の階層 = 関数の階層） | 1 | F1 |
 | F3 | [`F3_parser_stmt/`](../../materials/advanced/F3_parser_stmt.md) | 再帰下降②: 文・制御構文（dangling else） | 1 | F2 |
 | F4 | [`F4_parser_decl/`](../../materials/advanced/F4_parser_decl.md) | 再帰下降③: 宣言・型・`struct`・関数（ブラックボックスの完全置き換え） | 1 | F3 |
-| B1 | [`B1_fold_peephole/`](../../materials/advanced/B1_fold_peephole.md) | 最適化入門: 定数畳み込み + ピープホール | 1 | コマ8（着手）+ コマ16（`golden.py`） |
-| B2 | [`B2_regalloc/`](../../materials/advanced/B2_regalloc.md) | 式の途中結果を t レジスタへ（スタックマシンを卒業する） | 1 | コマ8（着手）+ コマ16（`golden.py`） |
-| B3 | [`B3_tailcall/`](../../materials/advanced/B3_tailcall.md) | 末尾呼び出し最適化（再帰をループに変える） | 1 | コマ8（着手）+ コマ16（`golden.py`） |
+| B1 | [`B1_fold_peephole/`](../../materials/advanced/B1_fold_peephole.md) | 最適化入門: 定数畳み込み + ピープホール | 1 | コマ7（着手）+ コマ16（`golden.py`） |
+| B2 | [`B2_regalloc/`](../../materials/advanced/B2_regalloc.md) | 式の途中結果を t レジスタへ（スタックマシンを卒業する） | 1 | コマ7（着手）+ コマ16（`golden.py`） |
+| B3 | [`B3_tailcall/`](../../materials/advanced/B3_tailcall.md) | 末尾呼び出し最適化（再帰をループに変える） | 1 | コマ7（着手）+ コマ16（`golden.py`） |
 | O1 | [`O1_measure/`](../../materials/advanced/O1_measure.md) | 最適化の測り方（静的/動的命令数、ベンチマーク集） | 1 | コマ16 |
 | O2 | [`O2_cfg/`](../../materials/advanced/O2_cfg.md) | 基本ブロックとフローグラフ | 1 | コマ16, O1 |
 | O3 | [`O3_isel/`](../../materials/advanced/O3_isel.md) | 命令選択（複数命令を1命令に畳む） | 2 | O1 |
@@ -44,13 +44,13 @@
 | R1 | [`R1_nolibc/`](../../materials/advanced/R1_nolibc.md) | libc なしで動かす（システムコール直接発行） | 1 | コマ11（着手）+ コマ16（`check.py` の Step 2） |
 | R2 | [`R2_printf/`](../../materials/advanced/R2_printf.md) | 自前 printf（整数→10進文字列の変換） | 1 | R1 + コマ16（`check.py`） |
 | R3 | [`R3_malloc/`](../../materials/advanced/R3_malloc.md) | 自前 malloc（バンプ割り当て → フリーリスト） | 1 | コマ13 + コマ16（`check.py`） |
-| S1 | [`S1_shortcircuit/`](../../materials/advanced/S1_shortcircuit.md) | 短絡評価（`&&` / `\|\|` の意味論を、仕様がCとわざと違えている点からCへ寄せる） | 1 | コマ12 + コマ16（`golden.py`） |
+| S1 | [`S1_shortcircuit/`](../../materials/advanced/S1_shortcircuit.md) | 短絡評価（`&&` / `\|\|` の意味論を、仕様がCとわざと違えている点からCへ寄せる） | 1 | コマ13 + コマ16（`golden.py`） |
 | S2 | [`S2_int32/`](../../materials/advanced/S2_int32.md) | `int` の演算が32bitで折り返さない | 1 | コマ13 + コマ16（`golden.py`） |
-| S3 | [`S3_struct/`](../../materials/advanced/S3_struct.md) | 構造体の代入（ポインタ・フィールド持ち構造体、ポインタ経由の代入。値渡しは発展課題） | 1 | コマ12 + コマ16（`golden.py`） |
+| S3 | [`S3_struct/`](../../materials/advanced/S3_struct.md) | 構造体の代入（ポインタ・フィールド持ち構造体、ポインタ経由の代入。値渡しは発展課題） | 1 | コマ13 + コマ16（`golden.py`） |
 | L1 | [`L1_ptrdiff/`](../../materials/advanced/L1_ptrdiff.md) | ポインタ同士の引き算が要素数にならない | 1 | コマ13 + コマ16（`golden.py`） |
 | L2 | [`L2_compound_assign/`](../../materials/advanced/L2_compound_assign.md) | 複合代入（`x += 3`、`p -= 1`。左辺は1回だけ評価） | 1 | コマ14 + コマ16（`golden.py`） |
 | L3 | [`L3_variadic/`](../../materials/advanced/L3_variadic.md) | 可変長引数の「定義」（`int sum(int n, ...)`） | 1 | コマ11 + コマ16（`golden.py`） |
-| Q1 | [`Q1_typecheck/`](../../materials/advanced/Q1_typecheck.md) | 型検査パス（実行前に誤りをまとめて報告する） | 1 | コマ12 |
+| Q1 | [`Q1_typecheck/`](../../materials/advanced/Q1_typecheck.md) | 型検査パス（実行前に誤りをまとめて報告する） | 1 | コマ13 |
 | P1 | [`P1_selfhost/`](../../materials/advanced/P1_selfhost.md) | C 移植・セルフホスト（方針のみ。複数回に渡る自主課題、自動採点なし） | - | コマ16 |
 
 ## どこから始めるか
@@ -172,7 +172,7 @@ python3 ../final/mycc.py foo.c | python3 count_insns.py
 ## B: 最適化入門
 
 生成したコードを「速くする」トピックのうち、**測定基盤を必要としない**もの。
-着手はコマ8（関数呼び出し）までで足りるので、コマ16 を待たずに始められる。
+着手はコマ7（関数呼び出し）までで足りるので、コマ16 を待たずに始められる。
 ただし完了条件のうち `golden.py` は `fixed17`（＝コマ16 の完成した `final/mycc.py`）を土台にするので、
 **やり切るにはコマ16 が要る**。コマ16 前は `check.py` を全 PASS にするところまで進める。
 

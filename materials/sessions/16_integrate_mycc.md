@@ -123,9 +123,9 @@ python3 scaffold/test_runner.py --compiler final/mycc.py --tests final/tests
 5. 生成アセンブリを見る
 6. 必要なら qemu / gdb で実行時の値を追う
 
-たとえば `f12_struct.c` が落ちた場合、まずコマ12の `dot_access.c` と `arrow_access.c` が通るか確認する。
-コマ12の小さいテストが通らないなら、構造体メンバのオフセット計算や `codegen_lval()` を見る。
-コマ12のテストは通るが `f12_struct.c` だけ落ちるなら、関数引数やポインタ渡しとの組み合わせを疑う。
+たとえば `f12_struct.c` が落ちた場合、まずコマ13の `dot_access.c` と `arrow_access.c` が通るか確認する。
+コマ13の小さいテストが通らないなら、構造体メンバのオフセット計算や `codegen_lval()` を見る。
+コマ13のテストは通るが `f12_struct.c` だけ落ちるなら、関数引数やポインタ渡しとの組み合わせを疑う。
 
 ## コードレビュー観点
 

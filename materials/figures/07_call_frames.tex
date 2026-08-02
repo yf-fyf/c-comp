@@ -1,0 +1,48 @@
+% コマ7: fib 再帰でスタックフレームが積み重なる様子
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    frame/.style={memcell, minimum width=46mm}]
+  % ---- main ----
+  \node[frame, dashed, fill=none, text=TcGrayText] (main) {main のフレーム};
+
+  % ---- fib(3) ----
+  \node[frame, fill=TcAccentLight, below=7mm of main] (f3h) {fib(3) のフレーム};
+  \node[frame, below=0mm of f3h]  (f3ra) {ra（main へ戻る）};
+  \node[frame, below=0mm of f3ra] (f3s0) {保存した s0};
+  \node[frame, fill=TcAccentLighter, below=0mm of f3s0] (f3n) {引数 n = 3};
+
+  % ---- fib(2) ----
+  \node[frame, fill=TcAccentLight, below=7mm of f3n] (f2h) {fib(2) のフレーム};
+  \node[frame, below=0mm of f2h]  (f2ra) {ra（fib(3) へ戻る）};
+  \node[frame, below=0mm of f2ra] (f2s0) {保存した s0};
+  \node[frame, fill=TcAccentLighter, below=0mm of f2s0] (f2n) {引数 n = 2};
+
+  % ---- 省略 ----
+  \node[gannot, below=2.5mm of f2n] (dots) {$\vdots$};
+  \node[gannot, below=0.5mm of dots] {fib(1)、fib(0) のフレームがさらに積まれる};
+
+  % ---- call 矢印(左) ----
+  \draw[flow] ($(main.south west)+(-4mm,0)$) -- ($(f3h.north west)+(-4mm,0)$)
+      node[annot, midway, left=2mm, align=right] {call fib\\引数 a0 = 3};
+  \draw[flow] ($(f3n.south west)+(-4mm,0)$) -- ($(f2h.north west)+(-4mm,0)$)
+      node[annot, midway, left=2mm, align=right] {call fib\\引数 a0 = 2};
+
+  % ---- ret 矢印(右) ----
+  \draw[flow back] ($(f2h.north east)+(4mm,0)$) -- ($(f3n.south east)+(4mm,0)$)
+      node[annot, midway, right=2mm] {ret\\戻り値 a0 = 1};
+  \draw[flow back] ($(f3h.north east)+(4mm,0)$) -- ($(main.south east)+(4mm,0)$)
+      node[annot, midway, right=2mm] {ret\\戻り値 a0 = 2};
+
+  % ---- アドレスの方向 ----
+  \node[gannot, anchor=south] (haddr) at ($(main.north west)+(-40mm,0)$) {高いアドレス};
+  \node[gannot, anchor=north] (laddr) at (haddr.south |- dots.south) {低いアドレス};
+  \draw[flow, color=TcGrayText] ($(haddr.south)+(0,-1mm)$) -- ($(laddr.north)+(0,1mm)$);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north] at ($(laddr.south |- dots.south)+(42mm,-8mm)$)
+      {呼び出すたびに新しいフレームが積まれるため、\\
+       各呼び出しが自分専用の n のスロットを持つ};
+\end{tikzpicture}
+\end{document}
