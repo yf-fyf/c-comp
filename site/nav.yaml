@@ -33,6 +33,8 @@ sections:
       - materials/sessions/08_functions_recursion.md
       - materials/sessions/09_lvalue_rvalue.md
       - materials/sessions/10_types_pointers.md
+      - materials/sessions/10a_types.md
+      - materials/sessions/10b_pointer_arith.md
       - materials/sessions/11_strings_printf.md
       - materials/sessions/12_struct.md
       - materials/sessions/13_sizeof_malloc_list.md
