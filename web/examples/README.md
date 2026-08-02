@@ -21,5 +21,5 @@
 ```
 
 不具合例は題名を `【不具合例】` で始める。何が起きるかと直し方をコメントに書く。
-対応する症状は [`../../workbook/docs/debugging.md`](../../workbook/docs/debugging.md)
+対応する症状は [`../../workbook/docs/testing.md`](../../workbook/docs/testing.md)
 の症状表に合わせる。

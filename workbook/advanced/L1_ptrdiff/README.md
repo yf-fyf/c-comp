@@ -21,7 +21,6 @@
 
 > **この回は 2026-08-01 に `S3_ptrdiff/` から `L1_ptrdiff/` へ改名した。**
 > ラッパーも S ファミリの `semcc.py` から L ファミリの `langcc.py` に変わっている。
-> 経緯と手元での対処は [`../../docs/migration.md`](../../docs/migration.md) にある。
 
 ## 編集するファイル
 

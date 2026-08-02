@@ -37,7 +37,7 @@ legacy_terms:
       「この言語に typedef はない」と、struct のタグ名参照が唯一の型名手段で
       あることを説明する文。除外の宣言パターン。
 
-  - file: workbook/docs/debugging.md
+  - file: workbook/docs/testing.md
     match: "配列の添字がずれる"
     check: array
     status: legitimate

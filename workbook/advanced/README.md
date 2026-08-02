@@ -26,32 +26,32 @@
 
 | 回 | ディレクトリ | 内容 | コマ | 必須の前提 |
 |----|--------------|------|------|------------|
-| F0 | `F0_cyk/` | 字句解析と構文解析とは何か（CYK 法で数式を解く） | 1 | コマ2 |
-| F1 | `F1_lexer/` | 字句解析: `scaffold/lexer.py` 読解 + Core lexer 自作 | 1 | F0 |
-| F2 | `F2_parser_expr/` | 再帰下降①: 式のパーサ（EBNF の階層 = 関数の階層） | 1 | F1 |
-| F3 | `F3_parser_stmt/` | 再帰下降②: 文・制御構文（dangling else） | 1 | F2 |
-| F4 | `F4_parser_decl/` | 再帰下降③: 宣言・型・`struct`・関数（ブラックボックスの完全置き換え） | 1 | F3 |
-| B1 | `B1_fold_peephole/` | 最適化入門: 定数畳み込み + ピープホール | 1 | コマ8（着手）+ コマ16（`golden.py`） |
-| B2 | `B2_regalloc/` | 式の途中結果を t レジスタへ（スタックマシンを卒業する） | 1 | コマ8（着手）+ コマ16（`golden.py`） |
-| B3 | `B3_tailcall/` | 末尾呼び出し最適化（再帰をループに変える） | 1 | コマ8（着手）+ コマ16（`golden.py`） |
-| O1 | `O1_measure/` | 最適化の測り方（静的/動的命令数、ベンチマーク集） | 1 | コマ16 |
-| O2 | `O2_cfg/` | 基本ブロックとフローグラフ | 1 | コマ16, O1 |
-| O3 | `O3_isel/` | 命令選択（複数命令を1命令に畳む） | 2 | O1 |
-| O4 | `O4_regalloc/` | 局所変数を callee-saved レジスタへ | 2 | コマ16, O1 |
-| O5 | `O5_liveness/` | 生存変数解析 | 1 | O1, O2, O4 |
-| O6 | `O6_copyprop/` | コピー伝播と死コード除去 | 2 | O1, O2, O4, O5 |
-| O7 | `O7_layout/` | ブロック整列とループ回転 | 1 | O1, O2 |
-| R1 | `R1_nolibc/` | libc なしで動かす（システムコール直接発行） | 1 | コマ11（着手）+ コマ16（`check.py` の Step 2） |
-| R2 | `R2_printf/` | 自前 printf（整数→10進文字列の変換） | 1 | R1 + コマ16（`check.py`） |
-| R3 | `R3_malloc/` | 自前 malloc（バンプ割り当て → フリーリスト） | 1 | コマ13 + コマ16（`check.py`） |
-| S1 | `S1_shortcircuit/` | 短絡評価（`&&` / `\|\|` の意味論を、仕様がCとわざと違えている点からCへ寄せる） | 1 | コマ12 + コマ16（`golden.py`） |
-| S2 | `S2_int32/` | `int` の演算が32bitで折り返さない | 1 | コマ13 + コマ16（`golden.py`） |
-| S3 | `S3_struct/` | 構造体の代入（ポインタ・フィールド持ち構造体、ポインタ経由の代入。値渡しは発展課題） | 1 | コマ12 + コマ16（`golden.py`） |
-| L1 | `L1_ptrdiff/` | ポインタ同士の引き算が要素数にならない | 1 | コマ13 + コマ16（`golden.py`） |
-| L2 | `L2_compound_assign/` | 複合代入（`x += 3`、`p -= 1`。左辺は1回だけ評価） | 1 | コマ14 + コマ16（`golden.py`） |
-| L3 | `L3_variadic/` | 可変長引数の「定義」（`int sum(int n, ...)`） | 1 | コマ11 + コマ16（`golden.py`） |
-| Q1 | `Q1_typecheck/` | 型検査パス（実行前に誤りをまとめて報告する） | 1 | コマ12 |
-| P1 | `P1_selfhost/` | C 移植・セルフホスト（方針のみ。複数回に渡る自主課題、自動採点なし） | - | コマ16 |
+| F0 | [`F0_cyk/`](../../materials/advanced/F0_cyk.md) | 字句解析と構文解析とは何か（CYK 法で数式を解く） | 1 | コマ2 |
+| F1 | [`F1_lexer/`](../../materials/advanced/F1_lexer.md) | 字句解析: `scaffold/lexer.py` 読解 + Core lexer 自作 | 1 | F0 |
+| F2 | [`F2_parser_expr/`](../../materials/advanced/F2_parser_expr.md) | 再帰下降①: 式のパーサ（EBNF の階層 = 関数の階層） | 1 | F1 |
+| F3 | [`F3_parser_stmt/`](../../materials/advanced/F3_parser_stmt.md) | 再帰下降②: 文・制御構文（dangling else） | 1 | F2 |
+| F4 | [`F4_parser_decl/`](../../materials/advanced/F4_parser_decl.md) | 再帰下降③: 宣言・型・`struct`・関数（ブラックボックスの完全置き換え） | 1 | F3 |
+| B1 | [`B1_fold_peephole/`](../../materials/advanced/B1_fold_peephole.md) | 最適化入門: 定数畳み込み + ピープホール | 1 | コマ8（着手）+ コマ16（`golden.py`） |
+| B2 | [`B2_regalloc/`](../../materials/advanced/B2_regalloc.md) | 式の途中結果を t レジスタへ（スタックマシンを卒業する） | 1 | コマ8（着手）+ コマ16（`golden.py`） |
+| B3 | [`B3_tailcall/`](../../materials/advanced/B3_tailcall.md) | 末尾呼び出し最適化（再帰をループに変える） | 1 | コマ8（着手）+ コマ16（`golden.py`） |
+| O1 | [`O1_measure/`](../../materials/advanced/O1_measure.md) | 最適化の測り方（静的/動的命令数、ベンチマーク集） | 1 | コマ16 |
+| O2 | [`O2_cfg/`](../../materials/advanced/O2_cfg.md) | 基本ブロックとフローグラフ | 1 | コマ16, O1 |
+| O3 | [`O3_isel/`](../../materials/advanced/O3_isel.md) | 命令選択（複数命令を1命令に畳む） | 2 | O1 |
+| O4 | [`O4_regalloc/`](../../materials/advanced/O4_regalloc.md) | 局所変数を callee-saved レジスタへ | 2 | コマ16, O1 |
+| O5 | [`O5_liveness/`](../../materials/advanced/O5_liveness.md) | 生存変数解析 | 1 | O1, O2, O4 |
+| O6 | [`O6_copyprop/`](../../materials/advanced/O6_copyprop.md) | コピー伝播と死コード除去 | 2 | O1, O2, O4, O5 |
+| O7 | [`O7_layout/`](../../materials/advanced/O7_layout.md) | ブロック整列とループ回転 | 1 | O1, O2 |
+| R1 | [`R1_nolibc/`](../../materials/advanced/R1_nolibc.md) | libc なしで動かす（システムコール直接発行） | 1 | コマ11（着手）+ コマ16（`check.py` の Step 2） |
+| R2 | [`R2_printf/`](../../materials/advanced/R2_printf.md) | 自前 printf（整数→10進文字列の変換） | 1 | R1 + コマ16（`check.py`） |
+| R3 | [`R3_malloc/`](../../materials/advanced/R3_malloc.md) | 自前 malloc（バンプ割り当て → フリーリスト） | 1 | コマ13 + コマ16（`check.py`） |
+| S1 | [`S1_shortcircuit/`](../../materials/advanced/S1_shortcircuit.md) | 短絡評価（`&&` / `\|\|` の意味論を、仕様がCとわざと違えている点からCへ寄せる） | 1 | コマ12 + コマ16（`golden.py`） |
+| S2 | [`S2_int32/`](../../materials/advanced/S2_int32.md) | `int` の演算が32bitで折り返さない | 1 | コマ13 + コマ16（`golden.py`） |
+| S3 | [`S3_struct/`](../../materials/advanced/S3_struct.md) | 構造体の代入（ポインタ・フィールド持ち構造体、ポインタ経由の代入。値渡しは発展課題） | 1 | コマ12 + コマ16（`golden.py`） |
+| L1 | [`L1_ptrdiff/`](../../materials/advanced/L1_ptrdiff.md) | ポインタ同士の引き算が要素数にならない | 1 | コマ13 + コマ16（`golden.py`） |
+| L2 | [`L2_compound_assign/`](../../materials/advanced/L2_compound_assign.md) | 複合代入（`x += 3`、`p -= 1`。左辺は1回だけ評価） | 1 | コマ14 + コマ16（`golden.py`） |
+| L3 | [`L3_variadic/`](../../materials/advanced/L3_variadic.md) | 可変長引数の「定義」（`int sum(int n, ...)`） | 1 | コマ11 + コマ16（`golden.py`） |
+| Q1 | [`Q1_typecheck/`](../../materials/advanced/Q1_typecheck.md) | 型検査パス（実行前に誤りをまとめて報告する） | 1 | コマ12 |
+| P1 | [`P1_selfhost/`](../../materials/advanced/P1_selfhost.md) | C 移植・セルフホスト（方針のみ。複数回に渡る自主課題、自動採点なし） | - | コマ16 |
 
 ## どこから始めるか
 
@@ -151,7 +151,7 @@ R は生成物のリンク方法を変え、P は移植そのものが課題で�
 > あわせて、ファミリを移した2本（`S3_ptrdiff/` → `L1_ptrdiff/`、`L1_struct/` → `S3_struct/`）の
 > ラッパーも `semcc.py` と `langcc.py` が入れ替わり、環境変数の接頭辞も入れ替わった。
 > 旧名は**エラーにならず黙って無視される**ので、以前の名前を書いた手元のスクリプトやメモが
-> あれば読み替えること。新旧の対応と症状は [`docs/migration.md`](../docs/migration.md) にまとめてある。
+> あれば読み替えること。
 
 `workbook/advanced/` から実行する。
 
@@ -304,8 +304,6 @@ S のずれは向きが2通りある。実装を仕様へ合わせる回（S2・
 
 **2本は番号を入れ替えた形になっている。**`S3` も `L1` も番号としては残っているが、
 指す中身が入れ替わっているので、以前のメモやブックマークをそのまま読むと取り違える。
-ディレクトリ名・公開 URL・ラッパー名の変化と手元での対処は
-[`../docs/migration.md`](../docs/migration.md) にまとめてある。
 
 これで S1〜S3・L1〜L3 の6本すべてが、判定基準どおりの位置にある。
 

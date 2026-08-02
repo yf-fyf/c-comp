@@ -41,11 +41,9 @@
     │   ├── README.md          # 索引
     │   ├── getting_started.md # 進め方・環境・全コマ一覧（読む）
     │   ├── conventions.md     # Python 実装の約束ごと（読む）
-    │   ├── debugging.md       # 症状から原因を絞る（読む）
-    │   ├── migration.md       # 教材更新と手元ファイルの非互換（読む・唯一の出典）
+    │   ├── testing.md         # テストとデバッグ（test_runner・テスト形式・症状から原因を絞る）
     │   ├── language_spec.md   # Core プロファイル（引く）
     │   ├── rv64_reference.md  # ABI・スタックフレーム・命令（引く）
-    │   ├── testing.md         # test_runner・テスト形式（引く）
     │   └── code_example.md    # 到達目標コード例（コマ1〜16、引く）
     ├── scaffold/          # 提供スキャフォールド（Lexer/Parser/AST/テストランナー）
     ├── sessions/          # 通常回 NN_xxx/（starter・テスト。資料はサイト）
@@ -336,7 +334,8 @@ workflow はテスト、Web ビルド、公開物の許可リスト検査、ZIP 
 | `S3_ptrdiff` | `L1_ptrdiff` | `semcc.py` → `langcc.py`（環境変数も `SEMCC_*` → `LANGCC_*`） |
 | `L1_struct` | `S3_struct` | `langcc.py` → `semcc.py`（環境変数も `LANGCC_*` → `SEMCC_*`） |
 
-学習者向けの案内は `workbook/docs/migration.md` にある。
+学習者向けの移行案内は非公開リポジトリの `../c-comp-design/teacher/handouts/migration_2026-08-01.md`
+にあり、必要な学習者にはメンテナが個別に渡す（公開サイトには置かない）。
 
 ---
 

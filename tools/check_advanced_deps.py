@@ -123,7 +123,8 @@ def read_index_table() -> dict[str, dict]:
         if not TOPIC_ID.fullmatch(topic):
             continue
         entries[topic] = {
-            "dir": cells[1].strip("`/ "),
+            # ディレクトリ欄はリンクになっている（[`F0_cyk/`](...)）。ラベルだけ取る。
+            "dir": unlink(cells[1]).strip("`/ "),
             "sessions": cells[3],
             "prereq": prereq_tokens(cells[4]),
             "prereq_raw": cells[4],

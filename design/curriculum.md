@@ -272,8 +272,7 @@ void emit_epilogue(int frame_size) {
 
 学習者が「動かないのに原因が分からない」状態で止まることが、この教材でいちばん起きやすい失敗である。
 そこに対して次の2つを用意している。使い方は
-[`workbook/docs/testing.md`](../workbook/docs/testing.md) と
-[`workbook/docs/debugging.md`](../workbook/docs/debugging.md) に書いてある。
+[`workbook/docs/testing.md`](../workbook/docs/testing.md)（テストとデバッグ）に書いてある。
 
 ### 補助ツール①: AST 確認（`scaffold/parse_viewer.py`）
 

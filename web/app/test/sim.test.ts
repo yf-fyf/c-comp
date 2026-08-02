@@ -263,7 +263,7 @@ describe("逆ステップ", () => {
   });
 });
 
-describe("教育的検査（debugging.md の症状表）", () => {
+describe("教育的検査（testing.md の症状表）", () => {
   const kinds = (m: Machine): string[] => m.warnings.map((w) => w.kind);
 
   it("call 直前の sp が 16 の倍数でないと警告する", () => {

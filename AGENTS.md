@@ -34,10 +34,8 @@ C サブセットコンパイラを段階的に作る教材リポジトリ。
 | `workbook/docs/language_spec.md` | Core プロファイル（言語仕様・型システム・演算子） |
 | `workbook/docs/conventions.md` | Python 実装の約束ごと（`codegen` / `codegen_lval` の分離など） |
 | `workbook/docs/rv64_reference.md` | 呼び出し規約・スタックフレーム・よく使う命令 |
-| `workbook/docs/testing.md` | `test_runner` の使い方・テストケースの形式 |
+| `workbook/docs/testing.md` | テストとデバッグ（`test_runner` の使い方・テスト形式・症状から原因を絞る手順） |
 | `workbook/docs/code_example.md` | 各コマのコンパイル到達目標コード例 |
-| `workbook/docs/debugging.md` | デバッグ手順（小さい入力に戻す・生成アセンブリの読み方） |
-| `workbook/docs/migration.md` | 教材更新に伴う手元ファイルとの非互換と移行手順（学習者向け・唯一の出典） |
 
 ---
 

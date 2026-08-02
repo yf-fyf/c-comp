@@ -19,7 +19,7 @@
 3. [`conventions.md`](./conventions.md) — 実装の約束ごと。コマ3 に入る前に一度目を通す
 4. [`language_spec.md`](./language_spec.md) — 対象言語の仕様。通読せず、迷ったときに引く
 
-途中で詰まったら [`debugging.md`](./debugging.md)、
+途中で詰まったら [`testing.md`（テストとデバッグ）](./testing.md)、
 何をどこで調べるか自体が分からなくなったら
 [`README.md`（逆引き索引）](./README.md) を見る。
 
@@ -84,7 +84,7 @@ python3 scaffold/test_runner.py sessions/03_arithmetic_codegen
 コマ16 の総合演習で、それまでの成果を `final/mycc.py` に統合する。
 以降は引数なしの `python3 scaffold/test_runner.py` が最終成果物のテストになる。
 
-詰まったときは [`debugging.md`](./debugging.md) を見る。
+詰まったときは [`testing.md` の症状表](./testing.md#症状から当たりをつける) を見る。
 各回の完成形に相当する OCaml 版参考実装が [`../ocaml/`](../ocaml/README.md) にあるので、
 自分の方針を考えたあとの確認に使える。
 
@@ -137,8 +137,7 @@ RV64 シミュレータだけを使って、完成したものを説明できる
 
 **コマ7 は無い。** かつてあった「再帰的な変数宣言収集」の回は、言語仕様の改訂で
 主題が消えたため廃止し、必要な部分はコマ4 に入れた。
-コマ8 以降の番号と URL はそのままなので、07 は欠番として残してある
-（詳しくは [`migration.md`](./migration.md)）。
+コマ8 以降の番号と URL はそのままなので、07 は欠番として残してある。
 
 ---
 

@@ -22,7 +22,6 @@
 
 > **この回は 2026-08-01 に `L1_struct/` から `S3_struct/` へ改名した。**
 > ラッパーも L ファミリの `langcc.py` から S ファミリの `semcc.py` に変わっている。
-> 経緯と手元での対処は [`../../docs/migration.md`](../../docs/migration.md) にある。
 
 ## 編集するファイル
 

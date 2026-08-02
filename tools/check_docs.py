@@ -24,7 +24,7 @@
     codeexec  workbook/docs/code_example.md の C コードブロックを実際に処理系へ
               通す。前段（構文）は常時、後段（実行と期待終了コードの照合）は
               処理系と RV64 ツールチェーンが揃っているときだけ走る
-    ident     conventions.md / debugging.md / scaffold/README.md が挙げる識別子が
+    ident     conventions.md / testing.md / scaffold/README.md が挙げる識別子が
               workbook/sessions/ と workbook/scaffold/ に実在するか
 
 除外リストは tools/doc_check_allowlist.yaml。理由は各エントリの reason に書く。
@@ -893,7 +893,7 @@ def check_code_examples() -> list[Violation]:
 
 # ── チェック8: 規約文書が挙げる識別子の実在確認 ──
 #
-# conventions.md の「命名の目安」表・debugging.md の症状表・scaffold/README.md の
+# conventions.md の「命名の目安」表・testing.md の症状表・scaffold/README.md の
 # ファイル一覧は、実装側の名前を名指しする。名前が変わったのに文書が古いままだと、
 # 学習者は存在しないヘルパーを探すことになる。conventions.md:77 は `_push_a0` /
 # `_pop_into` の名前固定を発展課題の動作条件にしているので、実利もある。
@@ -909,7 +909,7 @@ def check_code_examples() -> list[Violation]:
 
 IDENT_DOCS = [
     Path("workbook/docs/conventions.md"),
-    Path("workbook/docs/debugging.md"),
+    Path("workbook/docs/testing.md"),
     Path("workbook/scaffold/README.md"),
 ]
 IDENT_SOURCE_DIRS = [Path("workbook/sessions"), Path("workbook/scaffold")]

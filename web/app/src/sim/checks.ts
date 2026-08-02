@@ -1,6 +1,6 @@
 // 教育的検査。
 //
-// workbook/docs/debugging.md の症状表の各行を、実行中に検出できる形に落としたもの。
+// workbook/docs/testing.md の症状表の各行を、実行中に検出できる形に落としたもの。
 // どれも警告であって停止ではない。「なぜそれが問題か」を症状表の言葉で返す。
 
 import type { Insn } from "./assembler";
@@ -12,7 +12,7 @@ export interface Warning {
   step: number;
   kind: WarningKind;
   message: string;
-  /** debugging.md の対応する症状 */
+  /** testing.md の対応する症状 */
   symptom: string;
 }
 
