@@ -126,13 +126,28 @@ def link_map(pages: list[Page]) -> dict[str, str]:
 
 
 def topnav_html(nav: dict, base: str, current_slug: str | None = None) -> str:
-    """常設のナビはこれだけ。セクション内の移動は前後ナビと入口ページが担う。"""
-    parts = []
+    """常設のナビはこれだけ。セクション内の移動は前後ナビと入口ページが担う。
+
+    並びと群分けは nav.yaml が出典。group が変わる位置に区切り線を挟み、
+    「教材｜引くもの｜道具」の3群に見せる。
+    """
+    parts: list[str] = []
+    prev_group: str | None = None
+
+    def add(item: str, group: str | None) -> None:
+        nonlocal prev_group
+        if parts and group != prev_group:
+            parts.append('<span class="sep" aria-hidden="true"></span>')
+        prev_group = group
+        parts.append(item)
+
     for section in nav["sections"]:
         mark = ' aria-current="page"' if section["slug"] == current_slug else ""
-        parts.append(f'<a href="{base}{section["slug"]}/"{mark}>'
-                     f'{html.escape(section["title"])}</a>')
-    parts.append(f'<a href="{base}tools/">補助ツール</a>')
+        add(f'<a href="{base}{section["slug"]}/"{mark}>'
+            f'{html.escape(section["title"])}</a>', section.get("group"))
+    for link in nav.get("external_links", []):
+        add(f'<a href="{base}{link["url"]}">{html.escape(link["title"])}</a>',
+            link.get("group"))
     return "".join(parts)
 
 
@@ -149,11 +164,16 @@ def breadcrumb_html(nav: dict, page: Page) -> str:
 
 
 def pager_html(pages: list[Page], page: Page) -> str:
-    """前後ナビ。サイドバーが無いので、セクション一覧へ戻る道もここに置く。"""
-    index = pages.index(page)
+    """前後ナビ。サイドバーが無いので、セクション一覧へ戻る道もここに置く。
+
+    前後は同一セクション内に閉じる。docs は「引くもの」で読む順序が無く、
+    セクションを跨ぐ「次へ」は読書順の誤示唆になるため。
+    """
+    members = [p for p in pages if p.section_slug == page.section_slug]
+    index = members.index(page)
     parts = []
     if index > 0:
-        prev = pages[index - 1]
+        prev = members[index - 1]
         parts.append(
             f'<a class="prev" href="{page.base}{prev.url}">'
             f'<span class="label">前へ</span>{html.escape(prev.title)}</a>'
@@ -163,8 +183,8 @@ def pager_html(pages: list[Page], page: Page) -> str:
             f'<a class="index" href="{page.base}{page.section_slug}/">'
             f'<span class="label">一覧</span>{html.escape(page.section_title)}</a>'
         )
-    if index < len(pages) - 1:
-        nxt = pages[index + 1]
+    if index < len(members) - 1:
+        nxt = members[index + 1]
         parts.append(
             f'<a class="next" href="{page.base}{nxt.url}">'
             f'<span class="label">次へ</span>{html.escape(nxt.title)}</a>'
@@ -322,17 +342,26 @@ def home_markdown(nav: dict, pages: list[Page], release: str | None = None) -> s
         "前半は Python でコンパイラの論理だけに集中し、後半は動く Python 版を参照実装として",
         "C へ移植します。生成したアセンブリは毎回 qemu で実行して確かめます。",
         "",
+        "::: important",
         "はじめての方は [進め方ガイド](docs/getting_started/) から読んでください。",
+        "環境の用意・全コマの一覧・到達目標をまとめてあります。",
+        ":::",
         "",
     ]
+    lines += download_markdown(release)
+    # 主動線の通常回だけカードを直載せする。他セクションは入口への誘導に留め、
+    # 一覧は各セクション入口ページに一本化する（トップを全目録にしない）。
     for section in nav["sections"]:
         members = [p for p in pages if p.section_slug == section["slug"]]
         if not members:
             continue
-        lines += [f'## [{section["title"]}]({section["slug"]}/)', ""]
+        lines += [f'## {section["title"]}', ""]
         if section.get("summary"):
             lines += [section["summary"], ""]
-        lines += card_list(pages, section["slug"], "")
+        if section["slug"] == "sessions":
+            lines += card_list(pages, section["slug"], "")
+        else:
+            lines += [f'[一覧を見る →]({section["slug"]}/)', ""]
         lines.append("")
     lines += [
         "## 補助ツール",
@@ -347,7 +376,6 @@ def home_markdown(nav: dict, pages: list[Page], release: str | None = None) -> s
         "</ul>",
         "",
     ]
-    lines += download_markdown(release)
     return "\n".join(lines)
 
 

@@ -15,9 +15,13 @@ repo_branch: dev
 
 # サイト内に無い Markdown へのリンクは repo_url/blob/repo_branch/<path> へ逃がす。
 
+# group は上部メニューの群分け。group が変わる位置に区切り線が入る
+# （「教材｜引くもの｜道具」の3群に見せる）。
+
 sections:
   - slug: sessions
     title: 通常回
+    group: 教材
     summary: コマ1〜17（07 は欠番）の16コマ。読んで実装し、その日のうちに動かして確認する粒度に分けてある。最後のコマ17 だけは新しい実装をせず、発表と振り返りに充てる。
     pages:
       - materials/sessions/01_environment.md
@@ -39,6 +43,7 @@ sections:
 
   - slug: advanced
     title: 発展課題
+    group: 教材
     summary: 選択制の26トピック。回 ID の頭文字がカテゴリを表す。
     pages:
       - workbook/advanced/README.md
@@ -71,20 +76,29 @@ sections:
 
   - slug: docs
     title: 仕様・参考文書
+    group: 引くもの
     summary: 知りたいことから引く索引と、仕様・参考文書の本体。
+    # 並びは「読むもの」→「引くもの」の順。前後ナビがセクション内に閉じるので、
+    # この並びがそのまま読む順序の弱い示唆になる。
     pages:
       - workbook/docs/README.md
       - workbook/docs/getting_started.md
       - workbook/docs/conventions.md
-      - workbook/docs/debugging.md
-      - workbook/docs/migration.md
+      - workbook/docs/testing.md
       - workbook/docs/language_spec.md
       - workbook/docs/rv64_reference.md
-      - workbook/docs/testing.md
       - workbook/docs/code_example.md
 
   - slug: guides
     title: 補助ガイド
+    group: 道具
     summary: 演習そのものではないが、あると進めやすくなるもの。
     pages:
       - materials/tools/opencode.md
+
+# nav.yaml の外で生成されるページへの上部メニューのリンク。
+# url はサイトルートからの相対パス。
+external_links:
+  - title: 補助ツール
+    url: tools/
+    group: 道具
