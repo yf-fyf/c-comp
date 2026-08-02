@@ -9,19 +9,18 @@
 
 | 文書 | 内容 | 読みどき |
 |------|------|---------|
-| [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・読む順序・全16コマ（01〜17。07 は欠番）一覧・コマ16 のあと | **最初に**（入口） |
-| [`conventions.md`](./conventions.md) | 実装の約束ごと（編集するファイル・`emit()`・命名） | コマ3 の前に一度。`codegen` / `codegen_lval` の分離はコマ4 で最小形を導入しコマ9 で拡張するので、両方の回に読み直す |
+| [`getting_started.md`](./getting_started.md) | 進め方・環境の用意・読む順序・全17コマ（01〜17）一覧・コマ16 のあと | **最初に**（入口） |
+| [`conventions.md`](./conventions.md) | 実装の約束ごと（編集するファイル・`emit()`・命名） | コマ3 の前に一度。`codegen` / `codegen_lval` の分離はコマ4 で最小形を導入しコマ8 で拡張するので、両方の回に読み直す |
 | [`testing.md`](./testing.md) | `test_runner` の使い方・テストケースの形式と、動かないときの確認手順・症状表 | テストはコマ3 から毎回。デバッグの後半は詰まったとき |
 | [`language_spec.md`](./language_spec.md) | Core プロファイルの言語仕様（型・演算子・EBNF・除外機能・標準/発展の到達範囲） | 引くもの。冒頭に目次がある |
 | [`rv64_reference.md`](./rv64_reference.md) | 呼び出し規約・スタックフレーム・よく使う命令 | 引くもの |
-| [`code_example.md`](./code_example.md) | 各コマ終了時点でコンパイルできるプログラム（コマ1〜16。07 は欠番） | 引くもの。冒頭に目次がある |
+| [`code_example.md`](./code_example.md) | 各コマ終了時点でコンパイルできるプログラム（コマ1〜16） | 引くもの。冒頭に目次がある |
 
 ## 知りたいことから引く
 
 | 知りたいこと・キーワード | 行き先 |
 |------------------------|--------|
 | 環境を作りたい / Docker / Python のバージョン | [`getting_started.md` の「環境を用意する」](./getting_started.md#環境を用意する) |
-| コマ7 が無いのはなぜか | [`getting_started.md` の「全体の流れ」](./getting_started.md#全体の流れ)末尾 |
 | この機能は書けるのか（`switch`・`+=`・後置 `++`・ビット演算 など） | [`language_spec.md` の除外機能の一覧](./language_spec.md#excluded) |
 | 使える型・演算子・優先順位 | [`language_spec.md` の型](./language_spec.md#types)・[演算子](./language_spec.md#operators) |
 | 構文が通らない / EBNF を確かめたい | [`language_spec.md` の形式文法](./language_spec.md#grammar) |

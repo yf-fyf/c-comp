@@ -65,7 +65,7 @@ foo.files   # 一緒にコンパイルする追加ソース（複数ファイル
 ```text
 sessions/06_loops/tests/while_sum.c
 sessions/06_loops/tests/while_sum.ans
-sessions/11_strings_printf/tests/printf_hello.stdout
+sessions/11_strings_data_section/tests/printf_hello.stdout
 final/tests/f01_arith.c
 final/tests/f01_arith.ans
 ```
@@ -89,7 +89,7 @@ stat_lib.c
 
 ## `final/tests`（fixed17）
 
-コマ1〜16（07 は欠番）の機能をまとめて確認する17本のテスト。
+コマ1〜16 の機能をまとめて確認する17本のテスト。
 **標準トラック完成の目安**であり、発展課題では「意味を壊していないこと」の安全網として使う。
 
 発展課題に取り組むときは、変更を入れたあと毎回これを通すこと。

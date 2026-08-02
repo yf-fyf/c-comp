@@ -15,7 +15,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-_PREV = Path(__file__).resolve().parents[1] / '13_sizeof_malloc_list' / 'mycc.py'
+_PREV = Path(__file__).resolve().parents[1] / '13_struct_malloc_list' / 'mycc.py'
 _SPEC = importlib.util.spec_from_file_location('_session13_mycc', _PREV)
 prev = importlib.util.module_from_spec(_SPEC)
 assert _SPEC.loader is not None

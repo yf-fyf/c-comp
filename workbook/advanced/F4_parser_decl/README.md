@@ -32,7 +32,7 @@ Lexer（F1）とあわせてブラックボックスの完全な置き換え達�
 ## 動かし方
 
 ```bash
-python3 myparser.py ../../sessions/13_sizeof_malloc_list/tests/list_min.c
+python3 myparser.py ../../sessions/13_struct_malloc_list/tests/list_min.c
 ```
 
 ## テスト

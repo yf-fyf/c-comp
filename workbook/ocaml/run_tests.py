@@ -399,20 +399,26 @@ def main() -> int:
 
     if not args.no_equivalence:
         npass, nfail, nskip = run_equivalence(build_dir, args.timeout, args.quiet)
-        rows.append(("等価性  ", npass, nfail, nskip))
+        rows.append(("等価性", npass, nfail, nskip))
         for i, v in enumerate((npass, nfail, nskip)):
             total[i] += v
         npass, nfail, nskip = run_reject(build_dir, args.timeout, args.quiet)
-        rows.append(("拒否側  ", npass, nfail, nskip))
+        rows.append(("拒否側", npass, nfail, nskip))
         for i, v in enumerate((npass, nfail, nskip)):
             total[i] += v
+
+    # 行頭のラベルは全角と半角が混ざる（コマ9 と 等価性 など）ので、
+    # 文字数ではなく表示幅で揃える
+    def pad(label: str, width: int = 8) -> str:
+        shown = sum(2 if ord(ch) > 0x2E80 else 1 for ch in label)
+        return label + " " * max(0, width - shown)
 
     print("\n=================================")
     for label, npass, nfail, nskip in rows:
         mark = "OK  " if nfail == 0 else "FAIL"
-        print(f"  {mark} {label}  PASS: {npass:3d}  FAIL: {nfail:3d}  SKIP: {nskip:3d}")
+        print(f"  {mark} {pad(label)}  PASS: {npass:3d}  FAIL: {nfail:3d}  SKIP: {nskip:3d}")
     print("---------------------------------")
-    print(f"  合計       PASS: {total[0]:3d}  FAIL: {total[1]:3d}  SKIP: {total[2]:3d}")
+    print(f"  {pad('合計', 13)}  PASS: {total[0]:3d}  FAIL: {total[1]:3d}  SKIP: {total[2]:3d}")
     print("=================================")
     return 1 if total[1] > 0 else 0
 

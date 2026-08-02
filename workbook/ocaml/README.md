@@ -175,7 +175,7 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 
 ## コマ番号と対応するテーマ
 
-コマ7 は廃止したので `lecture07.ml` は無い（番号は 07 を欠番として残す）。
+`lectureNN.ml` は累積で、その回までに実装した機能をすべて含む。
 
 | 実装 | 対応するコマ | テーマ |
 |------|--------------|--------|
@@ -184,12 +184,13 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 | `sessions/lecture04.ml` | 04_variables | 変数・代入・シンボルテーブル |
 | `sessions/lecture05.ml` | 05_if_else | if / else |
 | `sessions/lecture06.ml` | 06_loops | while / for / break / continue |
-| `sessions/lecture08.ml` | 08_functions_recursion | 関数呼び出し・再帰 |
-| `sessions/lecture09.ml` | 09_lvalue_rvalue | lvalue / rvalue と `&` / `*` |
-| `sessions/lecture10.ml` | 10_types_pointers | 型・ポインタ演算 |
-| `sessions/lecture11.ml` | 11_strings_printf | 文字列リテラル・`printf` |
-| `sessions/lecture12.ml` | 12_struct | struct / `.` / `->` |
-| `sessions/lecture13.ml` | 13_sizeof_malloc_list | `sizeof` / `malloc` / 連結リスト |
+| `sessions/lecture07.ml` | 07_functions_recursion | 関数呼び出し・再帰 |
+| `sessions/lecture08.ml` | 08_lvalue_rvalue | lvalue / rvalue と `&` / `*` |
+| `sessions/lecture09.ml` | 09_types | 型表・型別 load/store・`char` の昇格と縮小 |
+| `sessions/lecture10.ml` | 10_pointer_arith | ポインタ演算・添字・`sizeof(型名)` |
+| `sessions/lecture11.ml` | 11_strings_data_section | 文字列リテラル・`.data`・`printf` の基本形 |
+| `sessions/lecture12.ml` | 12_expr_walk_libc | 式の走査・`lib.h` の残りの外部関数 |
+| `sessions/lecture13.ml` | 13_struct_malloc_list | struct / `.` / `->` / `sizeof` / `malloc` / 連結リスト |
 | `sessions/lecture14.ml` | 14_globals_scope | グローバル変数・スコープ |
 | `sessions/lecture15.ml` | 15_preprocess_multifile | 前処理・複数ファイル |
 | `sessions/lecture16.ml` | 16_integrate_mycc | 統合版（全機能） |
