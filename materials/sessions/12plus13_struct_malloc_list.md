@@ -16,6 +16,7 @@ introduces:
   - linked_list_traversal
 requires:
   - int_type
+  - while_stmt
   - codegen_lval_split
   - pointer_type
   - deref
@@ -23,7 +24,6 @@ requires:
   - char_type
   - type_sizes
   - size_of_ty_str
-  - while_stmt
   - sizeof_typename
   - malloc_call
   - include_libh

@@ -440,6 +440,46 @@ void exit(int code);
 | 未定義動作 8 種 | 動作を定めない項目であり、どの結果になっても仕様違反にならない |
 | struct 値の代入・実引数・戻り値 | 仕様が受理しない書き方であり、機能として存在しない |
 
+### 分割・統合した回への振り分け
+
+分量をならすため、コマ10 は 10a / 10b に、コマ11 は 11a / 11b に分割し、
+コマ12 とコマ13 は1回に統合した。上の表の導入コマと代表テストは**現行の回番号のまま**で、
+現行の `sessions/10_types_pointers/` などのディレクトリとテストもそのまま残してある。
+分割・統合後の回で引くときは、次の対応を使う。
+
+| 機能 | 分割・統合後の回 | 代表テスト |
+|------|-----------------|-----------|
+| 文字リテラル `'a'` | コマ10a | `sessions/10a_types/tests/char_var.c` |
+| `char`(昇格と縮小を含む) | コマ10a | `sessions/10a_types/tests/char_var.c` |
+| 型サイズに応じたロード / ストア | コマ10a | `sessions/10a_types/tests/load_store_ty.c` |
+| 多段ポインタ `int **` | コマ10b | `sessions/10b_pointer_arith/tests/ptr_to_ptr.c` |
+| ポインタ ± int(尺度は指し先型) | コマ10b | `sessions/10b_pointer_arith/tests/ptr_arith.c` |
+| 添字 `p[i]` | コマ10b | `sessions/10b_pointer_arith/tests/ptr_sum.c` |
+| `sizeof(型名)` | コマ10b | `sessions/10b_pointer_arith/tests/sizeof_type.c` |
+| 前置 `++`(ポインタ、型対応) | コマ10b | `sessions/10b_pointer_arith/tests/ptr_incdec.c` |
+| `int main(int argc, char **argv)` | コマ10b | `sessions/10b_pointer_arith/tests/main_argv.c` |
+| `malloc` | コマ10b | `sessions/10b_pointer_arith/tests/ptr_sum.c` |
+| 文字列リテラルとエスケープ・静的配置 | コマ11a | `sessions/11a_strings_data_section/tests/printf_hello.c` |
+| 可変長引数の外部プロトタイプと呼出し | コマ11a | `sessions/11a_strings_data_section/tests/printf_number.c` |
+| `#include "lib.h"` | コマ11a | `sessions/11a_strings_data_section/tests/printf_hello.c` |
+| `printf` | コマ11a | `sessions/11a_strings_data_section/tests/printf_number.c` |
+| `'\0'` を含む文字列の走査 | コマ11b | `sessions/11b_expr_walk_libc/tests/strlen_literal.c` |
+| 不完全型 `struct FILE`(不透明ポインタ) | コマ11b | `sessions/11b_expr_walk_libc/tests/file_stream.c` |
+| `fprintf` / `fdopen` / `fopen` / `fread` / `fclose` | コマ11b | `sessions/11b_expr_walk_libc/tests/file_stream.c` |
+| `exit` | コマ11b | `sessions/11b_expr_walk_libc/tests/lib_exit.c` |
+| `strcmp` / `strlen` 相当(提供しない) | コマ11b | `sessions/11b_expr_walk_libc/tests/strlen_literal.c` |
+| `struct Tag` の定義・変数・フィールド | コマ12+13 | `sessions/12plus13_struct_malloc_list/tests/dot_access.c` |
+| `.` と `->` | コマ12+13 | `sessions/12plus13_struct_malloc_list/tests/arrow_access.c` |
+| 型のサイズと整列・struct レイアウト | コマ12+13 | `sessions/12plus13_struct_malloc_list/tests/malloc_struct.c` |
+| `sizeof(struct タグ)` | コマ12+13 | `sessions/12plus13_struct_malloc_list/tests/sizeof_test.c` |
+| `void *` と `T *` の暗黙変換 | コマ12+13 | `sessions/12plus13_struct_malloc_list/tests/void_ptr.c` |
+| struct の自己参照・前方宣言 | コマ12+13 | `sessions/12plus13_struct_malloc_list/tests/list_sum.c` |
+| `NULL`・ポインタと `0` の比較 | コマ12+13 | `sessions/12plus13_struct_malloc_list/tests/list_sum.c` |
+
+分割で回が分かれても、機能の順序は変わらない。
+10a → 10b → 11a → 11b → コマ12+13 → コマ14 の順に前提が積み上がる。
+この依存が破れていないことは `python3 tools/check_concepts.py` が機械的に確かめる。
+
 ---
 
 <a id="excluded"></a>
