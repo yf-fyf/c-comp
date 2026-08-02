@@ -34,6 +34,8 @@ sections:
       - materials/sessions/09_lvalue_rvalue.md
       - materials/sessions/10_types_pointers.md
       - materials/sessions/11_strings_printf.md
+      - materials/sessions/11a_strings_data_section.md
+      - materials/sessions/11b_expr_walk_libc.md
       - materials/sessions/12_struct.md
       - materials/sessions/13_sizeof_malloc_list.md
       - materials/sessions/14_globals_scope.md
