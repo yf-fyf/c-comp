@@ -4,8 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
-_PREV = Path(__file__).resolve().parents[1] / '10_types_pointers' / 'mycc.py'
-_SPEC = importlib.util.spec_from_file_location('_session10', _PREV)
+_PREV = Path(__file__).resolve().parents[1] / '10b_pointer_arith' / 'mycc.py'
+_SPEC = importlib.util.spec_from_file_location('_session10b', _PREV)
 prev = importlib.util.module_from_spec(_SPEC)
 assert _SPEC.loader is not None
 _SPEC.loader.exec_module(prev)
@@ -16,7 +16,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen11(prev.Codegen10):
+class Codegen11(prev.Codegen10b):
     def __init__(self) -> None:
         super().__init__()
         self._strings: dict[str, str] = {}
