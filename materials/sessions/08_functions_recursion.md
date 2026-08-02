@@ -62,20 +62,7 @@ int main() {
 python3 scaffold/parse_viewer.py sessions/08_functions_recursion/tests/target.c
 ```
 
-このプログラムの内容は次の通り。
-
-```c
-int fib(int n) {
-    if (n <= 1) {
-        return n;
-    }
-    return fib(n - 1) + fib(n - 2);
-}
-
-int main() {
-    return fib(10);
-}
-```
+`target.c` の中身は、冒頭に挙げた `fib` のプログラムと同じである。
 
 ```lisp
 (program
@@ -122,30 +109,20 @@ int main() {
 python3 scaffold/parse_viewer.py sessions/08_functions_recursion/tests/mutual_rec.c
 ```
 
-このプログラムの内容は次の通り。
+このプログラムは、冒頭に宣言だけを2つ置き、そのあとに定義が続く（以下は本体を1行に詰めて示す）。
 
 ```c
 int is_even(int n);
 int is_odd(int n);
 
-int is_even(int n) {
-    if (n == 0) {
-        return 1;
-    }
-    return is_odd(n - 1);
-}
+int is_even(int n) { if (n == 0) { return 1; } return is_odd(n - 1); }
+int is_odd(int n)  { if (n == 0) { return 0; } return is_even(n - 1); }
 
-int is_odd(int n) {
-    if (n == 0) {
-        return 0;
-    }
-    return is_even(n - 1);
-}
-
-int main() {
-    return is_even(10) + is_odd(7) * 10;
-}
+int main() { return is_even(10) + is_odd(7) * 10; }
 ```
+
+S式の全文は上の `parse_viewer.py` で確認できる。見どころは冒頭で、
+定義より先に宣言が `funcproto` として現れる点である。
 
 ```lisp
 (program
@@ -153,42 +130,9 @@ int main() {
     (params (param "n" :type int)))
   (funcproto "is_odd" :type int
     (params (param "n" :type int)))
-  (funcdef "is_even" :type int
-    (params (param "n" :type int))
-    (block
-      (if
-        (cond
-          (eq (var "n") (num 0)))
-        (then
-          (block
-            (return (num 1)))))
-      (return
-        (call "is_odd"
-          (args
-            (sub (var "n") (num 1)))))))
-  (funcdef "is_odd" :type int
-    (params (param "n" :type int))
-    (block
-      (if
-        (cond
-          (eq (var "n") (num 0)))
-        (then
-          (block
-            (return (num 0)))))
-      (return
-        (call "is_even"
-          (args
-            (sub (var "n") (num 1)))))))
-  (funcdef "main" :type int (params)
-    (block
-      (return
-        (add
-          (call "is_even"
-            (args (num 10)))
-          (mul
-            (call "is_odd"
-              (args (num 7)))
-            (num 10)))))))
+  (funcdef "is_even" ...)   ; 中身は fib と同じ形（if と call）
+  (funcdef "is_odd" ...)
+  (funcdef "main" ...))
 ```
 
 ![相互再帰の AST](figures/ast/08_mutual_rec_ast.svg)
@@ -255,15 +199,8 @@ int add(int a, int b) {
 ただし、以後の計算で `a0` や `a1` はすぐ上書きされる。
 そのため、関数の先頭で引数をローカル変数と同じようにスタックへ保存する。
 
-`gen_func()` では、ローカル変数を集める前に、まず `funcdef.params` を `self.alloc_local()` で登録する。
-
-```text
-1. params を self.alloc_local() する
-2. 関数本体内のローカル変数を self.collect_decls() する
-3. frame_size を計算する
-4. プロローグを出す
-5. a0, a1, ... を対応する引数スロットへ sd する
-```
+`gen_func()` では、ローカル変数を集める前に、まず `funcdef.params` を `self.alloc_local()` で登録する
+（全体の手順は後述の「gen_func の変更点」にまとめてある）。
 
 たとえば `int add(int a, int b)` なら、次のように配置できる。
 
@@ -281,26 +218,13 @@ sd a1, -32(s0)
 
 これ以降、引数 `a`, `b` は通常のローカル変数と同じように `codegen_lval()` でアドレスを取り、`ld` で値を読める。
 
-## 関数を呼び出す側
-
-関数呼び出し `f(x, y)` では、呼び出す直前に次の状態を作る。
-
-| レジスタ | 内容 |
-|----------|------|
-| `a0` | 第1引数 |
-| `a1` | 第2引数 |
-| ... | ... |
-
-その後、`call f` を出す。
-
-関数から戻ってくると、戻り値は `a0` に入っている。
-したがって、`codegen(ND_CALL)` の結果も他の式と同じく `a0` に残る。
-
 ## codegen_Call の生成パターン
 
-引数を左から順に評価すると、各引数の結果は毎回 `a0` に入る。
-そのままだと、次の引数を評価したときに前の引数が上書きされる。
+呼び出す側は、`call f` を出す直前に第1引数を `a0`、第2引数を `a1`、…（最大 `a7`）へ置く。
+戻ってくると戻り値は `a0` に入っているので、`ND_CALL` の結果も他の式と同じく `a0` に残る。
 
+ただし、引数を左から順に評価すると、各引数の結果は毎回 `a0` に入る。
+そのままだと、次の引数を評価したときに前の引数が上書きされる。
 そのため、各引数を評価したら一度スタックに保存する。
 
 `codegen_Call(node)` は次の流れで実装する。
@@ -443,22 +367,6 @@ Parser はこれを `ND_FUNCPROTO` として返す。
 10. エピローグを出力する
 ```
 
-## 発展的な話題
-
-この回では、関数呼び出しの基本だけを扱う。
-実際のCコンパイラや本格的な呼び出し規約では、さらに次のような話題がある。
-
-| 話題 | 内容 | この回での扱い |
-|------|------|----------------|
-| 9個以上の引数 | `a0`〜`a7` に入りきらない引数はスタックで渡す | 扱わない |
-| 可変長引数 | `printf` のように引数個数が変わる関数 | 扱わない |
-| 型チェック | 宣言と呼び出しの引数個数・型が一致するか確認する | 扱わない |
-| 外部関数呼び出し | libc の `printf` や `malloc` を呼ぶ | 後の回で扱う |
-| caller-saved / callee-saved | 関数呼び出し前後でどのレジスタを誰が保存するか | この回では `a0`〜`a7`, `ra`, `s0` の基本だけ扱う |
-| 末尾呼び出し最適化 | `return f(x);` をジャンプに変える最適化 | 扱わない |
-
-これらは重要な話題だが、コマ8ではまず、8個以下の整数引数を持つユーザー定義関数を呼び出せることを目標にする。
-
 ## 編集するファイル
 
 - `mycc.py`
@@ -511,7 +419,9 @@ echo $?
 ## 注意
 
 この回では、引数は最大8個まで扱う。
-9個以上をレジスタ渡しできない場合のスタック渡しは扱わない。
+9個以上のスタック渡し・可変長引数・型チェック・末尾呼び出し最適化などは扱わない。
+この回の外にある話題の一覧は
+[`rv64_reference.md` の「呼び出し規約」](../../workbook/docs/rv64_reference.md)にまとめてある。
 
 `ND_CALL` の引数は1個もない場合もある。
 引数なしの関数呼び出しでは、引数をpushせず、直接 `call` を出す。
