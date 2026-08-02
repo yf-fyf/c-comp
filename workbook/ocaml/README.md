@@ -154,6 +154,7 @@ cd workbook/ocaml
 dune build
 python3 run_tests.py           # 全回
 python3 run_tests.py 13        # コマ13 だけ
+python3 run_tests.py 10a       # 分割した前半の回だけ
 python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 ```
 
@@ -177,6 +178,10 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 
 コマ7 は廃止したので `lecture07.ml` は無い（番号は 07 を欠番として残す）。
 
+コマ10・コマ11 は前半と後半に分けてある。前半の完成形が `lecture10a.ml` /
+`lecture11a.ml` で、後半（`10b_pointer_arith` / `11b_expr_walk_libc`）の完成形は
+前半を含んだ `lecture10.ml` / `lecture11.ml` である。
+
 | 実装 | 対応するコマ | テーマ |
 |------|--------------|--------|
 | `sessions/lecture02.ml` | 02_interpreter | AST インタープリター |
@@ -186,8 +191,10 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 | `sessions/lecture06.ml` | 06_loops | while / for / break / continue |
 | `sessions/lecture08.ml` | 08_functions_recursion | 関数呼び出し・再帰 |
 | `sessions/lecture09.ml` | 09_lvalue_rvalue | lvalue / rvalue と `&` / `*` |
-| `sessions/lecture10.ml` | 10_types_pointers | 型・ポインタ演算 |
-| `sessions/lecture11.ml` | 11_strings_printf | 文字列リテラル・`printf` |
+| `sessions/lecture10a.ml` | 10a_types | 型表・型別 load/store・`char` の昇格と縮小 |
+| `sessions/lecture10.ml` | 10_types_pointers / 10b_pointer_arith | 型・ポインタ演算 |
+| `sessions/lecture11a.ml` | 11a_strings_data_section | 文字列リテラル・`.data`・`printf` の基本形 |
+| `sessions/lecture11.ml` | 11_strings_printf / 11b_expr_walk_libc | 文字列リテラル・`printf` |
 | `sessions/lecture12.ml` | 12_struct | struct / `.` / `->` |
 | `sessions/lecture13.ml` | 13_sizeof_malloc_list | `sizeof` / `malloc` / 連結リスト |
 | `sessions/lecture14.ml` | 14_globals_scope | グローバル変数・スコープ |
