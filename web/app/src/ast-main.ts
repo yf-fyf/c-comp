@@ -79,10 +79,10 @@ function scheduleParse(): void {
   timer = setTimeout(runParse, 250);
 }
 
-function runParse(): void {
+async function runParse(): Promise<void> {
   editor.dispatch({ effects: setHoverRanges.of([]) });
   const src = editor.state.doc.toString();
-  result = parseSource(src);
+  result = await parseSource(src);
   ppToSrc = new Map(result.lineMap ?? []);
   const status = $("status");
   if (result.ok) {
@@ -99,7 +99,7 @@ function runParse(): void {
     status.className = "err";
     editor.dispatch({ effects: setErrorLine.of(srcLine) });
   }
-  renderActive();
+  await renderActive();
 }
 
 function countNodes(): number {
@@ -115,7 +115,7 @@ function countNodes(): number {
   return n;
 }
 
-function renderActive(): void {
+async function renderActive(): Promise<void> {
   if (!result) return;
   const showLine = ($("opt-show-line") as HTMLInputElement).checked;
   const src = editor.state.doc.toString();
@@ -159,7 +159,7 @@ function renderActive(): void {
       tbody.appendChild(tr);
     }
   } else if (activeTab === "sexp") {
-    const r = astSexp(src, showLine);
+    const r = await astSexp(src, showLine);
     $("sexp-pre").textContent = r.ok ? (r.text ?? "") : (r.errors?.[0]?.message ?? "エラー");
   }
 }

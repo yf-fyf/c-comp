@@ -5,7 +5,7 @@ import { EditorView, basicSetup } from "codemirror";
 import { keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 import { cpp } from "@codemirror/lang-cpp";
-import { compile } from "./core";
+import { compile, coreReady } from "./core";
 import { el as $, mountShell } from "./shell";
 import type { ExampleGroup } from "./types";
 import "./style.css";
@@ -73,12 +73,12 @@ function markDirty(): void {
   }
 }
 
-function runCompile(): void {
+async function runCompile(): Promise<void> {
   clearTimeout(timer);
   button.classList.remove("dirty");
   const src = editor.state.doc.toString();
   const comments = $<HTMLInputElement>("opt-comments").checked;
-  const result = compile(src, comments);
+  const result = await compile(src, comments);
   const out = $("asm-output");
   if (result.ok) {
     const text = result.text ?? "";
@@ -175,7 +175,14 @@ async function loadExamples(): Promise<void> {
 $("asm-output").textContent = PLACEHOLDER;
 $("asm-output").classList.add("placeholder");
 
-void loadExamples().then(() => {
+// コア初期化待ちの間はコンパイル操作を無効化する。現状(js_of_ocaml)は
+// ブロッキング script タグのため実質即座に解決するが、将来の非同期読み込み(T99)に
+// 備えた明示的な待ち状態として用意しておく。
+button.disabled = true;
+setStatus("pending", "コアを読み込み中…");
+
+void Promise.all([loadExamples(), coreReady()]).then(() => {
+  button.disabled = false;
   if (editor.state.doc.length === 0) {
     setSource("int main() {\n    return 1 + 2 * 3;\n}\n");
   }
