@@ -97,6 +97,8 @@ a:hover { text-decoration: none; }
 }
 .topnav a:hover { color: #fff; }
 .topnav a[aria-current="page"] { color: #fff; border-bottom-color: #C9A9D8; }
+/* 群の区切り（教材｜引くもの｜道具）。nav.yaml の group が変わる位置に入る */
+.topnav .sep { border-left: 1px solid #7d5f8d; margin: 0.2rem 0; }
 
 /* ── レイアウト ── */
 
@@ -144,8 +146,8 @@ a:hover { text-decoration: none; }
 }
 .content h4 { margin: 1.6rem 0 0.5rem; font-size: 1rem; }
 
-/* 見出しがリンクのとき（トップのセクション見出し）下線は出さない */
-.content h2 a, .content h3 a { text-decoration: none; }
+/* 見出しがリンクのとき（トップのセクション見出し）下線は出さず、色も本文と揃える */
+.content h2 a, .content h3 a { color: inherit; text-decoration: none; }
 .content h2 a:hover, .content h3 a:hover { text-decoration: underline; }
 
 .content p, .content ul, .content ol { margin: 0.9rem 0; }
@@ -186,8 +188,9 @@ hr { border: 0; border-top: 1px solid var(--accent-light); margin: 2.5rem 0; }
 }
 .toc li { break-inside: avoid; }
 .toc ul ul { padding-left: 1.1rem; columns: 1; }
-.toc a { text-decoration: none; }
-.toc a:hover { text-decoration: underline; }
+/* 目次は補助情報。本文リンクの青とは役割が違うのでグレーに落とす */
+.toc a { color: var(--gray-text); text-decoration: none; }
+.toc a:hover { color: var(--text); text-decoration: underline; }
 
 /* ── コード ── */
 
@@ -282,9 +285,12 @@ figcaption {
 
 /* ── 注意書きのボックス（boxes.lua が出す） ── */
 
+/* 上を 0 にするのは、タイトル帯を箱の上端に密着させるため。
+   boxes.lua は .adm を作るとき必ず .adm-title を先頭に差し込むので、
+   ここに余白を入れると帯の上にコンテナの背景が覗いてしまう。 */
 .adm {
   margin: 1.5rem 0;
-  padding: 0.2rem 1.1rem 0.6rem;
+  padding: 0 1.1rem 0.6rem;
   border: 1px solid var(--accent-light);
   border-radius: 0.35rem;
   background: var(--accent-lighter);
@@ -308,10 +314,10 @@ figcaption {
 .adm-exercise { background: var(--gray-bg); border-color: var(--accent-dark); }
 .adm-exercise > .adm-title { background: var(--accent-dark); color: #fff; }
 
-/* 「今日のゴール」 */
+/* 「今日のゴール」。上を 0 にする理由は .adm と同じ（帯を上端に密着させる） */
 .goal {
   margin: 0 0 2rem;
-  padding: 0.2rem 1.3rem 0.9rem;
+  padding: 0 1.3rem 0.9rem;
   border: 2px solid var(--accent-dark);
   border-radius: 0.4rem;
   background: #fff;
@@ -375,14 +381,17 @@ figcaption {
   display: block;
   height: 100%;
   padding: 0.9rem 1.1rem;
+  background: var(--accent-lighter);
   border: 1px solid var(--accent-light);
   border-radius: 0.4rem;
   text-decoration: none;
   color: var(--text);
   line-height: 1.6;
 }
-.cards a:hover { background: var(--accent-lighter); border-color: var(--accent-dark); }
-.cards .card-title { display: block; font-weight: 700; color: var(--link); }
+/* ホバーしていないときも面でタイルと分かるようにする。薄い→濃いの一方向で沈む */
+.cards a:hover { background: var(--accent-light); border-color: var(--accent-dark); }
+/* 本文の青リンクは使わないが、アクセント紫でリンクだと分かる手がかりは残す */
+.cards .card-title { display: block; font-weight: 700; color: var(--accent-dark); }
 .cards .card-desc { display: block; font-size: 0.87rem; color: var(--gray-text); }
 
 /* ── フッタ ── */
