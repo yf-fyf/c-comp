@@ -112,13 +112,14 @@ for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
 expr        ::= assign_expr
 assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
               | cond_expr
-cond_expr   ::= lor_expr [ '?' expr ':' cond_expr ]
-lor_expr    ::= land_expr { '||' land_expr }
-land_expr   ::= eq_expr   { '&&' eq_expr }
-eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
-rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
-add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
-mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+cond_expr   ::= binary_expr [ '?' expr ':' cond_expr ]
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= '*' | '/' | '%'
+              | '+' | '-'
+              | '<' | '>' | '<=' | '>='
+              | '==' | '!='
+              | '&&'
+              | '||'
 unary_expr  ::= postfix_expr
               | '-'  unary_expr
               | '!'  unary_expr
@@ -141,6 +142,20 @@ primary_expr ::= INT_LITERAL
                | '(' expr ')'
 arg_list    ::= assign_expr { ',' assign_expr }
 ```
+
+この回までの二項演算子の優先順位（高い順）:
+
+| 優先順位 | 演算子 | 結合 |
+|---|---|---|
+| 1（高） | `*` `/` `%` | 左 |
+| 2 | `+` `-` | 左 |
+| 3 | `<` `>` `<=` `>=` | 左 |
+| 4 | `==` `!=` | 左 |
+| 5 | `&&` | 左 |
+| 6 | `\|\|` | 左 |
+
+表の読み方はコマ1の「木の形は規則で決まっている」と
+[`language_spec.md` の「演算子」](../../workbook/docs/language_spec.md#operators)を参照。
 
 グローバル変数は `external_decl` に `var_decl` が加わっただけである。
 `var_decl` の形はローカル宣言と同一で、どちらであるかは書かれた位置だけで決まる。

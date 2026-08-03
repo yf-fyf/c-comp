@@ -1015,7 +1015,7 @@ def check_identifiers() -> list[Violation]:
 # （例外は下の GRAMMAR_REFINEMENTS に列挙した「右辺の精密化」だけ）。
 # 次の3点を検査する:
 #   (a) 単調性     コマN の選択肢集合 ⊆ コマN+1 の選択肢集合
-#                  （消えてよいのは GRAMMAR_REFINEMENTS の 12 件のみ）
+#                  （消えてよいのは GRAMMAR_REFINEMENTS の 11 件のみ）
 #   (b) 最終形一致 コマ14 の集合が language_spec.md「## 形式文法（EBNF）」節と
 #                  一致する（字句トークン節は各コマが省略するため対象外）。
 #                  T156 分割書は前処理指令 include_dir / define_dir の差分を
@@ -1041,17 +1041,15 @@ GRAMMAR_DIFF_SESSIONS = {14}
 # 出典: c-comp-design/tasks/T156_ebnf_snapshot_breakdown.md「精密化許可リスト」。
 GRAMMAR_REFINEMENTS: tuple[tuple[int, str, str, str], ...] = (
     (2, "func_body", "'{' { stmt } '}'", "'{' { var_decl } { stmt } '}'"),
-    (2, "expr", "add_expr", "assign_expr"),
+    (2, "expr", "binary_expr", "assign_expr"),
     (6, "stmt", "'return' expr ';'", "'return' [ expr ] ';'"),
     (5, "func_def", "'int' 'main' '(' ')' func_body",
      "ret_type IDENT '(' [ param_list ] ')' func_body"),
     (4, "expr_stmt", "expr ';'", "[ expr ] ';'"),
     (6, "scalar_type", "'int'", "'int' [ stars ]"),
     (8, "stars", "'*'", "'*' { '*' }"),
-    (12, "cond_expr", "eq_expr [ '?' expr ':' cond_expr ]",
-     "lor_expr [ '?' expr ':' cond_expr ]"),
     (8, "unary_expr", "primary_expr", "postfix_expr"),
-    (3, "assign_expr", "add_expr", "cond_expr"),
+    (3, "assign_expr", "binary_expr", "cond_expr"),
     (5, "program", "func_def", "external_decl { external_decl }"),
     (9, "func_proto", "ret_type IDENT '(' [ param_list ] ')' ';'",
      "ret_type IDENT '(' [ param_list [ ',' '...' ] ] ')' ';'"),

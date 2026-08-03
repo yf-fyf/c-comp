@@ -68,14 +68,25 @@ func_body   ::= '{' { stmt } '}'
 
 stmt        ::= 'return' expr ';'
 
-expr        ::= add_expr         /* 代入はコマ3、比較・条件はコマ4、論理はコマ13 */
-add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
-mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+expr        ::= binary_expr      /* 代入はコマ3、条件はコマ4 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= '*' | '/' | '%'  /* 優先順位・結合は下の表。関係・等値はコマ4、論理はコマ13 */
+              | '+' | '-'
 unary_expr  ::= primary_expr
               | '-'  unary_expr
 primary_expr ::= INT_LITERAL
                | '(' expr ')'
 ```
+
+この回までの二項演算子の優先順位（高い順）:
+
+| 優先順位 | 演算子 | 結合 |
+|---|---|---|
+| 1（高） | `*` `/` `%` | 左 |
+| 2 | `+` `-` | 左 |
+
+表の読み方はコマ1の「木の形は規則で決まっている」と
+[`language_spec.md` の「演算子」](../../workbook/docs/language_spec.md#operators)を参照。
 
 字句トークン（`INT_LITERAL` など）の定義はどの回でも同じであるため、ここでは繰り返さない。
 [`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。

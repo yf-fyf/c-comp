@@ -583,8 +583,8 @@ struct のフィールドは宣言順に配置し、各フィールドのオフ�
   UPPER           字句トークン（下部に定義）
 ```
 
-反復 `{ ... }` で表した二項演算子列の構文木は左結合として構成する。
-右結合の規則は再帰で直接表している。
+二項演算子列(`binary_expr`)の構文木は「演算子」節の優先順位で構成する。
+右結合の規則(代入・条件)は再帰で直接表している。
 
 ### 前処理
 
@@ -689,7 +689,7 @@ for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
 
 `else` は最も内側の未対応 `if` へ結合する(dangling-else は最近傍優先)。
 
-### 式（優先順位: 低い順に列挙）
+### 式
 
 ```ebnf
 expr        ::= assign_expr     /* カンマ演算子はない */
@@ -697,14 +697,16 @@ expr        ::= assign_expr     /* カンマ演算子はない */
 assign_expr ::= unary_expr '=' assign_expr   /* 右結合。複合代入はない */
               | cond_expr
 
-cond_expr   ::= lor_expr [ '?' expr ':' cond_expr ]   /* 右結合 */
+cond_expr   ::= binary_expr [ '?' expr ':' cond_expr ]   /* 右結合 */
 
-lor_expr    ::= land_expr { '||' land_expr }
-land_expr   ::= eq_expr   { '&&' eq_expr }
-eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
-rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
-add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
-mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+binary_expr ::= unary_expr { bin_op unary_expr }
+
+bin_op      ::= '*' | '/' | '%'
+              | '+' | '-'
+              | '<' | '>' | '<=' | '>='
+              | '==' | '!='
+              | '&&'
+              | '||'
 
 unary_expr  ::= postfix_expr
               | '-'  unary_expr          /* 負号 */
@@ -730,6 +732,11 @@ primary_expr ::= INT_LITERAL
 arg_list    ::= assign_expr { ',' assign_expr }
 ```
 
+- `binary_expr` は「単項式を二項演算子でつないだ列」だけを定め、木の形は定めない。
+  木の形は[「演算子」節](#operators)の優先順位で決まる: 優先順位の高い演算子ほど
+  先にまとまり(木の深い側に置かれ)、同じ順位の演算子は左から順にまとめる(左結合)。
+  `bin_op` の行の並びはこの優先順位の高い順である。この文法と優先順位の組で、
+  どの式についても構文木は一意に決まる。
 - 代入の左辺の文法カテゴリは `unary_expr`(N1570 6.5.16 と同じ)。
   lvalue 制約は意味解析で検査する。
 - `++`/`--` は前置のみ。後置形は `postfix_suffix` に含まれない。
