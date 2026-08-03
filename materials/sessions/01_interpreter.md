@@ -1,10 +1,12 @@
 ---
 introduces:
+  - provided_lexer_parser
+  - line_comment
+  - keywords_identifiers
   - ast_node_structure
   - ast_recursive_traversal
   - eval_ast_interpreter
-requires:
-  - provided_lexer_parser
+requires: []
 ---
 
 # コマ1: AST + インタープリター
@@ -22,6 +24,8 @@ Cプログラム全体を実行するのではなく、`main` 関数の中にあ
 
 実装に入る前に、教員提供の Lexer/Parser が AST を正しく構築できることを確認する。
 この回で初めて提供 Lexer/Parser を使うため、まずここで動作を確かめる。
+Lexer は `//` 行コメントを読み飛ばし、`if` `while` `return` などキーワード12語と
+それ以外の識別子を区別する。この字句解析はすでに提供されており、自分で書く対象ではない。
 
 ```bash
 python3 scaffold/parse_viewer.py sessions/01_interpreter/tests/add_mul.c

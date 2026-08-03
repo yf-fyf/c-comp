@@ -319,8 +319,8 @@ void exit(int code);
 
 | 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
 |------|---------|-----------|------|------|
-| 行コメント `//` | コマ0 | `sessions/02_arithmetic_codegen/tests/div_round.c` | 標準 | Lexer は提供済み |
-| 識別子・キーワード 12 語 | コマ0 | 全テスト | 標準 | Lexer は提供済み。例外 E2 |
+| 行コメント `//` | コマ1 | `sessions/02_arithmetic_codegen/tests/div_round.c` | 標準 | Lexer は提供済み |
+| 識別子・キーワード 12 語 | コマ1 | 全テスト | 標準 | Lexer は提供済み。例外 E2 |
 | 整数リテラル | コマ2 | `sessions/02_arithmetic_codegen/tests/add.c` | 標準 | 10 進のみ |
 | 文字リテラル `'a'` | コマ8 | `sessions/08_types/tests/char_var.c` | 標準 | `'\0'` は `sessions/11_expr_walk_libc/tests/strlen_literal.c` |
 | 文字列リテラルとエスケープ | コマ10 | `sessions/10_strings_data_section/tests/printf_hello.c` | 標準 | 静的領域に置く |

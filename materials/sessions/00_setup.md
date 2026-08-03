@@ -2,9 +2,6 @@
 introduces:
   - rv64_asm_handwritten
   - toolchain_qemu_link
-  - provided_lexer_parser
-  - line_comment
-  - keywords_identifiers
 requires: []
 ---
 
@@ -79,6 +76,18 @@ Windows 側のファイルではなく、Ubuntu のホームディレクトリ�
 
 **推奨は Docker** である。RV64 クロスコンパイラと qemu が入った環境が用意してある
 （Ubuntu 22.04 ベースなので、コンテナ内の `python3` は 3.10 を満たす）。
+
+### Docker 自体を入れる
+
+Docker がまだ無い場合、Ubuntu（WSL の中でも同じ）で次を実行する。
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+```
+
+`usermod` の後は一度ログアウトして入り直す（WSL なら Ubuntu のウィンドウを閉じて開き直す）。
+`docker ps` が権限エラーにならずに実行できれば準備完了である。
 以下は `workbook/` から実行する。
 
 ```bash
