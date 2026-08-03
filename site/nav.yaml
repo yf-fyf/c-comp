@@ -22,8 +22,9 @@ sections:
   - slug: sessions
     title: 通常回
     group: 教材
-    summary: コマ1〜16 の16コマ。授業内では読解と着手までを行い、実装の完成は次回までの課題とする粒度に分けてある。最後のコマ16 だけは新しい実装をせず、発表と振り返りに充てる。
+    summary: 先頭は番号を持たない準備回のコマ0（演習環境構築）で、初回授業の開始時点で終わっているのが目標である。続くコマ1〜16 の16コマが通常回で、授業内では読解と着手までを行い、実装の完成は次回までの課題とする粒度に分けてある。最後のコマ16 だけは新しい実装をせず、発表と振り返りに充てる。
     pages:
+      - materials/sessions/00_setup.md
       - materials/sessions/01_interpreter.md
       - materials/sessions/02_arithmetic_codegen.md
       - materials/sessions/03_variables.md

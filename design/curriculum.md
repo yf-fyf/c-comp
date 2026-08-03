@@ -364,6 +364,13 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
   前提概念をすべて集め、同じ回で導入される概念を除いたものと一致する。
   手で足し引きしてはならない。
 - 検査は `python3 tools/check_concepts.py`（`make check-concepts`）で行う。
+  導入コマの照合はファイル名の先頭2桁で行うため、準備回のコマ0（`00_setup.md`）は
+  **導入コマ `0`** の行として台帳に載る。番号を持たない回だが、台帳の上では
+  コマ1 より前に位置する通常の回として扱う。
+- 環境・ツールチェーンと、教材が最初から提供するもの（`provided_lexer_parser` と、
+  それに伴って決まる `line_comment`・`keywords_identifiers`）はコマ0 の導入とする。
+  提供 Lexer / Parser を学習者が実際に触るのはコマ1 だが、「教員が用意した
+  ブラックボックスがある」という前提自体はコマ0 の環境構築で成立する。
 - 学習者向けの「機能 → 導入コマ → 検証テスト」の対応は
   [`workbook/docs/language_spec.md`](../workbook/docs/language_spec.md) の「到達範囲」節にある。
   こちらは仕様上の機能単位、本表は実装上の概念単位（設計要素を含む）で粒度が異なる。
@@ -376,11 +383,11 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
 
 | 概念ID | 概念 | 導入コマ | 前提概念 |
 |--------|------|---------|----------|
-| `rv64_asm_handwritten` | 手書き RV64 アセンブリとレジスタ | 1 | — |
-| `toolchain_qemu_link` | アセンブル・リンク・qemu 実行と終了コード | 1 | — |
-| `provided_lexer_parser` | 提供 Lexer / Parser（ブラックボックス） | 1 | — |
-| `line_comment` | 行コメント `//` | 1 | `provided_lexer_parser` |
-| `keywords_identifiers` | 識別子とキーワード 12 語 | 1 | `provided_lexer_parser` |
+| `rv64_asm_handwritten` | 手書き RV64 アセンブリとレジスタ | 0 | — |
+| `toolchain_qemu_link` | アセンブル・リンク・qemu 実行と終了コード | 0 | — |
+| `provided_lexer_parser` | 提供 Lexer / Parser（ブラックボックス） | 0 | — |
+| `line_comment` | 行コメント `//` | 0 | `provided_lexer_parser` |
+| `keywords_identifiers` | 識別子とキーワード 12 語 | 0 | `provided_lexer_parser` |
 | `ast_node_structure` | `Node` の構造（`kind` と子ノード） | 1 | `provided_lexer_parser` |
 | `ast_recursive_traversal` | AST の再帰的走査 | 1 | `ast_node_structure` |
 | `eval_ast_interpreter` | `eval_ast()` による式の評価 | 1 | `ast_recursive_traversal` |

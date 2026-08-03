@@ -11,7 +11,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ16（完成した `final/mycc.py`）、O1（測定基盤。`golden.py` が `measure.py` と `O1_measure/bench/` を使う） |
+| 必須の前提 | コマ15（完成した `final/mycc.py`）、O1（測定基盤。`golden.py` が `measure.py` と `O1_measure/bench/` を使う） |
 | 推奨の前提 | O3（命令選択）。実質必須に近い。資料の測定値は O1 の全構成の基準表の `+isel` 列を基準にしているので、O3 が無いと表と突き合わせられない |
 | 改変しない | `mycc.py`、`scaffold/`、`optcc.py` |
 | 編集する | `regalloc.py` |
