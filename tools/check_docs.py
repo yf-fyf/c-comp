@@ -26,6 +26,10 @@
               処理系と RV64 ツールチェーンが揃っているときだけ走る
     ident     conventions.md / testing.md / scaffold/README.md が挙げる識別子が
               workbook/sessions/ と workbook/scaffold/ に実在するか
+    grammar   materials/sessions/01〜14 の「この回までの言語仕様（EBNF）」節が
+              単調に増えているか（右辺の精密化は許可リストで扱う）、コマ14 が
+              language_spec.md の最終形 EBNF と一致するか、各スナップショットが
+              参照閉包（現れる非終端記号が定義済み）を満たすか
 
 除外リストは tools/doc_check_allowlist.yaml。理由は各エントリの reason に書く。
 除外は「ファイル + 行の内容（match） + 検出種別（check）」の3点で指定する。
@@ -1003,6 +1007,312 @@ def check_identifiers() -> list[Violation]:
     return violations
 
 
+# ── チェック9: 各コマの EBNF スナップショットの単調性 ──
+#
+# materials/sessions/01〜14 の「### この回までの言語仕様（EBNF）」節にある
+# ```ebnf ブロックは「その回までに書ける文法」の累積スナップショットである。
+# 回を追うごとに単調に増えるはずで、後の回で選択肢が消えるのは誤りである
+# （例外は下の GRAMMAR_REFINEMENTS に列挙した「右辺の精密化」だけ）。
+# 次の3点を検査する:
+#   (a) 単調性     コマN の選択肢集合 ⊆ コマN+1 の選択肢集合
+#                  （消えてよいのは GRAMMAR_REFINEMENTS の 12 件のみ）
+#   (b) 最終形一致 コマ14 の集合が language_spec.md「## 形式文法（EBNF）」節と
+#                  一致する（字句トークン節は各コマが省略するため対象外）。
+#                  T156 分割書は前処理指令 include_dir / define_dir の差分を
+#                  許容してよいとしたが、実際にはコマ13 の全文＋コマ14 の差分が
+#                  前処理指令まで含めて最終形と完全一致するため、例外を設けず
+#                  厳密一致で検査する（例外を設けるとコマ14 の差分ブロックが
+#                  丸ごと検査対象外になってしまう）
+#   (c) 参照閉包   スナップショットの右辺に現れる非終端記号（小文字始まり）が
+#                  すべて同じスナップショット内で定義されている
+#
+# コマ14 は差分だけを載せる（前処理指令のみ）ため、コマ13 の集合に対して
+# コマ14 のブロックが定義する規則を差し替えたものを「コマ14 の集合」とする。
+
+GRAMMAR_HEADING = "### この回までの言語仕様（EBNF）"
+GRAMMAR_SPEC_HEADING = "## 形式文法（EBNF）"
+GRAMMAR_SPEC_SKIP_SUBHEADINGS = {"### 字句トークン"}
+GRAMMAR_LAST_SESSION = 14
+# コマ14 は差分掲載（下記コマの番号は「ブロックが全文ではない回」）
+GRAMMAR_DIFF_SESSIONS = {14}
+
+# 回をまたいで右辺が「置き換わる」箇所。素朴な部分集合判定では削除と
+# 誤検知されるため、(消える回, 規則名, 精密化前, 精密化後) を許可リストに置く。
+# 出典: c-comp-design/tasks/T156_ebnf_snapshot_breakdown.md「精密化許可リスト」。
+GRAMMAR_REFINEMENTS: tuple[tuple[int, str, str, str], ...] = (
+    (2, "func_body", "'{' { stmt } '}'", "'{' { var_decl } { stmt } '}'"),
+    (2, "expr", "add_expr", "assign_expr"),
+    (6, "stmt", "'return' expr ';'", "'return' [ expr ] ';'"),
+    (5, "func_def", "'int' 'main' '(' ')' func_body",
+     "ret_type IDENT '(' [ param_list ] ')' func_body"),
+    (4, "expr_stmt", "expr ';'", "[ expr ] ';'"),
+    (6, "scalar_type", "'int'", "'int' [ stars ]"),
+    (8, "stars", "'*'", "'*' { '*' }"),
+    (12, "cond_expr", "eq_expr [ '?' expr ':' cond_expr ]",
+     "lor_expr [ '?' expr ':' cond_expr ]"),
+    (8, "unary_expr", "primary_expr", "postfix_expr"),
+    (3, "assign_expr", "add_expr", "cond_expr"),
+    (5, "program", "func_def", "external_decl { external_decl }"),
+    (9, "func_proto", "ret_type IDENT '(' [ param_list ] ')' ';'",
+     "ret_type IDENT '(' [ param_list [ ',' '...' ] ] ')' ';'"),
+)
+
+GRAMMAR_COMMENT_RE = re.compile(r"/\*.*?\*/")
+GRAMMAR_QUOTED_RE = re.compile(r"'[^']*'|\"[^\"]*\"")
+GRAMMAR_WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _grammar_normalize(text: str) -> str:
+    """コメントを落とし空白を正規化した右辺の文字列を返す。"""
+    return re.sub(r"\s+", " ", GRAMMAR_COMMENT_RE.sub(" ", text)).strip()
+
+
+def parse_ebnf_block(body: list[str], start_line: int) -> tuple[
+        list[tuple[str, str]], dict[str, int], list[str]]:
+    """```ebnf ブロックから (規則名, 選択肢) の並び・定義行番号・書式違反を返す。"""
+    alts: list[tuple[str, str]] = []
+    defined: dict[str, int] = {}
+    problems: list[str] = []
+    current: str | None = None
+    for offset, raw in enumerate(body):
+        line = _grammar_normalize(raw)
+        if not line:
+            continue
+        lineno = start_line + offset
+        if "::=" in line:
+            lhs, rhs = line.split("::=", 1)
+            current = lhs.strip()
+            if not current or " " in current:
+                problems.append(f"{lineno}: 規則名として解釈できない `{lhs.strip()}`")
+                current = None
+                continue
+            defined.setdefault(current, lineno)
+            rhs = rhs.strip()
+            if rhs:
+                alts.append((current, rhs))
+            continue
+        if line.startswith("|"):
+            if current is None:
+                problems.append(f"{lineno}: 規則名の無い選択肢行 `{line}`")
+                continue
+            rhs = line[1:].strip()
+            if rhs:
+                alts.append((current, rhs))
+            continue
+        problems.append(f"{lineno}: `::=` でも行頭 `|` でもない行 `{line}`")
+    return alts, defined, problems
+
+
+def _grammar_nonterminals(alt: str) -> set[str]:
+    """選択肢の右辺に現れる非終端記号（小文字始まり）を返す。"""
+    stripped = GRAMMAR_QUOTED_RE.sub(" ", alt)
+    return {w for w in GRAMMAR_WORD_RE.findall(stripped) if w[:1].islower()}
+
+
+def _grammar_session_paths() -> dict[int, Path]:
+    paths: dict[int, Path] = {}
+    if not MATERIALS_SESSIONS.is_dir():
+        return paths
+    for path in sorted(MATERIALS_SESSIONS.glob("*.md")):
+        m = re.match(r"^(\d\d)_", path.name)
+        if not m:
+            continue
+        n = int(m.group(1))
+        if 1 <= n <= GRAMMAR_LAST_SESSION:
+            paths[n] = path
+    return paths
+
+
+def _extract_ebnf_after(lines: list[str], heading_idx: int,
+                        stop_pred=None) -> tuple[list[str], int] | None:
+    """heading_idx の次から最初に現れる ```ebnf ブロックを返す（内容, 開始行番号）。"""
+    i = heading_idx + 1
+    while i < len(lines):
+        stripped = lines[i].strip()
+        if stop_pred is not None and stop_pred(stripped):
+            return None
+        if stripped == "```ebnf":
+            end = next((j for j in range(i + 1, len(lines))
+                        if lines[j].strip() == "```"), None)
+            if end is None:
+                return None
+            return lines[i + 1:end], i + 2
+        i += 1
+    return None
+
+
+def _grammar_spec_alternatives() -> tuple[list[tuple[str, str]], dict[str, int],
+                                          list[str]] | None:
+    """language_spec.md の最終形 EBNF（字句トークン節を除く）を返す。"""
+    if not LANG_SPEC_PATH.is_file():
+        return None
+    lines = LANG_SPEC_PATH.read_text(encoding="utf-8").splitlines()
+    start = next((i for i, line in enumerate(lines)
+                  if line.strip() == GRAMMAR_SPEC_HEADING), None)
+    if start is None:
+        return None
+    alts: list[tuple[str, str]] = []
+    defined: dict[str, int] = {}
+    problems: list[str] = []
+    subheading = ""
+    i = start + 1
+    while i < len(lines):
+        stripped = lines[i].strip()
+        if stripped.startswith("## "):
+            break
+        if stripped.startswith("### "):
+            subheading = stripped
+        if stripped == "```ebnf":
+            end = next((j for j in range(i + 1, len(lines))
+                        if lines[j].strip() == "```"), None)
+            if end is None:
+                break
+            if subheading not in GRAMMAR_SPEC_SKIP_SUBHEADINGS:
+                b_alts, b_defined, b_problems = parse_ebnf_block(
+                    lines[i + 1:end], i + 2)
+                alts.extend(b_alts)
+                for name, lineno in b_defined.items():
+                    defined.setdefault(name, lineno)
+                problems.extend(b_problems)
+            i = end
+        i += 1
+    return alts, defined, problems
+
+
+def check_grammar_snapshots() -> list[Violation]:
+    violations: list[Violation] = []
+    paths = _grammar_session_paths()
+    missing = [n for n in range(1, GRAMMAR_LAST_SESSION + 1) if n not in paths]
+    if missing:
+        return violations  # 原稿が揃っていない環境では検査しない
+
+    blocks: dict[int, tuple[list[tuple[str, str]], dict[str, int]]] = {}
+    for n in range(1, GRAMMAR_LAST_SESSION + 1):
+        path = paths[n]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        heading_idx = next((i for i, line in enumerate(lines)
+                            if line.strip() == GRAMMAR_HEADING), None)
+        if heading_idx is None:
+            violations.append(Violation(
+                path, 1, f"「{GRAMMAR_HEADING}」の節が無い"))
+            continue
+        block = _extract_ebnf_after(
+            lines, heading_idx,
+            stop_pred=lambda s: s.startswith("## ") or s.startswith("### "))
+        if block is None:
+            violations.append(Violation(
+                path, heading_idx + 1,
+                f"「{GRAMMAR_HEADING}」の直後に ```ebnf ブロックが見つからない"))
+            continue
+        body, start_line = block
+        alts, defined, problems = parse_ebnf_block(body, start_line)
+        for problem in problems:
+            lineno, _, msg = problem.partition(": ")
+            violations.append(Violation(path, int(lineno), "EBNF の書式違反: " + msg))
+        blocks[n] = (alts, defined)
+
+    if len(blocks) != GRAMMAR_LAST_SESSION:
+        return violations
+
+    # 累積集合を作る（コマ14 は差分掲載なのでコマ13 の集合へ重ねる）。
+    # 規則の定義位置は (ファイル, 行) で持つ。コマ14 が引き継いだ規則の違反を
+    # コマ14 の原稿の無関係な行に貼り付けないため。
+    cumulative: dict[int, set[tuple[str, str]]] = {}
+    cum_defined: dict[int, dict[str, tuple[Path, int]]] = {}
+    for n in range(1, GRAMMAR_LAST_SESSION + 1):
+        alts, defined = blocks[n]
+        own = {rule: (paths[n], lineno) for rule, lineno in defined.items()}
+        if n in GRAMMAR_DIFF_SESSIONS and n - 1 in cumulative:
+            merged = {(r, a) for (r, a) in cumulative[n - 1] if r not in defined}
+            merged |= set(alts)
+            merged_defined = dict(cum_defined[n - 1])
+            merged_defined.update(own)
+        else:
+            merged = set(alts)
+            merged_defined = own
+        cumulative[n] = merged
+        cum_defined[n] = merged_defined
+
+    def where(n: int, rule: str) -> tuple[Path, int]:
+        return cum_defined[n].get(rule, (paths[n], 1))
+
+    # (c) 参照閉包
+    for n in range(1, GRAMMAR_LAST_SESSION + 1):
+        defined = cum_defined[n]
+        for rule, alt in sorted(cumulative[n]):
+            for name in sorted(_grammar_nonterminals(alt)):
+                if name in defined:
+                    continue
+                path, lineno = where(n, rule)
+                violations.append(Violation(
+                    path, lineno,
+                    f"参照閉包の違反: コマ{n} のスナップショットの "
+                    f"`{rule} ::= {alt}` が参照する非終端記号 `{name}` が "
+                    "そのスナップショットに定義されていない"))
+
+    # (a) 単調性
+    refinements = {(n, rule, before): after
+                   for (n, rule, before, after) in GRAMMAR_REFINEMENTS}
+    used: set[tuple[int, str, str]] = set()
+    for n in range(1, GRAMMAR_LAST_SESSION):
+        removed = sorted(cumulative[n] - cumulative[n + 1])
+        for rule, alt in removed:
+            key = (n, rule, alt)
+            after = refinements.get(key)
+            path, lineno = where(n + 1, rule)
+            if after is None:
+                violations.append(Violation(
+                    path, lineno,
+                    f"単調性の違反: コマ{n} にある `{rule} ::= {alt}` が "
+                    f"コマ{n + 1} で消えている（精密化許可リストに無い）"))
+                continue
+            if (rule, after) not in cumulative[n + 1]:
+                violations.append(Violation(
+                    path, lineno,
+                    f"精密化の違反: コマ{n} の `{rule} ::= {alt}` は "
+                    f"コマ{n + 1} で `{after}` に精密化されるはずだが見当たらない"))
+                continue
+            used.add(key)
+    for key in sorted(set(refinements) - used):
+        n, rule, before = key
+        violations.append(Violation(
+            paths.get(n, MATERIALS_SESSIONS), 1,
+            f"精密化許可リストの死んだ項目: コマ{n} → コマ{n + 1} の "
+            f"`{rule} ::= {before}` の置換が実際には起きていない"))
+
+    # (b) コマ14 と最終形 EBNF の一致
+    spec = _grammar_spec_alternatives()
+    if spec is None:
+        violations.append(Violation(
+            LANG_SPEC_PATH, 1, f"「{GRAMMAR_SPEC_HEADING}」節の EBNF を読み取れない"))
+    else:
+        spec_alts, spec_defined, spec_problems = spec
+        for problem in spec_problems:
+            lineno, _, msg = problem.partition(": ")
+            violations.append(Violation(
+                LANG_SPEC_PATH, int(lineno), "EBNF の書式違反: " + msg))
+        spec_set = set(spec_alts)
+        last = cumulative[GRAMMAR_LAST_SESSION]
+        for rule, alt in sorted(spec_set - last):
+            violations.append(Violation(
+                LANG_SPEC_PATH, spec_defined.get(rule, 1),
+                f"最終形との不一致: `{rule} ::= {alt}` が最終形にあって "
+                f"コマ{GRAMMAR_LAST_SESSION} のスナップショットに無い"))
+        for rule, alt in sorted(last - spec_set):
+            path, lineno = where(GRAMMAR_LAST_SESSION, rule)
+            violations.append(Violation(
+                path, lineno,
+                f"最終形との不一致: `{rule} ::= {alt}` がコマ"
+                f"{GRAMMAR_LAST_SESSION} のスナップショットにあって最終形に無い"))
+        NOTES.append(f"最終形 EBNF の選択肢 {len(spec_set)} 個と突き合わせた")
+
+    NOTES.append(
+        f"{GRAMMAR_LAST_SESSION} コマのスナップショットから "
+        f"{sum(len(cumulative[n]) for n in cumulative)} 個の選択肢を抽出し、"
+        f"精密化 {len(used)}/{len(refinements)} 件を確認した")
+    return violations
+
+
 CHECKS = {
     "tests": ("原稿とテスト実体の突合", check_test_tables),
     "terms": ("旧仕様語の検出", check_legacy_terms),
@@ -1012,6 +1322,7 @@ CHECKS = {
     "exc": ("ISO C 例外の件数と見出しの一致", check_exception_count),
     "codeexec": ("code_example.md のコード実行", check_code_examples),
     "ident": ("規約文書が挙げる識別子の実在", check_identifiers),
+    "grammar": ("各コマの EBNF スナップショットの単調性", check_grammar_snapshots),
 }
 
 
