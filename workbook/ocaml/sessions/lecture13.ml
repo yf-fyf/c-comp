@@ -1,5 +1,5 @@
 (*
-    コマ 13: sizeof + malloc — sizeof(型名) と連結リスト
+   コマ13: sizeof + malloc — sizeof(型名) と連結リスト
 *)
 
 open Ast_def
@@ -12,8 +12,8 @@ let error ?(line = 0) msg = prerr_endline (Printf.sprintf "[line %d] %s" line ms
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
-(* スタックに積んでいる一時値の個数（1個 8 バイト）。
-   call 直前に sp が 16 の倍数かどうかを判定するために数える。 *)
+(* スタックに積んでいる一時値の個数（1 個 8 バイト）。
+   call 直前に sp が 16 バイト境界にあるかどうかを判定するために数える。 *)
 let depth = ref 0
 let label_count = ref 0
 let ret_label = ref ""
@@ -149,7 +149,7 @@ and codegen = function
         emit (Printf.sprintf "  addi sp, sp, %d" (n * 8));
         depth := !depth - n);
       (* 呼び出しを囲む式が積んでいる一時値は 1 個 8 バイト。
-         奇数個なら sp が 16 バイト境界からずれているので詰める。 *)
+         奇数個なら sp が 16 バイト境界からずれているので詰める（呼び出し規約）。 *)
       let pad = if !depth mod 2 <> 0 then 8 else 0 in
       if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, -%d" pad);
       emit (Printf.sprintf "  call %s" name);
@@ -184,16 +184,16 @@ let rec gen_stmt = function
   | Decl _ -> () | ExprStmt { expr = Some e; _ } -> codegen e | ExprStmt _ -> ()
   | Return { expr; _ } -> Option.iter codegen expr; emit (Printf.sprintf "  j %s" !ret_label)
   | Block { stmts; _ } -> List.iter gen_stmt stmts
-  | If { cond; then_; else_; _ } -> let lel = new_label () in codegen cond; emit (Printf.sprintf "  beqz a0, %s" lel); gen_stmt then_; (match else_ with Some e -> let lend = new_label () in emit (Printf.sprintf "  j %s" lend); emit (lel ^ ":"); gen_stmt e; emit (lend ^ ":") | None -> emit (lel ^ ":"))
-  | While { cond; body; _ } -> let lc = new_label () in let le = new_label () in push break_stack le; push cont_stack lc; emit (lc ^ ":"); codegen cond; emit (Printf.sprintf "  beqz a0, %s" le); gen_stmt body; emit (Printf.sprintf "  j %s" lc); emit (le ^ ":"); pop break_stack; pop cont_stack
-  | For { init; cond; step; body; _ } -> let lc = new_label () in let ls = new_label () in let le = new_label () in push break_stack le; push cont_stack ls; Option.iter codegen init; emit (lc ^ ":"); Option.iter (fun c -> codegen c; emit (Printf.sprintf "  beqz a0, %s" le)) cond; gen_stmt body; emit (ls ^ ":"); Option.iter codegen step; emit (Printf.sprintf "  j %s" lc); emit (le ^ ":"); pop break_stack; pop cont_stack
+  | If { cond; then_; else_; _ } -> let label_else = new_label () in codegen cond; emit (Printf.sprintf "  beqz a0, %s" label_else); gen_stmt then_; (match else_ with Some else_stmt -> let label_end = new_label () in emit (Printf.sprintf "  j %s" label_end); emit (label_else ^ ":"); gen_stmt else_stmt; emit (label_end ^ ":") | None -> emit (label_else ^ ":"))
+  | While { cond; body; _ } -> let label_cond = new_label () in let label_end = new_label () in push break_stack label_end; push cont_stack label_cond; emit (label_cond ^ ":"); codegen cond; emit (Printf.sprintf "  beqz a0, %s" label_end); gen_stmt body; emit (Printf.sprintf "  j %s" label_cond); emit (label_end ^ ":"); pop break_stack; pop cont_stack
+  | For { init; cond; step; body; _ } -> let label_cond = new_label () in let label_step = new_label () in let label_end = new_label () in push break_stack label_end; push cont_stack label_step; Option.iter codegen init; emit (label_cond ^ ":"); Option.iter (fun c -> codegen c; emit (Printf.sprintf "  beqz a0, %s" label_end)) cond; gen_stmt body; emit (label_step ^ ":"); Option.iter codegen step; emit (Printf.sprintf "  j %s" label_cond); emit (label_end ^ ":"); pop break_stack; pop cont_stack
   | Break _ -> emit (Printf.sprintf "  j %s" (peek break_stack))
   | Continue _ -> emit (Printf.sprintf "  j %s" (peek cont_stack))
 
 let gen_func = function
   | FuncDef { name; params; body; _ } ->
       Hashtbl.clear locals; stack_offset := 0; depth := 0; ret_label := new_label (); break_stack := []; cont_stack := [];
-      List.iter (fun (p : param) -> Option.iter (fun n -> alloc_local n p.ty) p.name) params;
+      List.iter (fun (p : param) -> Option.iter (fun name -> alloc_local name p.ty) p.name) params;
       collect_decls body;
       let frame_size = align_to !stack_offset 16 in
       emit (Printf.sprintf "  .globl %s" name); emit (name ^ ":");
