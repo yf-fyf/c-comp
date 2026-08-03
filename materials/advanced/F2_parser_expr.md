@@ -2,7 +2,7 @@
 
 ## 今日のゴール
 
-`language_spec.md` の EBNF の式の階層を、そのまま関数の階層に写して、
+`language_spec.md` の式の EBNF と優先順位表を、そのまま関数の階層に展開して、
 Core プロファイルの式パーサを自作する。
 85本の式コーパスで、AST が スキャフォールド の Parser と**完全一致**することを golden test で確認する。
 
@@ -30,9 +30,16 @@ F0 の CYK 法は、どんな文法でも扱える代わりに O(n³) の表を�
 > **文法の1規則を1つの関数にする。関数は、自分の規則の形どおりにトークンを読み進め、
 > 対応する部分木を返す。**
 
-`language_spec.md` の式の EBNF は、優先順位の低い順に
-`assign → cond → lor → land → eq → rel → add → mul → unary → postfix → primary`
-の11段の規則が並んでいる。
+`language_spec.md` の式の EBNF は、均質な二項演算子をまとめて1つの規則で与えている。
+
+```text
+binary_expr ::= unary_expr { bin_op unary_expr }
+```
+
+木の形を決めているのは、この規則ではなく併記された**優先順位表**である
+（高い順に `* / %`、`+ -`、`< > <= >=`、`== !=`、`&&`、`||` の6段。いずれも左結合）。
+再帰下降で書くときは、**この表の1行を1つの関数に展開する**。展開すると、たとえば
+表の上2行はこうなる。
 
 ```text
 add_expr ::= mul_expr { ('+' | '-') mul_expr }
@@ -41,8 +48,11 @@ mul_expr ::= unary_expr { ('*' | '/' | '%') unary_expr }
 
 この2行は、そのまま2つの関数 `parse_add` と `parse_mul` になる。
 「`add_expr` の中に `mul_expr` が出てくる」は「`parse_add` が `parse_mul` を呼ぶ」に対応する。
+表の6段を同じ要領で展開すると、優先順位の低い順に
+`assign → cond → lor → land → eq → rel → add → mul → unary → postfix → primary`
+の階段ができる。
 
-![EBNF の優先順位階層 = 関数の呼び出し階層](figures/F2_prec_ladder.svg)
+![優先順位表を展開した階層 = 関数の呼び出し階層](figures/F2_prec_ladder.svg)
 
 各関数は**自分のレベルの演算子だけ**を処理し、それより優先順位の高い部分は
 1段下の関数に丸ごと任せる。この構造だけで、`1 + 2 * 3` の `*` が先に結ばれる。
@@ -142,7 +152,7 @@ def parse_assign(self):
 ::: note
 
 **仕様の EBNF は `unary_expr '=' assign_expr` なのに、なぜ cond まで読むのか。**
-`cond_expr`（その中の `lor_expr`）は `unary_expr` を含むので、「先に cond まで
+`cond_expr`（その中の `binary_expr`）は `unary_expr` を含むので、「先に cond まで
 読んでしまい、`=` が来たらそれを代入の左辺とみなす」ことができる。
 `1 + 2 = x` のような不正な左辺はこの段階では通ってしまうが、
 左辺が lvalue かどうかの検査は意味解析（codegen_lval）に任せる —
@@ -152,8 +162,8 @@ EBNF の注釈「lvalue 制約は意味解析フェーズで検査」の実装�
 
 ## 値を持つ if — parse_cond（三項演算子）
 
-`cond_expr ::= lor_expr [ '?' expr ':' cond_expr ]` は、`assign` と `lor` の
-**間**に挟まる新しいレベルである。コマ4 で「文の `if` / 値を持つ式の `?:`」として
+`cond_expr ::= binary_expr [ '?' expr ':' cond_expr ]` は、`assign` と、二項演算子表を
+展開した最上段（`lor`）の**間**に挟まる新しいレベルである。コマ4 で「文の `if` / 値を持つ式の `?:`」として
 導入した三項演算子は、ここで木になる。
 
 ```python
@@ -167,7 +177,7 @@ def parse_cond(self):
     return node
 ```
 
-`'?'` がなければ、いつもどおり1段下（`lor_expr`）の結果をそのまま返す
+`'?'` がなければ、いつもどおり1段下（`parse_lor`）の結果をそのまま返す
 ——これも「素通し」の一種である。`else_` 側だけ `parse_cond` を再帰しているのが
 ポイントで、`a ? b : c ? d : e` が `(ternary a b (ternary c d e))` という
 右結合の木になる（`then` 側は `parse_expr` で読むため、そちらは代入も許される）。
@@ -275,7 +285,8 @@ python3 golden.py
 **コラム: 二項演算のレベルを1個の関数にする方法。**
 `lor`・`land`・`eq`・`rel`・`add`・`mul` のような二項演算のレベルは、
 「演算子ごとの優先順位の数値」を引数に持つ1つの関数 `parse_expr(min_prec)`
-にまとめる書き方があり、precedence climbing あるいは Pratt parsing と呼ばれる
+にまとめる書き方があり、precedence climbing あるいは Pratt parsing と呼ばれる。
+これは階層に展開せず、`language_spec.md` の優先順位表をそのまま引きながら読む方式である
 （`cond`・`assign`・`unary`・`postfix` は構造が違うので、この一般化には乗らない）。
 実務のパーサ（clang など）でも使われる技法だが、
 「文法の階層がそのままコードに見える」教育的な美しさはレベルごとに関数を分ける方式にある。

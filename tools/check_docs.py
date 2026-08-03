@@ -1311,6 +1311,135 @@ def check_grammar_snapshots() -> list[Violation]:
     return violations
 
 
+# ── チェック10: 各コマの二項演算子 優先順位表 ──
+#
+# フラット方式（T160）では、二項演算子の木の形は EBNF ではなく
+# 「### この回までの言語仕様（EBNF）」節の ```ebnf ブロック直後に置いた
+# 優先順位表が担う。表は Markdown 表なのでチェック9 の視野に入らないため、
+# ここで別に検査する。検査する3点:
+#   (a) 表の存在   コマ1〜13 に PREC_INTRO で始まる表がある（コマ14 は差分掲載）
+#   (b) 表の内容   行が PREC_TABLE の「その回までに導入済み」の並びと
+#                  （演算子の集合・結合・順序まで）一致する
+#   (c) bin_op 整合 同じスナップショットの `bin_op` の選択肢行が、表の同じ位置の
+#                  行と同じ演算子集合である（表と EBNF の食い違いを検出）
+#
+# 既知の限界（チェック9 の精密化許可リストと同種）: 「導入コマ」の値そのものが
+# 正しいかは検証しない。T160 分割書の対応表と人手レビューの責任範囲である。
+
+# 正典。workbook/docs/language_spec.md の「演算子」節（<a id="operators"></a>）と
+# 目視で同期させること。行 = (演算子タプル, 結合, 導入コマ)。
+PREC_TABLE: tuple[tuple[tuple[str, ...], str, int], ...] = (
+    (("*", "/", "%"), "左", 2),
+    (("+", "-"), "左", 2),
+    (("<", ">", "<=", ">="), "左", 4),
+    (("==", "!="), "左", 4),
+    (("&&",), "左", 13),
+    (("||",), "左", 13),
+)
+PREC_INTRO = "この回までの二項演算子の優先順位（高い順）:"
+PREC_LAST_SESSION = 13  # コマ14 は差分掲載なので表を持たない
+PREC_CELL_CODE_RE = re.compile(r"`([^`]+)`")
+
+
+def _prec_expected(n: int) -> list[tuple[tuple[str, ...], str]]:
+    """コマ n の表に載るべき行を返す（コマ1 の範囲はコマ2 と同一）。"""
+    limit = max(n, 2)
+    return [(ops, assoc) for (ops, assoc, intro) in PREC_TABLE if intro <= limit]
+
+
+def _prec_parse_table(lines: list[str], start: int) -> tuple[
+        list[tuple[tuple[str, ...], str]], int] | None:
+    """PREC_INTRO 行 start の後ろの Markdown 表を (行, 表の開始行番号) で返す。"""
+    i = start + 1
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    if i >= len(lines) or not lines[i].strip().startswith("|"):
+        return None
+    header_lineno = i + 1
+    i += 2  # ヘッダ行と区切り行を読み飛ばす
+    rows: list[tuple[tuple[str, ...], str]] = []
+    while i < len(lines) and lines[i].strip().startswith("|"):
+        # `\|`（表中でパイプを書くための退避）では列を分割しない
+        cells = [c.strip() for c in
+                 re.split(r"(?<!\\)\|", lines[i].strip().strip("|"))]
+        if len(cells) >= 3:
+            ops = tuple(m.replace("\\|", "|")
+                        for m in PREC_CELL_CODE_RE.findall(cells[1]))
+            rows.append((ops, cells[2]))
+        i += 1
+    return rows, header_lineno
+
+
+def _prec_bin_op_rows(alts: list[tuple[str, str]]) -> list[tuple[str, ...]]:
+    """スナップショットの `bin_op` の各選択肢行の演算子タプルを返す。"""
+    return [tuple(m[1:-1] for m in GRAMMAR_QUOTED_RE.findall(alt))
+            for (rule, alt) in alts if rule == "bin_op"]
+
+
+def check_precedence_tables() -> list[Violation]:
+    violations: list[Violation] = []
+    paths = _grammar_session_paths()
+    if [n for n in range(1, PREC_LAST_SESSION + 1) if n not in paths]:
+        return violations  # 原稿が揃っていない環境では検査しない
+
+    checked = 0
+    for n in range(1, PREC_LAST_SESSION + 1):
+        path = paths[n]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        heading_idx = next((i for i, line in enumerate(lines)
+                            if line.strip() == GRAMMAR_HEADING), None)
+        if heading_idx is None:
+            continue  # チェック9 が報告する
+        block = _extract_ebnf_after(
+            lines, heading_idx,
+            stop_pred=lambda s: s.startswith("## ") or s.startswith("### "))
+        if block is None:
+            continue  # チェック9 が報告する
+        body, start_line = block
+        alts, _defined, _problems = parse_ebnf_block(body, start_line)
+
+        intro_idx = next((i for i in range(heading_idx, len(lines))
+                          if lines[i].strip() == PREC_INTRO), None)
+        expected = _prec_expected(n)
+        if intro_idx is None:
+            violations.append(Violation(
+                path, heading_idx + 1,
+                f"優先順位表が無い: コマ{n} の「{GRAMMAR_HEADING}」節に "
+                f"「{PREC_INTRO}」で始まる表が見つからない"))
+            continue
+        parsed = _prec_parse_table(lines, intro_idx)
+        if parsed is None:
+            violations.append(Violation(
+                path, intro_idx + 1,
+                f"優先順位表が読み取れない: コマ{n} の「{PREC_INTRO}」の直後に "
+                "Markdown 表が無い"))
+            continue
+        rows, table_lineno = parsed
+        if rows != expected:
+            violations.append(Violation(
+                path, table_lineno,
+                f"優先順位表の不一致: コマ{n} の表は "
+                f"{[(' '.join(o), a) for o, a in expected]} であるべきだが "
+                f"{[(' '.join(o), a) for o, a in rows]} になっている"))
+            continue
+
+        bin_op_rows = _prec_bin_op_rows(alts)
+        expected_ops = [ops for ops, _assoc in expected]
+        if bin_op_rows != expected_ops:
+            violations.append(Violation(
+                path, start_line,
+                f"`bin_op` と優先順位表の食い違い: コマ{n} の `bin_op` は "
+                f"{[' '.join(o) for o in expected_ops]} の順に並ぶべきだが "
+                f"{[' '.join(o) for o in bin_op_rows]} になっている"))
+            continue
+        checked += 1
+
+    NOTES.append(
+        f"コマ1〜{PREC_LAST_SESSION} のうち {checked} コマの優先順位表を "
+        f"正典 {len(PREC_TABLE)} 段および `bin_op` と突き合わせた")
+    return violations
+
+
 CHECKS = {
     "tests": ("原稿とテスト実体の突合", check_test_tables),
     "terms": ("旧仕様語の検出", check_legacy_terms),
@@ -1321,6 +1450,7 @@ CHECKS = {
     "codeexec": ("code_example.md のコード実行", check_code_examples),
     "ident": ("規約文書が挙げる識別子の実在", check_identifiers),
     "grammar": ("各コマの EBNF スナップショットの単調性", check_grammar_snapshots),
+    "prec": ("各コマの二項演算子 優先順位表の整合", check_precedence_tables),
 }
 
 
