@@ -28,6 +28,14 @@ qemu 上で手書き RV64 アセンブリを実行して終了コード `42` を
 WSL の導入手順を含む詳しい説明は上記の資料サイトにある。
 
 推奨は Docker で、上の3つが入った環境が用意してある（`workbook/` から実行する）。
+Docker がまだ無い場合、Ubuntu（WSL の中でも同じ）で次を実行して入れる。
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+```
+
+`usermod` の後は一度ログアウトして入り直す（`docker ps` が権限エラーにならなければ準備完了）。
 
 ```bash
 # コンテナ起動（初回はイメージをビルド）
