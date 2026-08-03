@@ -1,5 +1,5 @@
 (*
-    コマ 7: 関数② — 引数受け取り + 関数呼び出し
+   コマ7: 関数② — 引数受け取り + 関数呼び出し
 *)
 
 open Ast_def
@@ -13,8 +13,8 @@ let error ?(line = 0) msg =
 let locals : (string, int) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
-(* スタックに積んでいる一時値の個数（1個 8 バイト）。
-   call 直前に sp が 16 の倍数かどうかを判定するために数える。 *)
+(* スタックに積んでいる一時値の個数（1 個 8 バイト）。
+   call 直前に sp が 16 バイト境界にあるかどうかを判定するために数える。 *)
 let depth = ref 0
 
 let label_count = ref 0

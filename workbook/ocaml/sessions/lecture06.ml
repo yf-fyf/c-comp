@@ -1,5 +1,5 @@
 (*
-    コマ 6: 制御構文② — while / for / break / continue
+   コマ6: 制御構文② — while / for / break / continue
 *)
 
 open Ast_def

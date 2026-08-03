@@ -1,5 +1,5 @@
 (*
-   コマ 2: AST インタープリター（OCaml 版）
+   コマ2: AST インタープリター（OCaml 版）
 *)
 
 open Ast_def
