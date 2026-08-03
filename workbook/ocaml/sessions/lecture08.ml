@@ -1,5 +1,5 @@
 (*
-    コマ8: lvalue / rvalue — アドレス演算子 & と間接演算子 *
+   コマ8: lvalue / rvalue — アドレス演算子 & と間接演算子 *
 *)
 
 open Ast_def

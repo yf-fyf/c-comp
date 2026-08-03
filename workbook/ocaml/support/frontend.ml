@@ -1,6 +1,6 @@
 (*
    Frontend の統合入口。
-   前処理 -> 字句解析(ocamllex) -> 構文解析(ocamlyacc) をまとめる。
+   前処理 → 字句解析（ocamllex） → 構文解析（menhir） をまとめる。
 *)
 
 let init_lexbuf filename source =

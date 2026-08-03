@@ -55,7 +55,7 @@ let parse ~filename source =
 (* units は (ファイル名, ソース) の並び。前処理は support のものをそのまま使う。
    reference/ は例外のまま受け取る preprocess_exn を使い、Diag.Preprocess に
    載せ替えて他フェーズ（Parse / Typing）と同じ経路でエラーを扱う。
-   sessions/koma*.ml と web/core は従来どおり Preprocess.preprocess /
+   sessions/lectureNN.ml と web/core は従来どおり Preprocess.preprocess /
    preprocess_with_map（その場で印字して終了する）を使い続けるため、
    ここでの変更は reference/ の内部だけに閉じている。 *)
 (* 文と命令の対応（Emitter.stmt_span）も一緒に返す入口。
