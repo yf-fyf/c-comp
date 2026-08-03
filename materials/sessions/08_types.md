@@ -57,6 +57,73 @@ n = 4;     // 4バイト書く   → sw
 この言語に配列はない。連続した領域を扱う話（`malloc` と添字）はコマ9 で扱う。
 構造体、グローバル変数はさらに後の回で扱う。
 
+### この回までの言語仕様（EBNF）
+
+この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+[`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
+
+```ebnf
+stars       ::= '*'              /* 多段ポインタ int ** はコマ9 */
+
+scalar_type ::= 'int'  [ stars ]
+              | 'char' [ stars ] /* struct はコマ11、void * はコマ12 */
+obj_type    ::= scalar_type
+ret_type    ::= scalar_type
+              | 'void'
+
+program       ::= external_decl { external_decl }
+external_decl ::= func_proto
+                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
+var_decl      ::= obj_type IDENT ';'
+
+param       ::= scalar_type IDENT
+param_list  ::= param { ',' param }
+func_proto  ::= ret_type IDENT '(' [ param_list ] ')' ';'   /* '...' はコマ10 */
+func_def    ::= ret_type IDENT '(' [ param_list ] ')' func_body
+func_body   ::= '{' { var_decl } { stmt } '}'
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | 'break' ';'
+              | 'continue' ';'
+              | 'return' [ expr ] ';'
+expr_stmt   ::= [ expr ] ';'
+block       ::= '{' { stmt } '}'
+if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
+while_stmt  ::= 'while' '(' expr ')' stmt
+for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= eq_expr [ '?' expr ':' cond_expr ]   /* 論理 || && はコマ13 */
+eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
+rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+unary_expr  ::= primary_expr     /* 添字 [ ] と sizeof はコマ9、. -> はコマ12 */
+              | '-'  unary_expr
+              | '*'  unary_expr
+              | '&'  unary_expr
+              | '++' unary_expr
+              | '--' unary_expr
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | IDENT '(' [ arg_list ] ')'
+               | IDENT
+               | '(' expr ')'
+arg_list    ::= assign_expr { ',' assign_expr }
+```
+
+この回で増えたのは `scalar_type` の `char` と `primary_expr` の `CHAR_LITERAL` の2行だけである。
+型が増えても構文の形は変わらず、変わるのはサイズと命令の選択である。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
+
 ## 型の扱い
 
 新しいスキャフォールドでは、`Type` クラスを使わず、`ty_str` 文字列で型を扱う。

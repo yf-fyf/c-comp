@@ -66,6 +66,85 @@ p + 2;   // 2バイト進むのではなく、2 * sizeof(int) バイト進む
 
 構造体、連結リストの本格的な利用、グローバル変数は後の回で扱う。
 
+### この回までの言語仕様（EBNF）
+
+この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+[`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
+
+`#include` はこの回から書くが、指令行（行頭の `#` から改行まで）は構文解析より前に処理されるため、
+以下の `include_dir` 以外の規則には現れない。この回で書けるのは提供物の `lib.h` の取込みだけで、
+自作ヘッダと入れ子の取込み、`#define` はコマ14 で扱う。
+
+```ebnf
+include_dir ::= '#' 'include' '"' FILENAME '"' NEWLINE   /* #define はコマ14 */
+
+stars       ::= '*' { '*' }
+
+scalar_type ::= 'int'  [ stars ]
+              | 'char' [ stars ] /* struct はコマ11、void * はコマ12 */
+obj_type    ::= scalar_type      /* struct Tag はコマ12 */
+ret_type    ::= scalar_type
+              | 'void'
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= func_proto
+                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
+var_decl      ::= obj_type IDENT ';'
+
+param       ::= scalar_type IDENT
+param_list  ::= param { ',' param }
+func_proto  ::= ret_type IDENT '(' [ param_list ] ')' ';'   /* '...' はコマ10 */
+func_def    ::= ret_type IDENT '(' [ param_list ] ')' func_body
+func_body   ::= '{' { var_decl } { stmt } '}'
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | 'break' ';'
+              | 'continue' ';'
+              | 'return' [ expr ] ';'
+expr_stmt   ::= [ expr ] ';'
+block       ::= '{' { stmt } '}'
+if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
+while_stmt  ::= 'while' '(' expr ')' stmt
+for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= eq_expr [ '?' expr ':' cond_expr ]   /* 論理 || && はコマ13 */
+eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
+rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+unary_expr  ::= postfix_expr
+              | '-'  unary_expr
+              | '*'  unary_expr
+              | '&'  unary_expr
+              | '++' unary_expr
+              | '--' unary_expr
+              | 'sizeof' '(' type_name ')'
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= '[' expr ']'  /* . と -> はコマ12 */
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | IDENT '(' [ arg_list ] ')'
+               | IDENT
+               | '(' expr ')'
+arg_list    ::= assign_expr { ',' assign_expr }
+```
+
+`p + 1` の `+` はコマ2 から形が変わっていない。変わったのは意味（要素サイズ倍のスケーリング）だけである。
+`sizeof` は型名形式のみで、`sizeof(x)` のように式を書くと構文エラーになる。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
+
 ## AST を確認する: malloc 領域の添字アクセス
 
 まず、malloc で確保した領域を添字で使うプログラムがどのような AST になるか確認する。

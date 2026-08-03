@@ -54,6 +54,66 @@ int main() {
 
 これまでに扱ったすべての機能（変数、式、制御構文）を、`main` 以外の関数内でも使用できる。
 
+### この回までの言語仕様（EBNF）
+
+この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+[`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
+
+```ebnf
+scalar_type ::= 'int'            /* ポインタはコマ7、char はコマ8 */
+obj_type    ::= scalar_type
+ret_type    ::= scalar_type      /* void はコマ7 */
+
+program       ::= external_decl { external_decl }
+external_decl ::= func_proto
+                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
+var_decl      ::= obj_type IDENT ';'
+
+param       ::= scalar_type IDENT
+param_list  ::= param { ',' param }
+func_proto  ::= ret_type IDENT '(' [ param_list ] ')' ';'   /* '...' はコマ10 */
+func_def    ::= ret_type IDENT '(' [ param_list ] ')' func_body
+func_body   ::= '{' { var_decl } { stmt } '}'
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | 'break' ';'
+              | 'continue' ';'
+              | 'return' expr ';'
+expr_stmt   ::= [ expr ] ';'
+block       ::= '{' { stmt } '}'
+if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
+while_stmt  ::= 'while' '(' expr ')' stmt
+for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= eq_expr [ '?' expr ':' cond_expr ]   /* 論理 || && はコマ13 */
+eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
+rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+unary_expr  ::= primary_expr
+              | '-'  unary_expr
+              | '++' unary_expr
+              | '--' unary_expr
+primary_expr ::= INT_LITERAL
+               | IDENT '(' [ arg_list ] ')'
+               | IDENT
+               | '(' expr ')'
+arg_list    ::= assign_expr { ',' assign_expr }
+```
+
+`main` だけを書いていたこれまでと違い、`program` が複数の外部宣言を持てるようになった。
+引数なしは `()` と書く（`(void)` は受理しない）。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
+
 ## AST を確認する
 
 ### 関数定義

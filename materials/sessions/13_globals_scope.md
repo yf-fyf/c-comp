@@ -54,6 +54,100 @@ int add(int x) {
 言語仕様に初期化子はない。グローバル変数は**すべて 0 に初期化される**ことが
 保証されており（ポインタなら null）、初期値が必要なら代入文で設定する。
 
+### この回までの言語仕様（EBNF）
+
+この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+[`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
+
+**この回で、構文は最終形と完全に一致する。** コマ14 で増えるのは前処理指令だけである。
+この回で書ける `#include` は提供物の `lib.h` の取込みだけで、
+自作ヘッダと入れ子の取込み、`#define` はコマ14 で扱う。
+
+```ebnf
+include_dir ::= '#' 'include' '"' FILENAME '"' NEWLINE
+
+stars       ::= '*' { '*' }
+
+scalar_type ::= 'int'  [ stars ]
+              | 'char' [ stars ]
+              | 'void' stars
+              | 'struct' IDENT stars
+obj_type    ::= scalar_type
+              | 'struct' IDENT
+ret_type    ::= scalar_type
+              | 'void'
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= struct_decl
+                | var_decl
+                | func_proto
+                | func_def
+struct_decl   ::= 'struct' IDENT '{' field_decl { field_decl } '}' ';'
+                | 'struct' IDENT ';'
+field_decl    ::= scalar_type IDENT ';'
+var_decl      ::= obj_type IDENT ';'
+
+param       ::= scalar_type IDENT
+param_list  ::= param { ',' param }
+func_proto  ::= ret_type IDENT '(' [ param_list [ ',' '...' ] ] ')' ';'
+func_def    ::= ret_type IDENT '(' [ param_list ] ')' func_body
+func_body   ::= '{' { var_decl } { stmt } '}'
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | 'break' ';'
+              | 'continue' ';'
+              | 'return' [ expr ] ';'
+expr_stmt   ::= [ expr ] ';'
+block       ::= '{' { stmt } '}'
+if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
+while_stmt  ::= 'while' '(' expr ')' stmt
+for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= lor_expr [ '?' expr ':' cond_expr ]
+lor_expr    ::= land_expr { '||' land_expr }
+land_expr   ::= eq_expr   { '&&' eq_expr }
+eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
+rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+unary_expr  ::= postfix_expr
+              | '-'  unary_expr
+              | '!'  unary_expr
+              | '*'  unary_expr
+              | '&'  unary_expr
+              | '++' unary_expr
+              | '--' unary_expr
+              | 'sizeof' '(' type_name ')'
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= '[' expr ']'
+                 | '.'  IDENT
+                 | '->' IDENT
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | STRING_LITERAL
+               | IDENT '(' [ arg_list ] ')'
+               | IDENT
+               | '(' expr ')'
+arg_list    ::= assign_expr { ',' assign_expr }
+```
+
+グローバル変数は `external_decl` に `var_decl` が加わっただけである。
+`var_decl` の形はローカル宣言と同一で、どちらであるかは書かれた位置だけで決まる。
+`&&` と `||` はこの回で入るが、短絡評価はしない。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
+
 ## AST を確認する: グローバル変数
 
 まず、関数外の変数宣言が AST でどう見えるか確認する。

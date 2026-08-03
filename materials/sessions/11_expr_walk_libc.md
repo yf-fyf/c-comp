@@ -38,6 +38,87 @@ if ("abc"[1] != 'b') {   // Index の下にある "abc" を、コマ10 はまだ
 作業そのものには意味がある。AST を手でたどる練習は、後のコマ（グローバル変数の走査、
 `sizeof` の型計算、多ファイル対応）でも同じ形で繰り返し出てくる。
 
+### この回までの言語仕様（EBNF）
+
+この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+[`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
+
+文法もコマ10 とほぼ同じで、増えるのは `scalar_type` の `'struct' IDENT stars` の1行だけである。
+`lib.h` のストリーム関数を使うために `struct FILE *` と書くようになるためで、
+構造体そのもの（定義・フィールド・`.` と `->`）はコマ12 で扱う。
+この回で書ける `#include` は提供物の `lib.h` の取込みだけで、
+自作ヘッダと入れ子の取込み、`#define` はコマ14 で扱う。
+
+```ebnf
+include_dir ::= '#' 'include' '"' FILENAME '"' NEWLINE   /* #define はコマ14 */
+
+stars       ::= '*' { '*' }
+
+scalar_type ::= 'int'  [ stars ]
+              | 'char' [ stars ]
+              | 'struct' IDENT stars   /* void * はコマ12 */
+obj_type    ::= scalar_type      /* struct Tag はコマ12 */
+ret_type    ::= scalar_type
+              | 'void'
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= func_proto
+                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
+var_decl      ::= obj_type IDENT ';'
+
+param       ::= scalar_type IDENT
+param_list  ::= param { ',' param }
+func_proto  ::= ret_type IDENT '(' [ param_list [ ',' '...' ] ] ')' ';'
+func_def    ::= ret_type IDENT '(' [ param_list ] ')' func_body
+func_body   ::= '{' { var_decl } { stmt } '}'
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | 'break' ';'
+              | 'continue' ';'
+              | 'return' [ expr ] ';'
+expr_stmt   ::= [ expr ] ';'
+block       ::= '{' { stmt } '}'
+if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
+while_stmt  ::= 'while' '(' expr ')' stmt
+for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= eq_expr [ '?' expr ':' cond_expr ]   /* 論理 || && はコマ13 */
+eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
+rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+unary_expr  ::= postfix_expr
+              | '-'  unary_expr
+              | '*'  unary_expr
+              | '&'  unary_expr
+              | '++' unary_expr
+              | '--' unary_expr
+              | 'sizeof' '(' type_name ')'
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= '[' expr ']'  /* . と -> はコマ12 */
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | STRING_LITERAL
+               | IDENT '(' [ arg_list ] ')'
+               | IDENT
+               | '(' expr ')'
+arg_list    ::= assign_expr { ',' assign_expr }
+```
+
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
+
 ## 3つの型に分かれる
 
 書くハンドラは、子の数で3つの型に分かれる。

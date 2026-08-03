@@ -54,6 +54,32 @@ int main() {
 
 変数、代入、if、while、関数呼び出しはまだ扱わない。
 
+### この回までの言語仕様（EBNF）
+
+この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+[`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
+
+```ebnf
+program       ::= func_def        /* ユーザー定義関数はコマ6 */
+
+func_def    ::= 'int' 'main' '(' ')' func_body   /* 一般の関数定義はコマ6 */
+func_body   ::= '{' { stmt } '}'
+
+stmt        ::= 'return' expr ';'
+
+expr        ::= add_expr         /* 代入はコマ3、比較・条件はコマ4、論理はコマ13 */
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+unary_expr  ::= primary_expr
+              | '-'  unary_expr
+primary_expr ::= INT_LITERAL
+               | '(' expr ')'
+```
+
+字句トークン（`INT_LITERAL` など）の定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
+
 ## AST を確認する
 
 コマ1と同じように、まず Parser が返す AST を確認する。

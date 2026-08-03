@@ -55,6 +55,58 @@ int main() {
 
 関数呼び出しとポインタはまだ扱わない。
 
+### この回までの言語仕様（EBNF）
+
+この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+[`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
+
+```ebnf
+scalar_type ::= 'int'            /* ポインタはコマ7、char はコマ8 */
+obj_type    ::= scalar_type
+
+program       ::= func_def        /* ユーザー定義関数はコマ6 */
+var_decl      ::= obj_type IDENT ';'
+
+func_def    ::= 'int' 'main' '(' ')' func_body   /* 一般の関数定義はコマ6 */
+func_body   ::= '{' { var_decl } { stmt } '}'
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | 'break' ';'
+              | 'continue' ';'
+              | 'return' expr ';'
+expr_stmt   ::= [ expr ] ';'
+block       ::= '{' { stmt } '}'
+if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
+while_stmt  ::= 'while' '(' expr ')' stmt
+for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= eq_expr [ '?' expr ':' cond_expr ]   /* 論理 || && はコマ13 */
+eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
+rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+unary_expr  ::= primary_expr
+              | '-'  unary_expr
+              | '++' unary_expr
+              | '--' unary_expr
+primary_expr ::= INT_LITERAL
+               | IDENT
+               | '(' expr ')'
+```
+
+`for` の3つの式と `expr_stmt` の式が省略可能になったのがこの回である
+（`for (;;)` と空文 `;` が書けるようになる）。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
+
 ## AST を確認する
 
 ### while のAST

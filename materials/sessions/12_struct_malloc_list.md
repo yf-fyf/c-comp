@@ -89,6 +89,95 @@ struct Node { int val; struct Node *next; };    // ヒープ上に置く例
 扱わない範囲（struct 値の入れ子、構造体代入、グローバル構造体変数）は「注意」節にまとめた。
 `malloc` 自体も自作しない。`lib.h` の宣言を使い、リンク時に libc の `malloc` を呼び出す。
 
+### この回までの言語仕様（EBNF）
+
+この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+[`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
+
+この回で書ける `#include` は提供物の `lib.h` の取込みだけで、
+自作ヘッダと入れ子の取込み、`#define` はコマ14 で扱う。
+
+```ebnf
+include_dir ::= '#' 'include' '"' FILENAME '"' NEWLINE   /* #define はコマ14 */
+
+stars       ::= '*' { '*' }
+
+scalar_type ::= 'int'  [ stars ]
+              | 'char' [ stars ]
+              | 'void' stars
+              | 'struct' IDENT stars
+obj_type    ::= scalar_type
+              | 'struct' IDENT
+ret_type    ::= scalar_type
+              | 'void'
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= struct_decl
+                | func_proto
+                | func_def       /* グローバル変数はコマ13 */
+struct_decl   ::= 'struct' IDENT '{' field_decl { field_decl } '}' ';'
+                | 'struct' IDENT ';'
+field_decl    ::= scalar_type IDENT ';'
+var_decl      ::= obj_type IDENT ';'
+
+param       ::= scalar_type IDENT
+param_list  ::= param { ',' param }
+func_proto  ::= ret_type IDENT '(' [ param_list [ ',' '...' ] ] ')' ';'
+func_def    ::= ret_type IDENT '(' [ param_list ] ')' func_body
+func_body   ::= '{' { var_decl } { stmt } '}'
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | 'break' ';'
+              | 'continue' ';'
+              | 'return' [ expr ] ';'
+expr_stmt   ::= [ expr ] ';'
+block       ::= '{' { stmt } '}'
+if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
+while_stmt  ::= 'while' '(' expr ')' stmt
+for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= eq_expr [ '?' expr ':' cond_expr ]   /* 論理 || && はコマ13 */
+eq_expr     ::= rel_expr  { ( '==' | '!=' ) rel_expr }
+rel_expr    ::= add_expr  { ( '<' | '>' | '<=' | '>=' ) add_expr }
+add_expr    ::= mul_expr  { ( '+' | '-' ) mul_expr }
+mul_expr    ::= unary_expr { ( '*' | '/' | '%' ) unary_expr }
+unary_expr  ::= postfix_expr
+              | '-'  unary_expr
+              | '*'  unary_expr
+              | '&'  unary_expr
+              | '++' unary_expr
+              | '--' unary_expr
+              | 'sizeof' '(' type_name ')'
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= '[' expr ']'
+                 | '.'  IDENT
+                 | '->' IDENT
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | STRING_LITERAL
+               | IDENT '(' [ arg_list ] ')'
+               | IDENT
+               | '(' expr ')'
+arg_list    ::= assign_expr { ',' assign_expr }
+```
+
+`obj_type` にだけ `'struct' IDENT`（`*` なし）があり、`scalar_type` には無い。
+この構成により、struct 値の引数・戻り値・フィールドは構文の段階で書けなくなっている。
+struct 定義はファイルスコープのみで、タグ必須、フィールドは1個以上、初期化子は存在しない。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
+
 ## AST を確認する: `.` と `->`
 
 まず、メンバアクセスがどのような AST になるか確認する。
