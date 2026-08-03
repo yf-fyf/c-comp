@@ -30,6 +30,9 @@ qemu 上で手書き RV64 アセンブリを実行し、終了コード `42` を
 
 Docker 環境（`docker/rv64/`）を使えば、この3つはすべて入った状態で始められる。
 
+**Python 3.10 以降という基準は、この節が教材全体を通じての唯一の出典である**
+（他の文書ではここを参照すること）。
+
 ## 1. Windows の場合: WSL 上に Ubuntu を入れる
 
 macOS・Linux を使う場合はこの節を読み飛ばし、「2. 演習環境を用意する」へ進む。
@@ -73,7 +76,8 @@ Windows 側のファイルではなく、Ubuntu のホームディレクトリ�
 
 ## 2. 演習環境を用意する
 
-**推奨は Docker** である。RV64 クロスコンパイラと qemu が入った環境が用意してある。
+**推奨は Docker** である。RV64 クロスコンパイラと qemu が入った環境が用意してある
+（Ubuntu 22.04 ベースなので、コンテナ内の `python3` は 3.10 を満たす）。
 以下は `workbook/` から実行する。
 
 ```bash
@@ -82,6 +86,12 @@ bash docker/rv64/run.sh
 
 # 1コマンドだけ実行する
 bash docker/rv64/run.sh python3 sessions/00_setup/check.py
+```
+
+後の回でテストをまとめて走らせるときも、同じ形で使う。
+
+```bash
+bash docker/rv64/run.sh python3 scaffold/test_runner.py
 ```
 
 ネイティブ実行も許可する。その場合は Python 3.10 以降に加えて

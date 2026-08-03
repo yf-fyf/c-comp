@@ -14,10 +14,11 @@
 
 **この文書がスタート地点である。** 上から順に進めればよい。
 
-1. **この文書**（進め方ガイド）— 「環境を用意する」まで読んで環境を作る
-2. [コマ1の資料](https://yf-fyf.github.io/c-comp/sessions/01_environment/) — 以降は資料サイトを回ごとに読み進める
-3. [`conventions.md`](./conventions.md) — 実装の約束ごと。コマ3 に入る前に一度目を通す
-4. [`language_spec.md`](./language_spec.md) — 対象言語の仕様。通読せず、迷ったときに引く
+1. **この文書**（進め方ガイド）— 科目全体の構成と進め方を掴む。環境構築の手順はここには無い
+2. [コマ0（演習環境構築）](https://yf-fyf.github.io/c-comp/sessions/00_setup/) — 環境を作る。番号のある通常回には含めない準備回で、**初回授業の開始時点で終わっているのが目標**
+3. [コマ1の資料](https://yf-fyf.github.io/c-comp/sessions/01_environment/) — 以降は資料サイトを回ごとに読み進める
+4. [`conventions.md`](./conventions.md) — 実装の約束ごと。コマ3 に入る前に一度目を通す
+5. [`language_spec.md`](./language_spec.md) — 対象言語の仕様。通読せず、迷ったときに引く
 
 途中で詰まったら [`testing.md`（テストとデバッグ）](./testing.md)、
 何をどこで調べるか自体が分からなくなったら
@@ -39,28 +40,20 @@
 
 ## 環境を用意する
 
-必要なもの: **Python 3.10 以降**（`match` 文、`str | None` のような合併型注釈を使う）。
-これは Docker 環境・ネイティブ実行のどちらでも必要になる基準で、この教材全体を通じての唯一の
-出典である（他の文書ではここを参照すること）。
+環境構築は **コマ0（演習環境構築）** で扱う。手順の実体はそちらにあるので、
+まず [コマ0の資料](https://yf-fyf.github.io/c-comp/sessions/00_setup/)
+（配布物では [`../sessions/00_setup/README.md`](../sessions/00_setup/README.md)）を読んで環境を整えること。
 
-**推奨は Docker** である。RV64 クロスコンパイラと qemu が入った環境が用意されている
-（Ubuntu 22.04 ベースなので、コンテナ内の `python3` は 3.10 を満たす）。
+コマ0 で扱うのは次の3つである。
 
-以下は `workbook/` から実行する。
+- Windows の場合の WSL 上への Ubuntu 導入
+- Docker 環境（**推奨**）またはネイティブ実行の用意
+- 手書き RV64 アセンブリを qemu で動かして、環境が正しいことを確かめる
 
-```bash
-# コンテナ起動（初回はイメージをビルド）
-bash docker/rv64/run.sh
+**Python のバージョン基準（Python 3.10 以降）を含む環境の要件は、コマ0 の資料が
+教材全体を通じての唯一の出典である**（他の文書ではコマ0 を参照すること）。
+この文書では要件を重ねて書かない。
 
-# 1コマンドだけ実行する（例: コマ1の環境確認）
-bash docker/rv64/run.sh python3 sessions/01_environment/check.py
-
-# 全テスト
-bash docker/rv64/run.sh python3 scaffold/test_runner.py
-```
-
-ネイティブ実行も可能で、その場合は上記の Python に加えて `riscv64-linux-gnu-gcc` と
-`qemu-riscv64` がホストに必要になる。
 イメージ名の変更やよくあるエラーは [`../docker/rv64/README.md`](../docker/rv64/README.md) を参照。
 
 ---

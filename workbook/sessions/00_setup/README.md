@@ -17,6 +17,34 @@ qemu 上で手書き RV64 アセンブリを実行して終了コード `42` を
 - `hello.s` を編集し、終了コード `42` を返す命令を書く
 - アセンブル・リンク・実行の流れ（`riscv64-linux-gnu-gcc -static` でのアセンブル・リンク → `qemu-riscv64` での実行）を体験する
 
+## 必要なもの
+
+- **Python 3.10 以降**（`match` 文、`str | None` のような合併型注釈を使う）。
+  Docker 環境・ネイティブ実行のどちらでも必要になる基準である
+- RV64 クロスコンパイラ `riscv64-linux-gnu-gcc`
+- `qemu-riscv64`
+
+**この環境要件が教材全体を通じての唯一の出典である**（他の文書ではここを参照すること）。
+WSL の導入手順を含む詳しい説明は上記の資料サイトにある。
+
+推奨は Docker で、上の3つが入った環境が用意してある（`workbook/` から実行する）。
+
+```bash
+# コンテナ起動（初回はイメージをビルド）
+bash docker/rv64/run.sh
+
+# 1コマンドだけ実行する
+bash docker/rv64/run.sh python3 sessions/00_setup/check.py
+```
+
+ネイティブ実行も許可する。Ubuntu なら次で入る。
+
+```bash
+sudo apt install gcc-riscv64-linux-gnu qemu-user python3
+```
+
+イメージ名の変更やよくあるエラーは [`../../docker/rv64/README.md`](../../docker/rv64/README.md) を参照。
+
 ## 編集するファイル
 
 - `hello.s` の `addi a0, zero, 0` を、終了コード `42` を返す命令に変更する。
