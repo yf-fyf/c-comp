@@ -22,7 +22,7 @@ sections:
   - slug: sessions
     title: 通常回
     group: 教材
-    summary: コマ1〜17 の17コマ。読んで実装し、その日のうちに動かして確認する粒度に分けてある。最後のコマ17 だけは新しい実装をせず、発表と振り返りに充てる。
+    summary: コマ1〜17 の17コマ。授業内では読解と着手までを行い、実装の完成は次回までの課題とする粒度に分けてある。最後のコマ17 だけは新しい実装をせず、発表と振り返りに充てる。
     pages:
       - materials/sessions/01_environment.md
       - materials/sessions/02_interpreter.md
