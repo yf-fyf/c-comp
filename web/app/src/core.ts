@@ -5,7 +5,7 @@
 // <script> タグで読み込まれるため myccCore は module 実行時点で既に存在するが、
 // 将来 wasm 化(wasm_of_ocaml)すると .wasm の fetch+instantiate が本当に非同期になる
 // (T99)。そのときに呼び出し側のAPIを変えずに済むよう、先に非同期化しておく(T129)。
-import type { ParseResult, TextResult } from "./types";
+import type { CompileResult, ParseResult, TextResult } from "./types";
 
 interface CoreApi {
   parse(source: string): string;
@@ -64,5 +64,5 @@ export const astSexp = (source: string, showLine: boolean): Promise<TextResult> 
 export const astDot = (source: string, showLine: boolean): Promise<TextResult> =>
   guard<TextResult>((c) => c.astDot(source, showLine));
 
-export const compile = (source: string, comments: boolean): Promise<TextResult> =>
-  guard<TextResult>((c) => c.compile(source, comments));
+export const compile = (source: string, comments: boolean): Promise<CompileResult> =>
+  guard<CompileResult>((c) => c.compile(source, comments));

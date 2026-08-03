@@ -2,7 +2,7 @@
 // スキーマを二重管理しない代わりに、代表入力でキーと型を全数チェックする。
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
-import type { AstNode, ParseResult, TextResult, Token } from "../src/types";
+import type { AstNode, CompileResult, ParseResult, TextResult, Token } from "../src/types";
 
 interface CoreApi {
   parse(s: string): string;
@@ -124,6 +124,32 @@ describe("myccCore", () => {
     expect(r.ok).toBe(true);
     expect(typeof r.text).toBe("string");
     expect(r.text).toContain("main:");
+  });
+
+  it("compile の stmtMap が文と命令行を結ぶ", () => {
+    const source = "int main() {\n    int x;\n    x = 3;\n    return x;\n}\n";
+    const r = JSON.parse(core.compile(source, false)) as CompileResult;
+    expect(r.ok).toBe(true);
+    const lines = (r.text ?? "").split("\n");
+    const entries = r.stmtMap!;
+    expect(entries.length).toBeGreaterThan(0);
+    for (const e of entries) {
+      expect(Number.isInteger(e.fromLine)).toBe(true);
+      expect(e.fromLine).toBeGreaterThan(0);
+      expect(e.toLine).toBeGreaterThanOrEqual(e.fromLine);
+      expect(e.toLine).toBeLessThanOrEqual(lines.length);
+      for (const range of e.sourceRanges) {
+        expect(range.to).toBeGreaterThan(range.from);
+        expect(range.to).toBeLessThanOrEqual(source.length);
+      }
+    }
+    const text = (e: { sourceRanges: { from: number; to: number }[] }): string =>
+      e.sourceRanges.map(({ from, to }) => source.slice(from, to)).join("");
+    const assign = entries.find((e) => text(e) === "x = 3;")!;
+    expect(lines.slice(assign.fromLine - 1, assign.toLine).join("\n")).toContain("li a0, 3");
+    const ret = entries.find((e) => text(e) === "return x;")!;
+    // 文どうしの命令範囲は重ならない（return は代入より後ろ）
+    expect(ret.fromLine).toBeGreaterThan(assign.toLine);
   });
 
   it("compile のエラーは phase を持つ", () => {

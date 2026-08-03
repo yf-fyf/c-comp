@@ -8,11 +8,16 @@
 import { EditorView } from "codemirror";
 import { StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet } from "@codemirror/view";
-import { setHoverRanges, setSelectedRanges } from "./ast-highlight";
-import { parseSource, astSexp } from "./core";
-import { renderTree } from "./tree";
+import {
+  setHoverRanges,
+  setSelectedRanges,
+  stmtForLine,
+  stmtsForRanges,
+} from "./ast-highlight";
+import { parseSource, astSexp, compile } from "./core";
+import { renderTree, type TreeTarget } from "./tree";
 import { el as $ } from "./shell";
-import type { ParseResult, SourceRange } from "./types";
+import type { ParseResult, SourceRange, StmtSpan } from "./types";
 
 // ---- エディタ拡張: エラー行のハイライト ----
 // エディタ生成は app-main.ts なので、フィールドだけ作って渡す。
@@ -69,6 +74,8 @@ export function initAstView(opts: AstViewOptions): AstView {
   let resetView = false;
   let activeTab = "tree";
   let selectedId: string | null = null;
+  // 選択中のノードそのもの。A3（命令との対応）が範囲とラベルを使う
+  let selectedTarget: TreeTarget | null = null;
 
   // ---- 解析と表示 ----
 
@@ -91,6 +98,8 @@ export function initAstView(opts: AstViewOptions): AstView {
       editor.dispatch({ effects: setErrorLine.of(null) });
     } else {
       selectedId = null;
+      selectedTarget = null;
+      highlightStrip();
       editor.dispatch({ effects: setSelectedRanges.of([]) });
       const err = result.errors?.[0];
       const srcLine = err && err.line ? (ppToSrc.get(err.line) ?? null) : null;
@@ -136,6 +145,8 @@ export function initAstView(opts: AstViewOptions): AstView {
           onSelect(target) {
             const selected = target && target.id !== selectedId ? target : null;
             selectedId = selected?.id ?? null;
+            selectedTarget = selected;
+            highlightStrip();
             editor.dispatch({
               effects: [
                 setHoverRanges.of([]),
@@ -164,14 +175,122 @@ export function initAstView(opts: AstViewOptions): AstView {
     }
   }
 
-  // ---- サブタブ（AST 木 / トークン / S 式） ----
+  // ---- A3: 命令との対応（明示操作で開く） ----
+  // 常時2ペインにはしない。［命令と対応］を押したときだけ AST の下に命令列を出し、
+  // 選んだノードが出した命令を光らせる。対応の粒度は文（compile_json の stmtMap）。
+  // アセンブリペインと同じく、開く／更新はすべて明示操作にそろえる（T38 B6）。
 
-  for (const btn of document.querySelectorAll<HTMLButtonElement>("#ast-tabs button")) {
+  const strip = $("ast-asm-strip");
+  const stripLines = $("ast-asm-lines");
+  const stripToggle = $<HTMLButtonElement>("btn-ast-asm");
+  let stripOpen = false;
+  let stmtMap: StmtSpan[] = [];
+  let asmLineEls: HTMLElement[] = [];
+  // 表示中の命令が今のソースの出力ではない（未コンパイル or ソース変更後）
+  let stripStale = true;
+
+  function setStripStatus(text: string): void {
+    $("ast-asm-status").textContent = text;
+  }
+
+  /** 命令列を1行1要素で描き直す。行をクリックすると、その文のソース範囲を光らせる */
+  function renderStripLines(text: string): void {
+    stripLines.textContent = "";
+    stripLines.classList.remove("stale");
+    asmLineEls = [];
+    const lines = text === "" ? [] : text.split("\n");
+    lines.forEach((line, i) => {
+      const div = document.createElement("div");
+      div.className = "asm-line";
+      div.dataset.line = String(i + 1);
+      div.textContent = line === "" ? " " : line;
+      div.addEventListener("click", () => {
+        const hit = stmtForLine(stmtMap, i + 1);
+        editor.dispatch({
+          effects: [
+            setHoverRanges.of([]),
+            setSelectedRanges.of((hit?.sourceRanges ?? []) as readonly SourceRange[]),
+          ],
+        });
+      });
+      stripLines.appendChild(div);
+      asmLineEls.push(div);
+    });
+  }
+
+  /** 選択中のノードに合わせて命令行のハイライトを付け直す */
+  function highlightStrip(): void {
+    for (const el of asmLineEls) el.classList.remove("hit");
+    if (!stripOpen || stripStale || asmLineEls.length === 0) return;
+    const target = selectedTarget;
+    if (!target) {
+      setStripStatus("AST 木のノードをクリックすると、その文が出した命令が光ります");
+      return;
+    }
+    const hits = stmtsForRanges(stmtMap, target.sourceRanges);
+    if (hits.length === 0) {
+      setStripStatus(`${target.label}: 対応する命令はありません`);
+      return;
+    }
+    let first = Infinity;
+    let last = 0;
+    for (const e of hits) {
+      for (let n = e.fromLine; n <= e.toLine; n += 1) asmLineEls[n - 1]?.classList.add("hit");
+      first = Math.min(first, e.fromLine);
+      last = Math.max(last, e.toLine);
+    }
+    setStripStatus(`${target.label}: ${first}–${last} 行目（${last - first + 1} 行）`);
+    asmLineEls[first - 1]?.scrollIntoView({ block: "nearest" });
+  }
+
+  async function runStripCompile(): Promise<void> {
+    const comments = $<HTMLInputElement>("opt-comments").checked;
+    const result = await compile(editor.state.doc.toString(), comments);
+    if (!result.ok) {
+      stmtMap = [];
+      renderStripLines("");
+      stripStale = true;
+      setStripStatus(`✗ ${result.errors?.[0]?.message ?? "コンパイルエラー"}`);
+      return;
+    }
+    stmtMap = result.stmtMap ?? [];
+    renderStripLines(result.text ?? "");
+    stripStale = false;
+    highlightStrip();
+  }
+
+  function openStrip(): void {
+    stripOpen = true;
+    strip.hidden = false;
+    stripToggle.setAttribute("aria-pressed", "true");
+    if (stripStale) void runStripCompile();
+    else highlightStrip();
+  }
+
+  function closeStrip(): void {
+    stripOpen = false;
+    strip.hidden = true;
+    stripToggle.setAttribute("aria-pressed", "false");
+  }
+
+  stripToggle.addEventListener("click", () => (stripOpen ? closeStrip() : openStrip()));
+  $("btn-ast-asm-refresh").addEventListener("click", () => void runStripCompile());
+  $("btn-ast-asm-close").addEventListener("click", closeStrip);
+  $("opt-comments").addEventListener("change", () => {
+    // 注記コメントの有無で行番号がずれるので、対応表ごと作り直しになる
+    stripStale = true;
+    if (stripOpen) void runStripCompile();
+  });
+
+  // ---- サブタブ（AST 木 / トークン / S 式） ----
+  // ［命令と対応］も #ast-tabs の中にあるので、サブタブは data-ast-tab を持つものだけを見る
+
+  for (const btn of document.querySelectorAll<HTMLButtonElement>("#ast-tabs button[data-ast-tab]")) {
     btn.addEventListener("click", () => {
       editor.dispatch({ effects: setHoverRanges.of([]) });
       activeTab = btn.dataset.astTab ?? "tree";
       document
-        .querySelectorAll("#ast-tabs button")
+        .querySelectorAll("#ast-tabs button[data-ast-tab]")
         .forEach((b) => b.classList.toggle("active", b === btn));
       document
         .querySelectorAll<HTMLElement>(".ast-pane")
@@ -185,6 +304,12 @@ export function initAstView(opts: AstViewOptions): AstView {
 
   opts.onSourceChange(() => {
     selectedId = null;
+    selectedTarget = null;
+    // 命令列は明示操作でしか更新しない。古い出力だと分かるようにして［更新］を促す
+    stripStale = true;
+    for (const el of asmLineEls) el.classList.remove("hit");
+    stripLines.classList.add("stale");
+    if (stripOpen) setStripStatus("● 変更あり — ［更新］で反映");
     scheduleParse();
   });
 
@@ -196,6 +321,7 @@ export function initAstView(opts: AstViewOptions): AstView {
     reset() {
       collapsed.clear();
       selectedId = null;
+      selectedTarget = null;
       resetView = true;
     },
   };

@@ -48,6 +48,15 @@
               <button type="button" data-ast-tab="tree" class="active">AST 木</button>
               <button type="button" data-ast-tab="tokens">トークン</button>
               <button type="button" data-ast-tab="sexp">S 式</button>
+              <!-- A3: 命令との対応。常時並置はせず、この操作で開いたときだけ下に出す -->
+              <button
+                type="button"
+                id="btn-ast-asm"
+                aria-pressed="false"
+                title="選んだノードが出した命令を下に並べる"
+              >
+                命令と対応
+              </button>
               <span class="pane-note">入力に追随して自動更新されます</span>
               <label id="opt-line-label"><input type="checkbox" id="opt-show-line" /> 行番号</label>
             </nav>
@@ -62,6 +71,19 @@
               </table>
             </div>
             <div id="ast-pane-sexp" class="ast-pane"><pre id="sexp-pre"></pre></div>
+
+            <!-- A3: AST ノード ↔ 命令のクロスハイライト。［命令と対応］で開く -->
+            <div id="ast-asm-strip" hidden>
+              <div class="strip-head">
+                <span>対応する命令（文単位）</span>
+                <span id="ast-asm-status" class="pane-note" aria-live="polite"></span>
+                <button id="btn-ast-asm-refresh" type="button" title="いまのソースでコンパイルし直す">
+                  更新
+                </button>
+                <button id="btn-ast-asm-close" type="button">閉じる</button>
+              </div>
+              <div id="ast-asm-lines"></div>
+            </div>
           </div>
 
           <!-- アセンブリ: 明示操作でしか更新しない（T38 B6） -->

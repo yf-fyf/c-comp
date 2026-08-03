@@ -58,7 +58,10 @@ let parse ~filename source =
    sessions/koma*.ml と web/core は従来どおり Preprocess.preprocess /
    preprocess_with_map（その場で印字して終了する）を使い続けるため、
    ここでの変更は reference/ の内部だけに閉じている。 *)
-let compile_units ~comments ?include_dirs units =
+(* 文と命令の対応（Emitter.stmt_span）も一緒に返す入口。
+   範囲は前処理後ソースへのバイト位置なので、元ソースへ写すのは呼んだ側の仕事である
+   （web/core/js/api.ml が Preprocess の対応表で写す）。 *)
+let compile_units_with_spans ~comments ?include_dirs units =
   try
     let parsed =
       List.map
@@ -78,8 +81,16 @@ let compile_units ~comments ?include_dirs units =
     let em = Emitter.create () in
     let g = Codegen.create_genv em prog.layout in
     Codegen.gen_program g prog;
-    Ok (Emitter.to_string ~comments em)
+    Ok (Emitter.to_string_with_spans ~comments em)
   with Diag.Error e -> Error e
+
+let compile_units ~comments ?include_dirs units =
+  match compile_units_with_spans ~comments ?include_dirs units with
+  | Ok (text, _spans) -> Ok text
+  | Error e -> Error e
 
 let compile_source ~comments ?include_dirs ?(filename = "input.c") source =
   compile_units ~comments ?include_dirs [ (filename, source) ]
+
+let compile_source_with_spans ~comments ?include_dirs ?(filename = "input.c") source =
+  compile_units_with_spans ~comments ?include_dirs [ (filename, source) ]

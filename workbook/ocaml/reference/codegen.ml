@@ -326,13 +326,17 @@ and codegen_binary g f (op : Ast.binop) lhs rhs =
 (* ── 文のコード生成 ── *)
 
 (* 文ごとに元の C を見出しとして出す。Block は自分では何も出さないので
-   見出しも字下げも増やさず、中の文にそれぞれ付ける。 *)
+   見出しも字下げも増やさず、中の文にそれぞれ付ける。
+   どの文がどの命令を出したかは Emitter.with_span で囲って記録する（見出しの有無に
+   関係なく要るので、Block も含めてすべての文を囲む）。 *)
 let rec gen_stmt g f (s : Tast.stmt) =
-  match s.s_desc with
-  | Block _ -> gen_stmt_body g f s.s_desc
-  | _ ->
-      heading g (stmt_heading g s);
-      Emitter.nested g.em (fun () -> gen_stmt_body g f s.s_desc)
+  Emitter.with_span g.em ~start_offset:s.s_loc.start_offset ~end_offset:s.s_loc.end_offset
+    (fun () ->
+      match s.s_desc with
+      | Block _ -> gen_stmt_body g f s.s_desc
+      | _ ->
+          heading g (stmt_heading g s);
+          Emitter.nested g.em (fun () -> gen_stmt_body g f s.s_desc))
 
 (* ループ本体を、break / continue の飛び先を積んだ状態で生成する *)
 and in_loop f ~break_to ~continue_to body =
