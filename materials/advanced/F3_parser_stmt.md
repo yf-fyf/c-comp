@@ -96,7 +96,7 @@ if self.consume_if('else'):
     else_ = self.parse_stmt()
 ```
 
-ここで、コマ5 の資料にあった「`else` は最も内側の `if` に結合する（最近傍優先）」
+ここで、コマ4 の資料にあった「`else` は最も内側の `if` に結合する（最近傍優先）」
 という規則の種明かしができる。
 
 ![dangling else — else は最も内側の if に結合する](figures/F3_dangling_else.svg)
@@ -108,7 +108,7 @@ if self.consume_if('else'):
 
 また、`else if` という専用の構文がないことも実装から分かる。
 `else` の後の `stmt` がたまたま `if` 文である、というだけである
-（コマ5「else if の扱い」の実装側）。
+（コマ4「else if の扱い」の実装側）。
 
 ## while と for — 省略可能要素は None
 
@@ -128,10 +128,10 @@ for_stmt ::= 'for' '(' [expr] ';' [expr] ';' [expr] ')' stmt
 | cond | 次が `;` か | `None` |
 | step | 次が `)` か | `None` |
 
-コマ6 の資料に「省略された部分は AST 上で `None` になる」とあった。
+コマ5 の資料に「省略された部分は AST 上で `None` になる」とあった。
 その `None` を作っているのがこのコードである。
 `for (;;)` は3要素とも `None` の `ND_FOR` になり、
-コード生成側（コマ6）が「cond が `None` なら `beqz` を出さない」と対応していた。
+コード生成側（コマ5）が「cond が `None` なら `beqz` を出さない」と対応していた。
 
 ## Node の形
 

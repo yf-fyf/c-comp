@@ -91,11 +91,11 @@ make check-code-examples
 make figures
 
 # コンパイラのテスト（workbook/ から）
-cd workbook && python3 scaffold/test_runner.py sessions/03_arithmetic_codegen
+cd workbook && python3 scaffold/test_runner.py sessions/02_arithmetic_codegen
 cd workbook && python3 scaffold/test_runner.py    # final/mycc.py + final/tests
 
 # AST の確認
-cd workbook && python3 scaffold/parse_viewer.py sessions/02_interpreter/tests/add_mul.c
+cd workbook && python3 scaffold/parse_viewer.py sessions/01_interpreter/tests/add_mul.c
 
 # OCaml 参考実装
 cd workbook/ocaml && dune build

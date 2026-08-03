@@ -164,7 +164,7 @@ def main():
         raise SystemExit(2)
 
     compiler = Path(os.environ.get("OPTCC_COMPILER", WORKBOOK / "final" / "mycc.py"))
-    # コマ16 前は final/mycc.py が統合先のプレースホルダなので、
+    # コマ15 前は final/mycc.py が統合先のプレースホルダなので、
     # ここで弾かないと「最適化で壊れた」ように見える失敗になる。
     sys.path.insert(0, str(DIR))
     from basecc import ensure_base  # noqa: E402

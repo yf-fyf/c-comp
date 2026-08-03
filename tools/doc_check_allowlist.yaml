@@ -21,7 +21,7 @@
 #                        未修正項目（対応が終わったらこのエントリごと削除する）
 
 legacy_terms:
-  - file: materials/sessions/09_types.md
+  - file: materials/sessions/08_types.md
     match: "この言語に配列はない"
     check: array
     status: legitimate
@@ -29,15 +29,15 @@ legacy_terms:
       「この言語に配列はない」と、仕様の除外を正しく説明している文。
       workbook/docs/language_spec.md と同じ「除外の宣言」パターン。
 
-  - file: materials/sessions/10_pointer_arith.md
+  - file: materials/sessions/09_pointer_arith.md
     match: "この言語に配列はない。連続した int の並びが"
     check: array
     status: legitimate
     reason: >
       「この言語に配列はない」と、仕様の除外を正しく説明している文（扱う範囲の節）。
-      コマ9 の原稿と同じ「除外の宣言」パターン。
+      コマ8 の原稿と同じ「除外の宣言」パターン。
 
-  - file: materials/sessions/10_pointer_arith.md
+  - file: materials/sessions/09_pointer_arith.md
     match: "この言語に配列はない。`int a[10];`"
     check: array
     status: legitimate

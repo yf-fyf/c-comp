@@ -11,7 +11,7 @@ libc を使わずに `print_str` / `print_int` / `printf1` を自分で書き、
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | R1（`sys_write` が使える状態）とコマ16。`check.py` が完成した `final/mycc.py` で `myprintf.c` と `tests/*.c` をコンパイルするので、コマ16 が無いと1件も実行できない |
+| 必須の前提 | R1（`sys_write` が使える状態）とコマ15。`check.py` が完成した `final/mycc.py` で `myprintf.c` と `tests/*.c` をコンパイルするので、コマ15 が無いと1件も実行できない |
 | 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、`syscall.s`（R1 のもの。配布済み・完成品） |
 | 編集する | `myprintf.c` |

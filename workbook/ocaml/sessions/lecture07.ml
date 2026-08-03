@@ -1,5 +1,5 @@
 (*
-   コマ7: 関数② — 引数受け取り + 関数呼び出し
+   コマ7: lvalue / rvalue — アドレス演算子 & と間接演算子 *
 *)
 
 open Ast_def
@@ -48,11 +48,6 @@ let rec collect_decls = function
   | While { body; _ } | For { body; _ } -> collect_decls body
   | _ -> ()
 
-let codegen_lval = function
-  | Var { name; line; _ } ->
-      emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
-  | e -> error ~line:(line_of_expr e) "lvalue でない式です"
-
 let push_a0 () =
   emit "  addi sp, sp, -8";
   emit "  sd a0, 0(sp)";
@@ -63,18 +58,24 @@ let pop_into reg =
   emit "  addi sp, sp, 8";
   decr depth
 
-let rec codegen = function
+let rec codegen_lval = function
+  | Var { name; line; _ } ->
+      emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
+  | Unary { op = Deref; operand; _ } ->
+      codegen operand
+  | e -> error ~line:(line_of_expr e) "lvalue でない式です"
+
+and codegen = function
   | Num { value; _ } ->
       emit (Printf.sprintf "  li a0, %d" value)
   | Var _ as v ->
       codegen_lval v;
       emit "  ld a0, 0(a0)"
-  | Assign { lhs; rhs; _ } ->
-      codegen_lval lhs;
-      push_a0 ();
-      codegen rhs;
-      pop_into "a1";
-      emit "  sd a0, 0(a1)"
+  | Unary { op = Addr; operand; _ } ->
+      codegen_lval operand
+  | Unary { op = Deref; operand; _ } ->
+      codegen operand;
+      emit "  ld a0, 0(a0)"
   | Unary { op = Neg; operand; _ } ->
       codegen operand;
       emit "  neg a0, a0"
@@ -90,6 +91,12 @@ let rec codegen = function
       emit "  addi a1, a1, -1";
       emit "  sd a1, 0(a0)";
       emit "  mv a0, a1"
+  | Assign { lhs; rhs; _ } ->
+      codegen_lval lhs;
+      push_a0 ();
+      codegen rhs;
+      pop_into "a1";
+      emit "  sd a0, 0(a1)"
   | Call { name; args; _ } -> gen_call name args
   | Binary { op; lhs; rhs; _ } ->
       codegen lhs;
@@ -128,8 +135,8 @@ and gen_call name args =
   if n > 0 then (
     emit (Printf.sprintf "  addi sp, sp, %d" (n * 8));
     depth := !depth - n);
-  (* ここで sp は「呼び出しを囲む式が積んだ一時値」の分だけフレームから下がっている。
-     一時値は 1 個 8 バイトなので、奇数個なら 16 バイト境界からずれている。 *)
+  (* 呼び出しを囲む式が積んでいる一時値は 1 個 8 バイト。
+     奇数個なら sp が 16 バイト境界からずれているので詰める（呼び出し規約）。 *)
   let pad = if !depth mod 2 <> 0 then 8 else 0 in
   if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, -%d" pad);
   emit (Printf.sprintf "  call %s" name);

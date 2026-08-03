@@ -154,7 +154,7 @@ class ExprParser:
 
         TODO(Step 3): これは parse_binary では書けない。
         '>' と '>=' は lhs・rhs を入れ替えて ND_LT / ND_LE に正規化する
-        (AST に ND_GT / ND_GE は存在しない — コマ5 資料の種明かし)。
+        (AST に ND_GT / ND_GE は存在しない — コマ4 資料の種明かし)。
         例: a > b は Node(ND_LT, lhs=b の木, rhs=a の木)
         """
         return self.parse_add()  # TODO

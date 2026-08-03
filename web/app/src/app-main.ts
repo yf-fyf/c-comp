@@ -23,7 +23,7 @@ mountShell("app.html");
 type Mode = "build" | "run";
 
 const DEFAULT_C_SOURCE = "int main() {\n    return 1 + 2 * 3;\n}\n";
-const DEFAULT_C_EXAMPLE = "sessions/02_interpreter/tests/add_mul.c";
+const DEFAULT_C_EXAMPLE = "sessions/01_interpreter/tests/add_mul.c";
 
 // ---- モード ----
 

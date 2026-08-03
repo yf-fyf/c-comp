@@ -7,8 +7,8 @@ mycc テストランナー
     python3 scaffold/test_runner.py --compiler PATH --tests PATH
 
 例:
-    python3 scaffold/test_runner.py sessions/06_loops
-    python3 scaffold/test_runner.py --compiler sessions/06_loops/mycc.py --tests sessions/06_loops/tests
+    python3 scaffold/test_runner.py sessions/05_loops
+    python3 scaffold/test_runner.py --compiler sessions/05_loops/mycc.py --tests sessions/05_loops/tests
     python3 scaffold/test_runner.py        # final/mycc.py と final/tests を使う
 
 テストケース形式:
@@ -127,7 +127,7 @@ def run_test(src: Path, compiler: Path, gcc_bin: Path, qemu_bin: Path) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description="mycc テストランナー")
-    parser.add_argument("session_dir", nargs="?", help="セッションディレクトリ (例: sessions/06_loops)")
+    parser.add_argument("session_dir", nargs="?", help="セッションディレクトリ (例: sessions/05_loops)")
     parser.add_argument("--compiler", help="コンパイラのパス (デフォルト: final/mycc.py)")
     parser.add_argument("--tests", dest="tests_dir", help="テストディレクトリのパス (デフォルト: final/tests)")
     args = parser.parse_args()

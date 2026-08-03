@@ -19,5 +19,5 @@ sessions/NN_xxx/
 テストはセッションディレクトリを渡して実行する。
 
 ```bash
-python3 scaffold/test_runner.py sessions/06_loops
+python3 scaffold/test_runner.py sessions/05_loops
 ```

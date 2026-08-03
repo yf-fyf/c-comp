@@ -11,7 +11,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ16（完成した `final/mycc.py`）、O1（`golden.py` が `O1_measure/bench/` の5本を対象にする） |
+| 必須の前提 | コマ15（完成した `final/mycc.py`）、O1（`golden.py` が `O1_measure/bench/` の5本を対象にする） |
 | 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、`optcc.py` |
 | 編集する | `cfg.py` |

@@ -10,7 +10,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ13（`malloc`）まで。差の考え方そのものはポインタ演算までで足りるが、`tests/count.c` が `malloc` を、`tests/use_result.c` が `struct` と `malloc` を使う。完了条件のうち `golden.py` は完成した `final/mycc.py` を土台に `fixed17` を回すので、やり切るにはコマ16 も要る |
+| 必須の前提 | コマ12（`malloc`）まで。差の考え方そのものはポインタ演算までで足りるが、`tests/count.c` が `malloc` を、`tests/use_result.c` が `struct` と `malloc` を使う。完了条件のうち `golden.py` は完成した `final/mycc.py` を土台に `fixed17` を回すので、やり切るにはコマ15 も要る |
 | 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、ラッパー `langcc.py`（配布済み・完成品） |
 | 編集する | `ptrdiff.py` |

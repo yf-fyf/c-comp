@@ -79,7 +79,7 @@ OpenCode はプロジェクト内のファイルを読み取り、質問に回�
 特定のファイルについて質問したい場合は、ファイル名を指定します。
 
 ```
-> sessions/03_arithmetic_codegen/mycc.py のコードを説明してください
+> sessions/02_arithmetic_codegen/mycc.py のコードを説明してください
 ```
 
 ### コードを書いてもらう

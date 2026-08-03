@@ -18,11 +18,11 @@
 デフォルト表示は S-expression 形式。
 
 ```bash
-python3 scaffold/parse_viewer.py sessions/03_arithmetic_codegen/tests/add.c
-python3 scaffold/parse_viewer.py sessions/03_arithmetic_codegen/tests/add.c --tokens
-python3 scaffold/parse_viewer.py sessions/03_arithmetic_codegen/tests/add.c --format tree
-python3 scaffold/parse_viewer.py sessions/03_arithmetic_codegen/tests/add.c --format json
-python3 scaffold/parse_viewer.py sessions/03_arithmetic_codegen/tests/add.c --format dot > ast.dot
+python3 scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c
+python3 scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c --tokens
+python3 scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c --format tree
+python3 scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c --format json
+python3 scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c --format dot > ast.dot
 dot -Tpng ast.dot -o ast.png
 ```
 
@@ -35,6 +35,6 @@ S-expression では、変数名・関数名などの文字列値は double quota
 ## テストランナー
 
 ```bash
-python3 scaffold/test_runner.py sessions/03_arithmetic_codegen
+python3 scaffold/test_runner.py sessions/02_arithmetic_codegen
 python3 scaffold/test_runner.py
 ```

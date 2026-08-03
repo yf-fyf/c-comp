@@ -8,22 +8,22 @@ OCaml 参考実装の回帰テストランナー
 判定の流れも Python 版と揃えているが、qemu 実行に**タイムアウトを設けている**点だけ
 異なる。生成コードが無限ループになるとテストランナー自体が返らなくなるためである。
 
-コマ2 だけはインタープリターでアセンブリを出さないため、
+コマ1 だけはインタープリターでアセンブリを出さないため、
 `評価結果: N` の印字を `.ans` と直接比較する。
 
 最後に等価性テストを回す。`reference/mycc_ref.exe --no-comments` の出力が
-`lecture16.exe` の出力とバイト単位で一致することを、全テストソースで確かめる。
+`lecture15.exe` の出力とバイト単位で一致することを、全テストソースで確かめる。
 
 使い方:
     cd workbook/ocaml
     dune build
     python3 run_tests.py               # 全回
-    python3 run_tests.py 13            # コマ13 だけ
-    python3 run_tests.py 12 13 16      # 複数指定
+    python3 run_tests.py 12            # コマ12 だけ
+    python3 run_tests.py 11 12 15      # 複数指定
     python3 run_tests.py --build-dir DIR   # 別ビルド（変更前版との比較用）
     python3 run_tests.py --no-equivalence  # 等価性テストを飛ばす
 
-前提: riscv64-linux-gnu-gcc と qemu-riscv64（コマ3以降で使う）。
+前提: riscv64-linux-gnu-gcc と qemu-riscv64（コマ2以降で使う）。
       無い場合は docker/rv64 経由で実行する。
 """
 
@@ -47,15 +47,15 @@ RESULT_RE = re.compile(r"^評価結果:\s*(-?\d+)$", re.MULTILINE)
 
 def tests_dir_for(num: int) -> Path | None:
     """コマ番号からテストディレクトリを引く（対応表は持たず番号で照合する）"""
-    if num == 16:
-        # コマ16 は統合版。自前の tests を持たず final/tests を使う
+    if num == 15:
+        # コマ15 は統合版。自前の tests を持たず final/tests を使う
         return WORKBOOK / "final" / "tests"
     matches = sorted(WORKBOOK.glob(f"sessions/{num:02d}_*/tests"))
     return matches[0] if matches else None
 
 
 def extra_sources(src: Path) -> list[Path] | str:
-    """`.files` に列挙された追加ソース（コマ15 の複数ファイル）"""
+    """`.files` に列挙された追加ソース（コマ14 の複数ファイル）"""
     files_file = src.with_suffix(".files")
     if not files_file.exists():
         return []
@@ -72,7 +72,7 @@ def extra_sources(src: Path) -> list[Path] | str:
 
 
 def run_compiler_case(exe: Path, src: Path, timeout_s: int) -> str:
-    """コマ3 以降: コンパイル → アセンブル → qemu 実行 → .ans / .stdout と比較"""
+    """コマ2 以降: コンパイル → アセンブル → qemu 実行 → .ans / .stdout と比較"""
     ans_file = src.with_suffix(".ans")
     if not ans_file.exists():
         return "SKIP"
@@ -124,7 +124,7 @@ def run_compiler_case(exe: Path, src: Path, timeout_s: int) -> str:
 
 
 def run_interpreter_case(exe: Path, src: Path, timeout_s: int) -> str:
-    """コマ2 用: `評価結果: N` の印字を .ans と比べる"""
+    """コマ1 用: `評価結果: N` の印字を .ans と比べる"""
     ans_file = src.with_suffix(".ans")
     if not ans_file.exists():
         return "SKIP"
@@ -147,7 +147,7 @@ def run_interpreter_case(exe: Path, src: Path, timeout_s: int) -> str:
 
 
 def all_test_sources() -> list[Path]:
-    """全回のテストソース（コマ2 のものも含む。どれも同じ C サブセットである）"""
+    """全回のテストソース（コマ1 のものも含む。どれも同じ C サブセットである）"""
     dirs = sorted(WORKBOOK.glob("sessions/*/tests")) + [WORKBOOK / "final" / "tests"]
     return [src for d in dirs if d.is_dir() for src in sorted(d.glob("*.c"))]
 
@@ -179,7 +179,7 @@ def normalize_asm(text: str) -> list[str]:
     """.data / .bss の並び順の違いだけを吸収する（.text はそのまま）。
 
     文字列リテラルとグローバル変数をどの順に出すかは実装の自由で、
-    lecture16 は Hashtbl の走査順、mycc_ref は定義順に出す。順序以外の違い
+    lecture15 は Hashtbl の走査順、mycc_ref は定義順に出す。順序以外の違い
     （ラベル番号・中身・個数）は下の並べ替えでは消えないので、比較は保たれる。
     """
     lines = text.splitlines()
@@ -199,13 +199,13 @@ def normalize_asm(text: str) -> list[str]:
     return out
 
 
-def run_equivalence_case(lec16: Path, ref: Path, src: Path, timeout_s: int) -> str:
-    """`lecture16.exe` と `mycc_ref.exe --no-comments` の出力が一致することを確かめる。
+def run_equivalence_case(lec15: Path, ref: Path, src: Path, timeout_s: int) -> str:
+    """`lecture15.exe` と `mycc_ref.exe --no-comments` の出力が一致することを確かめる。
 
     mycc_ref は別実装（型付けパスを挟む作りに書き直してある）なので、
-    生成されるコードは lecture16 と同じでなければならない。`.text` は 1 行の違いも
+    生成されるコードは lecture15 と同じでなければならない。`.text` は 1 行の違いも
     許さず、`.data` / `.bss` だけはラベル単位に並べ替えてから比べる（並び順は
-    実装の自由で、lecture16 は Hashtbl の走査順、mycc_ref は定義順に出す）。
+    実装の自由で、lecture15 は Hashtbl の走査順、mycc_ref は定義順に出す）。
     リファレンス側を書き換えたときに生成コードが変わっていないことを、この比較で担保する。
     """
     extras = extra_sources(src)
@@ -213,14 +213,14 @@ def run_equivalence_case(lec16: Path, ref: Path, src: Path, timeout_s: int) -> s
         return extras
     argv = [str(src), *(str(p) for p in extras)]
     try:
-        a = subprocess.run([str(lec16), *argv], capture_output=True, text=True, timeout=timeout_s)
+        a = subprocess.run([str(lec15), *argv], capture_output=True, text=True, timeout=timeout_s)
         b = subprocess.run(
             [str(ref), "--no-comments", *argv], capture_output=True, text=True, timeout=timeout_s
         )
     except subprocess.TimeoutExpired:
         return f"FAIL: コンパイルが {timeout_s}s で終わらない"
     if a.returncode != b.returncode:
-        return f"FAIL: 終了コードが違う lecture16={a.returncode} mycc_ref={b.returncode}"
+        return f"FAIL: 終了コードが違う lecture15={a.returncode} mycc_ref={b.returncode}"
     if a.returncode != 0:
         # 両方が同じように失敗するケース（このコーパスには無い想定）は比較対象外
         return "SKIP"
@@ -229,23 +229,23 @@ def run_equivalence_case(lec16: Path, ref: Path, src: Path, timeout_s: int) -> s
     if expected != got:
         for i, (x, y) in enumerate(zip(expected, got)):
             if x != y:
-                return f"FAIL: {i + 1} 行目が違う\n    lecture16:   {x!r}\n    mycc_ref: {y!r}"
-        return f"FAIL: 行数が違う lecture16={len(expected)} mycc_ref={len(got)}"
+                return f"FAIL: {i + 1} 行目が違う\n    lecture15:   {x!r}\n    mycc_ref: {y!r}"
+        return f"FAIL: 行数が違う lecture15={len(expected)} mycc_ref={len(got)}"
     return "PASS"
 
 
 def run_equivalence(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, int, int]:
-    lec16 = build_dir / "sessions" / "lecture16.exe"
+    lec15 = build_dir / "sessions" / "lecture15.exe"
     ref = build_dir / "reference" / "mycc_ref.exe"
-    print("\n--- 等価性 (lecture16.exe == mycc_ref.exe --no-comments) ---")
-    for exe in (lec16, ref):
+    print("\n--- 等価性 (lecture15.exe == mycc_ref.exe --no-comments) ---")
+    for exe in (lec15, ref):
         if not exe.is_file():
             print(f"  実行ファイルがない: {exe}", file=sys.stderr)
             return (0, 1, 0)
 
     npass = nfail = nskip = 0
     for src in all_test_sources():
-        result = run_equivalence_case(lec16, ref, src, timeout_s)
+        result = run_equivalence_case(lec15, ref, src, timeout_s)
         rel = src.relative_to(WORKBOOK)
         if result == "PASS":
             npass += 1
@@ -261,7 +261,7 @@ def run_equivalence(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, 
     return (npass, nfail, nskip)
 
 
-# 受理してはいけない入力。lecture16（support のフロントエンド）と mycc_ref
+# 受理してはいけない入力。lecture15（support のフロントエンド）と mycc_ref
 # （reference の専用フロントエンド）は文法定義を別々に持つので、正しいプログラムの
 # 出力が一致するだけでは「同じ言語を受理する」ことの片側しか確かめられない。
 # ここは拒否側を突き合わせる（どちらも 0 以外で終わることだけを見る。
@@ -285,12 +285,12 @@ REJECT_SOURCES = [
 ]
 
 
-def run_reject_case(lec16: Path, ref: Path, source: str, timeout_s: int) -> str:
+def run_reject_case(lec15: Path, ref: Path, source: str, timeout_s: int) -> str:
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp) / "reject.c"
         src.write_text(source, encoding="utf-8")
         codes = []
-        for exe, argv in ((lec16, []), (ref, ["--no-comments"])):
+        for exe, argv in ((lec15, []), (ref, ["--no-comments"])):
             try:
                 proc = subprocess.run(
                     [str(exe), *argv, str(src)], capture_output=True, text=True, timeout=timeout_s
@@ -301,24 +301,24 @@ def run_reject_case(lec16: Path, ref: Path, source: str, timeout_s: int) -> str:
     if codes[0] == 0 and codes[1] == 0:
         return "FAIL: どちらも受理してしまった"
     if codes[0] == 0:
-        return "FAIL: lecture16 だけが受理した"
+        return "FAIL: lecture15 だけが受理した"
     if codes[1] == 0:
         return "FAIL: mycc_ref だけが受理した"
     return "PASS"
 
 
 def run_reject(build_dir: Path, timeout_s: int, quiet: bool) -> tuple[int, int, int]:
-    lec16 = build_dir / "sessions" / "lecture16.exe"
+    lec15 = build_dir / "sessions" / "lecture15.exe"
     ref = build_dir / "reference" / "mycc_ref.exe"
-    print("\n--- 拒否側 (lecture16.exe と mycc_ref.exe が揃って拒否する) ---")
-    for exe in (lec16, ref):
+    print("\n--- 拒否側 (lecture15.exe と mycc_ref.exe が揃って拒否する) ---")
+    for exe in (lec15, ref):
         if not exe.is_file():
             print(f"  実行ファイルがない: {exe}", file=sys.stderr)
             return (0, 1, 0)
 
     npass = nfail = 0
     for name, source in REJECT_SOURCES:
-        result = run_reject_case(lec16, ref, source, timeout_s)
+        result = run_reject_case(lec15, ref, source, timeout_s)
         if result == "PASS":
             npass += 1
             if not quiet:
@@ -337,7 +337,7 @@ def main() -> int:
     ap.add_argument("--timeout", type=int, default=15, help="1件あたりの制限秒数")
     ap.add_argument("-q", "--quiet", action="store_true", help="PASS を表示しない")
     ap.add_argument("--no-equivalence", action="store_true",
-                    help="lecture16 と mycc_ref の出力一致テストを飛ばす")
+                    help="lecture15 と mycc_ref の出力一致テストを飛ばす")
     args = ap.parse_args()
 
     build_dir = Path(args.build_dir).resolve()
@@ -376,9 +376,9 @@ def main() -> int:
             continue
 
         npass = nfail = nskip = 0
-        runner = run_interpreter_case if num == 2 else run_compiler_case
+        runner = run_interpreter_case if num == 1 else run_compiler_case
         for src in sorted(tests.glob("*.c")):
-            # コマ15 の math_util.c のように、他のテストから include される
+            # コマ14 の math_util.c のように、他のテストから include される
             # 補助ソースは .ans を持たないので SKIP に落ちる
             result = runner(exe, src, args.timeout)
             rel = src.relative_to(WORKBOOK)
@@ -407,7 +407,7 @@ def main() -> int:
         for i, v in enumerate((npass, nfail, nskip)):
             total[i] += v
 
-    # 行頭のラベルは全角と半角が混ざる（コマ9 と 等価性 など）ので、
+    # 行頭のラベルは全角と半角が混ざる（コマ8 と 等価性 など）ので、
     # 文字数ではなく表示幅で揃える
     def pad(label: str, width: int = 8) -> str:
         shown = sum(2 if ord(ch) > 0x2E80 else 1 for ch in label)

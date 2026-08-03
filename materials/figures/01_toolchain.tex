@@ -1,11 +1,11 @@
-% コマ1: hello.s が実行されて終了コードになるまでの流れ
+% コマ0: hello.s が実行されて終了コードになるまでの流れ
 \documentclass[border=8pt]{standalone}
 \input{figure-preamble}
 \begin{document}
 \begin{tikzpicture}[node distance=0mm]
   % ---- 将来の位置づけ ----
   \node[cfgbox, dashed, text=TcGrayText, minimum width=34mm] (mycc) at (0mm, 24mm)
-      {（コマ3 から）自作コンパイラ\\mycc.py がここを出力する};
+      {（コマ2 から）自作コンパイラ\\mycc.py がここを出力する};
 
   % ---- ツールチェーンの流れ ----
   \node[cfgbox, fill=TcAccentLighter, minimum width=30mm] (A) at (0mm, 0mm)

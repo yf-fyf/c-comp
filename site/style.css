@@ -164,7 +164,7 @@ hr { border: 0; border-top: 1px solid var(--accent-light); margin: 2.5rem 0; }
 
 /* ── ページ内目次 ── */
 
-/* 箱にすると本文の前を占領する（コマ7 は15項目）。罫線だけにして横に流す。 */
+/* 箱にすると本文の前を占領する（コマ6 は15項目）。罫線だけにして横に流す。 */
 .toc {
   margin: 0 0 2.2rem;
   padding: 0.2rem 0 0.2rem 1rem;

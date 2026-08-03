@@ -1,5 +1,5 @@
 (*
-   コマ6: 制御構文② — while / for / break / continue
+   コマ6: 関数② — 引数受け取り + 関数呼び出し
 *)
 
 open Ast_def
@@ -12,6 +12,11 @@ let error ?(line = 0) msg =
 
 let locals : (string, int) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
+
+(* スタックに積んでいる一時値の個数（1 個 8 バイト）。
+   call 直前に sp が 16 バイト境界にあるかどうかを判定するために数える。 *)
+let depth = ref 0
+
 let label_count = ref 0
 let ret_label = ref ""
 let break_stack : string list ref = ref []
@@ -36,10 +41,27 @@ let lookup_var name line =
   | Some offset -> offset
   | None -> error ~line (Printf.sprintf "未定義の変数: '%s'" name)
 
+let rec collect_decls = function
+  | Decl { name; _ } -> alloc_local name
+  | Block { stmts; _ } -> List.iter collect_decls stmts
+  | If { then_; else_; _ } -> collect_decls then_; Option.iter collect_decls else_
+  | While { body; _ } | For { body; _ } -> collect_decls body
+  | _ -> ()
+
 let codegen_lval = function
   | Var { name; line; _ } ->
       emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
   | e -> error ~line:(line_of_expr e) "lvalue でない式です"
+
+let push_a0 () =
+  emit "  addi sp, sp, -8";
+  emit "  sd a0, 0(sp)";
+  incr depth
+
+let pop_into reg =
+  emit (Printf.sprintf "  ld %s, 0(sp)" reg);
+  emit "  addi sp, sp, 8";
+  decr depth
 
 let rec codegen = function
   | Num { value; _ } ->
@@ -49,17 +71,14 @@ let rec codegen = function
       emit "  ld a0, 0(a0)"
   | Assign { lhs; rhs; _ } ->
       codegen_lval lhs;
-      emit "  addi sp, sp, -8";
-      emit "  sd a0, 0(sp)";
+      push_a0 ();
       codegen rhs;
-      emit "  ld a1, 0(sp)";
-      emit "  addi sp, sp, 8";
+      pop_into "a1";
       emit "  sd a0, 0(a1)"
   | Unary { op = Neg; operand; _ } ->
       codegen operand;
       emit "  neg a0, a0"
   | Unary { op = PreInc; operand; _ } ->
-      (* 前置 ++: 左辺値のアドレスを 1 回だけ求め、+1 して書き戻す *)
       codegen_lval operand;
       emit "  ld a1, 0(a0)";
       emit "  addi a1, a1, 1";
@@ -71,13 +90,12 @@ let rec codegen = function
       emit "  addi a1, a1, -1";
       emit "  sd a1, 0(a0)";
       emit "  mv a0, a1"
+  | Call { name; args; _ } -> gen_call name args
   | Binary { op; lhs; rhs; _ } ->
       codegen lhs;
-      emit "  addi sp, sp, -8";
-      emit "  sd a0, 0(sp)";
+      push_a0 ();
       codegen rhs;
-      emit "  ld a1, 0(sp)";
-      emit "  addi sp, sp, 8";
+      pop_into "a1";
       (match op with
       | Add -> emit "  add a0, a1, a0"
       | Sub -> emit "  sub a0, a1, a0"
@@ -100,6 +118,22 @@ let rec codegen = function
       codegen else_;
       emit (label_end ^ ":")
   | e -> error ~line:(line_of_expr e) "コマ6で未対応の式です"
+
+and gen_call name args =
+  let n = List.length args in
+  List.iter (fun arg -> codegen arg; push_a0 ()) args;
+  for i = 0 to n - 1 do
+    emit (Printf.sprintf "  ld a%d, %d(sp)" i ((n - 1 - i) * 8))
+  done;
+  if n > 0 then (
+    emit (Printf.sprintf "  addi sp, sp, %d" (n * 8));
+    depth := !depth - n);
+  (* ここで sp は「呼び出しを囲む式が積んだ一時値」の分だけフレームから下がっている。
+     一時値は 1 個 8 バイトなので、奇数個なら 16 バイト境界からずれている。 *)
+  let pad = if !depth mod 2 <> 0 then 8 else 0 in
+  if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, -%d" pad);
+  emit (Printf.sprintf "  call %s" name);
+  if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, %d" pad)
 
 let rec gen_stmt = function
   | Decl _ -> ()
@@ -154,18 +188,16 @@ let rec gen_stmt = function
   | Break _ -> emit (Printf.sprintf "  j %s" (peek break_stack))
   | Continue _ -> emit (Printf.sprintf "  j %s" (peek cont_stack))
 
-let collect_decls = function
-  | Decl { name; _ } -> alloc_local name
-  | _ -> ()
-
 let gen_func = function
-  | FuncDef { name; body = Block { stmts; _ }; _ } ->
+  | FuncDef { name; params; body; _ } ->
       Hashtbl.clear locals;
       stack_offset := 0;
+      depth := 0;
       ret_label := new_label ();
       break_stack := [];
       cont_stack := [];
-      List.iter collect_decls stmts;
+      List.iter (fun (p : param) -> Option.iter alloc_local p.name) params;
+      collect_decls body;
       let frame_size = align_to !stack_offset 16 in
       emit (Printf.sprintf "  .globl %s" name);
       emit (name ^ ":");
@@ -173,13 +205,23 @@ let gen_func = function
       emit (Printf.sprintf "  sd ra, %d(sp)" (frame_size + 8));
       emit (Printf.sprintf "  sd s0, %d(sp)" frame_size);
       emit (Printf.sprintf "  addi s0, sp, %d" (frame_size + 16));
-      List.iter gen_stmt stmts;
+      List.iteri
+        (fun i (p : param) ->
+          match p.name with
+          | Some pname when i < 8 ->
+              (match Hashtbl.find_opt locals pname with
+              | Some offset -> emit (Printf.sprintf "  sd a%d, %d(s0)" i offset)
+              | None -> ())
+          | _ -> ())
+        params;
+      gen_stmt body;
+      if !depth <> 0 then
+        error (Printf.sprintf "push と pop の数が合っていません (depth=%d)" !depth);
       emit (!ret_label ^ ":");
       emit (Printf.sprintf "  ld s0, %d(sp)" frame_size);
       emit (Printf.sprintf "  ld ra, %d(sp)" (frame_size + 8));
       emit (Printf.sprintf "  addi sp, sp, %d" (frame_size + 16));
       emit "  ret"
-  | FuncDef _ -> error "gen_func: 関数本体がブロックではありません"
   | _ -> ()
 
 let () =

@@ -1,12 +1,6 @@
 (*
-   コマ9: 型システムの導入 — 型表・型別 load/store・char の昇格と縮小
-
-   コマ8 まではローカル変数表がオフセットしか覚えておらず、読み書きは
-   すべて ld / sd だった。この回から変数表に型を持たせ、型サイズで
-   lb/lw/ld・sb/sw/sd を選ぶ。
-
-   添字 p[i]・ポインタ演算のスケーリング・sizeof(型名) は、この型の
-   仕組みの上に載る話なので、コマ10（lecture10.ml）で足す。
+   コマ9: 型・ポインタ演算 — TyPtr, Index, ポインタ加減算のスケーリング
+   （連続領域は malloc で確保し、sizeof(型名) でサイズを求める）
 *)
 
 open Ast_def
@@ -19,8 +13,8 @@ let error ?(line = 0) msg =
   prerr_endline (Printf.sprintf "[line %d] %s" line msg);
   exit 1
 
-(* 宣言時の型を offset と一緒に覚える。ロード・ストアの幅は、この型で決まる。
-   コマ8 の (string, int) Hashtbl に型を足したのがこの表である。 *)
+(* 宣言時の型を offset と一緒に覚える。ロード・ストアの幅と
+   ポインタ演算のスケーリングは、この型で決まる。 *)
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
@@ -42,8 +36,6 @@ let new_label () =
 
 let align_to n align = ((n + align - 1) / align) * align
 
-(* 領域の大きさは型で決まる（char は 1、int は 4、ポインタは 8）。
-   ただしスロットは 8 バイト単位に揃えるので、置き場所の計算は 8 の倍数になる。 *)
 let alloc_local name ty =
   stack_offset := !stack_offset + align_to (size_of_ty ty) 8;
   Hashtbl.replace locals name (-(16 + !stack_offset), ty)
@@ -60,21 +52,23 @@ let rec collect_decls = function
   | While { body; _ } | For { body; _ } -> collect_decls body
   | _ -> ()
 
-(* 読み出しは int へ昇格する。lb は符号拡張するので、
-   負の値を入れた char はそのまま負の値として読める。 *)
 let load ty =
   match size_of_ty ty with
   | 1 -> emit "  lb a0, 0(a0)"
   | 4 -> emit "  lw a0, 0(a0)"
   | _ -> emit "  ld a0, 0(a0)"
 
-(* 書き込みは左辺値の型の幅で行う。char への代入が sb になることが、
-   下位 8 ビットへの縮小そのものである。 *)
 let store ty =
   match size_of_ty ty with
   | 1 -> emit "  sb a0, 0(a1)"
   | 4 -> emit "  sw a0, 0(a1)"
   | _ -> emit "  sd a0, 0(a1)"
+
+let scale_index elem_ty =
+  let sz = size_of_ty elem_ty in
+  if sz <> 1 then (
+    emit (Printf.sprintf "  li a1, %d" sz);
+    emit "  mul a0, a0, a1")
 
 let push_a0 () = emit "  addi sp, sp, -8"; emit "  sd a0, 0(sp)"; incr depth
 let pop_into reg = emit (Printf.sprintf "  ld %s, 0(sp)" reg); emit "  addi sp, sp, 8"; decr depth
@@ -84,6 +78,17 @@ let rec codegen_lval = function
       emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
   | Unary { op = Deref; operand; _ } ->
       codegen operand
+  | Index { base; index; _ } ->
+      let elem_ty = match type_of_expr base with
+        | TyPtr e -> e
+        | _ -> TyInt (* 型が分からないときは int として扱う *)
+      in
+      codegen base;
+      push_a0 ();
+      codegen index;
+      scale_index elem_ty;
+      pop_into "a1";
+      emit "  add a0, a1, a0"
   | e -> error ~line:(line_of_expr e) "lvalue でない式です"
 
 (* lvalue が指す先の型。codegen_lval が a0 に置いたアドレスを
@@ -92,6 +97,10 @@ and type_of_lval = function
   | Var { name; line; _ } -> lookup_local_ty name line
   | Unary { op = Deref; operand; _ } -> (
       match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
+  | Index { base; _ } -> (
+      match type_of_expr base with
+      | TyPtr e -> e
+      | _ -> TyInt)
   | _ -> TyInt
 
 and type_of_expr = function
@@ -102,9 +111,11 @@ and type_of_expr = function
       match type_of_expr operand with TyPtr t -> t | _ -> TyInt)
   | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
       type_of_lval operand
-  | Assign { lhs; _ } -> type_of_lval lhs
   | Cond { then_; _ } -> type_of_expr then_
-  (* 算術は常に int で行う。ポインタ + 整数がポインタ型になるのはコマ10 から。 *)
+  | Index _ as e -> type_of_lval e
+  | Binary { op = Add; lhs; rhs; _ } ->
+      let lt = type_of_expr lhs in
+      if is_ptr_ty lt then lt else type_of_expr rhs
   | _ -> TyInt
 
 and lookup_local_ty name line =
@@ -116,10 +127,12 @@ and codegen = function
   | Num { value; _ } ->
       emit (Printf.sprintf "  li a0, %d" value)
   | Var _ as v ->
-      (* lval としてアドレスを求めてから、型に応じた幅で読み出す。 *)
       let ty = type_of_expr v in
       codegen_lval v;
       load ty
+  | SizeofType { ty; _ } ->
+      (* sizeof は翻訳時定数 *)
+      emit (Printf.sprintf "  li a0, %d" (size_of_ty ty))
   | Unary { op = Addr; operand; _ } ->
       codegen_lval operand
   | Unary { op = Deref; operand; _ } ->
@@ -158,8 +171,11 @@ and codegen = function
       emit (label_else ^ ":");
       codegen else_;
       emit (label_end ^ ":")
+  | Index _ as e ->
+      let ty = type_of_expr e in
+      codegen_lval e;
+      load ty
   | Assign { lhs; rhs; _ } ->
-      (* 書き込み幅を決めるのは左辺値の型であって、右辺の型ではない。 *)
       let ty = type_of_lval lhs in
       codegen_lval lhs;
       push_a0 ();
@@ -181,16 +197,46 @@ and codegen = function
       if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, -%d" pad);
       emit (Printf.sprintf "  call %s" name);
       if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, %d" pad)
+  | Binary { op = Add; lhs; rhs; _ } ->
+      let lt = type_of_expr lhs and rt = type_of_expr rhs in
+      if is_ptr_ty lt || is_ptr_ty rt then (
+        let ptr_expr, int_expr, ptr_ty =
+          if is_ptr_ty lt then (lhs, rhs, lt) else (rhs, lhs, rt) in
+        let elem_ty = match ptr_ty with TyPtr e -> e | _ -> TyInt in
+        codegen ptr_expr;
+        push_a0 ();
+        codegen int_expr;
+        scale_index elem_ty;
+        pop_into "a1";
+        emit "  add a0, a1, a0")
+      else (
+        codegen lhs;
+        push_a0 ();
+        codegen rhs;
+        pop_into "a1";
+        emit "  add a0, a1, a0")
+  | Binary { op = Sub; lhs; rhs; _ } ->
+      let lt = type_of_expr lhs in
+      if is_ptr_ty lt then (
+        let elem_ty = match lt with TyPtr e -> e | _ -> TyInt in
+        codegen lhs;
+        push_a0 ();
+        codegen rhs;
+        scale_index elem_ty;
+        pop_into "a1";
+        emit "  sub a0, a1, a0")
+      else (
+        codegen lhs;
+        push_a0 ();
+        codegen rhs;
+        pop_into "a1";
+        emit "  sub a0, a1, a0")
   | Binary { op; lhs; rhs; _ } ->
-      (* 算術そのものは常に int で行うので、char の昇格に特別な処理は要らない。
-         ポインタ加減算のスケーリングはコマ10 で足す。 *)
       codegen lhs;
       push_a0 ();
       codegen rhs;
       pop_into "a1";
       (match op with
-      | Add -> emit "  add a0, a1, a0"
-      | Sub -> emit "  sub a0, a1, a0"
       | Mul -> emit "  mul a0, a1, a0"
       | Div -> emit "  div a0, a1, a0"
       | Mod -> emit "  rem a0, a1, a0"
@@ -201,7 +247,7 @@ and codegen = function
       | _ -> error "コマ9で未対応の二項演算です")
   | e -> error ~line:(line_of_expr e) "コマ9で未対応の式です"
 
-(* gen_stmt: コマ8 から変更なし *)
+(* gen_stmt: コマ7 から変更なし *)
 let rec gen_stmt = function
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
@@ -263,7 +309,6 @@ let gen_func = function
       ret_label := new_label ();
       break_stack := [];
       cont_stack := [];
-      (* パラメータも宣言と同じく型付きで確保する。 *)
       List.iter (fun (p : param) -> Option.iter (fun name -> alloc_local name p.ty) p.name) params;
       collect_decls body;
       let frame_size = align_to !stack_offset 16 in
@@ -273,9 +318,6 @@ let gen_func = function
       emit (Printf.sprintf "  sd ra, %d(sp)" (frame_size + 8));
       emit (Printf.sprintf "  sd s0, %d(sp)" frame_size);
       emit (Printf.sprintf "  addi s0, sp, %d" (frame_size + 16));
-      (* 退避はスロット 1 個ぶん（8 バイト）をまるごと使う。alloc_local が
-         8 バイト単位で場所を取っているので、char / int の引数でも隣を壊さない。
-         読み出し側が lb / lw で下位バイトだけを見るため、幅の食い違いも起きない。 *)
       List.iteri
         (fun i (p : param) ->
           match p.name with

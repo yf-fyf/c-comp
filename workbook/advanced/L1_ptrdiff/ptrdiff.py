@@ -60,6 +60,6 @@ def gen_ptr_diff(cg, node):
          '  div a0, a0, a1'
        (要素サイズは elem_size(cg, cg._type_of_expr(node.lhs)) で取れる)
 
-    1〜3 はコマ3 以来の二項演算のパターンそのままである。
+    1〜3 はコマ2 以来の二項演算のパターンそのままである。
     """
     raise NotImplementedError("Step 2: gen_ptr_diff を実装する")

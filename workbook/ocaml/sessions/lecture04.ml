@@ -1,5 +1,5 @@
 (*
-   コマ4: コード生成② — 変数・代入・シンボルテーブル
+   コマ4: 制御構文① — if / else + 比較演算子
 *)
 
 open Ast_def
@@ -12,6 +12,12 @@ let error ?(line = 0) msg =
 
 let locals : (string, int) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
+let label_count = ref 0
+let ret_label = ref ""
+
+let new_label () =
+  incr label_count;
+  Printf.sprintf ".L%d" !label_count
 
 let align_to n align = ((n + align - 1) / align) * align
 
@@ -59,15 +65,46 @@ let rec codegen = function
       | Mul -> emit "  mul a0, a1, a0"
       | Div -> emit "  div a0, a1, a0"
       | Mod -> emit "  rem a0, a1, a0"
+      | Eq -> emit "  sub a0, a1, a0"; emit "  seqz a0, a0"
+      | Ne -> emit "  sub a0, a1, a0"; emit "  snez a0, a0"
+      | Lt -> emit "  slt a0, a1, a0"
+      | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
       | _ -> error "コマ4で未対応の二項演算です")
+  | Cond { cond; then_; else_; _ } ->
+      (* 三項演算子: if/else と同じ分岐で、選ばれた腕の値を a0 に残す *)
+      let label_else = new_label () in
+      let label_end = new_label () in
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_else);
+      codegen then_;
+      emit (Printf.sprintf "  j %s" label_end);
+      emit (label_else ^ ":");
+      codegen else_;
+      emit (label_end ^ ":")
   | e -> error ~line:(line_of_expr e) "コマ4で未対応の式です"
 
-let gen_stmt = function
+let rec gen_stmt = function
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
   | ExprStmt _ -> ()
-  | Return { expr; _ } -> Option.iter codegen expr
-  | _ -> ()
+  | Return { expr; _ } ->
+      Option.iter codegen expr;
+      emit (Printf.sprintf "  j %s" !ret_label)
+  | Block { stmts; _ } -> List.iter gen_stmt stmts
+  | If { cond; then_; else_; _ } ->
+      let label_else = new_label () in
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_else);
+      gen_stmt then_;
+      (match else_ with
+      | Some else_stmt ->
+          let label_end = new_label () in
+          emit (Printf.sprintf "  j %s" label_end);
+          emit (label_else ^ ":");
+          gen_stmt else_stmt;
+          emit (label_end ^ ":")
+      | None -> emit (label_else ^ ":"))
+  | s -> error ~line:(line_of_stmt s) "コマ4で未対応の文です"
 
 let collect_decls = function
   | Decl { name; _ } -> alloc_local name
@@ -77,6 +114,7 @@ let gen_func = function
   | FuncDef { name; body = Block { stmts; _ }; _ } ->
       Hashtbl.clear locals;
       stack_offset := 0;
+      ret_label := new_label ();
       List.iter collect_decls stmts;
       let frame_size = align_to !stack_offset 16 in
       emit (Printf.sprintf "  .globl %s" name);
@@ -86,6 +124,7 @@ let gen_func = function
       emit (Printf.sprintf "  sd s0, %d(sp)" frame_size);
       emit (Printf.sprintf "  addi s0, sp, %d" (frame_size + 16));
       List.iter gen_stmt stmts;
+      emit (!ret_label ^ ":");
       emit (Printf.sprintf "  ld s0, %d(sp)" frame_size);
       emit (Printf.sprintf "  ld ra, %d(sp)" (frame_size + 8));
       emit (Printf.sprintf "  addi sp, sp, %d" (frame_size + 16));

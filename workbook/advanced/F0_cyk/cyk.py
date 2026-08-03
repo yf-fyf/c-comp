@@ -189,7 +189,7 @@ def to_sexpr(ast):
 
 
 def eval_ast(ast):
-    """Step 5: AST を評価して値を返す(コマ2 と同じ考え方)。
+    """Step 5: AST を評価して値を返す(コマ1 と同じ考え方)。
 
     方針:
     - ('num', 値) なら値を返す

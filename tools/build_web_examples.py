@@ -29,7 +29,7 @@ PUBLIC = DEV / "web" / "app" / "public"
 OUT = PUBLIC / "examples.json"
 SIM_OUT = PUBLIC / "sim-examples.json"
 HANDWRITTEN = DEV / "web" / "examples" / "asm"
-KOMA16 = WORKBOOK / "ocaml" / "_build" / "default" / "sessions" / "lecture16.exe"
+KOMA16 = WORKBOOK / "ocaml" / "_build" / "default" / "sessions" / "lecture15.exe"
 
 sys.path.insert(0, str(WORKBOOK / "scaffold"))
 from lexer import preprocess, tokenize  # noqa: E402
@@ -52,7 +52,7 @@ def accepts(path: pathlib.Path) -> bool:
 
 
 def group_label(rel: pathlib.Path) -> str:
-    # sessions/03_arithmetic_codegen/tests/x.c -> "03_arithmetic_codegen"
+    # sessions/02_arithmetic_codegen/tests/x.c -> "02_arithmetic_codegen"
     # final/tests/x.c -> "final" / advanced/S1_shortcircuit/tests/x.c -> "S1_shortcircuit"
     parts = rel.parts
     return parts[1] if parts[0] in ("sessions", "advanced") else parts[0]

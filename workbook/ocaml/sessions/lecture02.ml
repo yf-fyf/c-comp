@@ -1,42 +1,56 @@
 (*
-   コマ2: AST インタープリター（OCaml 版）
+   コマ2: コード生成① — 算術式 → RV64 アセンブリ
 *)
 
 open Ast_def
-let c_div a b =
-  if b = 0 then raise Division_by_zero;
-  a / b
 
-let c_mod a b = a - (b * c_div a b)
+let emit line = print_endline line
 
-let rec eval_ast = function
-  | Num { value; _ } -> value
-  | Unary { op = Neg; operand; _ } -> -(eval_ast operand)
-  | Binary { op = Add; lhs; rhs; _ } -> eval_ast lhs + eval_ast rhs
-  | Binary { op = Sub; lhs; rhs; _ } -> eval_ast lhs - eval_ast rhs
-  | Binary { op = Mul; lhs; rhs; _ } -> eval_ast lhs * eval_ast rhs
-  | Binary { op = Div; lhs; rhs; _ } -> c_div (eval_ast lhs) (eval_ast rhs)
-  | Binary { op = Mod; lhs; rhs; _ } -> c_mod (eval_ast lhs) (eval_ast rhs)
-  | _ -> failwith "eval_ast: コマ2で未対応の式です"
+let error ?(line = 0) msg =
+  prerr_endline (Printf.sprintf "[line %d] %s" line msg);
+  exit 1
 
-let run_main prog =
-  let rec eval_stmt = function
-    | Return { expr = Some e; _ } -> Some (eval_ast e)
-    | Block { stmts; _ } -> eval_stmts stmts
-    | _ -> None
-  and eval_stmts = function
-    | [] -> None
-    | s :: ss ->
-        (match eval_stmt s with
-        | Some v -> Some v
-        | None -> eval_stmts ss)
-  in
-  match List.find_opt (function FuncDef { name = "main"; _ } -> true | _ -> false) prog with
-  | Some (FuncDef { body; _ }) ->
-      (match eval_stmt body with
-      | Some v -> v
-      | None -> failwith "main 関数内に評価可能な return が見つかりません")
-  | _ -> failwith "main 関数が見つかりません"
+let rec codegen = function
+  | Num { value; _ } ->
+      emit (Printf.sprintf "  li a0, %d" value)
+  | Unary { op = Neg; operand; _ } ->
+      codegen operand;
+      emit "  neg a0, a0"
+  | Binary { op; lhs; rhs; _ } ->
+      codegen lhs;
+      emit "  addi sp, sp, -8";
+      emit "  sd a0, 0(sp)";
+      codegen rhs;
+      emit "  ld a1, 0(sp)";
+      emit "  addi sp, sp, 8";
+      (match op with
+      | Add -> emit "  add a0, a1, a0"
+      | Sub -> emit "  sub a0, a1, a0"
+      | Mul -> emit "  mul a0, a1, a0"
+      | Div -> emit "  div a0, a1, a0"
+      | Mod -> emit "  rem a0, a1, a0"
+      | _ -> error "コマ2で未対応の二項演算です")
+  | e -> error ~line:(line_of_expr e) "コマ2で未対応の式です"
+
+let gen_stmt = function
+  | Return { expr; _ } -> Option.iter codegen expr
+  | _ -> ()
+
+let gen_func = function
+  | FuncDef { name; body = Block { stmts; _ }; _ } ->
+      emit (Printf.sprintf "  .globl %s" name);
+      emit (name ^ ":");
+      emit "  addi sp, sp, -16";
+      emit "  sd ra, 8(sp)";
+      emit "  sd s0, 0(sp)";
+      emit "  addi s0, sp, 16";
+      List.iter gen_stmt stmts;
+      emit "  ld s0, 0(sp)";
+      emit "  ld ra, 8(sp)";
+      emit "  addi sp, sp, 16";
+      emit "  ret"
+  | FuncDef _ -> error "gen_func: 関数本体がブロックではありません"
+  | _ -> ()
 
 let () =
   if Array.length Sys.argv < 2 then (
@@ -45,5 +59,5 @@ let () =
   let filename = Sys.argv.(1) in
   let source = Utils.read_file filename in
   let prog = Frontend.parse_source ~filename source in
-  let result = run_main prog in
-  Printf.printf "評価結果: %d\n" result
+  emit "  .text";
+  List.iter gen_func prog

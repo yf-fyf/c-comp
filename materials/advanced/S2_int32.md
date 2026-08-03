@@ -9,7 +9,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ13（`malloc`）まで。折り返しの考え方そのものは型サイズまでで足りるが、安全網の `tests/pointer_ok.c` が `struct` と `malloc` を使う。完了条件のうち `golden.py` は完成した `final/mycc.py` を土台に [`fixed17`](../../workbook/advanced/README.md#fixed17) を回すので、やり切るにはコマ16 も要る |
+| 必須の前提 | コマ12（`malloc`）まで。折り返しの考え方そのものは型サイズまでで足りるが、安全網の `tests/pointer_ok.c` が `struct` と `malloc` を使う。完了条件のうち `golden.py` は完成した `final/mycc.py` を土台に [`fixed17`](../../workbook/advanced/README.md#fixed17) を回すので、やり切るにはコマ15 も要る |
 | 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、ラッパー `semcc.py`（配布済み・完成品） |
 | 編集する | `narrow.py` |
@@ -20,7 +20,7 @@
 
 ## いまのコンパイラは何をしているか
 
-コマ9 で「`int` は4バイト」と決め、`lw` / `sw` で読み書きするようにした。
+コマ8 で「`int` は4バイト」と決め、`lw` / `sw` で読み書きするようにした。
 しかし**計算**のほうは、ずっと64bit命令のままである。
 
 ```asm

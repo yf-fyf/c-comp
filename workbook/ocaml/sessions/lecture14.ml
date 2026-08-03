@@ -1,5 +1,5 @@
 (*
-   コマ14: グローバル変数・スコープ管理
+   コマ14: 複数ファイル + 前処理 (#include / #define) — マルチファイルコンパイル
 *)
 
 open Ast_def
@@ -46,7 +46,6 @@ let peek st = match !st with x :: _ -> x | [] -> error "空のラベルスタッ
 
 (* ── 構造体レイアウト ──
    struct 定義は support の構文解析時に Struct_env へ登録される。 *)
-
 (* ── グローバル変数宣言の収集 ──
    初期化子はない。グローバル変数はすべて .bss に置かれ 0 に初期化される。 *)
 
@@ -502,7 +501,6 @@ let gen_func = function
 (* ── プログラム全体のビルド ── *)
 
 let parse_file filename =
-  Struct_env.reset ();
   let source = Utils.read_file filename in
   let preprocessed = Preprocess.preprocess source filename in
   Frontend.parse_source ~already_preprocessed:true ~filename preprocessed
@@ -517,7 +515,11 @@ let gen_program prog =
 
 let () =
   if Array.length Sys.argv < 2 then (
-    prerr_endline "使い方: dune exec ./lecture14.exe -- <source.c>";
+    prerr_endline "使い方: dune exec ./lecture14.exe -- <source.c> [...]";
     exit 1);
-  let prog = parse_file Sys.argv.(1) in
-  gen_program prog
+  Struct_env.reset ();
+  let prog = ref [] in
+  for i = 1 to Array.length Sys.argv - 1 do
+    prog := !prog @ parse_file Sys.argv.(i)
+  done;
+  gen_program !prog

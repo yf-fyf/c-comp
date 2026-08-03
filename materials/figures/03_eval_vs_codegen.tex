@@ -1,4 +1,4 @@
-% コマ3: eval_ast（値を返す）と codegen（命令を出力する）の対比
+% コマ2: eval_ast（値を返す）と codegen（命令を出力する）の対比
 \documentclass[border=8pt]{standalone}
 \input{figure-preamble}
 \begin{document}
@@ -6,7 +6,7 @@
     ast/.style={cfgbox, minimum width=17mm, minimum height=7mm, font=\ttfamily\small},
     val/.style={annot, text=TcEmph}]
   % ================ 左: eval_ast ================
-  \node[gannot] at (0mm, 12mm) {コマ2 {\ttfamily eval\_ast} — 値を返す};
+  \node[gannot] at (0mm, 12mm) {コマ1 {\ttfamily eval\_ast} — 値を返す};
 
   \node[ast] (La) at (0mm, 0mm) {add};
   \node[ast] (L1) at (-16mm, -16mm) {num 1};
@@ -21,7 +21,7 @@
   \node[gannot] at (0mm, -30mm) {結果: Python の値 3};
 
   % ================ 右: codegen ================
-  \node[gannot] at (95mm, 12mm) {コマ3 {\ttfamily codegen} — 命令を出力する};
+  \node[gannot] at (95mm, 12mm) {コマ2 {\ttfamily codegen} — 命令を出力する};
 
   \node[ast] (Ra) at (95mm, 0mm) {add};
   \node[ast] (R1) at (79mm, -16mm) {num 1};

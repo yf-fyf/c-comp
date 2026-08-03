@@ -424,7 +424,7 @@ def check_libh_sync() -> list[Violation]:
 #
 # materials/advanced/, workbook/advanced/ も対象に含める。ただし
 # 「第N回」チェックだけは advanced 側で除外する: advanced の「Xシリーズの
-# 第N回」（F/O/S/R/Q/B の各ファミリ内での位置）は、コマ1〜16 を指す「第NN回」
+# 第N回」（F/O/S/R/Q/B の各ファミリ内での位置）は、コマ1〜15 を指す「第NN回」
 # とは無関係な別の数え方であり、正当な出現のため。
 #
 # advanced 配下限定の追加規約:
@@ -708,7 +708,7 @@ def extract_code_blocks(lines: list[str]) -> list[CodeBlock]:
 def annotate_code_blocks(blocks: list[CodeBlock], lines: list[str]) -> None:
     """C ブロックに仮想ファイル名と期待値を付ける。
 
-    ブロック先頭の `// name.c` 行はファイル名の宣言として扱う（コマ15 の
+    ブロック先頭の `// name.c` 行はファイル名の宣言として扱う（コマ14 の
     複数ファイル例がこの形）。期待値は、そのブロックの後から次のブロック
     （または次の見出し・区切り線）までの範囲に書かれたものを拾う。
     """
@@ -743,7 +743,7 @@ def group_code_blocks(blocks: list[CodeBlock]) -> list[list[CodeBlock]]:
     """1つのプログラムを成すブロックをまとめる。
 
     ファイル名を宣言したブロックは、同じ節にある限り1つのプログラム
-    （コマ15 の math_util.h / math_util.c / main.c）として束ねる。
+    （コマ14 の math_util.h / math_util.c / main.c）として束ねる。
     """
     groups: list[list[CodeBlock]] = []
     current: list[CodeBlock] | None = None

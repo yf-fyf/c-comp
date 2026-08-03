@@ -11,8 +11,8 @@
 
 ```bash
 # 各回のテスト（その回の mycc.py と tests/ を使う）
-python3 scaffold/test_runner.py sessions/03_arithmetic_codegen
-python3 scaffold/test_runner.py sessions/06_loops
+python3 scaffold/test_runner.py sessions/02_arithmetic_codegen
+python3 scaffold/test_runner.py sessions/05_loops
 
 # 最終統合版（引数を省略すると final/mycc.py + final/tests/）
 python3 scaffold/test_runner.py
@@ -21,8 +21,8 @@ python3 scaffold/test_runner.py
 出力例:
 
 ```text
-[PASS] sessions/06_loops/tests/for_count.c
-[FAIL: exit code expected=55 got=0] sessions/06_loops/tests/while_sum.c
+[PASS] sessions/05_loops/tests/for_count.c
+[FAIL: exit code expected=55 got=0] sessions/05_loops/tests/while_sum.c
 
 =============================
   PASS: 7  FAIL: 1  SKIP: 0
@@ -30,7 +30,7 @@ python3 scaffold/test_runner.py
 ```
 
 `SKIP` は `.ans`（期待する終了コード）が無いファイルである。
-コマ15 の `math_util.c` / `stat_lib.c` のように、**単体では実行せず他のテストと一緒に
+コマ14 の `math_util.c` / `stat_lib.c` のように、**単体では実行せず他のテストと一緒に
 コンパイルする補助ソース**がこれに当たるので、ここに出るのは正常である。
 
 一方、発展課題の `check.py` が出す `SKIP` は**未実装**を意味する。
@@ -63,9 +63,9 @@ foo.files   # 一緒にコンパイルする追加ソース（複数ファイル
 例:
 
 ```text
-sessions/06_loops/tests/while_sum.c
-sessions/06_loops/tests/while_sum.ans
-sessions/11_strings_data_section/tests/printf_hello.stdout
+sessions/05_loops/tests/while_sum.c
+sessions/05_loops/tests/while_sum.ans
+sessions/10_strings_data_section/tests/printf_hello.stdout
 final/tests/f01_arith.c
 final/tests/f01_arith.ans
 ```
@@ -79,7 +79,7 @@ final/tests/f01_arith.ans
 1行に1ファイル名で、パスは `foo.c` と同じディレクトリからの相対で書く。
 
 ```text
-sessions/15_preprocess_multifile/tests/multifile_global.files:
+sessions/14_preprocess_multifile/tests/multifile_global.files:
 stat_lib.c
 ```
 
@@ -89,7 +89,7 @@ stat_lib.c
 
 ## `final/tests`（fixed17）
 
-コマ1〜16 の機能をまとめて確認する17本のテスト。
+コマ1〜15 の機能をまとめて確認する17本のテスト。
 **標準トラック完成の目安**であり、発展課題では「意味を壊していないこと」の安全網として使う。
 
 発展課題に取り組むときは、変更を入れたあと毎回これを通すこと。
@@ -99,7 +99,7 @@ stat_lib.c
 テストランナーを使わず、生成アセンブリを目で見たいときの手順。
 
 ```bash
-python3 sessions/03_arithmetic_codegen/mycc.py test.c > out.s
+python3 sessions/02_arithmetic_codegen/mycc.py test.c > out.s
 riscv64-linux-gnu-gcc -x assembler -static out.s -o out
 qemu-riscv64 ./out; echo $?
 ```
@@ -119,10 +119,10 @@ qemu-riscv64 ./out; echo $?
 コンパイル結果ではなく、Parser が返した AST を見たいとき。
 
 ```bash
-python3 scaffold/parse_viewer.py sessions/02_interpreter/tests/add_mul.c
-python3 scaffold/parse_viewer.py sessions/03_arithmetic_codegen/tests/add.c --tokens
-python3 scaffold/parse_viewer.py sessions/03_arithmetic_codegen/tests/add.c --format tree
-python3 scaffold/parse_viewer.py sessions/03_arithmetic_codegen/tests/add.c --format dot > ast.dot
+python3 scaffold/parse_viewer.py sessions/01_interpreter/tests/add_mul.c
+python3 scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c --tokens
+python3 scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c --format tree
+python3 scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c --format dot > ast.dot
 ```
 
 ## 発展課題のテスト
@@ -149,7 +149,7 @@ python3 golden.py    # 存在し、README で指定されている場合
 5. ポインタで壊れる場合は `codegen()` と `codegen_lval()` の区別を見る
 
 ```bash
-python3 sessions/03_arithmetic_codegen/mycc.py sessions/03_arithmetic_codegen/tests/add.c > out.s
+python3 sessions/02_arithmetic_codegen/mycc.py sessions/02_arithmetic_codegen/tests/add.c > out.s
 riscv64-linux-gnu-gcc -x assembler -static out.s -o out
 qemu-riscv64 ./out; echo $?
 ```

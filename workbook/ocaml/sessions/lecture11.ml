@@ -1,13 +1,5 @@
 (*
-   コマ11: 文字列リテラルと .data セクション — intern_string, 文の走査, printf の基本形
-
-   文字列リテラルはコード生成の前に集めておかないと、.data を先に出せない。
-   そこで「文をたどって文字列を集める」パスを 1 本足し、集めた文字列に
-   .LCn ラベルを振って .data に並べる。
-
-   この回の式の走査は、文字列リテラルそのものと、それを直接抱えうる
-   代入・関数呼び出しだけを見る。二項演算・単項演算・添字・三項演算子の
-   下にある文字列を取りこぼすので、そこを埋めるのがコマ12（lecture12.ml）である。
+   コマ11: 式の走査と libc 活用 — intern_string, .data セクション
 *)
 
 open Ast_def
@@ -91,15 +83,15 @@ let intern_string s =
       Hashtbl.replace string_literals s label;
       label
 
-(* この回の走査は、文字列リテラルそのものと、それを直接抱えうる 2 種類の式
-   （代入・関数呼び出し）だけを辿る。二項演算・単項演算・添字・三項演算子の
-   下にある文字列は、まだ拾えないまま素通りする。この取りこぼしを埋めるのが
-   コマ12 である。 *)
 let rec collect_strings_expr = function
   | StrLit { value; _ } -> ignore (intern_string value)
-  | Assign { lhs; rhs; _ } -> collect_strings_expr lhs; collect_strings_expr rhs
+  | Assign { lhs; rhs; _ } | Binary { lhs; rhs; _ } | Index { base = lhs; index = rhs; _ } ->
+      collect_strings_expr lhs; collect_strings_expr rhs
+  | Unary { operand; _ } -> collect_strings_expr operand
+  | Cond { cond; then_; else_; _ } ->
+      collect_strings_expr cond; collect_strings_expr then_; collect_strings_expr else_
   | Call { args; _ } -> List.iter collect_strings_expr args
-  | _ -> ()
+  | Num _ | Var _ | SizeofType _ | Member _ -> ()
 
 let rec collect_strings_stmt = function
   | Block { stmts; _ } -> List.iter collect_strings_stmt stmts

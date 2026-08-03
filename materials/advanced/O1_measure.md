@@ -10,7 +10,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | コマ16（完成した `final/mycc.py`） |
+| 必須の前提 | コマ15（完成した `final/mycc.py`） |
 | 推奨の前提 | — |
 | 改変しない | `mycc.py`、`scaffold/`、`optcc.py` |
 | 編集する | `measure.py` |
@@ -170,7 +170,7 @@ O3 以降の各回は「前」と「後」の表を出すが、その**「前」
 
 | 列 | 何をかけた状態か | 導入する回 | コマンド（`workbook/advanced/` から） |
 |----|------------------|-----------|----------------------------------------|
-| 素 | 最適化なし。コマ16 の `mycc.py` の出力そのもの | — | `python3 optcc.py --passes '' FILE` |
+| 素 | 最適化なし。コマ15 の `mycc.py` の出力そのもの | — | `python3 optcc.py --passes '' FILE` |
 | +isel | 命令選択 | O3 | `python3 optcc.py --passes isel FILE` |
 | +regalloc | 局所変数を callee-saved レジスタへ | O4 | `python3 optcc.py --regalloc --passes isel FILE` |
 | +copyprop,dce | コピー伝播と死コード除去 | O6 | `python3 optcc.py --regalloc --passes isel,copyprop,dce FILE` |
@@ -207,7 +207,7 @@ strops          77108  69066      59877          51875    50135
 
 ### 素の出力は何でできているか
 
-素の 1,183命令のうち **587命令（49.6%）**が、コマ3 以来の push/pop の往復
+素の 1,183命令のうち **587命令（49.6%）**が、コマ2 以来の push/pop の往復
 （`addi sp, sp, -8` / `sd a0, 0(sp)` / `ld a1, 0(sp)` / `addi sp, sp, 8`）である。
 式の途中結果をメモリに逃がすたびに4命令を払っている勘定で、
 **出力のおよそ半分が値の往復に消えている**。

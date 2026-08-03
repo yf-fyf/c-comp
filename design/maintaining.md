@@ -19,7 +19,7 @@
 │   ├── quality_guide.md   # 教材品質管理・AIレビュー手順
 │   └── webapps.md         # 補助ウェブアプリの企画書（企画段階）
 ├── materials/             # 資料の Markdown 原稿
-│   ├── sessions/          # 実装のコマ1〜16 + 発表・振り返りのコマ17 の原稿 NN_xxx.md
+│   ├── sessions/          # 実装のコマ1〜15 + 発表・振り返りのコマ16 の原稿 NN_xxx.md
 │   ├── advanced/          # 発展教材の原稿 <回ID>_xxx.md
 │   ├── tools/             # 補助ツールガイドの原稿
 │   └── figures/           # 図の TikZ ソースと生成 SVG（sessions・advanced 共用）
@@ -44,11 +44,11 @@
     │   ├── testing.md         # テストとデバッグ（test_runner・テスト形式・症状から原因を絞る）
     │   ├── language_spec.md   # Core プロファイル（引く）
     │   ├── rv64_reference.md  # ABI・スタックフレーム・命令（引く）
-    │   └── code_example.md    # 到達目標コード例（コマ1〜16、引く）
+    │   └── code_example.md    # 到達目標コード例（コマ1〜15、引く）
     ├── scaffold/          # 提供スキャフォールド（Lexer/Parser/AST/テストランナー）
     ├── sessions/          # 通常回 NN_xxx/（starter・テスト。資料はサイト）
-    ├── final/             # コマ16で作る最終統合版
-    ├── ocaml/             # OCaml 版参考実装（コマ2〜16、完成相当）
+    ├── final/             # コマ15で作る最終統合版
+    ├── ocaml/             # OCaml 版参考実装（コマ1〜15、完成相当）
     ├── advanced/          # 発展教材。1トピック=1ディレクトリのフラット構成
     │   ├── README.md      # 全トピック一覧・カテゴリ別の解説
     │   ├── optcc.py       # O 系列の共有ラッパー
@@ -97,7 +97,7 @@ R=ランタイム、S=意味論、L=言語機能、Q=品質、P=移植・セル�
 `materials/` は資料の原稿、`workbook/` は学習者向け配布物として扱う。
 学習者経路を確認するときは、原則として `workbook/` 内だけを参照する。
 
-通常回は `workbook/sessions/NN_xxx/mycc.py` を編集し、コマ16で `workbook/final/mycc.py` に統合する構成である。
+通常回は `workbook/sessions/NN_xxx/mycc.py` を編集し、コマ15で `workbook/final/mycc.py` に統合する構成である。
 
 ### 用語と表記の統一
 
@@ -106,9 +106,9 @@ R=ランタイム、S=意味論、L=言語機能、Q=品質、P=移植・セル�
 
 | 対象 | 正 | 誤（避ける） | 備考 |
 |------|----|----|------|
-| 回の呼称 | `コマN`（例: コマ3、コマ16） | `第NN回`・`第N回` | H1 見出しが全16本で「コマN:」に統一されているため、本文もこれに寄せる |
-| ゼロ埋め | ゼロ埋めしない（`コマ3`。`コマ03` は使わない） | `コマ08`・`コマ06` 等 | ディレクトリ名・ファイル名（`04_variables` 等）は従来どおりゼロ埋めのまま変更しない。対象は本文中の表記だけ |
-| コマとNの間の空白 | 詰める（`コマ3`） | `コマ 3`・`コマ　3`（全角/半角空白・中黒スペース） | |
+| 回の呼称 | `コマN`（例: コマ2、コマ15） | `第NN回`・`第N回` | H1 見出しが全16本で「コマN:」に統一されているため、本文もこれに寄せる |
+| ゼロ埋め | ゼロ埋めしない（`コマ2`。`コマ03` は使わない） | `コマ08`・`コマ06` 等 | ディレクトリ名・ファイル名（`03_variables` 等）は従来どおりゼロ埋めのまま変更しない。対象は本文中の表記だけ |
+| コマとNの間の空白 | 詰める（`コマ2`） | `コマ 3`・`コマ　3`（全角/半角空白・中黒スペース） | |
 | 呼称（人） | 学習者 | 学生 | 公開文書の多数派に合わせる。私有側 `teacher/quality/` の記録も対象に含める（`teacher/answers/` は対象外） |
 | スキャフォールド／scaffold | 地の文では「スキャフォールド」（カタカナ）。ディレクトリ名・ファイルパス（`scaffold/`）・コマンド例・インラインコード・コードブロックの中身は実体を指すのでローマ字のまま変更しない | 地の文での英字 `scaffold` | `workbook/advanced/`・`materials/advanced/` にも適用する |
 | 丸括弧（`workbook/advanced/`・`materials/advanced/` 限定） | 地の文では全角（） | 地の文での半角 `()` | Big-O 記法（`O(n³)` 等）・`LL(1)` のような確立した記法、Markdown リンク／画像の `](...)`、インラインコード・コードブロックの中身、`golden.py` などが実際に印字するリテラル出力の引用は対象外。他の通常回・学習者向け文書には適用しない（この節の対象外） |
@@ -118,7 +118,7 @@ R=ランタイム、S=意味論、L=言語機能、Q=品質、P=移植・セル�
 | 「black box」の訳語 | ブラックボックス（カタカナの借用語） | 黒箱 | 「黒箱」は英語 "black box" の逐語訳(calque)で、日本語の技術文書としては不自然。T98 でリポジトリ全体の既知の出現を置換済み |
 
 advanced 側の「Xシリーズの第N回」（F/O/S/R/Q/B の各ファミリ内での位置づけ）は、
-「回の呼称」行（コマ1〜16 を指す `第NN回` の禁止）とは無関係の別の数え方であり、
+「回の呼称」行（コマ1〜15 を指す `第NN回` の禁止）とは無関係の別の数え方であり、
 対象外（そのまま使ってよい）。
 
 ---
@@ -155,7 +155,7 @@ CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make ch
 テンプレートやフィルタで新しい機能を使ったときは、CI の `pandoc --version` の出力と
 突き合わせて切り分ける。
 
-ページ間のリンクは `sessions/03_arithmetic_codegen/` のディレクトリ形式なので、
+ページ間のリンクは `sessions/02_arithmetic_codegen/` のディレクトリ形式なので、
 `file://` で開いても辿れない。ローカルで見るときは必ず `make serve` を使う。
 
 既定は `127.0.0.1` だけに開く。別端末から見るときは `HOST` を指定する。
@@ -182,7 +182,7 @@ CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make ch
 ```bash
 # 通常回（workbook/ から実行）
 cd workbook
-python3 scaffold/test_runner.py sessions/03_arithmetic_codegen
+python3 scaffold/test_runner.py sessions/02_arithmetic_codegen
 python3 scaffold/test_runner.py            # final/mycc.py + final/tests
 
 # OCaml 参考実装

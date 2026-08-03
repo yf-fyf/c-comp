@@ -10,7 +10,7 @@
      ネイティブ CLI（reference/mycc_ref.exe --no-comments）とバイト単位で同じ
      RV64 アセンブリを出すことを、workbook/ocaml/run_tests.py と同じテストソース
      集合で確かめる。両者とも Refcomp.Compile を通るので、run_tests.py の等価性
-     テスト（lecture16 との突き合わせ）と違い、正規化なしの完全一致で比較する。
+     テスト（lecture15 との突き合わせ）と違い、正規化なしの完全一致で比較する。
 
 使い方:
     cd dev/web/core && dune build && python3 golden_test.py [-v]
@@ -33,7 +33,7 @@ GLOBS = ["sessions/*/tests/*.c", "final/tests/*.c", "advanced/*/tests/*.c"]
 VARIANTS = [("sexp", []), ("sexp", ["--show-line"]), ("dot", []), ("dot", ["--show-line"])]
 
 # workbook/ocaml/run_tests.py の all_test_sources() / extra_sources() をそのまま使う。
-# 対象ファイル集合とコマ15 の複数ファイルコンパイルの扱いを二重に持たないため。
+# 対象ファイル集合とコマ14 の複数ファイルコンパイルの扱いを二重に持たないため。
 sys.path.insert(0, str(OCAML_DIR))
 import run_tests  # noqa: E402
 
@@ -114,7 +114,7 @@ def run_compile_golden(verbose: bool) -> int:
 
     sources = run_tests.all_test_sources()
 
-    # コマ15 の複数ファイルコンパイル（.files で追加ソースを束ねる）は、
+    # コマ14 の複数ファイルコンパイル（.files で追加ソースを束ねる）は、
     # ブラウザ向け compile(source, comments) が単一ソース文字列しか受け取らない
     # 設計（api.ml のコメントにある「文字列を渡して JSON 文字列を受け取る」境界）
     # のため原理的に再現できない。これはバグではなく API の意図した範囲外なので、

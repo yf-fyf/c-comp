@@ -1,5 +1,5 @@
 (*
-   コマ5: 制御構文① — if / else + 比較演算子
+   コマ5: 制御構文② — while / for / break / continue
 *)
 
 open Ast_def
@@ -14,6 +14,12 @@ let locals : (string, int) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 let label_count = ref 0
 let ret_label = ref ""
+let break_stack : string list ref = ref []
+let cont_stack : string list ref = ref []
+
+let push st x = st := x :: !st
+let pop st = match !st with [] -> () | _ :: xs -> st := xs
+let peek st = match !st with x :: _ -> x | [] -> error "空のラベルスタックです"
 
 let new_label () =
   incr label_count;
@@ -52,6 +58,19 @@ let rec codegen = function
   | Unary { op = Neg; operand; _ } ->
       codegen operand;
       emit "  neg a0, a0"
+  | Unary { op = PreInc; operand; _ } ->
+      (* 前置 ++: 左辺値のアドレスを 1 回だけ求め、+1 して書き戻す *)
+      codegen_lval operand;
+      emit "  ld a1, 0(a0)";
+      emit "  addi a1, a1, 1";
+      emit "  sd a1, 0(a0)";
+      emit "  mv a0, a1"
+  | Unary { op = PreDec; operand; _ } ->
+      codegen_lval operand;
+      emit "  ld a1, 0(a0)";
+      emit "  addi a1, a1, -1";
+      emit "  sd a1, 0(a0)";
+      emit "  mv a0, a1"
   | Binary { op; lhs; rhs; _ } ->
       codegen lhs;
       emit "  addi sp, sp, -8";
@@ -71,7 +90,6 @@ let rec codegen = function
       | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
       | _ -> error "コマ5で未対応の二項演算です")
   | Cond { cond; then_; else_; _ } ->
-      (* 三項演算子: if/else と同じ分岐で、選ばれた腕の値を a0 に残す *)
       let label_else = new_label () in
       let label_end = new_label () in
       codegen cond;
@@ -104,7 +122,37 @@ let rec gen_stmt = function
           gen_stmt else_stmt;
           emit (label_end ^ ":")
       | None -> emit (label_else ^ ":"))
-  | s -> error ~line:(line_of_stmt s) "コマ5で未対応の文です"
+  | While { cond; body; _ } ->
+      let label_cond = new_label () in
+      let label_end = new_label () in
+      push break_stack label_end;
+      push cont_stack label_cond;
+      emit (label_cond ^ ":");
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_end);
+      gen_stmt body;
+      emit (Printf.sprintf "  j %s" label_cond);
+      emit (label_end ^ ":");
+      pop break_stack;
+      pop cont_stack
+  | For { init; cond; step; body; _ } ->
+      let label_cond = new_label () in
+      let label_step = new_label () in
+      let label_end = new_label () in
+      push break_stack label_end;
+      push cont_stack label_step;
+      Option.iter codegen init;
+      emit (label_cond ^ ":");
+      Option.iter (fun c -> codegen c; emit (Printf.sprintf "  beqz a0, %s" label_end)) cond;
+      gen_stmt body;
+      emit (label_step ^ ":");
+      Option.iter codegen step;
+      emit (Printf.sprintf "  j %s" label_cond);
+      emit (label_end ^ ":");
+      pop break_stack;
+      pop cont_stack
+  | Break _ -> emit (Printf.sprintf "  j %s" (peek break_stack))
+  | Continue _ -> emit (Printf.sprintf "  j %s" (peek cont_stack))
 
 let collect_decls = function
   | Decl { name; _ } -> alloc_local name
@@ -115,6 +163,8 @@ let gen_func = function
       Hashtbl.clear locals;
       stack_offset := 0;
       ret_label := new_label ();
+      break_stack := [];
+      cont_stack := [];
       List.iter collect_decls stmts;
       let frame_size = align_to !stack_offset 16 in
       emit (Printf.sprintf "  .globl %s" name);

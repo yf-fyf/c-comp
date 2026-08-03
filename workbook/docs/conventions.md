@@ -6,9 +6,9 @@ C 版へ移植するときの規約は発展課題 [`P1_selfhost`](../advanced/P
 ここに書くのは「どう書くか」の規約であり、「何を受理するか」は
 [`language_spec.md`](./language_spec.md)（第 2 版、2026 年改訂）が定める。
 
-**読みどき**: コード生成を書き始めるコマ3 の前に一度、全体に目を通す。
+**読みどき**: コード生成を書き始めるコマ2 の前に一度、全体に目を通す。
 ただし最重要の [`codegen()` と `codegen_lval()` を分ける](#codegen-と-codegen_lval-を分ける)は
-コマ4 で最小形を導入しコマ8 で拡張する内容なので、両方の回で改めてここに戻ること。
+コマ3 で最小形を導入しコマ7 で拡張する内容なので、両方の回で改めてここに戻ること。
 
 ---
 
@@ -17,7 +17,7 @@ C 版へ移植するときの規約は発展課題 [`P1_selfhost`](../advanced/P
 | 時期 | 編集対象 |
 |------|---------|
 | 通常回 | `sessions/NN_xxx/mycc.py` |
-| コマ16 以降 | `final/mycc.py`（各回の成果を統合したもの） |
+| コマ15 以降 | `final/mycc.py`（各回の成果を統合したもの） |
 
 `scaffold/` は書き換えない。Lexer / Parser / AST 定義は提供物として扱う
 （自作したい場合は発展課題の F 系列で扱う）。
@@ -26,8 +26,8 @@ C 版へ移植するときの規約は発展課題 [`P1_selfhost`](../advanced/P
 
 ### `codegen()` と `codegen_lval()` を分ける
 
-**この教材でいちばん重要な設計**である。コマ4 で `codegen_lval()` を
-`'Var'`（ローカル変数）だけの最小形として導入し、コマ8 で `'Deref'`（`*p`）へ
+**この教材でいちばん重要な設計**である。コマ3 で `codegen_lval()` を
+`'Var'`（ローカル変数）だけの最小形として導入し、コマ7 で `'Deref'`（`*p`）へ
 拡張する。以降ずっと使う。
 
 ```python
@@ -76,9 +76,9 @@ Python 版では素直に `dict` を使う。C 版へ移植するときに連結
 
 先頭の `_` は「その回の実装の内部状態」を表す目印として使っている。
 
-`size_of_ty_str` はコマ9 で `size_of_ty_str(ty_str)` として入り、
-コマ13 で `struct` のサイズを引くために `size_of_ty_str(ty_str, struct_defs=None)`
-へ引数が1つ増える（詳細はコマ13 の原稿）。名前は変えない。
+`size_of_ty_str` はコマ8 で `size_of_ty_str(ty_str)` として入り、
+コマ12 で `struct` のサイズを引くために `size_of_ty_str(ty_str, struct_defs=None)`
+へ引数が1つ増える（詳細はコマ12 の原稿）。名前は変えない。
 
 `_push_a0` / `_pop_into` は**名前を変えないこと**。
 発展課題（B・O・S・L 系列）のラッパーは、この名前でコード生成クラスを探す。
@@ -93,12 +93,12 @@ Python 版では素直に `dict` を使う。C 版へ移植するときに連結
 
 前回のコマで動いていたコードを今回のコマで書き換えさせるスケルトンでは、
 前回版の実装をコメントとして `raise NotImplementedError(...)` の直前に残してよい。
-コマ13 の `alloc_local` がその例である。
+コマ12 の `alloc_local` がその例である。
 
 ```python
 def alloc_local(self, name: str, ty_str: str = 'int') -> None:
     # TODO: self._struct_defs を渡して struct のサイズで領域確保する。
-    #       コマ12 版は次の形だった。size_of_ty_str に self._struct_defs を足す。
+    #       コマ11 版は次の形だった。size_of_ty_str に self._struct_defs を足す。
     #           sz = self.align_to(self.size_of_ty_str(ty_str), 8)
     #           self._stack_offset += sz
     #           self._locals[name] = (-(16 + self._stack_offset), ty_str)

@@ -1,6 +1,13 @@
 (*
-   コマ10: 型・ポインタ演算 — TyPtr, Index, ポインタ加減算のスケーリング
-   （連続領域は malloc で確保し、sizeof(型名) でサイズを求める）
+   コマ10: 文字列リテラルと .data セクション — intern_string, 文の走査, printf の基本形
+
+   文字列リテラルはコード生成の前に集めておかないと、.data を先に出せない。
+   そこで「文をたどって文字列を集める」パスを 1 本足し、集めた文字列に
+   .LCn ラベルを振って .data に並べる。
+
+   この回の式の走査は、文字列リテラルそのものと、それを直接抱えうる
+   代入・関数呼び出しだけを見る。二項演算・単項演算・添字・三項演算子の
+   下にある文字列を取りこぼすので、そこを埋めるのがコマ11（lecture11.ml）である。
 *)
 
 open Ast_def
@@ -13,8 +20,8 @@ let error ?(line = 0) msg =
   prerr_endline (Printf.sprintf "[line %d] %s" line msg);
   exit 1
 
-(* 宣言時の型を offset と一緒に覚える。ロード・ストアの幅と
-   ポインタ演算のスケーリングは、この型で決まる。 *)
+(* 宣言時の型を offset と一緒に覚える。ポインタ演算の幅も load / store の
+   命令幅も型で決まるので、型が分からないと判断できない。 *)
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
@@ -25,6 +32,8 @@ let label_count = ref 0
 let ret_label = ref ""
 let break_stack : string list ref = ref []
 let cont_stack : string list ref = ref []
+let string_literals : (string, string) Hashtbl.t = Hashtbl.create 64
+let string_label_count = ref 0
 
 let push st x = st := x :: !st
 let pop st = match !st with [] -> () | _ :: xs -> st := xs
@@ -73,6 +82,43 @@ let scale_index elem_ty =
 let push_a0 () = emit "  addi sp, sp, -8"; emit "  sd a0, 0(sp)"; incr depth
 let pop_into reg = emit (Printf.sprintf "  ld %s, 0(sp)" reg); emit "  addi sp, sp, 8"; decr depth
 
+let intern_string s =
+  match Hashtbl.find_opt string_literals s with
+  | Some label -> label
+  | None ->
+      incr string_label_count;
+      let label = Printf.sprintf ".LC%d" !string_label_count in
+      Hashtbl.replace string_literals s label;
+      label
+
+(* この回の走査は、文字列リテラルそのものと、それを直接抱えうる 2 種類の式
+   （代入・関数呼び出し）だけを辿る。二項演算・単項演算・添字・三項演算子の
+   下にある文字列は、まだ拾えないまま素通りする。この取りこぼしを埋めるのが
+   コマ11 である。 *)
+let rec collect_strings_expr = function
+  | StrLit { value; _ } -> ignore (intern_string value)
+  | Assign { lhs; rhs; _ } -> collect_strings_expr lhs; collect_strings_expr rhs
+  | Call { args; _ } -> List.iter collect_strings_expr args
+  | _ -> ()
+
+let rec collect_strings_stmt = function
+  | Block { stmts; _ } -> List.iter collect_strings_stmt stmts
+  | ExprStmt { expr; _ } | Return { expr; _ } -> Option.iter collect_strings_expr expr
+  | If { cond; then_; else_; _ } -> collect_strings_expr cond; collect_strings_stmt then_; Option.iter collect_strings_stmt else_
+  | While { cond; body; _ } -> collect_strings_expr cond; collect_strings_stmt body
+  | For { init; cond; step; body; _ } -> Option.iter collect_strings_expr init; Option.iter collect_strings_expr cond; Option.iter collect_strings_expr step; collect_strings_stmt body
+  | Decl _ -> ()
+  | Break _ | Continue _ -> ()
+
+let emit_data_section () =
+  if Hashtbl.length string_literals > 0 then emit "  .data";
+  Hashtbl.iter
+    (fun s label ->
+      emit (label ^ ":");
+      String.iter (fun ch -> emit (Printf.sprintf "  .byte %d" (Char.code ch))) s;
+      emit "  .byte 0")
+    string_literals
+
 let rec codegen_lval = function
   | Var { name; line; _ } ->
       emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
@@ -81,7 +127,7 @@ let rec codegen_lval = function
   | Index { base; index; _ } ->
       let elem_ty = match type_of_expr base with
         | TyPtr e -> e
-        | _ -> TyInt (* 型が分からないときは int として扱う *)
+        | _ -> TyInt
       in
       codegen base;
       push_a0 ();
@@ -105,6 +151,7 @@ and type_of_lval = function
 
 and type_of_expr = function
   | Num _ -> TyInt
+  | StrLit _ -> TyPtr TyChar
   | Var { name; line; _ } -> lookup_local_ty name line
   | Unary { op = Addr; operand; _ } -> TyPtr (type_of_lval operand)
   | Unary { op = Deref; operand; _ } -> (
@@ -126,13 +173,13 @@ and lookup_local_ty name line =
 and codegen = function
   | Num { value; _ } ->
       emit (Printf.sprintf "  li a0, %d" value)
+  | StrLit { value; _ } ->
+      emit (Printf.sprintf "  la a0, %s" (intern_string value))
   | Var _ as v ->
+      (* lval としてアドレスを求めてから、型に応じた幅で読み出す。 *)
       let ty = type_of_expr v in
       codegen_lval v;
       load ty
-  | SizeofType { ty; _ } ->
-      (* sizeof は翻訳時定数 *)
-      emit (Printf.sprintf "  li a0, %d" (size_of_ty ty))
   | Unary { op = Addr; operand; _ } ->
       codegen_lval operand
   | Unary { op = Deref; operand; _ } ->
@@ -143,7 +190,6 @@ and codegen = function
       codegen operand;
       emit "  neg a0, a0"
   | Unary { op = PreInc; operand; _ } ->
-      (* 前置 ++: ポインタなら指し先サイズ、int/char なら 1 を足して書き戻す *)
       let ty = type_of_lval operand in
       let delta = match ty with TyPtr e -> size_of_ty e | _ -> 1 in
       codegen_lval operand;
@@ -161,16 +207,8 @@ and codegen = function
       emit (Printf.sprintf "  addi a0, a0, %d" (-delta));
       pop_into "a1";
       store ty
-  | Cond { cond; then_; else_; _ } ->
-      let label_else = new_label () in
-      let label_end = new_label () in
-      codegen cond;
-      emit (Printf.sprintf "  beqz a0, %s" label_else);
-      codegen then_;
-      emit (Printf.sprintf "  j %s" label_end);
-      emit (label_else ^ ":");
-      codegen else_;
-      emit (label_end ^ ":")
+  | SizeofType { ty; _ } ->
+      emit (Printf.sprintf "  li a0, %d" (size_of_ty ty))
   | Index _ as e ->
       let ty = type_of_expr e in
       codegen_lval e;
@@ -245,9 +283,19 @@ and codegen = function
       | Lt -> emit "  slt a0, a1, a0"
       | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
       | _ -> error "コマ10で未対応の二項演算です")
+  | Cond { cond; then_; else_; _ } ->
+      let label_else = new_label () in
+      let label_end = new_label () in
+      codegen cond;
+      emit (Printf.sprintf "  beqz a0, %s" label_else);
+      codegen then_;
+      emit (Printf.sprintf "  j %s" label_end);
+      emit (label_else ^ ":");
+      codegen else_;
+      emit (label_end ^ ":")
   | e -> error ~line:(line_of_expr e) "コマ10で未対応の式です"
 
-(* gen_stmt: コマ8 から変更なし *)
+(* gen_stmt: 前回から変更なし *)
 let rec gen_stmt = function
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
@@ -342,5 +390,7 @@ let () =
   let filename = Sys.argv.(1) in
   let source = Utils.read_file filename in
   let prog = Frontend.parse_source ~filename source in
+  List.iter (function FuncDef { body; _ } -> collect_strings_stmt body | _ -> ()) prog;
+  emit_data_section ();
   emit "  .text";
   List.iter gen_func prog

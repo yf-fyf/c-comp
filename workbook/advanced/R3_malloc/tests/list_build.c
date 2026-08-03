@@ -1,4 +1,4 @@
-// 自前 malloc で連結リストを作って走査する(コマ13 の再現)
+// 自前 malloc で連結リストを作って走査する(コマ12 の再現)
 #include "lib.h"
 
 int heap_init(char *buf, int size);

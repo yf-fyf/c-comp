@@ -26,7 +26,7 @@
 ## 動かし方
 
 ```bash
-python3 mylexer.py ../../sessions/03_arithmetic_codegen/tests/add.c
+python3 mylexer.py ../../sessions/02_arithmetic_codegen/tests/add.c
 ```
 
 ## テスト

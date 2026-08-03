@@ -19,7 +19,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const APP = join(HERE, "..");
 const DEV = join(APP, "../..");
 const WORKBOOK = join(DEV, "workbook");
-const KOMA16 = join(WORKBOOK, "ocaml/_build/default/sessions/lecture16.exe");
+const KOMA16 = join(WORKBOOK, "ocaml/_build/default/sessions/lecture15.exe");
 const GCC = process.env.GCC ?? "riscv64-linux-gnu-gcc";
 const QEMU = process.env.QEMU ?? "qemu-riscv64";
 
@@ -65,7 +65,7 @@ const failures: [string, string][] = [];
 
 for (const src of sources) {
   const rel = relative(WORKBOOK, src);
-  // 追加ソース（コマ15 の複数ファイル）
+  // 追加ソース（コマ14 の複数ファイル）
   const filesList = src.replace(/\.c$/, ".files");
   const extra = existsSync(filesList)
     ? execFileSync("cat", [filesList], { encoding: "utf8" })
