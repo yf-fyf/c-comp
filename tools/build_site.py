@@ -696,7 +696,9 @@ def serve(nav: dict, pages: list[Page], links: dict[str, str], output: Path,
 
 HREF_RE = re.compile(r'(?:href|src)="([^"#][^"]*)"')
 
-# tools/build_pages.py が公開時に足すもの。単体のサイトビルドには存在しない。
+# tools/build_pages.py が公開時に足すもの。"tools"・"downloads" は単体のサイトビルドには
+# 存在しない。"LICENSE"・"THIRD_PARTY_NOTICES.md" は copy_legal() が単体ビルドでも出力先へ
+# 置くが、check_links() 側の除外はどちらのビルド経路でも安全なので変更していない。
 ASSEMBLED = {"tools", "downloads", "LICENSE", "THIRD_PARTY_NOTICES.md"}
 
 
