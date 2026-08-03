@@ -239,8 +239,13 @@ and gen_call g f name args =
 (* ── 式のコード生成 ──
    「その式の値を a0 に置く」までを行う。 *)
 
+(* 式のコード生成の唯一の入口。ここを Emitter.with_span で囲うと、
+   どの式がどの命令を出したかが式単位で記録される（web の A3）。
+   印字には 1 行も足さないので、生成されるアセンブリは変わらない。 *)
 and codegen g f (e : Tast.expr) =
-  with_note g (expr_note "codegen" e) (fun () -> codegen_body g f e)
+  Emitter.with_span g.em ~kind:Emitter.Expr ~start_offset:e.e_loc.start_offset
+    ~end_offset:e.e_loc.end_offset (fun () ->
+      with_note g (expr_note "codegen" e) (fun () -> codegen_body g f e))
 
 and codegen_body g f (e : Tast.expr) =
   match e.e_desc with

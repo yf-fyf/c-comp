@@ -61,16 +61,20 @@ export interface TextResult {
   errors?: ParseError[];
 }
 
-/** 文 1 つと、その文が出した命令の範囲（A3 のクロスハイライト用） */
-export interface StmtSpan {
+/** 文または式 1 つと、それが出した命令の範囲（A3 のクロスハイライト用） */
+export interface SpanEntry {
   sourceRanges: SourceRange[]; // 元ソース上のUTF-16半開区間（AstNode と同じ土俵）
   fromLine: number; // 出力アセンブリの行番号（1 起点の閉区間）
   toLine: number;
 }
 
-/** compile の戻り値。text に加えて文と命令の対応表を持つ */
+/** 旧名。中身は SpanEntry と同じ（文単位だった頃からの互換用） */
+export type StmtSpan = SpanEntry;
+
+/** compile の戻り値。text に加えて文・式と命令の対応表を持つ */
 export interface CompileResult extends TextResult {
-  stmtMap?: StmtSpan[];
+  stmtMap?: SpanEntry[];
+  exprMap?: SpanEntry[];
 }
 
 export interface ExampleItem {

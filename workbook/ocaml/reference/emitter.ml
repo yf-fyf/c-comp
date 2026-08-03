@@ -14,15 +14,19 @@ type note = Bare | Owner of string | Aside of string
 
 type note_line = { line : Asm.line; note : note }
 
+(* 範囲の種別。文を囲んだのか式を囲んだのかを下流（web の A3）へ伝えるだけで、
+   印字には影響しない。 *)
+type span_kind = Stmt | Expr
+
 (* ソース上の範囲。Loc.t の一部だが、こちらは印字の都合しか知らないので
    行番号・列は持たず、前処理後ソースのバイト半開区間だけを覚える。 *)
-type span = { sp_start : int; sp_end : int }
+type span = { sp_start : int; sp_end : int; sp_kind : span_kind }
 
 type item =
   | Heading of { text : string; depth : int }
   | Line of note_line
-  (* 「ここからここまでが 1 つの文の出力」の目印。印字では 1 行も使わない。
-     どの文がどの命令を出したかを、出力の行番号で外へ返すために使う（web の A3）。 *)
+  (* 「ここからここまでが 1 つの文（または式）の出力」の目印。印字では 1 行も使わない。
+     どの文・どの式がどの命令を出したかを、出力の行番号で外へ返すために使う（web の A3）。 *)
   | Enter of span
   | Leave
 
@@ -32,8 +36,15 @@ type t = {
   mutable depth : int; (* 見出しの入れ子の深さ *)
 }
 
-(* 文 1 つと、その文が出した命令の範囲（印字後の行番号、1 起点の閉区間） *)
-type stmt_span = { s_start : int; s_end : int; from_line : int; to_line : int }
+(* 文または式 1 つと、それが出した命令の範囲（印字後の行番号、1 起点の閉区間）。
+   名前は互換のため stmt_span のままだが、s_kind で文と式を見分ける。 *)
+type stmt_span = {
+  s_start : int;
+  s_end : int;
+  from_line : int;
+  to_line : int;
+  s_kind : span_kind;
+}
 
 let create () = { rev_items = []; owners = []; depth = 0 }
 let add t item = t.rev_items <- item :: t.rev_items
@@ -62,9 +73,10 @@ let nested t f =
   t.depth <- t.depth + 1;
   Fun.protect ~finally:(fun () -> t.depth <- t.depth - 1) f
 
-(* f が出す行を「この範囲の文の出力」として囲む。入れ子の文はそのまま入れ子になる *)
-let with_span t ~start_offset ~end_offset f =
-  add t (Enter { sp_start = start_offset; sp_end = end_offset });
+(* f が出す行を「この範囲の文（または式）の出力」として囲む。
+   入れ子の文・式はそのまま入れ子になる *)
+let with_span t ?(kind = Stmt) ~start_offset ~end_offset f =
+  add t (Enter { sp_start = start_offset; sp_end = end_offset; sp_kind = kind });
   Fun.protect ~finally:(fun () -> add t Leave) f
 
 (* ── 印字 ── *)
@@ -82,14 +94,14 @@ let string_of_note_line { line; note } last_owner =
   | Owner owner | Aside owner ->
       (Printf.sprintf "%-*s # %s" note_column text owner, owner)
 
-(* 印字と、文ごとの出力範囲の採取を 1 回で行う。
-   範囲は「その文を囲む Enter … Leave の間に実際に出た行」なので、
+(* 印字と、文・式ごとの出力範囲の採取を 1 回で行う。
+   範囲は「その文（式）を囲む Enter … Leave の間に実際に出た行」なので、
    注記コメントの有無（見出し行が出るかどうか）でも必ず出力と揃う。 *)
 let render ~comments t =
   let buf = Buffer.create 4096 in
   let line_no = ref 0 in
   let rev_spans = ref [] in
-  (* いま開いている文のスタック。first は最初に出た行（0 = まだ出ていない） *)
+  (* いま開いている文・式のスタック。first は最初に出た行（0 = まだ出ていない） *)
   let open_spans = ref [] in
   let out line =
     Buffer.add_string buf line;
@@ -98,7 +110,7 @@ let render ~comments t =
     List.iter (fun (_, first) -> if !first = 0 then first := !line_no) !open_spans
   in
   let enter sp = open_spans := (sp, ref 0) :: !open_spans in
-  (* 1 行も出さなかった文（空文など）は範囲を持たないので捨てる *)
+  (* 1 行も出さなかった文（空文など）は範囲を持たないので捨てる。式は必ず 1 行以上出す *)
   let leave () =
     match !open_spans with
     | [] -> ()
@@ -106,7 +118,11 @@ let render ~comments t =
         open_spans := rest;
         if !first > 0 then
           rev_spans :=
-            { s_start = sp.sp_start; s_end = sp.sp_end; from_line = !first; to_line = !line_no }
+            { s_start = sp.sp_start;
+              s_end = sp.sp_end;
+              from_line = !first;
+              to_line = !line_no;
+              s_kind = sp.sp_kind }
             :: !rev_spans
   in
   let items = List.rev t.rev_items in
@@ -148,7 +164,7 @@ let render ~comments t =
 
 let to_string ~comments t = fst (render ~comments t)
 
-(* 文と命令の対応も要る呼び出し口（web の A3）。印字は to_string と同じ経路を通る *)
+(* 文・式と命令の対応も要る呼び出し口（web の A3）。印字は to_string と同じ経路を通る *)
 let to_string_with_spans ~comments t = render ~comments t
 
 (* 標準出力へ直接書く口。ライブラリとして使うときは to_string を呼ぶ *)

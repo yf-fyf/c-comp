@@ -152,6 +152,40 @@ describe("myccCore", () => {
     expect(ret.fromLine).toBeGreaterThan(assign.toLine);
   });
 
+  it("compile の exprMap が式と命令行を結ぶ", () => {
+    const source = "int main() {\n    int x;\n    x = 1 + 2;\n    return x;\n}\n";
+    const r = JSON.parse(core.compile(source, false)) as CompileResult;
+    expect(r.ok).toBe(true);
+    const lines = (r.text ?? "").split("\n");
+    const entries = r.exprMap!;
+    expect(entries.length).toBeGreaterThan(0);
+    for (const e of entries) {
+      expect(Number.isInteger(e.fromLine)).toBe(true);
+      expect(e.fromLine).toBeGreaterThan(0);
+      expect(e.toLine).toBeGreaterThanOrEqual(e.fromLine);
+      expect(e.toLine).toBeLessThanOrEqual(lines.length);
+      for (const range of e.sourceRanges) {
+        expect(range.to).toBeGreaterThan(range.from);
+        expect(range.to).toBeLessThanOrEqual(source.length);
+      }
+    }
+    const text = (e: { sourceRanges: { from: number; to: number }[] }): string =>
+      e.sourceRanges.map(({ from, to }) => source.slice(from, to)).join("");
+    // 部分式まで載る（文単位の stmtMap には無い粒度）
+    const one = entries.find((e) => text(e) === "1")!;
+    expect(lines.slice(one.fromLine - 1, one.toLine).join("\n")).toContain("li a0, 1");
+    const add = entries.find((e) => text(e) === "1 + 2")!;
+    expect(lines.slice(add.fromLine - 1, add.toLine).join("\n")).toContain("add a0");
+    // 部分式の命令範囲は、それを含む式の範囲の中に入る
+    expect(one.fromLine).toBeGreaterThanOrEqual(add.fromLine);
+    expect(one.toLine).toBeLessThanOrEqual(add.toLine);
+    // 文の範囲は式より広い（stmtMap は従来どおり文だけ）
+    const stmt = r.stmtMap!.find((e) => text(e) === "x = 1 + 2;")!;
+    expect(stmt.fromLine).toBeLessThanOrEqual(add.fromLine);
+    expect(stmt.toLine).toBeGreaterThanOrEqual(add.toLine);
+    expect(r.stmtMap!.some((e) => text(e) === "1 + 2")).toBe(false);
+  });
+
   it("compile のエラーは phase を持つ", () => {
     const r = JSON.parse(core.compile("int main() { return }", false)) as TextResult;
     expect(r.ok).toBe(false);

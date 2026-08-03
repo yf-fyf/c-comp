@@ -61,42 +61,49 @@ let phase_string = function
   | Refcomp.Diag.Parse -> "parse"
   | Refcomp.Diag.Typing -> "typing"
 
-(* 文と命令の対応（A3）。参考実装は「前処理後ソースのバイト範囲 → 出力の行番号」で返すので、
+(* 文・式と命令の対応（A3）。参考実装は「前処理後ソースのバイト範囲 → 出力の行番号」で返すので、
    ここで範囲を元ソースの UTF-16 位置へ写す（AST ノードの sourceRanges と同じ土俵に載せる）。
-   マクロ展開や include 由来で元ソースへ写せない文は落とす。 *)
-let stmt_map_json source (spans : Refcomp.Emitter.stmt_span list) =
-  let map_span =
-    match Preprocess.preprocess_with_map_exn ~include_dirs source filename with
-    | mapped -> source_range_mapper source mapped.segments
-    | exception _ -> fun _ -> []
-  in
+   マクロ展開や include 由来で元ソースへ写せない文・式は落とす。
+
+   map_span は preprocess をもう 1 回走らせて作るので、stmtMap と exprMap で使い回す
+   （compile 1 回につき前処理は 2 回まで）。 *)
+let span_mapper source =
+  match Preprocess.preprocess_with_map_exn ~include_dirs source filename with
+  | mapped -> source_range_mapper source mapped.segments
+  | exception _ -> fun _ -> []
+
+let span_map_json map_span kind (spans : Refcomp.Emitter.stmt_span list) =
   JList
     (List.filter_map
        (fun (s : Refcomp.Emitter.stmt_span) ->
-         match map_span (Some { Ast_def.start_offset = s.s_start; end_offset = s.s_end }) with
-         | [] -> None
-         | ranges ->
-             Some
-               (JObj
-                  [ ("sourceRanges",
-                      JList
-                        (List.map
-                           (fun (from_pos, to_pos) ->
-                             JObj [ ("from", JInt from_pos); ("to", JInt to_pos) ])
-                           ranges));
-                    (* 出力アセンブリの行番号（1 起点の閉区間）。comments の有無で変わる *)
-                    ("fromLine", JInt s.from_line);
-                    ("toLine", JInt s.to_line) ]))
+         if s.s_kind <> kind then None
+         else
+           match map_span (Some { Ast_def.start_offset = s.s_start; end_offset = s.s_end }) with
+           | [] -> None
+           | ranges ->
+               Some
+                 (JObj
+                    [ ("sourceRanges",
+                        JList
+                          (List.map
+                             (fun (from_pos, to_pos) ->
+                               JObj [ ("from", JInt from_pos); ("to", JInt to_pos) ])
+                             ranges));
+                      (* 出力アセンブリの行番号（1 起点の閉区間）。comments の有無で変わる *)
+                      ("fromLine", JInt s.from_line);
+                      ("toLine", JInt s.to_line) ]))
        spans)
 
 let compile_json source comments =
   try
     match Refcomp.Compile.compile_source_with_spans ~comments ~include_dirs ~filename source with
     | Ok (text, spans) ->
+        let map_span = span_mapper source in
         JObj
           [ ("ok", JBool true);
             ("text", JStr text);
-            ("stmtMap", stmt_map_json source spans) ]
+            ("stmtMap", span_map_json map_span Refcomp.Emitter.Stmt spans);
+            ("exprMap", span_map_json map_span Refcomp.Emitter.Expr spans) ]
     | Error (diag : Refcomp.Diag.t) ->
         JObj
           [ ("ok", JBool false);

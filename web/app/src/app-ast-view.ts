@@ -11,13 +11,13 @@ import { Decoration, type DecorationSet } from "@codemirror/view";
 import {
   setHoverRanges,
   setSelectedRanges,
-  stmtForLine,
-  stmtsForRanges,
+  spanForLine,
+  spansForRanges,
 } from "./ast-highlight";
 import { parseSource, astSexp, compile } from "./core";
 import { renderTree, type TreeTarget } from "./tree";
 import { el as $ } from "./shell";
-import type { ParseResult, SourceRange, StmtSpan } from "./types";
+import type { ParseResult, SourceRange, SpanEntry } from "./types";
 
 // ---- エディタ拡張: エラー行のハイライト ----
 // エディタ生成は app-main.ts なので、フィールドだけ作って渡す。
@@ -177,14 +177,16 @@ export function initAstView(opts: AstViewOptions): AstView {
 
   // ---- A3: 命令との対応（明示操作で開く） ----
   // 常時2ペインにはしない。［命令と対応］を押したときだけ AST の下に命令列を出し、
-  // 選んだノードが出した命令を光らせる。対応の粒度は文（compile_json の stmtMap）。
+  // 選んだノードが出した命令を光らせる。対応の粒度は式（compile_json の exprMap。
+  // 式として引けないノードは stmtMap へ落とす。ast-highlight.ts の照合規則を参照）。
   // アセンブリペインと同じく、開く／更新はすべて明示操作にそろえる（T38 B6）。
 
   const strip = $("ast-asm-strip");
   const stripLines = $("ast-asm-lines");
   const stripToggle = $<HTMLButtonElement>("btn-ast-asm");
   let stripOpen = false;
-  let stmtMap: StmtSpan[] = [];
+  let stmtMap: SpanEntry[] = [];
+  let exprMap: SpanEntry[] = [];
   let asmLineEls: HTMLElement[] = [];
   // 表示中の命令が今のソースの出力ではない（未コンパイル or ソース変更後）
   let stripStale = true;
@@ -193,7 +195,7 @@ export function initAstView(opts: AstViewOptions): AstView {
     $("ast-asm-status").textContent = text;
   }
 
-  /** 命令列を1行1要素で描き直す。行をクリックすると、その文のソース範囲を光らせる */
+  /** 命令列を1行1要素で描き直す。行をクリックすると、その式（または文）のソース範囲を光らせる */
   function renderStripLines(text: string): void {
     stripLines.textContent = "";
     stripLines.classList.remove("stale");
@@ -205,7 +207,7 @@ export function initAstView(opts: AstViewOptions): AstView {
       div.dataset.line = String(i + 1);
       div.textContent = line === "" ? " " : line;
       div.addEventListener("click", () => {
-        const hit = stmtForLine(stmtMap, i + 1);
+        const hit = spanForLine(stmtMap, exprMap, i + 1);
         editor.dispatch({
           effects: [
             setHoverRanges.of([]),
@@ -224,10 +226,10 @@ export function initAstView(opts: AstViewOptions): AstView {
     if (!stripOpen || stripStale || asmLineEls.length === 0) return;
     const target = selectedTarget;
     if (!target) {
-      setStripStatus("AST 木のノードをクリックすると、その文が出した命令が光ります");
+      setStripStatus("AST 木のノードをクリックすると、その式・文が出した命令が光ります");
       return;
     }
-    const hits = stmtsForRanges(stmtMap, target.sourceRanges);
+    const hits = spansForRanges(stmtMap, exprMap, target.sourceRanges);
     if (hits.length === 0) {
       setStripStatus(`${target.label}: 対応する命令はありません`);
       return;
@@ -248,12 +250,14 @@ export function initAstView(opts: AstViewOptions): AstView {
     const result = await compile(editor.state.doc.toString(), comments);
     if (!result.ok) {
       stmtMap = [];
+      exprMap = [];
       renderStripLines("");
       stripStale = true;
       setStripStatus(`✗ ${result.errors?.[0]?.message ?? "コンパイルエラー"}`);
       return;
     }
     stmtMap = result.stmtMap ?? [];
+    exprMap = result.exprMap ?? [];
     renderStripLines(result.text ?? "");
     stripStale = false;
     highlightStrip();
