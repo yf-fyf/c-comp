@@ -13,7 +13,6 @@ requires: []
 ## 今日のゴール
 
 qemu 上で手書き RV64 アセンブリを実行し、終了コード `42` を確認する。
-あわせて、教員提供の Lexer/Parser で `1+2*3` の AST を表示できることも確認する。
 
 この回ではコード生成は行わない。まずは RISC-V アセンブリを手で書いて、アセンブル・リンク・実行の流れを理解する。
 
@@ -65,30 +64,6 @@ python3 sessions/01_environment/check.py
 `tests/` には完成済みの命令例が置いてある（一覧は後の「tests/」節を参照）。
 編集対象ではないので、`addi` / `li` / `add` などの基本命令の組み合わせを読んで確認する。
 
-## スキャフォールドの動作確認
-
-教員提供の Lexer/Parser が AST を正しく構築できることを確認する。
-
-```bash
-python3 scaffold/parse_viewer.py sessions/02_interpreter/tests/add_mul.c
-```
-
-以下のような S 式が表示されれば成功。
-
-```lisp
-(program
-  (funcdef "main" :type int (params)
-    (block
-      (return
-        (add (num 1)
-          (mul (num 2) (num 3)))))))
-```
-
-`1 + 2 * 3` が `(add (num 1) (mul (num 2) (num 3)))` のように、
-掛け算が先にまとめられている（演算子の優先順位が正しく反映されている）ことを確認する。
-
-S 式ではなく木の形で見たいときは、[AST ビジュアライザ](../../tools/app.html?mode=build) に同じソースを貼るとブラウザ上に構文木が表示され、ノードとソース範囲の対応も確認できる。
-
 ## 編集するファイル
 
 - `hello.s`
@@ -111,7 +86,7 @@ S 式ではなく木の形で見たいときは、[AST ビジュアライザ](..
 python3 sessions/01_environment/check.py
 ```
 
-このコマンドは、編集した `hello.s`、完成済みの追加例2件、`1 + 2 * 3` の AST 構造をまとめて確認する。
+このコマンドは、編集した `hello.s` と完成済みの追加例2件をまとめて確認する。
 
 個別に動かす場合は、次のようにする。
 
