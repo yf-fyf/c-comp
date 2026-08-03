@@ -415,9 +415,23 @@ def copy_figures(output: Path) -> None:
                     ignore=shutil.ignore_patterns("*.tex", "*.pdf"))
 
 
+def copy_legal(output: Path) -> None:
+    """フッタが参照する LICENSE / THIRD_PARTY_NOTICES.md を出力先に置く。
+
+    tools/build_pages.py（リリース組み立て）でも同じファイルをコピーしているが、
+    build_site.py 単体のプレビュー（make serve 等）でもフッタのリンクが
+    404 にならないよう、ここでも出力先に置く。
+    """
+    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
+        source = ROOT / name
+        if source.is_file():
+            shutil.copy2(source, output / name)
+
+
 def copy_assets(output: Path) -> None:
     copy_style(output)
     copy_figures(output)
+    copy_legal(output)
 
 
 # ── ローカル確認用の開発サーバ ──
