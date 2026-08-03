@@ -1,5 +1,5 @@
 (*
-    コマ 12: 式の走査と libc 活用 — intern_string, .data section
+   コマ12: 式の走査と libc 活用 — intern_string, .data セクション
 *)
 
 open Ast_def
@@ -17,8 +17,8 @@ let error ?(line = 0) msg =
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
-(* スタックに積んでいる一時値の個数（1個 8 バイト）。
-   call 直前に sp が 16 の倍数かどうかを判定するために数える。 *)
+(* スタックに積んでいる一時値の個数（1 個 8 バイト）。
+   call 直前に sp が 16 バイト境界にあるかどうかを判定するために数える。 *)
 let depth = ref 0
 let label_count = ref 0
 let ret_label = ref ""
@@ -222,7 +222,7 @@ and codegen = function
         emit (Printf.sprintf "  addi sp, sp, %d" (n * 8));
         depth := !depth - n);
       (* 呼び出しを囲む式が積んでいる一時値は 1 個 8 バイト。
-         奇数個なら sp が 16 バイト境界からずれているので詰める。 *)
+         奇数個なら sp が 16 バイト境界からずれているので詰める（呼び出し規約）。 *)
       let pad = if !depth mod 2 <> 0 then 8 else 0 in
       if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, -%d" pad);
       emit (Printf.sprintf "  call %s" name);
@@ -287,7 +287,7 @@ and codegen = function
       emit (label_end ^ ":")
   | e -> error ~line:(line_of_expr e) "コマ12で未対応の式です"
 
-(* gen_stmt — unchanged *)
+(* gen_stmt: 前回から変更なし *)
 let rec gen_stmt = function
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
@@ -349,7 +349,7 @@ let gen_func = function
       ret_label := new_label ();
       break_stack := [];
       cont_stack := [];
-      List.iter (fun (p : param) -> Option.iter (fun n -> alloc_local n p.ty) p.name) params;
+      List.iter (fun (p : param) -> Option.iter (fun name -> alloc_local name p.ty) p.name) params;
       collect_decls body;
       let frame_size = align_to !stack_offset 16 in
       emit (Printf.sprintf "  .globl %s" name);

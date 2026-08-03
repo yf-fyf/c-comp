@@ -1,5 +1,5 @@
 (*
-    コマ 8: lvalue / rvalue — アドレス演算子 & と間接演算子 *
+    コマ8: lvalue / rvalue — アドレス演算子 & と間接演算子 *
 *)
 
 open Ast_def
@@ -13,8 +13,8 @@ let error ?(line = 0) msg =
 let locals : (string, int) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
-(* スタックに積んでいる一時値の個数（1個 8 バイト）。
-   call 直前に sp が 16 の倍数かどうかを判定するために数える。 *)
+(* スタックに積んでいる一時値の個数（1 個 8 バイト）。
+   call 直前に sp が 16 バイト境界にあるかどうかを判定するために数える。 *)
 let depth = ref 0
 
 let label_count = ref 0
@@ -136,7 +136,7 @@ and gen_call name args =
     emit (Printf.sprintf "  addi sp, sp, %d" (n * 8));
     depth := !depth - n);
   (* 呼び出しを囲む式が積んでいる一時値は 1 個 8 バイト。
-     奇数個なら sp が 16 バイト境界からずれているので詰める。 *)
+     奇数個なら sp が 16 バイト境界からずれているので詰める（呼び出し規約）。 *)
   let pad = if !depth mod 2 <> 0 then 8 else 0 in
   if pad <> 0 then emit (Printf.sprintf "  addi sp, sp, -%d" pad);
   emit (Printf.sprintf "  call %s" name);
