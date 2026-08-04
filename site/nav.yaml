@@ -22,7 +22,7 @@ sections:
   - slug: sessions
     title: 通常回
     group: 教材
-    summary: 先頭は番号を持たない準備回のコマ0（演習環境構築）で、初回授業の開始時点で終わっているのが目標である。続くコマ1〜16 の16コマが通常回で、授業内では読解と着手までを行い、実装の完成は次回までの課題とする粒度に分けてある。最後のコマ16 だけは新しい実装をせず、発表と振り返りに充てる。
+    summary: 先頭は番号を持たない準備回のコマ0（演習環境構築）で、初回授業の開始時点で終わっているのが目標である。続くコマ1〜15 の15コマが通常回で、授業内では読解と着手までを行い、実装の完成は次回までの課題とする粒度に分けてある。通常回のあとに自身の取り組みを発表する発表会（コマ16）を置くが、進度に応じて指導する回のため、この一覧には資料を載せていない。
     pages:
       - materials/sessions/00_setup.md
       - materials/sessions/01_interpreter.md
@@ -40,7 +40,6 @@ sections:
       - materials/sessions/13_globals_scope.md
       - materials/sessions/14_preprocess_multifile.md
       - materials/sessions/15_integrate_mycc.md
-      - materials/sessions/16_demo_review.md
 
   - slug: advanced
     title: 発展課題
