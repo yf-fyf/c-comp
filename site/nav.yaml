@@ -73,6 +73,7 @@ sections:
       - materials/advanced/L2_compound_assign.md
       - materials/advanced/L3_variadic.md
       - materials/advanced/L4_sizeof_expr.md
+      - materials/advanced/L5_struct_byval.md
       - materials/advanced/Q1_typecheck.md
       - materials/advanced/P1_selfhost.md
 
