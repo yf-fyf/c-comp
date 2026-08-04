@@ -45,8 +45,54 @@ let mapped_line ~map_source ~source_start value =
   in
   { value; origins }
 
-(* オブジェクト形式マクロを 1 段だけ適用する。置換結果にマクロ名が残る場合は
-   エラー（多段参照は言語仕様外）。挿入された展開文字列は元ソース上に
+(* 1 行を走査して「コード」区間 (start, end) の並びを返す。
+   文字列リテラル "..."、文字リテラル '...'、行コメント // ... の内側は
+   コードではないので除外する。マクロ置換をコード区間だけに限るために使う。
+   規則は workbook/scaffold/lexer.py の _code_spans と同じ（バックスラッシュが
+   次の 1 文字を打ち消す、行コメントは // のみ）。 *)
+let code_spans value =
+  let n = String.length value in
+  let spans = ref [] in
+  let i = ref 0 in
+  let start = ref 0 in
+  let stop = ref false in
+  while (not !stop) && !i < n do
+    let c = value.[!i] in
+    if c = '/' && !i + 1 < n && value.[!i + 1] = '/' then stop := true
+    else if c = '"' || c = '\'' then begin
+      if !start < !i then spans := (!start, !i) :: !spans;
+      let quote = c in
+      incr i;
+      while !i < n && value.[!i] <> quote do
+        if value.[!i] = '\\' then incr i;
+        incr i
+      done;
+      incr i;
+      start := !i
+    end
+    else incr i
+  done;
+  if !start < n then spans := (!start, min !i n) :: !spans;
+  List.rev !spans
+
+(* コード区間だけを対象に re を探し、見つかった名前を返す。多段参照の検出に使う。 *)
+let find_in_code_spans re value =
+  List.fold_left
+    (fun acc (s, e) ->
+      match acc with
+      | Some _ -> acc
+      | None ->
+          (try
+             let first = Str.search_forward re value s in
+             if first < e then Some (Str.matched_group 1 value) else None
+           with Not_found -> None))
+    None (code_spans value)
+
+(* オブジェクト形式マクロを 1 段だけ適用する。置換対象は文字列リテラル・
+   文字リテラル・行コメントの外側にある識別子トークンだけである
+   （"N" や 'N' や // N の中身は変えない。workbook/scaffold/lexer.py の
+   _apply_defines と同じ規則）。置換結果にマクロ名が残る場合はエラー
+   （多段参照は言語仕様外）。挿入された展開文字列は元ソース上に
    同じ文字範囲を持たないため未対応にする。 *)
 let apply_defines defines_tbl (mapped : mapped_text) filename lineno =
   if Hashtbl.length defines_tbl = 0 then mapped
@@ -69,31 +115,39 @@ let apply_defines defines_tbl (mapped : mapped_text) filename lineno =
       Buffer.add_string value_buf body;
       for _ = 1 to String.length body do origins_rev := None :: !origins_rev done
     in
-    let rec loop pos =
-      match
-        try Some (Str.search_forward re mapped.value pos) with Not_found -> None
-      with
-      | None -> append_original pos (String.length mapped.value)
-      | Some _ ->
-          let first = Str.match_beginning () and last = Str.match_end () in
-          let name = Str.matched_group 1 mapped.value in
-          append_original pos first;
-          append_replacement (Hashtbl.find defines_tbl name);
-          replaced := true;
-          loop last
+    (* コード区間 [pos, e) の中だけをマクロ名で走査・置換する。 *)
+    let rec scan_code_span pos e =
+      if pos >= e then ()
+      else
+        match
+          try Some (Str.search_forward re mapped.value pos) with Not_found -> None
+        with
+        | None -> append_original pos e
+        | Some first when first >= e -> append_original pos e
+        | Some first ->
+            let last = Str.match_end () in
+            let name = Str.matched_group 1 mapped.value in
+            append_original pos first;
+            append_replacement (Hashtbl.find defines_tbl name);
+            replaced := true;
+            scan_code_span last e
     in
-    loop 0;
+    (* コード区間の外（文字列・文字リテラル・行コメントの内側）はそのまま素通しする。 *)
+    let rec walk_spans pos = function
+      | [] -> append_original pos (String.length mapped.value)
+      | (s, e) :: rest ->
+          append_original pos s;
+          scan_code_span s e;
+          walk_spans e rest
+    in
+    walk_spans 0 (code_spans mapped.value);
     let result =
       { value = Buffer.contents value_buf; origins = Array.of_list (List.rev !origins_rev) }
     in
     if !replaced then (
-      match
-        try Some (Str.search_forward re result.value 0) with Not_found -> None
-      with
-      | Some _ ->
-          pp_error
-            ("マクロの多段参照は使えない: " ^ Str.matched_group 1 result.value)
-            filename lineno
+      match find_in_code_spans re result.value with
+      | Some name ->
+          pp_error ("マクロの多段参照は使えない: " ^ name) filename lineno
       | None -> ());
     result
   end
