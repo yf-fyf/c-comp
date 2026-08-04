@@ -1,4 +1,4 @@
-# コマ8: 型システムの導入
+# コマ8: 型検査の導入
 
 この回の資料は [https://yf-fyf.github.io/c-comp/sessions/08_types/](https://yf-fyf.github.io/c-comp/sessions/08_types/) にあります。
 
