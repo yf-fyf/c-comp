@@ -76,5 +76,4 @@ make pages VERSION=v0.1.0
 
 ## 参考文献
 
-- Abdulaziz Ghuloum, "An Incremental Approach to Compiler Construction" (Scheme Workshop 2006)
-- Rui Ueyama「低レイヤを知りたい人のための C コンパイラ作成入門」
+[`workbook/docs/getting_started.md` の「参考資料」](./workbook/docs/getting_started.md#参考資料)を参照。
