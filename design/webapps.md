@@ -303,7 +303,6 @@ Python 版と OCaml 版で既に同じ規約になっている。
   `app.html?mode=build&example=<教材テストのパス>` / `app.html?mode=run&example=<サンプルのラベル>`。
   `example` の意味はモードごとに異なるため必ず `mode` とセットで解釈する
   （`mode` 省略時は作るモード）。旧3ページの URL への後方互換は持たない
-  （学生への個別共有実績が無いことを確認済み。リダイレクトも置かない）
 
 ---
 
