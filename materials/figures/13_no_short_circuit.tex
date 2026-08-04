@@ -1,0 +1,45 @@
+% コマ13: && は短絡しない — 両辺を必ず評価することの帰結
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    box/.style={cfgbox, minimum width=46mm, minimum height=9mm},
+    hot/.style={box, fill=TcAccentLighter},
+    ttl/.style={annot, anchor=south, align=center}]
+
+  \node[gannot, anchor=south] at (48mm, 30mm)
+      {{\ttfamily if (p != 0 \&\& p->val > 0)} を、それぞれがどう実行するか};
+
+  % ================ 左: 本物の C（短絡する） ================
+  \node[ttl] at (0mm, 20mm) {本物の C（短絡する）};
+
+  \node[box] (Ll) at (0mm, 10mm)  {左辺 {\ttfamily p != 0} を評価};
+  \node[hot] (Lr) at (0mm, -6mm)  {右辺 {\ttfamily p->val > 0} を評価};
+  \node[box] (Le) at (0mm, -22mm) {結果を {\ttfamily a0} に};
+
+  \draw[flow] (Ll) -- node[annot, right=1mm] {\small 真} (Lr);
+  \draw[flow] (Lr) -- (Le);
+  \draw[ptr] (Ll.west) to[out=180, in=180, looseness=1.4]
+      node[annot, text=TcEmph, left=1.5mm, align=right, pos=0.5] {偽なら\\右辺を飛び越す} (Le.west);
+
+  % ================ 右: この言語（例外 E3） ================
+  \node[ttl] at (96mm, 20mm) {この言語（{\ttfamily language\_spec.md} 例外 E3・短絡しない）};
+
+  \node[box] (Rl) at (96mm, 10mm)  {左辺 {\ttfamily p != 0} を評価 → {\ttfamily snez}};
+  \node[hot] (Rr) at (96mm, -6mm)  {右辺 {\ttfamily p->val > 0} を評価 → {\ttfamily snez}};
+  \node[box] (Ra) at (96mm, -22mm) {{\ttfamily and} で合成};
+
+  \draw[flow] (Rl) -- (Rr);
+  \draw[flow] (Rr) -- (Ra);
+
+  \node[annot, anchor=west, text=TcGrayText, align=left] at (122mm, 10mm)
+      {分岐もラベルも作らない。\\比較演算子と同じ形};
+  \node[annot, anchor=west, text=TcEmph, align=left] at (122mm, -6mm)
+      {{\ttfamily p} が 0 でもここを必ず実行する\\→ {\ttfamily p->val} で NULL 参照クラッシュ};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (48mm, -34mm)
+      {この言語では NULL の判定と中身の判定を別の文に分けて書く（コマ12 の note）。\\
+       短絡する生成に作り替えるのは発展課題 S1 で扱う};
+\end{tikzpicture}
+\end{document}

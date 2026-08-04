@@ -1,0 +1,72 @@
+% コマ10: 2パス構成 — 同じ AST を collect_strings と codegen が順にたどる
+% printf("hi"); を含む AST に、目的の違う2本の走査を通す
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ast/.style={cfgbox, minimum width=30mm, minimum height=7mm, font=\ttfamily\small},
+    p1/.style={flow, line width=1.1pt},
+    p2/.style={ptr},
+    num/.style={annot, font=\small\bfseries, text=TcEmph, align=center},
+    numa/.style={annot, font=\small\bfseries, text=TcAccentDark, align=center},
+    note/.style={annot, text=TcGrayText},
+    lcline/.style={font=\ttfamily\footnotesize, text=TcText, anchor=west}]
+
+  \node[gannot, anchor=north] at (0mm, 46mm)
+      {{\ttfamily main() \{ printf("hi"); \}} の AST（1 本だけ）を、目的の違う 2 つの走査が順に通る};
+
+  % ================ 中央: AST ================
+  \node[ast] (stmt) at (0mm, 20mm)  {ExprStmt};
+  \node[ast] (call) at (0mm, 4mm)   {Call printf};
+  \node[ast] (str)  at (0mm, -12mm) {Str "hi"};
+  \draw[flow] (stmt.south) -- (call.north);
+  \draw[flow] (call.south) -- (str.north);
+
+  % ================ パス1（左・collect_strings） ================
+  \node[numa, anchor=south] at (-38mm, 29mm)
+      {① パス1\\{\ttfamily collect\_strings\_stmt()}};
+  \draw[p1] (-38mm, 26mm) -- (-38mm, -8mm);
+  \node[note, anchor=east, text=TcAccentDark, align=right] at (-46mm, 8mm)
+      {木を上から順にたどり、\\{\ttfamily Str} に着いたら\\{\ttfamily \_intern()} で登録する};
+
+  \node[region, minimum width=64mm, minimum height=13mm,
+        font=\ttfamily\footnotesize, align=center] (dict) at (-64mm, -34mm)
+      {self.\_strings = \{"hi": ".LC1"\}};
+  \draw[p1] (str.south) to[out=-135, in=90] (dict.north);
+
+  % ================ パス2（右・codegen） ================
+  \node[num, anchor=south] at (38mm, 29mm)
+      {② パス2\\{\ttfamily gen\_func()}};
+  \draw[p2] (38mm, 26mm) -- (38mm, -8mm);
+  \node[note, anchor=west, text=TcEmph, align=left] at (46mm, 8mm)
+      {同じ木をもう一度たどり、\\{\ttfamily Str} では登録済みの\\ラベルを命令に埋める};
+
+  \node[region, minimum width=44mm, minimum height=13mm,
+        font=\ttfamily\footnotesize, align=center] (insn) at (64mm, -34mm)
+      {la a0, .LC1};
+  \draw[p2] (str.south) to[out=-45, in=90] (insn.north);
+
+  % ================ 下: 出力されるアセンブリ ================
+  \node[gannot, anchor=south] at (0mm, -49mm) {出力されるアセンブリ（{\ttfamily .data} が先、{\ttfamily .text} が後）};
+
+  \node[region, minimum width=108mm, minimum height=17mm, anchor=north] (data) at (0mm, -51mm) {};
+  \node[lcline] at ($(data.north west)+(4mm,-4mm)$)  {.data};
+  \node[lcline] at ($(data.north west)+(4mm,-9mm)$)  {.LC1:};
+  \node[lcline] at ($(data.north west)+(4mm,-14mm)$) {\ \ .byte 104, 105, 0};
+  \node[numa, anchor=east] at ($(data.east)+(-4mm,0mm)$) {パス1 が埋める};
+
+  \node[region, minimum width=108mm, minimum height=17mm, anchor=north] (text) at (0mm, -71mm) {};
+  \node[lcline] at ($(text.north west)+(4mm,-4mm)$)  {.text};
+  \node[lcline] at ($(text.north west)+(4mm,-9mm)$)  {main:};
+  \node[lcline] at ($(text.north west)+(4mm,-14mm)$) {\ \ la a0, .LC1};
+  \node[num, anchor=east] at ($(text.north east)+(-4mm,-5mm)$) {パス2 が埋める};
+
+  \draw[p1] (dict.south) to[out=-90, in=180] ($(data.west)+(0mm,-3mm)$);
+  \draw[p2] (insn.south) to[out=-90, in=0]  ($(text.east)+(0mm,-4mm)$);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (0mm, -94mm)
+      {{\ttfamily .data} を先に出すには、コードを書き始める前に文字列を全部知っている必要がある。\\
+       だからパス1 が木を最後までたどり終えるまで、パス2 は始められない};
+\end{tikzpicture}
+\end{document}

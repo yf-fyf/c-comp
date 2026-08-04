@@ -260,9 +260,10 @@ def _intern(self, s: str) -> str:
 そこで、コード生成の前に AST をもう一度たどって文字列だけを集める。
 この走査が `collect_strings_stmt()` と `collect_strings_expr()` である。
 
-```text
-parse → collect_strings_stmt（文字列を集める） → emit_data_section → .text → gen_func
-```
+![同じ AST を collect_strings と codegen が順にたどる2パス構成](figures/10_two_pass.svg)
+
+パス1 が集めた `self._strings` が `.data` を、パス2 のコード生成が `.text` を埋める。
+出力は `parse` → `collect_strings_stmt` → `emit_data_section` → `.text` → `gen_func` の順に進む。
 
 集める処理は、コード生成の再帰と同じ形をしている。
 文なら子の文と式へ、式なら子の式へ降りていき、`ND_STR` に着いたら `_intern()` する。

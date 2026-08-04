@@ -1,0 +1,61 @@
+% コマ14: 前処理は字句解析の前 — 置換される場所・されない場所
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    stg/.style={cfgbox, minimum width=22mm, minimum height=8mm, font=\small},
+    ftxt/.style={font=\ttfamily\small, inner sep=1.5pt},
+    srcline/.style={font=\ttfamily\footnotesize, text=TcText, anchor=west},
+    okmark/.style={annot, text=TcEmph, anchor=west},
+    note/.style={annot, text=TcGrayText, anchor=west}]
+
+  % ================ 上段: パイプライン上の位置 ================
+  \node[gannot, anchor=west] at (-74mm, 14mm) {前処理はパイプラインのどこで効くか};
+
+  \node[ftxt, anchor=west] (f1) at (-74mm, 0mm) {ソース文字列};
+  \node[stg, right=4mm of f1, fill=TcAccentLighter, line width=1.1pt] (s1) {preprocess};
+  \node[ftxt, right=4mm of s1] (f2) {展開済み文字列};
+  \node[stg, right=4mm of f2] (s2) {Lexer};
+  \node[ftxt, right=4mm of s2] (f3) {トークン列};
+  \node[stg, right=4mm of f3] (s3) {Parser};
+  \node[ftxt, right=4mm of s3] (f4) {AST};
+
+  \foreach \a/\b in {f1/s1, s1/f2, f2/s2, s2/f3, f3/s3, s3/f4} {
+    \draw[flow] (\a.east) -- (\b.west);
+  }
+
+  \node[annot, text=TcEmph, anchor=north, align=center] at ($(s1.south)+(0mm,-2mm)$)
+      {ここで {\ttfamily \#include} と {\ttfamily \#define} が消える};
+  \node[gannot, anchor=north, align=center] at ($(s2.south)+(0mm,-2mm)$)
+      {Lexer は指令行を\\一度も見ない};
+
+  % ================ 下段: 置換される場所・されない場所 ================
+  \node[gannot, anchor=west] at (-74mm, -22mm) {同じ綴りの {\ttfamily BASE} でも、置換されるのは識別子トークンだけ};
+
+  \node[region, minimum width=54mm, minimum height=34mm, anchor=north west] (src) at (-74mm, -32mm) {};
+  \node[gannot, anchor=south west] at ($(src.north west)+(1mm,0.5mm)$) {前処理前のソース};
+  \node[srcline] at ($(src.north west)+(3mm,-6mm)$)  {\#define BASE 2};
+  \node[srcline] at ($(src.north west)+(3mm,-14mm)$) {return BASE + 1;};
+  \node[srcline] at ($(src.north west)+(3mm,-22mm)$) {printf("BASE");};
+  \node[srcline] at ($(src.north west)+(3mm,-30mm)$) {// BASE};
+
+  \node[region, minimum width=54mm, minimum height=34mm, anchor=north west] (dst) at (4mm, -32mm) {};
+  \node[gannot, anchor=south west] at ($(dst.north west)+(1mm,0.5mm)$) {前処理後（Lexer が受け取る文字列）};
+  \node[srcline, text=TcGrayText] at ($(dst.north west)+(3mm,-6mm)$)  {（行ごと消える）};
+  \node[srcline] at ($(dst.north west)+(3mm,-14mm)$) {return {\color{TcEmph}2} + 1;};
+  \node[srcline] at ($(dst.north west)+(3mm,-22mm)$) {printf("BASE");};
+  \node[srcline] at ($(dst.north west)+(3mm,-30mm)$) {// BASE};
+
+  \draw[ptr] (src.east) -- node[gannot, above=0.5mm] {preprocess} (dst.west);
+
+  \node[note] at (62mm, -38mm) {指令行そのものが取り除かれる};
+  \node[okmark] at (62mm, -46mm) {○ 識別子トークンなので {\ttfamily 2} に置換される};
+  \node[note] at (62mm, -54mm) {× 文字列リテラルの中身はトークンではない};
+  \node[note] at (62mm, -62mm) {× コメントの中身はトークンではない};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (10mm, -74mm)
+      {置換は文字列のうえで起き、その結果が Lexer に渡る。だから AST に {\ttfamily BASE} は残らない。\\
+       逆に {\ttfamily "BASE"} は文字列リテラルの中身のまま {\ttfamily .data} に出る};
+\end{tikzpicture}
+\end{document}
