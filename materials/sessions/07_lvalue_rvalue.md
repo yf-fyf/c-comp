@@ -174,7 +174,7 @@ int main() {
       (return (var "a")))))
 ```
 
-![`deref_write.c` の AST](figures/ast/08_deref_write_ast.svg)
+![`deref_write.c` の AST](figures/ast/07_deref_write_ast.svg)
 
 注目するノードは次の2つである。
 
@@ -200,7 +200,7 @@ int main() {
 `*p` のアドレスは、スタック上の位置を計算して作るのではなく、
 `p` に入っている値をそのまま使う。ここが `'Var'` との違いである。
 
-![`p = &a;` 実行後のメモリと、rvalue / lvalue の関係](figures/08_ptr_memory.svg)
+![`p = &a;` 実行後のメモリと、rvalue / lvalue の関係](figures/07_ptr_memory.svg)
 
 `p` のスロットには `a` のアドレスが値として入っている。
 `*p` を lvalue として使うときは、この値（矢印の先）がそのまま書き込み先アドレスになる。

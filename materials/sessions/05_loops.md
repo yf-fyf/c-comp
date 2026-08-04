@@ -166,7 +166,7 @@ int main() {
       (return (var "sum")))))
 ```
 
-![while ループの AST](figures/ast/06_while_ast.svg)
+![while ループの AST](figures/ast/05_while_ast.svg)
 
 `while` ノードは次のフィールドを持つ。
 
@@ -217,7 +217,7 @@ int main() {
       (return (var "sum")))))
 ```
 
-![for ループの AST](figures/ast/06_for_ast.svg)
+![for ループの AST](figures/ast/05_for_ast.svg)
 
 `for` ノードは次のフィールドを持つ。
 
@@ -336,7 +336,7 @@ for (i = 1; i <= 10; i = i + 1) {
 この例では、`continue` は `Lstep` に飛ぶ必要がある。
 `Lcond` に飛ぶと `i` が更新されず、無限ループに陥る。
 
-![while / for の制御フローと break / continue の飛び先](figures/06_loop_cfg.svg)
+![while / for の制御フローと break / continue の飛び先](figures/05_loop_cfg.svg)
 
 `break` はどちらのループでも終了ラベルへ飛ぶ。
 `continue` の飛び先だけが、while（`Lcond`）と for（`Lstep`）で異なる。

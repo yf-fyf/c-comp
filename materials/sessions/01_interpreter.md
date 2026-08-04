@@ -50,7 +50,7 @@ int main() {
           (mul (num 2) (num 3)))))))
 ```
 
-![`add_mul.c` の AST](figures/ast/02_add_mul_ast.svg)
+![`add_mul.c` の AST](figures/ast/01_add_mul_ast.svg)
 
 この出力は、`1 + 2 * 3` が次の構造として解析されたことを表している。
 
@@ -228,7 +228,7 @@ primary_expr ::= INT_LITERAL
 
 このように、自分自身を使って木をたどる関数を再帰関数という。
 
-![`eval_ast` が `1 + 2 * 3` の AST を評価する流れ](figures/02_eval_tree.svg)
+![`eval_ast` が `1 + 2 * 3` の AST を評価する流れ](figures/01_eval_tree.svg)
 
 葉の値が親に返り、根まで上がると式全体の値になる。
 ①〜⑤は値が確定する順番である。

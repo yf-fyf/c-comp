@@ -153,7 +153,7 @@ int main() {
       (return (var "c")))))
 ```
 
-![変数を含むプログラムの AST](figures/ast/04_variables_ast.svg)
+![変数を含むプログラムの AST](figures/ast/03_variables_ast.svg)
 
 新しく登場するノードは次の通り。
 
@@ -334,7 +334,7 @@ addi s0, sp, frame_size + 16
 この後、`s0` は関数に入る前の `sp` と同じ位置を指す。
 ローカル変数は `s0` から負の方向に置く。
 
-![3変数 `a`, `b`, `c` を宣言したときのスタックフレーム](figures/04_stack_frame.svg)
+![3変数 `a`, `b`, `c` を宣言したときのスタックフレーム](figures/03_stack_frame.svg)
 
 `ra` と保存した `s0` の下にローカル変数が順に並ぶ。
 1個目の変数 `a` は `s0 - 24`、2個目の `b` は `s0 - 32`、3個目の `c` は `s0 - 40` に置かれる。

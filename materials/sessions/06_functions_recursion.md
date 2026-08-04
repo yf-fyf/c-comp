@@ -163,7 +163,7 @@ python3 scaffold/parse_viewer.py sessions/06_functions_recursion/tests/target.c
           (args (num 10)))))))
 ```
 
-![関数定義の AST](figures/ast/07_fib_ast.svg)
+![関数定義の AST](figures/ast/06_fib_ast.svg)
 
 新しく登場するノードは次の通り。
 
@@ -208,7 +208,7 @@ S式の全文は上の `parse_viewer.py` で確認できる。見どころは冒
   (funcdef "main" ...))
 ```
 
-![相互再帰の AST](figures/ast/07_mutual_rec_ast.svg)
+![相互再帰の AST](figures/ast/06_mutual_rec_ast.svg)
 
 相互に呼び合う関数では、先に `funcproto` が出る。
 これは、宣言より前に関数定義を書く必要がある場合に、Parserが宣言を前方に移動するためである。
@@ -247,7 +247,7 @@ call fib
 したがって、再帰を含む関数呼び出しを行うときは、自らの `ra` を関数の先頭で保存し、末尾で復元する必要がある。
 これはコマ3のプロローグ・エピローグがすでに行っている。
 
-![`fib(3)` を呼び出したときのスタックフレームの積み重なり](figures/07_call_frames.svg)
+![`fib(3)` を呼び出したときのスタックフレームの積み重なり](figures/06_call_frames.svg)
 
 関数を呼ぶたびに新しいフレームが低いアドレス側へ積まれ、`ret` するたびに1つ上のフレームへ戻る。
 各呼び出しが自分専用の引数スロットを持つため、再帰しても `n` の値が混ざらない。
@@ -328,7 +328,7 @@ sp + 16  arg0
 | `a1` | `sp + (N - 2) * 8` |
 | ... | ... |
 
-![3引数の呼び出しで、push した引数をレジスタへ戻す対応](figures/07_arg_stack.svg)
+![3引数の呼び出しで、push した引数をレジスタへ戻す対応](figures/06_arg_stack.svg)
 
 最後に push した引数が `sp + 0` に来るため、レジスタへは逆順に読み出す。
 

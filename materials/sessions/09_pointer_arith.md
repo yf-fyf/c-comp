@@ -224,7 +224,7 @@ int main() {
       (return (var "sum")))))
 ```
 
-![`ptr_sum.c` の AST](figures/ast/10_ptr_sum_ast.svg)
+![`ptr_sum.c` の AST](figures/ast/09_ptr_sum_ast.svg)
 
 `a[i]` は AST 上では `(index (var "a") (var "i"))` になる。
 このノードは、`*(a + i)` と同じ意味で扱う。
@@ -280,7 +280,7 @@ int main() {
             (add (var "p") (num 3))))))))
 ```
 
-![`ptr_arith.c` の AST](figures/ast/10_ptr_arith_ast.svg)
+![`ptr_arith.c` の AST](figures/ast/09_ptr_arith_ast.svg)
 
 `p + 2` は、単にアドレスに `2` を足すのではない。
 `p` は `int *` なので、`2 * sizeof(int)`、つまり8バイト進む。
@@ -305,7 +305,7 @@ def codegen_SizeofType(self, node):
 address(p[i]) = value(p) + i * sizeof(element)
 ```
 
-![malloc した領域のメモリ配置と `p[i]` / `p + 2` のアドレス計算](figures/10_malloc_ptr.svg)
+![malloc した領域のメモリ配置と `p[i]` / `p + 2` のアドレス計算](figures/09_malloc_ptr.svg)
 
 要素1つは `sizeof(int)` = 4 バイトなので、`p + 2` はアドレスを 8 バイト進める。
 この倍率を決めるために、要素型のサイズが必要になる。

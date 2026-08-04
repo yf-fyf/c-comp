@@ -213,7 +213,7 @@ int main() {
           (member "." "y" (var "p")))))))
 ```
 
-![`dot_access.c` の AST](figures/ast/13_dot_access_ast.svg)
+![`dot_access.c` の AST](figures/ast/12_dot_access_ast.svg)
 
 `p.x` は AST 上では `(member "." "x" (var "p"))` になる。
 
@@ -242,7 +242,7 @@ int distance_sq(struct Point *p) {
           (mul (member "->" "y" (var "p")) (member "->" "y" (var "p")))))))
 ```
 
-![`arrow_access.c` の AST](figures/ast/13_arrow_access_ast.svg)
+![`arrow_access.c` の AST](figures/ast/12_arrow_access_ast.svg)
 
 `p->x` は AST 上では `(member "->" "x" (var "p"))` になる。
 意味としては `(*p).x` と考えればよい。
@@ -270,7 +270,7 @@ int main() {
         (add (sizeof-type int) (sizeof-type char))))))
 ```
 
-![`sizeof_test.c` の AST](figures/ast/13_sizeof_test_ast.svg)
+![`sizeof_test.c` の AST](figures/ast/12_sizeof_test_ast.svg)
 
 `sizeof(int)` は `(sizeof-type int)`、`sizeof(char)` は `(sizeof-type char)` になる。
 どちらも実行時に計算する必要はなく、翻訳時に型サイズを見て定数を出せばよい。
@@ -316,7 +316,7 @@ int main() {
         (member "->" "val" (var "n"))))))
 ```
 
-![`list_min.c` の AST](figures/ast/13_list_min_ast.svg)
+![`list_min.c` の AST](figures/ast/12_list_min_ast.svg)
 
 見どころは3つある。
 
@@ -346,7 +346,7 @@ int main() {
 
 `struct Point` 全体のサイズは8バイトである。
 
-![`Point` のメモリ配置と `.` / `->` のアドレス計算](figures/13_struct_layout.svg)
+![`Point` のメモリ配置と `.` / `->` のアドレス計算](figures/12_struct_layout.svg)
 
 図の `q` は `&p` を代入した `struct Point *q` である（`distance_sq(&p)` の仮引数も同じ状態になる）。
 `.` は構造体変数のアドレスから、`->` はポインタの値から、どちらも「+ フィールドオフセット」で場所が決まる。
@@ -575,7 +575,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 
 :::
 
-![スタック上の `head` とヒープ上に確保された3ノード](figures/13_linked_list.svg)
+![スタック上の `head` とヒープ上に確保された3ノード](figures/12_linked_list.svg)
 
 `head` はスタック上のローカル変数だが、各ノードは `malloc` で確保したヒープ上にある。
 `head = head->next` は、`head` の指す先を矢印1つぶん右のノードへ進める。

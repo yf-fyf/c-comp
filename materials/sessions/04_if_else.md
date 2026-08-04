@@ -163,7 +163,7 @@ int main() {
               (sub (var "b") (var "a")))))))))
 ```
 
-![if/else を含むプログラムの AST](figures/ast/05_if_else_ast.svg)
+![if/else を含むプログラムの AST](figures/ast/04_if_else_ast.svg)
 
 注目すべき点は2つある。
 
@@ -313,7 +313,7 @@ Lend:
 
 こうしないと、then 側の実行後に else 側にも突入してしまう。
 
-![if と if/else の制御フロー](figures/05_if_cfg.svg)
+![if と if/else の制御フロー](figures/04_if_cfg.svg)
 
 偽のときは `beqz` でラベルへ飛ぶ。
 if/else では、then 側の最後に `j Lend` を置いて else 側を飛び越す。
@@ -384,7 +384,7 @@ j Lreturn
 
 共通エピローグラベルを使うことで、関数内のどこに `return` があっても正しく関数を抜けられるようになる。
 
-![複数の `return` が共通エピローグに合流する](figures/05_ret_label.svg)
+![複数の `return` が共通エピローグに合流する](figures/04_ret_label.svg)
 
 ## 三項演算子: 値を持つ分岐（式と文の違い）
 

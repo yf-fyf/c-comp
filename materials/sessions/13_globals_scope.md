@@ -213,7 +213,7 @@ int main() {
       (return (var "total")))))
 ```
 
-![`global_min.c` の AST](figures/ast/14_global_counter_ast.svg)
+![`global_min.c` の AST](figures/ast/13_global_counter_ast.svg)
 
 トップレベルにある `(decl "total" :type int)` がグローバル変数宣言である。
 同じ `'Decl'` ノードでも、関数本体のブロック内にあればローカル変数、トップレベルにあればグローバル変数として扱う。
@@ -258,7 +258,7 @@ int main() {
           (call "read_global" (args)))))))
 ```
 
-![`shadow_min.c` の AST](figures/ast/14_global_shadow_ast.svg)
+![`shadow_min.c` の AST](figures/ast/13_global_shadow_ast.svg)
 
 `main()` の中の `value` はローカル変数である。
 一方、`read_global()` の中にはローカル変数 `value` がないので、グローバル変数 `value` を参照する。
@@ -296,7 +296,7 @@ count:
 「グローバル変数は 0 で始まる」という言語仕様の保証が
 追加のコードなしでそのまま実現できる。
 
-![プログラム実行時のメモリ全体像と変数の置き場所](figures/14_memory_map.svg)
+![プログラム実行時のメモリ全体像と変数の置き場所](figures/13_memory_map.svg)
 
 ローカル変数はスタック、`malloc` で確保した領域はヒープ、グローバル変数は `.data` / `.bss` に置かれる。
 どの領域に置くかが決まると、アドレスの計算方法（`s0` からのオフセットか、ラベルか）も決まる。
