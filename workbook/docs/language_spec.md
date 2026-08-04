@@ -402,7 +402,7 @@ void exit(int code);
 
 | 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
 |------|---------|-----------|------|------|
-| `#include "..."` | コマ10(`lib.h`)・コマ14(自作ヘッダ・入れ子) | `sessions/14_preprocess_multifile/tests/multifile_math.c` | 標準 | 前処理はスキャフォールド提供 |
+| `#include "..."` | コマ9(`lib.h`)・コマ14(自作ヘッダ・入れ子) | `sessions/14_preprocess_multifile/tests/multifile_math.c` | 標準 | 前処理はスキャフォールド提供 |
 | `#define`(1 段置換) | コマ14 | `sessions/14_preprocess_multifile/tests/define_min.c` | 標準 | |
 | 複数ソースファイルの同時コンパイル | コマ14 | `sessions/14_preprocess_multifile/tests/multifile_global.c` | 標準 | |
 | 循環取込み・マクロ多段参照のエラー | コマ14 | — | 標準 | 診断。下の「テストを持たない項目」を参照 |
