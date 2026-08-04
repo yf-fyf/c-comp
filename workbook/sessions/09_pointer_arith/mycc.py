@@ -107,7 +107,7 @@ class Codegen10(prev.Codegen09):
         raise NotImplementedError("codegen_SizeofType を実装してください")
 
     def codegen_PreInc(self, node: Node) -> None:
-        # TODO: コマ 6 の前置 ++ を型対応にする。ポインタは指し先サイズ、
+        # TODO: コマ5の前置 ++ を型対応にする。ポインタは指し先サイズ、
         #       int/char は 1 を加算し、_load_ty/_store_ty で読み書きする。
         raise NotImplementedError("codegen_PreInc（型対応版）を実装してください")
 

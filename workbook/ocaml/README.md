@@ -153,7 +153,7 @@ dune exec reference/mycc_ref.exe -- --no-comments ../final/tests/f01_arith.c
 cd workbook/ocaml
 dune build
 python3 run_tests.py           # 全回
-python3 run_tests.py 13        # コマ12 だけ
+python3 run_tests.py 12        # コマ12 だけ
 python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 ```
 
