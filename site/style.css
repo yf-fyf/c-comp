@@ -300,7 +300,16 @@ figcaption {
   place-items: center;
 }
 .lightbox::backdrop { background: rgba(38, 38, 38, 0.85); }
-.lightbox img { max-width: 100%; max-height: 100vh; cursor: zoom-in; }
+.lightbox img {
+  max-width: 100%; max-height: 100vh;
+  cursor: zoom-in;
+  /* TikZ 図は透明背景で書き出されるので、暗い backdrop がそのまま透けて
+     見づらくなる。原稿ページと同じ白地に揃える(AST 図は元から白背景で
+     不要だが、余白として害はない) */
+  background: #fff;
+  padding: 0.6rem;
+  border-radius: 0.35rem;
+}
 .lightbox img.actual { max-width: none; max-height: none; cursor: zoom-out; }
 /* 44px はタッチの最小目標寸法。スクロールしても隠れないよう fixed で置く */
 .lightbox-close {
