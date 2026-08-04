@@ -142,7 +142,8 @@ struct Tag   複合型（タグ必須）
 - 前置 `++`/`--` の左辺は 1 回だけ評価される。
 - 除外: 複合代入(`+=` `-=` `*=` `/=` `%=`。発展 L2 で追加する)、
   ビット演算・シフト(`~` `&` `^` `|` `<<` `>>`)、後置 `++`/`--`、
-  `(type)expr` キャスト、カンマ演算子、`sizeof 式`、関数ポインタ経由の呼出し
+  `(type)expr` キャスト、カンマ演算子、`sizeof 式`(発展 L4 で追加する)、
+  関数ポインタ経由の呼出し
 
 ---
 
@@ -361,6 +362,7 @@ void exit(int code);
 | 関数呼出し `f(args)` | コマ6 | `sessions/06_functions_recursion/tests/call_add.c` | 標準 | 識別子直呼びのみ |
 | `sizeof(型名)` | コマ9 | `sessions/09_pointer_arith/tests/sizeof_type.c` | 標準 | struct への適用はコマ12 の `sizeof_test.c`。例外 E1 |
 | 複合代入 `+= -= *= /= %=` | 発展 L2 | `advanced/L2_compound_assign/tests/` | 発展 | 本仕様の外 |
+| `sizeof 式`(`sizeof x`) | 発展 L4 | `advanced/L4_sizeof_expr/tests/` | 発展 | 本仕様の外 |
 | 短絡する `&&` `\|\|` | 発展 S1 | `advanced/S1_shortcircuit/tests/` | 発展 | 本仕様の外 |
 
 ### 宣言とスコープ
@@ -460,7 +462,7 @@ void exit(int code);
 | ビット演算・シフト | 整列は `/` と `*`、ハッシュは `%`、フラグは個別の int フィールド |
 | `(type)expr` キャスト | `void *` 暗黙変換 |
 | カンマ演算子 | 文の列 |
-| `sizeof 式` | `sizeof(型名)` |
+| `sizeof 式` | `sizeof(型名)`（発展 L4 で追加する） |
 | 関数ポインタ | 直接呼出し+分岐 |
 | 可変長引数関数の定義 | 外部プロトタイプのみ許可 |
 | 初期化子(大域・局所) | 代入文(大域は 0 初期化) |

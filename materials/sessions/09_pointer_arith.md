@@ -155,6 +155,7 @@ arg_list    ::= assign_expr { ',' assign_expr }
 
 `p + 1` の `+` はコマ2 から形が変わっていない。変わったのは意味（要素サイズ倍のスケーリング）だけである。
 `sizeof` は型名形式のみで、`sizeof(x)` のように式を書くと構文エラーになる。
+式形式の `sizeof x` は発展 [L4](../../workbook/advanced/L4_sizeof_expr/README.md) で扱う。
 字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
 [`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
 
@@ -445,6 +446,8 @@ echo $?
 
 ポインタ演算まで進んだので、ポインタ同士の引き算に意味を足す
 [L1](../../workbook/advanced/L1_ptrdiff/README.md) に着手できる。
+`sizeof` を式にも広げる [L4](../../workbook/advanced/L4_sizeof_expr/README.md) は、
+構造体まで進んだコマ12 以降に着手できる。
 
 生成したアセンブリでポインタ演算のアドレス計算を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/app.html?mode=run) に貼り付ける。
 

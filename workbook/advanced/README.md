@@ -50,6 +50,7 @@
 | L1 | [`L1_ptrdiff/`](../../materials/advanced/L1_ptrdiff.md) | ポインタ同士の引き算が要素数にならない | 1 | コマ12 + コマ15（`golden.py`） |
 | L2 | [`L2_compound_assign/`](../../materials/advanced/L2_compound_assign.md) | 複合代入（`x += 3`、`p -= 1`。左辺は1回だけ評価） | 1 | コマ13 + コマ15（`golden.py`） |
 | L3 | [`L3_variadic/`](../../materials/advanced/L3_variadic.md) | 可変長引数の「定義」（`int sum(int n, ...)`） | 1 | コマ10 + コマ15（`golden.py`） |
+| L4 | [`L4_sizeof_expr/`](../../materials/advanced/L4_sizeof_expr.md) | `sizeof` 単項式（`sizeof x`。オペランドは評価しない） | 1 | コマ12 + コマ15（`golden.py`） |
 | Q1 | [`Q1_typecheck/`](../../materials/advanced/Q1_typecheck.md) | 型検査パス（実行前に誤りをまとめて報告する） | 1 | コマ12 |
 | P1 | [`P1_selfhost/`](../../materials/advanced/P1_selfhost.md) | C 移植・セルフホスト（方針のみ。複数回に渡る自主課題、自動採点なし） | - | コマ15 |
 
@@ -62,6 +63,7 @@
 | 生成したコードを本気で速くしたい | **O1**（まず測る物差しを作る） |
 | 仕様がCとわざと違えている点をCへ寄せたい | **S1**（`&&` が短絡していないことの確認から） |
 | OS もライブラリも無い世界を見たい | **R1** |
+| 仕様の外側の機能を自分で足してみたい | **L4**（L 系列で最も軽い。字句の変更なし、コード生成は1命令） |
 
 ## 共通のルール
 
