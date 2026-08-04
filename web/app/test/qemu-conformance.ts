@@ -1,6 +1,6 @@
 // シミュレータの正しさを qemu との照合で担保する（design/webapps.md 4章）。
 //
-// workbook の全テストを参照実装 koma16 でアセンブリ化し、
+// workbook の全テストを参照実装 lecture15 でアセンブリ化し、
 //   (a) riscv64-linux-gnu-gcc + qemu-riscv64 で実行した結果
 //   (b) TypeScript シミュレータで実行した結果
 // の終了コードと標準出力を突き合わせる。
@@ -19,7 +19,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const APP = join(HERE, "..");
 const DEV = join(APP, "../..");
 const WORKBOOK = join(DEV, "workbook");
-const KOMA16 = join(WORKBOOK, "ocaml/_build/default/sessions/lecture15.exe");
+const LECTURE15 = join(WORKBOOK, "ocaml/_build/default/sessions/lecture15.exe");
 const GCC = process.env.GCC ?? "riscv64-linux-gnu-gcc";
 const QEMU = process.env.QEMU ?? "qemu-riscv64";
 
@@ -29,8 +29,8 @@ function have(cmd: string): boolean {
   return spawnSync("sh", ["-c", `command -v ${cmd}`], { encoding: "utf8" }).status === 0;
 }
 
-if (!existsSync(KOMA16)) {
-  console.error(`参照コンパイラがない: ${KOMA16}\n  cd workbook/ocaml && dune build`);
+if (!existsSync(LECTURE15)) {
+  console.error(`参照コンパイラがない: ${LECTURE15}\n  cd workbook/ocaml && dune build`);
   process.exit(2);
 }
 for (const tool of [GCC, QEMU]) {
@@ -76,7 +76,7 @@ for (const src of sources) {
   let asm;
   try {
     // #include "lib.h" は scaffold/ を cwd 相対で探すので workbook から実行する
-    asm = execFileSync(KOMA16, [src, ...extra], {
+    asm = execFileSync(LECTURE15, [src, ...extra], {
       encoding: "utf8", timeout: 20000, cwd: WORKBOOK,
     });
   } catch {

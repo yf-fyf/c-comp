@@ -75,7 +75,7 @@
 
 `workbook/final/tests/` に置いてある**17本のテスト**のこと。
 コマ1〜15 で作った機能を通しで確認する参考テストで、標準トラック完成の目安として
-コマ15（[通常回16](../../materials/sessions/15_integrate_mycc.md)）で導入する。
+コマ15（[通常回15](../../materials/sessions/15_integrate_mycc.md)）で導入する。
 内訳は [`docs/testing.md`](../docs/testing.md) と
 [`docs/code_example.md`](../docs/code_example.md) の一覧にある。
 

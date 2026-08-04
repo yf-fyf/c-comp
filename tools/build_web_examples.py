@@ -3,7 +3,7 @@
 
 - examples.json      AST ビジュアライザ用。workbook/**/tests/*.c をそのまま収録する
 - sim-examples.json  RV64 シミュレータ用。web/examples/asm/*.s（手書き）と、
-                     参照実装 koma16 が出したアセンブリ（ゲート付き）
+                     参照実装 lecture15 が出したアセンブリ（ゲート付き）
 
 教材を単一の出典にするため、アプリ側にサンプルを手書きしない（design/webapps.md 1章）。
 手書きのアセンブリだけは例外で、理由は web/examples/README.md に書いてある。
@@ -29,7 +29,7 @@ PUBLIC = DEV / "web" / "app" / "public"
 OUT = PUBLIC / "examples.json"
 SIM_OUT = PUBLIC / "sim-examples.json"
 HANDWRITTEN = DEV / "web" / "examples" / "asm"
-KOMA16 = WORKBOOK / "ocaml" / "_build" / "default" / "sessions" / "lecture15.exe"
+LECTURE15 = WORKBOOK / "ocaml" / "_build" / "default" / "sessions" / "lecture15.exe"
 
 sys.path.insert(0, str(WORKBOOK / "scaffold"))
 from lexer import preprocess, tokenize  # noqa: E402
@@ -80,7 +80,7 @@ def build_sim_examples() -> tuple[int, int]:
     # 参照実装の出力。既に workbook/ocaml/ として配布済みのものだが、
     # ワンクリックで答えが見える導線になるので gated にする（webapps.md 5-2）
     n_ref = 0
-    if KOMA16.is_file():
+    if LECTURE15.is_file():
         for pattern in ("sessions/*/tests/*.c", "final/tests/*.c"):
             for f in sorted(WORKBOOK.glob(pattern)):
                 extra = []
@@ -94,7 +94,7 @@ def build_sim_examples() -> tuple[int, int]:
                 try:
                     # #include "lib.h" は cwd 相対で探すので workbook から実行する
                     asm = subprocess.run(
-                        [str(KOMA16), str(f), *extra],
+                        [str(LECTURE15), str(f), *extra],
                         cwd=WORKBOOK, capture_output=True, text=True, timeout=20,
                     )
                 except subprocess.TimeoutExpired:
@@ -108,7 +108,7 @@ def build_sim_examples() -> tuple[int, int]:
                         "group": "参照実装の出力（解答例）",
                         "description": f"{rel.parts[1] if rel.parts[0] == 'sessions' else 'final'} / {f.name}",
                         "note": "",
-                        "source": f"# {rel} を参照実装（OCaml 版 koma16）でコンパイルした結果\n{asm.stdout}",
+                        "source": f"# {rel} を参照実装（OCaml 版 lecture15）でコンパイルした結果\n{asm.stdout}",
                         "gated": True,
                     }
                 )
@@ -142,7 +142,7 @@ def main() -> None:
     print(f"{OUT.relative_to(DEV)}: {len(data)} グループ {total} ファイル（除外 {n_skip}）")
 
     n_hand, n_ref = build_sim_examples()
-    note = "" if KOMA16.is_file() else "（参照実装が未ビルド: cd workbook/ocaml && dune build）"
+    note = "" if LECTURE15.is_file() else "（参照実装が未ビルド: cd workbook/ocaml && dune build）"
     print(f"{SIM_OUT.relative_to(DEV)}: 手書き {n_hand} / 参照実装 {n_ref}{note}")
 
 
