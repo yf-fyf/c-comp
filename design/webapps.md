@@ -321,3 +321,7 @@ Python 版と OCaml 版で既に同じ規約になっている。
 
 旧3ページ（`ast.html` / `sim.html` / `compile.html`）の削除は移植完了と同時に行い、
 並行稼働期間は置かなかった。現在のページは `index.html` と `app.html` の2つだけである。
+
+（注記）これは**現行サイトの `tools/` に対する判断**であり、`archive/v0.1.0/` に凍結した
+旧版アーカイブ（旧 `ast.html`/`sim.html` を含む）とは別レイヤの時限措置。
+詳細は [`maintaining.md` の「旧版アーカイブの時限公開」](./maintaining.md#旧版アーカイブの時限公開)を参照。

@@ -18,6 +18,8 @@
 │   ├── maintaining.md     # このファイル
 │   ├── quality_guide.md   # 教材品質管理・AIレビュー手順
 │   └── webapps.md         # 補助ウェブアプリの企画書（企画段階）
+├── archive/               # 過去リリースの公開物の凍結スナップショット（編集禁止・再生成対象外）
+│   └── v0.1.0/            # 2026-07-29 公開。archive/v0.1.0/ として Pages へそのまま出す（時限措置、下記参照）
 ├── materials/             # 資料の Markdown 原稿
 │   ├── sessions/          # 準備回のコマ0 + 実装のコマ1〜15 + 発表会のコマ16 の原稿 NN_xxx.md
 │   ├── advanced/          # 発展教材の原稿 <回ID>_xxx.md
@@ -68,7 +70,7 @@ R=ランタイム、S=意味論、L=言語機能、Q=品質、P=移植・セル�
 **一対一で対応する**。`site/nav.yaml` はこの対応をそのまま使うため、
 新しいトピックを追加するときも写像表の更新は要らない。
 
-トップレベルは役割で6分割している。
+トップレベルは役割で分割している。
 
 | ディレクトリ | 役割 | 読む人 |
 |--------------|------|--------|
@@ -77,6 +79,7 @@ R=ランタイム、S=意味論、L=言語機能、Q=品質、P=移植・セル�
 | `workbook/` | 演習の配布物 | 学習者 |
 | `site/` + `latex/` + `tools/` | サイトと図のビルドシステム | 教材を書く人 |
 | `web/` | 補助ウェブアプリ（ブラウザで使う学習支援） | 学習者・教える側 |
+| `archive/` | 過去リリースの凍結公開物（時限措置。下記「旧版アーカイブの時限公開」参照） | 移行期間中の学習者 |
 | `../c-comp-design/teacher/` | Private リポジトリ内の完成解答・品質記録・隠しテスト | メンテナ |
 
 ### 設計資料と配布物の書き分け
@@ -269,10 +272,40 @@ figures/                  # 図の SVG
 sessions/ advanced/ docs/ guides/   # 資料のページ
 tools/                    # ビルド済みの補助ウェブアプリ
 downloads/*.zip           # workbook/ 全体の配布アーカイブ
+archive/v0.1.0/           # 旧版アーカイブ（時限措置。下記参照）
 LICENSE
 THIRD_PARTY_NOTICES.md
 .nojekyll
 ```
+
+この許可リストは `tools/build_pages.py` の `ALLOWED_TOP_LEVEL` としてもコードで検査している
+（`verify_output()`）。リストを変えるときは文書とコードの両方を直す。
+
+### 旧版アーカイブの時限公開
+
+`archive/v0.1.0/` は 2026-07-29 公開の GitHub Pages スナップショット(`origin/main` からの
+`git archive` による凍結取り込み)であり、次期言語仕様(Core プロファイル v2)適用**前**の資料と
+補助ウェブアプリ(旧 `ast.html`/`sim.html`)を含む。現在進行中の授業の履修者がこの旧版で
+プログラムを作成中のため、履修者が現行版へ移行し終えるまでの**時限的な**措置として並存公開する。
+
+- 凍結物は `archive/README.md` の方針どおり一切編集しない。ビルド時に `tools/build_pages.py`
+  の `copy_archives()`/`overlay_archive_notice()` が公開先へコピーし、旧版である旨のバナーと
+  `noindex` だけを注入する。ハッシュは `archive/v0.1.0.sha256` で照合する。
+- 旧版は当時の PDF-free 方針適用前の版で、workbook ZIP に handout PDF を同梱している。
+  `verify_output()` の PDF 混入検査は `archive/` 配下の ZIP だけ明示的に除外している
+  (原稿から作り直す対象ではないため)。
+- 現行トップページからの導線は `tools/build_site.py` の `archive_markdown()` が公開ビルド
+  (`--release` 指定時)だけに出す。ローカル `make site`/`make serve` には出さない。
+- 旧 URL(`/handouts/...`・`/tools/ast.html` 等)は次のリリースで 404 になる。
+  リダイレクトは張らない([`webapps.md`](./webapps.md) の既存判断「旧3ページの URL 後方互換は
+  持たない」を維持する。旧版アーカイブはその判断とは別レイヤの時限措置だが、方針は揃える)。
+- 撤去の権威ある期限は非公開 `../c-comp-design/tasks/TODO.md` のタスクで管理する
+  (公開側には期日を書かない)。`tools/build_pages.py` の `ARCHIVE_SUNSET` は仮決めの期日で、
+  超過するとリリース実行時に stderr へ警告を出す(リリース自体は失敗させない)。
+- 撤去手順: (1) `build_pages.py` の `PUBLISHED_ARCHIVES` を空にし `ALLOWED_TOP_LEVEL` から
+  `"archive"` を削る、(2) `build_site.py` の `archive_markdown()` と呼び出し元の1行を削る、
+  (3) `archive/` を `git rm -r` する、(4) この節と上のディレクトリ構成表・分割表を戻す。
+  `main` は次リリースで作り直されるため、旧版 URL の削除に別途 Pages 側の作業は不要。
 
 公開前には次を必ず行う。
 

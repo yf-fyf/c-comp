@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+from datetime import date
 from pathlib import Path
 
 
@@ -17,7 +18,28 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKBOOK = ROOT / "workbook"
 WEB_DIST = ROOT / "web" / "app" / "dist"
 BUILD_SITE = ROOT / "tools" / "build_site.py"
+ARCHIVE = ROOT / "archive"
 EXCLUDED_PARTS = {"__pycache__", "_build", "cfg_out", "node_modules"}
+# 過去リリースの凍結スナップショットのうち、公開に含めるもの。
+# ディレクトリ名がそのまま公開パス archive/<name>/ になる。
+# 撤去するときはこのタプルを空にする（design/maintaining.md の撤去手順を参照）。
+PUBLISHED_ARCHIVES = ("v0.1.0",)
+# 今学期の履修者が旧版資料から現行版へ移行し終える見込みの期日（仮決め）。
+# TODO(c-comp-design/tasks/TODO.md の撤去タスク): 正式な期日が決まったら更新する。
+ARCHIVE_SUNSET = "2026-10-31"
+# main ブランチのルート直下に置いてよいものの許可リスト（design/maintaining.md と同期させる）。
+ALLOWED_TOP_LEVEL = {
+    "index.html", "assets", "figures", "sessions", "advanced", "docs", "guides",
+    "tools", "downloads", "archive", "LICENSE", "LICENSE-MATERIALS",
+    "THIRD_PARTY_NOTICES.md", ".nojekyll",
+}
+ARCHIVE_NOTICE_META = '<meta name="robots" content="noindex">'
+ARCHIVE_NOTICE_BANNER = """<div style="background:#fff3cd;color:#664d03;border-bottom:2px solid #ffcd39;padding:0.75em 1em;font-size:0.95em">
+これは 2026-07-29 公開の<strong>旧版アーカイブ</strong>です。言語仕様は現行版（Core プロファイル v2）適用前のものです。
+今学期の履修者向けの時限的な移行措置であり、移行完了後に削除されます。
+最新の資料は<a href="../../">現行版のトップページ</a>を参照してください。
+なお、このスナップショット当時の教材は MIT ライセンスで公開されたものです（現行の教材ライセンスは CC BY-NC-SA 4.0）。
+</div>"""
 # dist の鮮度を比べる相手。web/app の入力と、埋め込まれるコア（web/core）の原稿。
 WEB_SOURCES = [
     ROOT / "web" / "app" / "src",
@@ -39,6 +61,10 @@ def revision() -> str:
         ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True
     )
     return result.stdout.strip() if result.returncode == 0 else "uncommitted"
+
+
+def revision_date_passed(sunset: str) -> bool:
+    return date.today() >= date.fromisoformat(sunset)
 
 
 def safe_version(value: str) -> str:
@@ -80,6 +106,55 @@ def archive_workbook(destination: Path, version: str) -> None:
                 if "teacher" in relative.parts:
                     raise RuntimeError(f"forbidden path in workbook archive: {relative}")
                 archive.write(source, f"{prefix}/{relative.as_posix()}")
+
+
+def verify_archive_hash(name: str) -> None:
+    """archive/<name>.sha256 と archive/<name>/ の内容が一致するか確かめる。
+
+    凍結スナップショットは書き換えないはずなので、取り込み時のハッシュとの不一致は
+    意図しない改変の疑いとして扱う。マニフェストが無いこと自体も設定ミスとして落とす。
+    """
+    manifest = ARCHIVE / f"{name}.sha256"
+    if not manifest.is_file():
+        raise RuntimeError(f"archive/{name}.sha256 が無い（凍結時のマニフェストが未作成）")
+    result = subprocess.run(
+        ["sha256sum", "--check", "--strict", str(manifest)],
+        cwd=ARCHIVE / name, capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"archive/{name} の内容が取り込み時のハッシュと一致しない（改変の疑い）:\n"
+            f"{result.stdout}{result.stderr}"
+        )
+
+
+def copy_archives(output: Path) -> None:
+    """過去リリースの凍結スナップショットを出力先へそのままコピーする。"""
+    for name in PUBLISHED_ARCHIVES:
+        source = ARCHIVE / name
+        if not source.is_dir():
+            raise RuntimeError(f"archive/{name} が無い（PUBLISHED_ARCHIVES の設定ミス）")
+        forbidden = [path for path in source.rglob("*") if "teacher" in path.parts]
+        if forbidden:
+            raise RuntimeError(f"forbidden path in archive/{name}: {forbidden[0]}")
+        verify_archive_hash(name)
+        shutil.copytree(source, output / "archive" / name)
+
+
+def overlay_archive_notice(output: Path) -> None:
+    """凍結した旧版 index.html に、旧版である旨のバナーと noindex を注入する。
+
+    コミットした archive/<name>/ 自体はバイト単位で凍結したまま保つため、
+    注意書きはビルド時にコピー先へだけ書き込む。
+    """
+    for name in PUBLISHED_ARCHIVES:
+        index = output / "archive" / name / "index.html"
+        html = index.read_text(encoding="utf-8")
+        if "<head>" not in html or "<body>" not in html:
+            raise RuntimeError(f"archive/{name}/index.html に <head>/<body> が見つからない")
+        html = html.replace("<head>", f"<head>\n{ARCHIVE_NOTICE_META}", 1)
+        html = html.replace("<body>", f"<body>\n{ARCHIVE_NOTICE_BANNER}", 1)
+        index.write_text(html, encoding="utf-8")
 
 
 def newest_mtime(paths, *, skip_dirs=frozenset()) -> float:
@@ -138,6 +213,10 @@ def verify_output(output: Path) -> None:
     forbidden = [path for path in output.rglob("*") if "teacher" in path.parts]
     if forbidden:
         raise RuntimeError(f"forbidden path in release output: {forbidden[0]}")
+    top_level = {path.name for path in output.iterdir()}
+    disallowed = top_level - ALLOWED_TOP_LEVEL
+    if disallowed:
+        raise RuntimeError(f"許可リスト外のトップレベルパス: {', '.join(sorted(disallowed))}")
     required = [
         output / "index.html",
         output / "assets" / "style.css",
@@ -148,18 +227,26 @@ def verify_output(output: Path) -> None:
         output / "tools" / "index.html",
         output / ".nojekyll",
     ]
+    required += [output / "archive" / name / "index.html" for name in PUBLISHED_ARCHIVES]
+    required += [output / "archive" / name / "tools" / "index.html" for name in PUBLISHED_ARCHIVES]
     missing = [path for path in required if not path.exists()]
     if missing:
         raise RuntimeError(f"missing release output: {', '.join(str(p) for p in missing)}")
     if not any((output / "figures").glob("*.svg")):
         raise RuntimeError("no figures in release output")
-    for archive in (output / "downloads").glob("*.zip"):
-        with zipfile.ZipFile(archive) as release:
+    archive_zip_prefixes = tuple(f"archive/{name}/" for name in PUBLISHED_ARCHIVES)
+    for release_zip in output.rglob("*.zip"):
+        relative = release_zip.relative_to(output).as_posix()
+        is_archived_release = relative.startswith(archive_zip_prefixes)
+        with zipfile.ZipFile(release_zip) as release:
             names = release.namelist()
             if any("teacher" in Path(name).parts for name in names):
-                raise RuntimeError(f"forbidden path in release archive: {archive}")
-            if any(name.endswith(".pdf") for name in names):
-                raise RuntimeError(f"PDF left in release archive: {archive}")
+                raise RuntimeError(f"forbidden path in release archive: {release_zip}")
+            # archive/<name>/ 配下は過去リリース時点のビルド済み配布物そのものであり、
+            # 当時は handout PDF を workbook に同梱していた（現行の PDF-free 方針の適用前）。
+            # 原稿から作り直す対象ではないため、この検査だけ免除する。
+            if not is_archived_release and any(name.endswith(".pdf") for name in names):
+                raise RuntimeError(f"PDF left in release archive: {release_zip}")
 
 
 def main() -> None:
@@ -184,8 +271,16 @@ def main() -> None:
         archive = args.output / "downloads" / f"c-comp-workbook-{version}.zip"
         archive.parent.mkdir(parents=True)
         archive_workbook(archive, version)
+        copy_archives(args.output)
+        overlay_archive_notice(args.output)
         (args.output / ".nojekyll").touch()
         verify_output(args.output)
+        if PUBLISHED_ARCHIVES and revision_date_passed(ARCHIVE_SUNSET):
+            print(
+                f"build_pages: [警告] archive/ の公開期限({ARCHIVE_SUNSET})を過ぎている。"
+                "撤去手順は design/maintaining.md を参照",
+                file=sys.stderr,
+            )
     except (OSError, RuntimeError, ValueError) as error:
         print(f"build_pages: {error}", file=sys.stderr)
         raise SystemExit(1) from error

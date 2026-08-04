@@ -336,6 +336,25 @@ def download_markdown(release: str | None) -> list[str]:
     return lines
 
 
+def archive_markdown(release: str | None) -> list[str]:
+    """公開物を組み立てるときだけ、旧版アーカイブへの時限的な導線を出す。
+
+    ローカル `make site`/`make serve` の出力には `archive/` が存在しないため、
+    release 未指定時は何も出さない（内部リンク切れを避ける）。
+    今学期の履修者の移行が済んだら、この関数と呼び出し元の1行を削除する。
+    """
+    if not release:
+        return []
+    return [
+        "::: note",
+        "旧版(2026-07-29 公開)の資料が必要な場合は"
+        "[旧版アーカイブ](archive/v0.1.0/)を参照してください。"
+        "言語仕様は現行版と異なります。この導線は移行期間限定で、今後削除されます。",
+        ":::",
+        "",
+    ]
+
+
 def home_markdown(nav: dict, pages: list[Page], release: str | None = None) -> str:
     lines = [f'# {nav["title"]}', "", nav["description"], ""]
     lines += [
@@ -350,6 +369,7 @@ def home_markdown(nav: dict, pages: list[Page], release: str | None = None) -> s
         "",
     ]
     lines += download_markdown(release)
+    lines += archive_markdown(release)
     # 主動線の通常回だけカードを直載せする。他セクションは入口への誘導に留め、
     # 一覧は各セクション入口ページに一本化する（トップを全目録にしない）。
     for section in nav["sections"]:
