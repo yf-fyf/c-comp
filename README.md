@@ -1,5 +1,8 @@
 # 実践・Cコンパイラ演習
 
+[![code: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](./LICENSE)
+[![materials: CC BY-NC-SA 4.0](https://img.shields.io/badge/materials-CC%20BY--NC--SA%204.0-lightgrey.svg)](./LICENSE-MATERIALS)
+
 C 言語サブセットのコンパイラを、**動く状態を保ちながら**段階的に作り上げる演習教材。
 
 - **方針**: 「Python で理解 → C に移植」。前半は Python でコンパイラの論理だけに集中し、後半は動く Python 版を参照実装として C へ移植する
