@@ -1,4 +1,4 @@
-"""コマ 8: lvalue / rvalue と & / *（学生用スケルトン）。"""
+"""コマ 7: lvalue / rvalue と & / *（学生用スケルトン）。"""
 
 import importlib.util
 import sys

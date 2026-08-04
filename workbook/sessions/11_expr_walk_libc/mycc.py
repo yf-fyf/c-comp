@@ -1,4 +1,4 @@
-"""コマ 12: 式の走査と libc 活用（学習者用スケルトン）。"""
+"""コマ 11: 式の走査と libc 活用（学習者用スケルトン）。"""
 
 import importlib.util
 import sys

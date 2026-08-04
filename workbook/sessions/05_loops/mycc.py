@@ -1,5 +1,5 @@
 """
-コマ 6: 制御構文② — while / for / break / continue（学生用スケルトン）
+コマ 5: 制御構文② — while / for / break / continue（学生用スケルトン）
 
 目標: コマ 5 のコード生成器を継承し、ループと break/continue のジャンプ先管理を追加する。
 """

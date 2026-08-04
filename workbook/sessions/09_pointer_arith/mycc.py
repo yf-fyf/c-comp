@@ -1,4 +1,4 @@
-"""コマ 10: ポインタ演算とスケーリング（学生用スケルトン）。連続領域は malloc + sizeof で確保する。"""
+"""コマ 9: ポインタ演算とスケーリング（学生用スケルトン）。連続領域は malloc + sizeof で確保する。"""
 
 import importlib.util
 import sys
