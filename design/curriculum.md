@@ -3,8 +3,9 @@
 > 対象: C言語既習・コンパイラ理論未習の学習者
 > 到達目標: Python 版 C サブセットコンパイラの完遂。以降は選択制の発展課題（`workbook/advanced/`）
 > ターゲット: RISC-V RV64IM（C拡張なし）、代替候補 x86-64
-> 構成: 全16コマ（Phase 0〜2 の15コマ + 発表・振り返りのコマ16。番号は 01〜16 の連番）
-> このほかに、番号を持たない準備回のコマ0（演習環境構築）がある
+> 構成: 実装する通常回はコマ1〜15 の15コマ（Phase 0〜2。番号は 01〜15 の連番）
+> このほかに、準備回のコマ0（演習環境構築）と発表会のコマ16（自身の取り組みを発表する）があり、
+> いずれも通常回には含めない別枠として扱う
 
 この文書は教材全体の設計思想を説明する。
 学習者向けの進め方は [`workbook/docs/getting_started.md`](../workbook/docs/getting_started.md) を参照。
@@ -49,11 +50,11 @@ Step 3（発展課題）: C 実装が動いたら、それ自体がコンパイ�
 ### フェーズ構成
 
 ```
-（準備）[ 1コマ]  演習環境構築（コマ0。番号を持たない）
-Phase 0 [ 1コマ]  AST 理解
+（準備） [1コマ]  演習環境構築（コマ0。通常回には含めない別枠）
+Phase 0  [1コマ]  AST 理解
 Phase 1 [10コマ]  Python 版ミニコンパイラを完成させる（コマ2〜11）
-Phase 2 [ 4コマ]  Python 版標準機能を完成させる
-最終デモ [ 1コマ]  発表・振り返り（コマ16。新しい機能は入れず、既存資産だけを使う）
+Phase 2  [4コマ]  Python 版標準機能を完成させる
+（発表会）[1コマ]  発表・振り返り（コマ16。通常回には含めない別枠）
 ```
 
 Phase 1 の終わりで「小さいが動く Python 版コンパイラ」を一度完成させる。
@@ -185,6 +186,11 @@ def codegen_lval(node):
 > 変数名・関数の役割・コメントを整理し、「自分が書いたが読める Python 版コンパイラ」にする。
 
 ### 最終デモ: 発表・振り返り（コマ16）
+
+> **現況（T198、2026-08-04）**: 公開教材の本体（`materials/sessions/16_demo_review.md`）は
+> `c-comp-design/teacher/handouts/session16_demo_review.md` へ退避した。学習者向けページ
+> （`workbook/docs/getting_started.md` 等）には「自身の取り組みを発表する」程度の言及のみを残す方針とした。
+> 以下はこの回を設けた際の設計判断の記録である。
 
 コマ15 で成果物は完成しているので、コマ16 に技術的な補完の役割は無い。
 新しい機能もコードも入れず、既存資産（自分の `final/mycc.py`・`fixed17`・RV64 シミュレータ）の
@@ -501,10 +507,6 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
 | `mycc_integration` | `final/mycc.py` への統合 | 15 | `define_object_macro`, `multifile_compile`, `linked_list_traversal`, `local_shadows_global` |
 | `final_test_suite` | `final/tests/` の総合判定（`fixed17`） | 15 | `mycc_integration` |
 | `code_review_criteria` | コードレビュー観点と仕上げ | 15 | `mycc_integration` |
-| `final_demo` | 成果デモの型（設計の説明と質疑） | 16 | `mycc_integration`, `final_test_suite` |
-| `asm_readthrough` | 生成アセンブリの読み下し | 16 | `func_prologue_epilogue`, `stack_frame_offsets`, `rv64_calling_convention` |
-| `self_review_rubric` | 自己レビューのルーブリック | 16 | `code_review_criteria`, `final_test_suite` |
-| `advanced_track_selection` | 発展課題の選び方 | 16 | `final_test_suite` |
 
 ### 台帳から読み取れる設計上の判断
 
@@ -515,8 +517,6 @@ x86-64 で書かれているものを RV64 に読み替える作業が、自分�
   コマ12 は `sizeof` そのものの導入回ではなく、struct への適用の導入回である。
 - コマ15 は新しい C 構文を導入しない。導入するのは統合と検証の枠組みだけであり、
   `introduces:` はその3項目になる。
-- コマ16 も新しい C 構文を導入しない。導入するのは発表・読解・自己評価・分岐選択という
-  非言語の4項目である。台帳は言語機能だけの表ではなく実装上・運用上の概念も含む表なので
-  （`toolchain_qemu_link`・`stdout_test`・`code_review_criteria` などが既にそうである）、
-  コマ16 もこの枠に収まる。`introduces:` を空にして台帳に載せない案も取れるが、
-  「台帳が単一の出典」という原則を保つため、載せる側を採った。
+- 台帳は言語機能だけの表ではなく、実装上・運用上の概念も含む表である
+  （`toolchain_qemu_link`・`stdout_test`・`code_review_criteria` などが既にそうである）。
+  「台帳が単一の出典」という原則を保つため、原稿が存在する回の `introduces:` は必ず台帳に載せる。
