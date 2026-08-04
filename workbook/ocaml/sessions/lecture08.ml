@@ -16,7 +16,8 @@ let size_of_ty = Struct_env.size_of_ty
 let emit line = print_endline line
 
 let error ?(line = 0) msg =
-  prerr_endline (Printf.sprintf "[line %d] %s" line msg);
+  let prefix = if line = 0 then "" else Printf.sprintf "[line %d] " line in
+  prerr_endline (Printf.sprintf "OCamlコード生成エラー: %s%s" prefix msg);
   exit 1
 
 (* 宣言時の型を offset と一緒に覚える。ロード・ストアの幅は、この型で決まる。

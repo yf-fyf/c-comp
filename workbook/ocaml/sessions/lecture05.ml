@@ -1,5 +1,5 @@
 (*
-   コマ5: 制御構文② — while / for / break / continue
+   コマ5: while / for / break / continue
 *)
 
 open Ast_def
@@ -7,7 +7,8 @@ open Ast_def
 let emit line = print_endline line
 
 let error ?(line = 0) msg =
-  prerr_endline (Printf.sprintf "[line %d] %s" line msg);
+  let prefix = if line = 0 then "" else Printf.sprintf "[line %d] " line in
+  prerr_endline (Printf.sprintf "OCamlコード生成エラー: %s%s" prefix msg);
   exit 1
 
 let locals : (string, int) Hashtbl.t = Hashtbl.create 64

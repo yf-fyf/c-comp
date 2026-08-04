@@ -1,5 +1,5 @@
 (*
-   コマ2: コード生成① — 算術式 → RV64 アセンブリ
+   コマ2: 算術式コード生成
 *)
 
 open Ast_def
@@ -7,7 +7,8 @@ open Ast_def
 let emit line = print_endline line
 
 let error ?(line = 0) msg =
-  prerr_endline (Printf.sprintf "[line %d] %s" line msg);
+  let prefix = if line = 0 then "" else Printf.sprintf "[line %d] " line in
+  prerr_endline (Printf.sprintf "OCamlコード生成エラー: %s%s" prefix msg);
   exit 1
 
 let rec codegen = function

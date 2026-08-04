@@ -1,5 +1,5 @@
 (*
-   コマ12: sizeof + malloc — sizeof(型名) と連結リスト
+   コマ12: 構造体とヒープ（struct / . / -> / sizeof / malloc / 連結リスト）
 *)
 
 open Ast_def
@@ -7,7 +7,10 @@ open Ast_def
 let size_of_ty = Struct_env.size_of_ty
 
 let emit line = print_endline line
-let error ?(line = 0) msg = prerr_endline (Printf.sprintf "[line %d] %s" line msg); exit 1
+let error ?(line = 0) msg =
+  let prefix = if line = 0 then "" else Printf.sprintf "[line %d] " line in
+  prerr_endline (Printf.sprintf "OCamlコード生成エラー: %s%s" prefix msg);
+  exit 1
 
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0

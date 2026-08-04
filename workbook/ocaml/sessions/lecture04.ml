@@ -1,5 +1,5 @@
 (*
-   コマ4: 制御構文① — if / else + 比較演算子
+   コマ4: if/else + 比較演算
 *)
 
 open Ast_def
@@ -7,7 +7,8 @@ open Ast_def
 let emit line = print_endline line
 
 let error ?(line = 0) msg =
-  prerr_endline (Printf.sprintf "[line %d] %s" line msg);
+  let prefix = if line = 0 then "" else Printf.sprintf "[line %d] " line in
+  prerr_endline (Printf.sprintf "OCamlコード生成エラー: %s%s" prefix msg);
   exit 1
 
 let locals : (string, int) Hashtbl.t = Hashtbl.create 64
