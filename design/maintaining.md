@@ -19,7 +19,7 @@
 │   ├── quality_guide.md   # 教材品質管理・AIレビュー手順
 │   └── webapps.md         # 補助ウェブアプリの企画書（企画段階）
 ├── materials/             # 資料の Markdown 原稿
-│   ├── sessions/          # 準備回のコマ0 + 実装のコマ1〜15 の原稿 NN_xxx.md（発表会のコマ16 は原稿を持たない）
+│   ├── sessions/          # 準備回のコマ0 + 実装のコマ1〜15 + 発表会のコマ16 の原稿 NN_xxx.md
 │   ├── advanced/          # 発展教材の原稿 <回ID>_xxx.md
 │   ├── tools/             # 補助ツールガイドの原稿
 │   └── figures/           # 図の TikZ ソースと生成 SVG（sessions・advanced 共用）

@@ -96,7 +96,7 @@ python3 scaffold/test_runner.py sessions/02_arithmetic_codegen
 | Phase 2 | 12〜15 | Python 版標準機能を完成させる |
 
 ::: note
-**コマ16（発表会）** — 自身の取り組みを発表する回。番号のある通常回には含めない。
+**コマ16（発表会）** — [発表・振り返り](https://yf-fyf.github.io/c-comp/sessions/16_demo_review/)。自身の取り組みを発表する回。番号のある通常回には含めない。
 :::
 
 Phase 1 の終わり（コマ11）で「小さいが動く Python 版コンパイラ」が一度完成する。
@@ -129,7 +129,7 @@ Phase 1 の終わり（コマ11）で「小さいが動く Python 版コンパ�
 | 15 | Python 版総合演習・`mycc.py` 統合 | 標準トラック完成（`final/mycc.py` に統合し、`final/tests`（fixed17）全通を目安とする） |
 
 ::: note
-**コマ16（発表会）** — 自身の取り組みを発表する回。番号のある通常回には含めない。
+**コマ16（発表会）** — [発表・振り返り](https://yf-fyf.github.io/c-comp/sessions/16_demo_review/)。自身の取り組みを発表する回。番号のある通常回には含めない。
 :::
 
 上の表はコマ単位の要約である。
@@ -147,7 +147,7 @@ Phase 1 の終わり（コマ11）で「小さいが動く Python 版コンパ�
 完成した自分の `final/mycc.py` を説明できる形に整え、そのうえで次に何をやるかを決める。
 
 ::: note
-**コマ16（発表会）** — 自身の取り組みを発表する回。番号のある通常回には含めない。
+**コマ16（発表会）** — [発表・振り返り](https://yf-fyf.github.io/c-comp/sessions/16_demo_review/)。自身の取り組みを発表する回。番号のある通常回には含めない。
 :::
 
 | 行き先 | 内容 |

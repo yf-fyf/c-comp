@@ -187,9 +187,9 @@ def codegen_lval(node):
 
 ### 最終デモ: 発表・振り返り（コマ16）
 
-> **現況（T198、2026-08-04）**: 公開教材の本体（`materials/sessions/16_demo_review.md`）は
-> `c-comp-design/teacher/handouts/session16_demo_review.md` へ退避した。学習者向けページ
-> （`workbook/docs/getting_started.md` 等）には「自身の取り組みを発表する」程度の言及のみを残す方針とした。
+> **現況（T199、2026-08-04）**: コマ16 に簡易版の公開ページ（`materials/sessions/16_demo_review.md`）を
+> 復元した。発表の型・詳細ルーブリック等は T198 で非公開の
+> `c-comp-design/teacher/handouts/session16_demo_review.md` へ退避したままであり、公開版には含めていない。
 > 以下はこの回を設けた際の設計判断の記録である。
 
 コマ15 で成果物は完成しているので、コマ16 に技術的な補完の役割は無い。
