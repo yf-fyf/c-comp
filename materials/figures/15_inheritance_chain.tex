@@ -1,0 +1,65 @@
+% コマ15: 継承の連鎖を final/mycc.py の 1 ファイルへ畳み込む
+% 各回の mycc.py は前回クラスの差分でしかない
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    stg/.style={cfgbox, minimum width=84mm, minimum height=7.5mm, font=\small,
+                align=left, text width=78mm},
+    cls/.style={font=\ttfamily\small},
+    note/.style={annot, text=TcGrayText, align=left}]
+
+  \node[gannot, anchor=south] at (38mm, 6mm) {通常回（コマ2〜コマ14）};
+
+  \foreach \i/\y/\t in {
+      0/0/{{\ttfamily Codegen02}  算術式・関数プロローグ／エピローグ},
+      1/-11/{{\ttfamily Codegen03}  {\ttfamily \_locals}・{\ttfamily codegen\_lval\_Var}・代入},
+      2/-22/{{\ttfamily Codegen04}  ラベル生成・{\ttfamily if}／{\ttfamily else}・比較演算},
+      3/-33/{{\ttfamily Codegen05}  {\ttfamily while}／{\ttfamily for}・{\ttfamily break}／{\ttfamily continue}},
+      4/-44/{{\ttfamily Codegen06}  関数定義・関数呼び出し・再帰},
+      5/-55/{{\ttfamily Codegen07}  {\ttfamily codegen\_lval} の分離・{\ttfamily \&}／{\ttfamily *}},
+      6/-66/{{\ttfamily Codegen08}  {\ttfamily ty\_str}・{\ttfamily \_load\_ty}／{\ttfamily \_store\_ty}},
+      7/-77/{{\ttfamily Codegen09}  ポインタ演算・添字・{\ttfamily sizeof}・{\ttfamily malloc}},
+      8/-88/{{\ttfamily Codegen10}  {\ttfamily .data}・文字列ラベル・{\ttfamily printf}},
+      9/-99/{{\ttfamily Codegen11}  式の走査の網羅},
+      10/-110/{{\ttfamily Codegen12}  {\ttfamily struct}・{\ttfamily .}／{\ttfamily ->}・レイアウト},
+      11/-121/{{\ttfamily Codegen13}  {\ttfamily \_globals}・{\ttfamily .bss}・{\ttfamily \&\&}／{\ttfamily ||}／{\ttfamily !}},
+      12/-132/{{\ttfamily Codegen14}  {\ttfamily \#define}・複数ファイル}} {
+    \node[stg] (b\i) at (38mm, \y mm) {\t};
+  }
+
+  \foreach \i [evaluate=\i as \j using int(\i+1)] in {0,...,11} {
+    \draw[flow] (b\i.south) -- (b\j.north);
+  }
+
+  \node[note, anchor=east] at (-6mm, -66mm)
+      {importlib 継承\\（各回は差分だけを書く）};
+
+  % ---- 全体を束ねて final へ ----
+  \draw[bracestyle] ($(b0.north east)+(4mm,0)$) -- ($(b12.south east)+(4mm,0)$);
+
+  \node[cfgbox, minimum width=52mm, minimum height=44mm, align=center, font=\small]
+      (final) at (140mm, -66mm)
+      {{\ttfamily final/mycc.py}\\[2mm]
+       継承なし。\\
+       全ハンドラを 1 クラスに展開する};
+  \draw[ptr] (88mm, -66mm) -- (final.west);
+
+  % ---- 検証フロー ----
+  \node[cfgbox, minimum width=34mm, minimum height=8mm, font=\footnotesize]
+      (tests) at (140mm, -102mm) {final/tests/（fixed17）};
+  \node[cfgbox, minimum width=34mm, minimum height=8mm, font=\footnotesize]
+      (runner) at (140mm, -118mm) {test\_runner.py};
+  \draw[flow] (final.south) -- (tests.north);
+  \draw[flow] (tests.south) -- (runner.north);
+  \node[gannot, anchor=west, align=left] at (160mm, -118mm)
+      {17 本すべてが通れば\\標準トラック完成の目安};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (76mm, -146mm)
+      {各回の {\ttfamily mycc.py} は前の回のクラスを継承した差分でしかないので、
+       そのまま {\ttfamily final/} へ置いても動かない。\\
+       連鎖をたどって、どの回の何がどこに効いているかを確かめながら 1 つのクラスへまとめる
+       （{\ttfamily tokenize} / {\ttfamily parse} も同じ連鎖で引き継がれている）};
+\end{tikzpicture}
+\end{document}

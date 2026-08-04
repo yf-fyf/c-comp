@@ -1,0 +1,58 @@
+% コマ8: char の縮小(sb)と昇格(lb) — 64 ビットレジスタと 1 バイトのメモリの間で何が起きるか
+% char c; c = 200; と、その c を読み出したときのバイト列
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    byte/.style={memcell, minimum width=9mm, minimum height=7.5mm, font=\ttfamily\small},
+    byte gray/.style={byte, fill=TcGrayBg, text=TcGrayText},
+    byte hi/.style={byte, fill=TcAccentLight},
+    panelttl/.style={annot, anchor=south, align=center},
+    insn/.style={font=\ttfamily\footnotesize, text=TcText, align=center, anchor=north}]
+
+  % ================ パネル①: sb(縮小) ================
+  \node[panelttl] at (31.5mm, 26mm) {① {\ttfamily c = 200;} — {\ttfamily sb} は下位 1 バイトだけを書く};
+  \node[gannot, anchor=south] at (31.5mm, 18mm) {a0 に載っている 200 = 0x00\dots C8（64 ビット）};
+
+  \foreach \i in {0,...,6} {
+    \node[byte gray] (p\i) at ({\i*9mm}, 12mm) {00};
+  }
+  \node[byte hi] (p7) at (63mm, 12mm) {C8};
+  \node[addr, anchor=east] at (-6.5mm, 12mm) {a0};
+
+  \draw[bracestyle] ($(p0.south west)+(0,-1mm)$) -- ($(p6.south east)+(0,-1mm)$)
+      node[gannot, midway, below=2mm] {この 7 バイトは書かれない（捨てられる）};
+
+  \node[byte hi] (m1) at (63mm, -6mm) {C8};
+  \node[addr, anchor=east] at (56mm, -6mm) {char c};
+  \draw[ptr] (p7.south) -- (m1.north);
+
+  \node[gannot, anchor=north] at (31.5mm, -12mm) {メモリ上の {\ttfamily c} は 1 バイトしかない};
+  \node[insn] at (31.5mm, -18mm) {sb a0, 0(a1)};
+
+  % ================ パネル②: lb(昇格) ================
+  \node[panelttl] at (123.5mm, 26mm) {② {\ttfamily c} を読む — {\ttfamily lb} は符号拡張して int へ昇格させる};
+  \node[gannot, anchor=south] at (123.5mm, 18mm) {読み出した結果は 0xFF\dots C8 = -56};
+
+  \foreach \i in {0,...,6} {
+    \node[byte] (q\i) at ({92mm+\i*9mm}, 12mm) {FF};
+  }
+  \node[byte hi] (q7) at (155mm, 12mm) {C8};
+  \node[addr, anchor=east] at (85.5mm, 12mm) {a0};
+
+  \draw[bracestyle] ($(q0.south west)+(0,-1mm)$) -- ($(q6.south east)+(0,-1mm)$)
+      node[gannot, midway, below=2mm] {上位 56 ビットは符号ビットのコピーで埋まる};
+
+  \node[byte hi] (m2) at (155mm, -6mm) {C8};
+  \node[addr, anchor=east] at (148mm, -6mm) {char c};
+  \draw[ptr] (m2.north) -- (q7.south);
+
+  \node[gannot, anchor=north] at (123.5mm, -12mm) {最上位ビットが 1 なので負の値になる};
+  \node[insn] at (123.5mm, -18mm) {lb a0, 0(a0)};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (77.5mm, -28mm)
+      {残るのは常に下位 8 ビットで、読み戻した値はその 8 ビットを符号付きとして解釈したものになる。\\
+       {\ttfamily c = 300;} なら下位 8 ビットは {\ttfamily 0x2C} なので、読み出すと {\ttfamily 44} になる};
+\end{tikzpicture}
+\end{document}

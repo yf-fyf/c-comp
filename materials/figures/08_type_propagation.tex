@@ -1,0 +1,69 @@
+% コマ8: 式の木を型が伝播し、ロード・ストア命令の幅が決まる
+% char c; char *p; のもとで *p = c + 2; を生成する
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ast/.style={cfgbox, minimum width=18mm, minimum height=7mm, font=\ttfamily\small},
+    ty/.style={annot, text=TcEmph},
+    num/.style={annot, font=\small\bfseries, text=TcAccentDark},
+    insn/.style={font=\ttfamily\footnotesize, text=TcText, align=left, anchor=west}]
+
+  \node[gannot, anchor=west] at (-48mm, 15mm)
+      {{\ttfamily char c; char *p;} のもとで {\ttfamily *p = c + 2;} を生成する};
+
+  % ---- AST ----
+  \node[ast] (as) at (0mm, 0mm)    {Assign};
+  \node[ast] (de) at (-26mm, -18mm) {Deref};
+  \node[ast] (ad) at (26mm, -18mm)  {Add};
+  \node[ast] (vp) at (-26mm, -36mm) {Var p};
+  \node[ast] (vc) at (12mm, -36mm)  {Var c};
+  \node[ast] (n2) at (40mm, -36mm)  {Num 2};
+
+  \draw[flow] (as.south) -- (de.north);
+  \draw[flow] (as.south) -- (ad.north);
+  \draw[flow] (de.south) -- (vp.north);
+  \draw[flow] (ad.south) -- (vc.north);
+  \draw[flow] (ad.south) -- (n2.north);
+
+  % ---- 各ノードに付く型 ----
+  \node[ty, anchor=south] at ($(as.north)+(0,4mm)$) {左辺値の型 char が書き込み幅を決める};
+  \node[ty, anchor=east]  at ($(de.west)+(-2mm,0)$)   {*p の左辺値型: char};
+  \node[ty, anchor=east]  at ($(vp.west)+(-2mm,0)$)   {p: char*};
+  \node[ty, anchor=west]  at ($(ad.east)+(2mm,0)$)    {c + 2: int};
+  \node[ty, anchor=north, align=center] at ($(vc.south)+(0,-1.5mm)$)
+      {c: char\\（読むと int）};
+  \node[ty, anchor=north] at ($(n2.south)+(0,-1.5mm)$) {2: int};
+
+  % ---- 生成の順番 ----
+  \node[num, anchor=south east] at ($(de.north west)+(-0.5mm,0.5mm)$) {①};
+  \node[num, anchor=south east] at ($(vc.north west)+(-0.5mm,0.5mm)$) {②};
+  \node[num, anchor=south west] at ($(ad.north east)+(0.5mm,0.5mm)$)  {③};
+  \node[num, anchor=west]       at ($(as.east)+(2mm,0)$)             {④};
+
+  % ---- 生成される命令 ----
+  \node[gannot, anchor=west] at (70mm, 8mm) {生成される命令（①〜④ の順）};
+  \draw[flow, color=TcGrayText] (58mm, -6mm) -- (66mm, -6mm);
+
+  \node[insn] (r1) at (70mm, 0mm)   {ld a0, 0(a0)};
+  \node[insn] (r2) at (70mm, -11mm) {lb a0, 0(a0)};
+  \node[insn] (r3) at (70mm, -23mm) {li a0, 2\\add a0, a1, a0};
+  \node[insn] (r4) at (70mm, -37mm) {sb a0, 0(a1)};
+
+  \node[annot, anchor=west, align=left] at (98mm, 0mm)
+      {① 書き込み先アドレス（{\ttfamily p} の値。ポインタは 8 バイト）};
+  \node[annot, anchor=west, align=left] at (98mm, -11mm)
+      {② {\ttfamily c} を読む。{\ttfamily char} は 1 バイトなので {\ttfamily lb}\\
+       \phantom{②} （符号拡張されて int として載る）};
+  \node[annot, anchor=west, align=left] at (98mm, -23mm)
+      {③ 算術は int で行う};
+  \node[annot, anchor=west, align=left] at (98mm, -37mm)
+      {④ {\ttfamily *p} へ書く。幅は左辺値の型 {\ttfamily char} なので {\ttfamily sb}};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (52mm, -52mm)
+      {木を上がるのは値ではなく型で、根まで上がった型がロード・ストア命令の幅を選ぶ。\\
+       書き込み幅は左辺値の型で決める。{\ttfamily *p = 30} の幅は
+       {\ttfamily p} の指し先型であって、右辺の型ではない};
+\end{tikzpicture}
+\end{document}

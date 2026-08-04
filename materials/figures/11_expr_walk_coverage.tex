@@ -1,0 +1,77 @@
+% コマ11: 式走査の網羅 — コマ10 が素通りした枝を、コマ11 の走査が全部たどる
+% printf("%s\n", n < 2 ? "then side" : "else side"); の AST
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    ast/.style={cfgbox, minimum width=30mm, minimum height=7mm, font=\ttfamily\small},
+    ast off/.style={ast, dashed, text=TcGrayText, draw=TcGrayText},
+    num/.style={annot, font=\small\bfseries, text=TcEmph},
+    lab/.style={annot, text=TcEmph, font=\small\ttfamily},
+    note/.style={annot, text=TcGrayText, align=left},
+    lcline/.style={font=\ttfamily\footnotesize, text=TcText, anchor=west}]
+
+  \node[gannot, anchor=west] at (-58mm, 24mm)
+      {{\ttfamily printf("\%s{\textbackslash}n", n < 2 ? "then side" : "else side");} の AST};
+
+  % ---- AST ----
+  \node[ast]     (call) at (0mm, 10mm)    {Call printf};
+  \node[ast]     (s1)   at (-40mm, -8mm)  {Str "\%s{\textbackslash}n"};
+  \node[ast off] (cond) at (24mm, -8mm)   {Cond};
+  \node[ast off] (lt)   at (-18mm, -26mm) {Lt};
+  \node[ast off] (s2)   at (26mm, -26mm)  {Str "then side"};
+  \node[ast off] (s3)   at (74mm, -26mm)  {Str "else side"};
+  \node[ast off] (vn)   at (-34mm, -44mm) {Var n};
+  \node[ast off] (n2)   at (-2mm, -44mm)  {Num 2};
+
+  \draw[flow] (call.south) -- (s1.north);
+  \draw[flow] (call.south) -- (cond.north);
+  \foreach \c in {lt, s2, s3} { \draw[flow, color=TcGrayText] (cond.south) -- (\c.north); }
+  \draw[flow, color=TcGrayText] (lt.south) -- (vn.north);
+  \draw[flow, color=TcGrayText] (lt.south) -- (n2.north);
+
+  % ---- コマ10 の到達範囲 ----
+  \begin{scope}[on background layer]
+    \node[fill=TcAccentLighter, rounded corners=2mm, fit=(call)(s1), inner sep=3mm] (reach) {};
+  \end{scope}
+  \node[note, anchor=east] at ($(reach.west)+(-2mm,0)$)
+      {コマ10 の {\ttfamily collect\_strings\_expr()} が\\
+       枝を持つのは {\ttfamily Str} / {\ttfamily Assign} / {\ttfamily Call} の\\
+       3 種類だけ（実線の範囲）};
+  \node[note, anchor=west] at ($(cond.east)+(4mm,0)$)
+      {{\ttfamily Cond} はコマ10 では {\ttfamily case \_: pass} に落ちる。\\
+       ここで走査が止まり、破線の枝は素通りしていた};
+
+  % ---- コマ11 の走査順 ----
+  \node[num, anchor=south east] at ($(call.north west)+(-0.5mm,0.5mm)$) {①};
+  \node[num, anchor=south east] at ($(s1.north west)+(-0.5mm,0.5mm)$)   {②};
+  \node[num, anchor=south east] at ($(cond.north west)+(-0.5mm,0.5mm)$) {③};
+  \node[num, anchor=south east] at ($(lt.north west)+(-0.5mm,0.5mm)$)   {④};
+  \node[num, anchor=south east] at ($(s2.north west)+(-0.5mm,0.5mm)$)   {⑤};
+  \node[num, anchor=south east] at ($(s3.north west)+(-0.5mm,0.5mm)$)   {⑥};
+  \node[note, anchor=west] at (18mm, -45mm)
+      {①〜⑥ はコマ11 の走査がたどる順番。{\ttfamily n} と {\ttfamily 2} には\\
+       文字列が無いので、たどっても何も登録されない};
+
+  % ---- 集めた結果 ----
+  \node[lab, anchor=north] at ($(s1.south)+(0,-1.5mm)$) {.LC1};
+  \node[lab, anchor=north] at ($(s2.south)+(0,-1.5mm)$) {.LC2};
+  \node[lab, anchor=north] at ($(s3.south)+(0,-1.5mm)$) {.LC3};
+
+  \node[region, minimum width=52mm, minimum height=30mm, anchor=north west] (data) at (116mm, 4mm) {};
+  \node[lcline, anchor=north west] at ($(data.north west)+(3mm,-3mm)$) {.data};
+  \node[lcline] at ($(data.north west)+(3mm,-12mm)$) {.LC1:  "\%s{\textbackslash}n"};
+  \node[lcline] at ($(data.north west)+(3mm,-19mm)$) {.LC2:  "then side"};
+  \node[lcline] at ($(data.north west)+(3mm,-26mm)$) {.LC3:  "else side"};
+
+  \draw[ptr] (104mm, -20mm) -- (114mm, -20mm);
+  \node[gannot, anchor=north, align=center] at (142mm, -28mm)
+      {集めた順に {\ttfamily .LC1} から割り当て、\\
+       各ラベルの下に {\ttfamily .byte} 列を並べる};
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (40mm, -60mm)
+      {走査は「実行される経路」ではなく「AST に書かれているもの全部」を対象にする。\\
+       実行時に選ばれるのは片方でも、両方のラベルが {\ttfamily .data} に無いとリンクに失敗する};
+\end{tikzpicture}
+\end{document}

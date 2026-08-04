@@ -71,6 +71,11 @@ workbook/
 └── final/mycc.py                             # 最終成果物の統合先
 ```
 
+![各回の `Codegen` クラスの継承の連鎖と、`final/mycc.py` への畳み込み](figures/15_inheritance_chain.svg)
+
+通常回の `mycc.py` は、前の回のクラスを `importlib` で継承した差分だけを書いてきた。
+統合はファイルのコピーではなく、この連鎖をたどって全ハンドラを 1 つのクラスへ展開する作業である。
+
 まず、コマ14までの完成版を `final/mycc.py` に反映する。
 その後、次のコマンドを実行する。
 
