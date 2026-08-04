@@ -694,6 +694,9 @@ echo $?
 `struct Point a; a = b;` のように構造体そのものを代入することはできず、
 フィールドを1つずつ代入するか、ポインタで渡す。
 関数の引数・戻り値も同じで、構造体を値で受け渡すことはしない（`struct Point *` を渡す）。
+構造体代入は発展課題 [S3](../../workbook/advanced/S3_struct/README.md) で、
+引数・戻り値の値渡し・値返しは発展課題
+[L5](../../workbook/advanced/L5_struct_byval/README.md) で実装する。
 
 フィールドに書けるのは `int`、`char`、ポインタだけである。
 struct 値を入れ子にすることはできない（`struct Node *next` のようなポインタは書ける）。

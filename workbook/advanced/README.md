@@ -46,11 +46,12 @@
 | R3 | [`R3_malloc/`](../../materials/advanced/R3_malloc.md) | 自前 malloc（バンプ割り当て → フリーリスト） | 1 | コマ12 + コマ15（`check.py`） |
 | S1 | [`S1_shortcircuit/`](../../materials/advanced/S1_shortcircuit.md) | 短絡評価（`&&` / `\|\|` の意味論を、仕様がCとわざと違えている点からCへ寄せる） | 1 | コマ12 + コマ15（`golden.py`） |
 | S2 | [`S2_int32/`](../../materials/advanced/S2_int32.md) | `int` の演算が32bitで折り返さない | 1 | コマ12 + コマ15（`golden.py`） |
-| S3 | [`S3_struct/`](../../materials/advanced/S3_struct.md) | 構造体の代入（ポインタ・フィールド持ち構造体、ポインタ経由の代入。値渡しは発展課題） | 1 | コマ12 + コマ15（`golden.py`） |
+| S3 | [`S3_struct/`](../../materials/advanced/S3_struct.md) | 構造体の代入（ポインタ・フィールド持ち構造体、ポインタ経由の代入。値渡しは L5） | 1 | コマ12 + コマ15（`golden.py`） |
 | L1 | [`L1_ptrdiff/`](../../materials/advanced/L1_ptrdiff.md) | ポインタ同士の引き算が要素数にならない | 1 | コマ12 + コマ15（`golden.py`） |
 | L2 | [`L2_compound_assign/`](../../materials/advanced/L2_compound_assign.md) | 複合代入（`x += 3`、`p -= 1`。左辺は1回だけ評価） | 1 | コマ13 + コマ15（`golden.py`） |
 | L3 | [`L3_variadic/`](../../materials/advanced/L3_variadic.md) | 可変長引数の「定義」（`int sum(int n, ...)`） | 1 | コマ10 + コマ15（`golden.py`） |
 | L4 | [`L4_sizeof_expr/`](../../materials/advanced/L4_sizeof_expr.md) | `sizeof` 単項式（`sizeof x`。オペランドは評価しない） | 1 | コマ12 + コマ15（`golden.py`） |
+| L5 | [`L5_struct_byval/`](../../materials/advanced/L5_struct_byval.md) | 構造体の値渡し・値返し（呼び出し規約を自分で決める。L 系列で最も重い） | 1 | コマ12 + S3 + コマ15（`golden.py`） |
 | Q1 | [`Q1_typecheck/`](../../materials/advanced/Q1_typecheck.md) | 型検査パス（実行前に誤りをまとめて報告する） | 1 | コマ12 |
 | P1 | [`P1_selfhost/`](../../materials/advanced/P1_selfhost.md) | C 移植・セルフホスト（方針のみ。複数回に渡る自主課題、自動採点なし） | - | コマ15 |
 
@@ -64,6 +65,7 @@
 | 仕様がCとわざと違えている点をCへ寄せたい | **S1**（`&&` が短絡していないことの確認から） |
 | OS もライブラリも無い世界を見たい | **R1** |
 | 仕様の外側の機能を自分で足してみたい | **L4**（L 系列で最も軽い。字句の変更なし、コード生成は1命令） |
+| 言語仕様に書かれない取り決め（呼び出し規約）を自分で決めたい | **L5**（L 系列で最も重い。軽い入口ではないので、S3 を終えてから） |
 
 ## 共通のルール
 
