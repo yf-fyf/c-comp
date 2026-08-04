@@ -634,6 +634,14 @@ def check_style_terms() -> list[Violation]:
             if any(part in SKIP_DIRNAMES for part in path.relative_to(ROOT).parts):
                 continue
             _check_style_terms_in_file(path, violations, allowlist)
+    # workbook/ocaml/ の .ml コメント（T105で統一した表記の退行を検出するため）。
+    # advanced 系の記法チェック（scaffold 表記等）は対象外（Markdown の地の文向けのため）。
+    ocaml_dir = ROOT / "workbook" / "ocaml"
+    if ocaml_dir.is_dir():
+        for path in sorted(ocaml_dir.rglob("*.ml")):
+            if any(part in SKIP_DIRNAMES for part in path.relative_to(ROOT).parts):
+                continue
+            _check_style_terms_in_file(path, violations, allowlist)
     violations.extend(_dead_allowlist_violations(allowlist))
     return violations
 
