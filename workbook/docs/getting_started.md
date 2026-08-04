@@ -167,3 +167,4 @@ Phase 1 の終わり（コマ11）で「小さいが動く Python 版コンパ�
 | Rui Ueyama「低レイヤを知りたい人のためのCコンパイラ作成入門」 | コンパイラ実装の主参考書（x86-64 → RV64 置換して読む） | 発展課題（P1）挑戦時 |
 | RISC-V 仕様書 Volume I (User-Level ISA) | 命令セット参照 | コマ2 以降 |
 | Abdulaziz Ghuloum, "An Incremental Approach to Compiler Construction" | この教材の構成の元になった論文 | 興味があれば最初に |
+| [京都大学「計算機科学実験及び演習3 ソフトウェア」2015年度配布資料](https://web.archive.org/web/20150608075952/https://www.fos.kuis.kyoto-u.ac.jp/~umatani/le3b/siryo.pdf)（archive.org 保存版） | この教材の言語仕様（Core プロファイル）を設計する際に参考にした資料。対象言語 Small C の構文・型を比較した | 興味があれば |
