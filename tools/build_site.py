@@ -422,13 +422,13 @@ def copy_figures(output: Path) -> None:
 
 
 def copy_legal(output: Path) -> None:
-    """フッタが参照する LICENSE / THIRD_PARTY_NOTICES.md を出力先に置く。
+    """フッタが参照する LICENSE / LICENSE-MATERIALS / THIRD_PARTY_NOTICES.md を出力先に置く。
 
     tools/build_pages.py（リリース組み立て）でも同じファイルをコピーしているが、
     build_site.py 単体のプレビュー（make serve 等）でもフッタのリンクが
     404 にならないよう、ここでも出力先に置く。
     """
-    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
+    for name in ("LICENSE", "LICENSE-MATERIALS", "THIRD_PARTY_NOTICES.md"):
         source = ROOT / name
         if source.is_file():
             shutil.copy2(source, output / name)
@@ -704,9 +704,10 @@ def serve(nav: dict, pages: list[Page], links: dict[str, str], output: Path,
 HREF_RE = re.compile(r'(?:href|src)="([^"#][^"]*)"')
 
 # tools/build_pages.py が公開時に足すもの。"tools"・"downloads" は単体のサイトビルドには
-# 存在しない。"LICENSE"・"THIRD_PARTY_NOTICES.md" は copy_legal() が単体ビルドでも出力先へ
-# 置くが、check_links() 側の除外はどちらのビルド経路でも安全なので変更していない。
-ASSEMBLED = {"tools", "downloads", "LICENSE", "THIRD_PARTY_NOTICES.md"}
+# 存在しない。"LICENSE"・"LICENSE-MATERIALS"・"THIRD_PARTY_NOTICES.md" は copy_legal() が
+# 単体ビルドでも出力先へ置くが、check_links() 側の除外はどちらのビルド経路でも安全なので
+# 変更していない。
+ASSEMBLED = {"tools", "downloads", "LICENSE", "LICENSE-MATERIALS", "THIRD_PARTY_NOTICES.md"}
 
 
 def check_links(output: Path) -> int:

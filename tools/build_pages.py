@@ -67,7 +67,7 @@ def archive_workbook(destination: Path, version: str) -> None:
     """演習環境の配布アーカイブ。資料はサイトで配るので workbook のコードとテストだけ。"""
     prefix = f"c-comp-workbook-{version}"
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for top_level in (ROOT / "README.md", ROOT / "LICENSE", ROOT / "THIRD_PARTY_NOTICES.md"):
+        for top_level in (ROOT / "README.md", ROOT / "LICENSE", ROOT / "LICENSE-MATERIALS", ROOT / "THIRD_PARTY_NOTICES.md"):
             archive.write(top_level, f"{prefix}/{top_level.name}")
         for directory, subdirs, filenames in os.walk(WORKBOOK):
             path = Path(directory)
@@ -179,7 +179,7 @@ def main() -> None:
 
         build_site(args.output, version, args.revision)
         shutil.copytree(WEB_DIST, args.output / "tools")
-        for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
+        for name in ("LICENSE", "LICENSE-MATERIALS", "THIRD_PARTY_NOTICES.md"):
             copy_file(ROOT / name, args.output / name)
         archive = args.output / "downloads" / f"c-comp-workbook-{version}.zip"
         archive.parent.mkdir(parents=True)

@@ -65,7 +65,11 @@ make pages VERSION=v0.1.0
 
 ## ライセンス
 
-MIT License。第三者依存の扱いは [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) を参照。
+プログラム(実行可能なコード。コンパイラ本体・スキャフォールド・ウェブアプリ・ビルドツール等)は
+[`LICENSE`](./LICENSE)(MIT License)。それ以外の講義資料(原稿・図・カリキュラム/設計文書などの
+文章コンテンツ全般)は [`LICENSE-MATERIALS`](./LICENSE-MATERIALS)
+(CC BY-NC-SA 4.0、表示・非営利・継承)。商用利用を検討する場合はメンテナへ連絡すること。
+第三者依存の扱いは [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) を参照。
 
 ## 参考文献
 

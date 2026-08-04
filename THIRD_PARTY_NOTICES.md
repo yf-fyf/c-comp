@@ -1,7 +1,10 @@
 # Third-Party Notices
 
-This repository's original source code, teaching materials, and generated
-handouts are licensed under the MIT License in [`LICENSE`](./LICENSE).
+This repository's original program code (compiler, scaffolding, web app,
+build tools) is licensed under the MIT License in [`LICENSE`](./LICENSE).
+The teaching materials and other non-code content (lecture text, figures,
+curriculum and design documents, generated handouts) are licensed under
+CC BY-NC-SA 4.0 in [`LICENSE-MATERIALS`](./LICENSE-MATERIALS).
 
 The project uses third-party tools and dependencies when building or running
 the materials. They remain subject to their own licenses; the MIT License does
