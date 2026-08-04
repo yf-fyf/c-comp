@@ -1,0 +1,63 @@
+% コマ13: 変数名の探索は _locals → _globals の2段(コンパイル時の名前引き)
+% shadow_min.c を題材に、同じ名前 value が関数によって別の表に当たることを示す
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    row/.style={region, minimum width=66mm, minimum height=12mm, align=center},
+    hdr/.style={region, minimum width=66mm, minimum height=8mm, fill=TcAccentLight},
+    query/.style={cfgbox, minimum width=40mm, minimum height=11mm, align=center},
+    num/.style={annot, font=\small\bfseries, text=TcAccentDark},
+    insn/.style={font=\ttfamily\footnotesize, text=TcText, align=left, anchor=west}]
+
+  % ---- 題材のソース ----
+  \node[gannot, anchor=west] at (-80mm, 39mm)
+      {{\ttfamily shadow\_min.c} — 同じ名前 {\ttfamily value} を2か所から引く};
+  \node[annot, font=\ttfamily\footnotesize, anchor=north west, align=left] at (-80mm, 35mm)
+      {int value;\\
+       int read\_global() \{ return value; \}\\
+       int main() \{ int value; value = 5; return value + read\_global(); \}};
+
+  % ---- 中央: 2つの変数表 ----
+  \node[hdr] (lochdr) at (0mm, 14mm) {{\ttfamily self.\_locals}　関数ごとに作り直す};
+  \node[row, fill=TcAccentLighter, below=0mm of lochdr] (locmain)
+      {{\ttfamily main} を処理中\\{\ttfamily \{"value": (-24, "int")\}}};
+  \node[row, text=TcGrayText, below=0mm of locmain] (locread)
+      {{\ttfamily read\_global} を処理中\\{\ttfamily \{\}}（この関数に宣言は無い）};
+
+  \node[hdr] (glohdr) at (0mm, -24mm) {{\ttfamily self.\_globals}　プログラム全体で1つ};
+  \node[row, fill=TcAccentLighter, minimum height=10mm, below=0mm of glohdr] (glorow)
+      {{\ttfamily \{"value": "int"\}}};
+
+  % ---- 左: 2つの引き当て ----
+  \node[query] (qmain) at (-66mm, 5mm)
+      {{\ttfamily main()} の中の\\{\ttfamily value}};
+  \node[query] (qread) at (-66mm, -7mm)
+      {{\ttfamily read\_global()} の中の\\{\ttfamily value}};
+
+  \draw[ptr] (qmain.east) -- (locmain.west);
+  \node[num, anchor=south] at ($(qmain.east)!0.5!(locmain.west)+(0,1mm)$) {①};
+  \draw[flow back] (qread.east) -- (locread.west);
+  \node[num, anchor=south] at ($(qread.east)!0.5!(locread.west)+(0,1mm)$) {①};
+  \node[gannot, anchor=north] at ($(qread.east)!0.5!(locread.west)+(0,-2mm)$) {素通り};
+
+  \draw[ptr] (locread.south) -- (glohdr.north);
+  \node[num, anchor=west] at ($(locread.south)!0.5!(glohdr.north)+(1.5mm,0)$) {②};
+
+  % ---- 右: 決まるアドレスの作り方 ----
+  \node[insn] (imain) at (42mm, 5mm) {addi a0, s0, -24};
+  \node[annot, anchor=west] at (42mm, 0mm) {{\ttfamily s0} からのオフセット};
+  \draw[ptr] (locmain.east) -- (imain.west);
+
+  \node[insn] (iglo) at (42mm, -29mm) {la a0, value};
+  \node[annot, anchor=west] at (42mm, -34mm) {ラベルのアドレス};
+  \draw[ptr] (glorow.east) -- (iglo.west);
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (0mm, -46mm)
+      {変数名は必ず {\ttfamily \_locals} → {\ttfamily \_globals} の順に引く。
+       ローカルが同名のグローバルを隠すのは、この探索順が固定されているからである\\
+       どちらの表に当たったかが、そのままアドレスの作り方
+       （{\ttfamily s0} からのオフセットか、ラベルか）を決める};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,75 @@
+% コマ6: call 前の16バイト整列 — 一時値が奇数個のときだけ sp が8ずれる
+% return n * fact(n - 1); の生成中、sp が16バイト境界のどこに居るかを4場面で追う
+\documentclass[border=8pt]{standalone}
+\input{figure-preamble}
+\begin{document}
+\begin{tikzpicture}[node distance=0mm,
+    scell/.style={memcell, minimum width=30mm, minimum height=8mm},
+    padcell/.style={memcell gray, minimum width=30mm, minimum height=8mm},
+    freecell/.style={memcell dashed, minimum width=30mm, minimum height=8mm},
+    stepttl/.style={annot, anchor=south, align=center},
+    spmark/.style={annot, font=\ttfamily\bfseries, anchor=east, fill=white, inner sep=1pt},
+    state/.style={annot, anchor=north, align=center},
+    insn/.style={font=\ttfamily\footnotesize, text=TcText, align=center, anchor=north}]
+
+  \node[gannot] at (69mm, 24mm)
+      {{\ttfamily return n * fact(n - 1);} を生成するあいだの sp と16バイト境界};
+  \node[annot, text=TcEmph, anchor=south, align=center] at (92mm, 15mm)
+      {規約: {\ttfamily call} を出す時点の sp は16の倍数};
+
+  % ---- 背景の16バイト境界 ----
+  \begin{scope}[on background layer]
+    \draw[dashed, line width=0.4pt, color=TcGrayText] (-30mm, 0mm) -- (158mm, 0mm);
+    \draw[dashed, line width=0.4pt, color=TcGrayText] (-30mm, -16mm) -- (158mm, -16mm);
+  \end{scope}
+  \node[gannot, anchor=west] at (159mm, 0mm) {16バイト境界};
+  \node[gannot, anchor=west] at (159mm, -16mm) {16バイト境界};
+
+  % ---- ① プロローグ直後 ----
+  \node[stepttl] at (0mm, 9mm) {① プロローグ直後};
+  \node[spmark] (sp1) at (-17mm, 0mm) {sp};
+  \draw[regptr] (sp1.east) -- (-15mm, 0mm);
+  \node[state] at (0mm, -19mm) {{\ttfamily depth = 0}\\境界の上};
+  \node[insn] at (0mm, -31mm) {addi sp, sp, -32};
+
+  % ---- ② 左辺 n を積む ----
+  \node[stepttl] at (46mm, 9mm) {② 左辺 {\ttfamily n} を積む};
+  \node[scell, fill=TcAccentLight] (n2) at (46mm, -4mm) {n の値};
+  \node[spmark] (sp2) at (29mm, -8mm) {sp};
+  \draw[regptr] (sp2.east) -- (31mm, -8mm);
+  \draw[bracestyle, color=TcEmph] (62mm, -16mm) -- (62mm, -8mm)
+      node[midway, anchor=west, xshift=3mm, annot, text=TcEmph] {8 ずれ};
+  \node[state] at (46mm, -19mm) {{\ttfamily depth = 1}\\境界から 8 ずれ};
+  \node[insn] at (46mm, -31mm) {addi sp, sp, -8\\sd a0, 0(sp)};
+
+  % ---- ③ call の直前 ----
+  \node[stepttl] at (92mm, 9mm) {③ {\ttfamily call fact} の直前};
+  \node[scell, fill=TcAccentLight] (n3) at (92mm, -4mm) {n の値};
+  \node[padcell] (pad3) at (92mm, -12mm) {詰め物 8バイト};
+  \node[spmark] (sp3) at (75mm, -16mm) {sp};
+  \draw[regptr] (sp3.east) -- (77mm, -16mm);
+  \node[state] at (92mm, -19mm) {{\ttfamily depth = 1}\\詰め物で境界の上へ};
+  \node[insn] at (92mm, -31mm) {addi sp, sp, -8\\call fact};
+
+  % ---- ④ 戻ってきたあと ----
+  \node[stepttl] at (138mm, 9mm) {④ 戻ってきたあと};
+  \node[scell, fill=TcAccentLight] (n4) at (138mm, -4mm) {n の値};
+  \node[freecell] (pad4) at (138mm, -12mm) {詰め物は返した};
+  \node[spmark] (sp4) at (121mm, -8mm) {sp};
+  \draw[regptr] (sp4.east) -- (123mm, -8mm);
+  \node[state] at (138mm, -19mm) {{\ttfamily depth = 1}\\{\ttfamily a1} へ復元して {\ttfamily mul}};
+  \node[insn] at (138mm, -31mm) {addi sp, sp, 8\\ld a1, 0(sp)\\addi sp, sp, 8\\mul a0, a1, a0};
+
+  % ---- パネル間の矢印 ----
+  \foreach \x in {0, 46, 92} {
+    \draw[flow, color=TcGrayText] (\x mm + 18mm, 4mm) -- (\x mm + 28mm, 4mm);
+  }
+
+  % ---- 補足 ----
+  \node[gannot, anchor=north, align=center] at (69mm, -52mm)
+      {引数の push は {\ttfamily call} の時点では戻し済みなので、ずれを決めるのは
+       呼び出しを囲む式が積んだ一時値の個数だけである\\
+       詰め物を入れるのは {\ttfamily call} の前後だけで、同じ幅を戻すため
+       積んである一時値の位置は変わらない};
+\end{tikzpicture}
+\end{document}
