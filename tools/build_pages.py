@@ -141,6 +141,7 @@ def verify_output(output: Path) -> None:
     required = [
         output / "index.html",
         output / "assets" / "style.css",
+        output / "assets" / "lightbox.js",
         output / "sessions" / "01_interpreter" / "index.html",
         output / "advanced" / "index.html",
         output / "docs" / "language_spec" / "index.html",

@@ -45,6 +45,7 @@ NAV = SITE / "nav.yaml"
 TEMPLATE = SITE / "template.html"
 FILTER = SITE / "boxes.lua"
 STYLE = SITE / "style.css"
+SCRIPT = SITE / "lightbox.js"
 FIGURES = ROOT / "materials" / "figures"
 
 PANDOC = "pandoc"
@@ -402,9 +403,14 @@ def render_home(nav: dict, pages: list[Page], output: Path,
     print("[ OK ] index.html")
 
 
-def copy_style(output: Path) -> None:
+# assets/ へそのまま置く静的ファイル。template.html がこの名前で読み込む
+STATIC_ASSETS = (STYLE, SCRIPT)
+
+
+def copy_static(output: Path) -> None:
     (output / "assets").mkdir(parents=True, exist_ok=True)
-    shutil.copy2(STYLE, output / "assets" / "style.css")
+    for source in STATIC_ASSETS:
+        shutil.copy2(source, output / "assets" / source.name)
 
 
 def copy_figures(output: Path) -> None:
@@ -429,7 +435,7 @@ def copy_legal(output: Path) -> None:
 
 
 def copy_assets(output: Path) -> None:
-    copy_style(output)
+    copy_static(output)
     copy_figures(output)
     copy_legal(output)
 
@@ -535,7 +541,7 @@ def make_handler(output: Path, reloader: Reloader, inject: bool):
 
 
 def source_snapshot(pages: list[Page]) -> dict[Path, float]:
-    watched = [TEMPLATE, FILTER, STYLE, NAV]
+    watched = [TEMPLATE, FILTER, STYLE, SCRIPT, NAV]
     watched += [p.source for p in pages if p.source is not None]
     snapshot = {}
     for path in watched:
@@ -554,7 +560,7 @@ def rebuild_all(output: Path, state: dict) -> None:
     state["nav"] = load_nav()
     state["pages"] = build_pages(state["nav"])
     state["links"] = link_map(state["pages"])
-    copy_style(output)
+    copy_static(output)
     for page in state["pages"]:
         render_page(state["nav"], state["pages"], page, output, state["links"])
     render_home(state["nav"], state["pages"], output)
@@ -580,9 +586,10 @@ def rebuild_changed(output: Path, state: dict) -> bool:
     if not dirty and not vanished:
         return changed
 
-    if dirty == [STYLE] and not vanished:
-        copy_style(output)
-        print("[更新] style.css")
+    # 静的資産だけが変わったならコピーし直すだけでよい（ページの再生成は要らない）
+    if set(dirty) <= set(STATIC_ASSETS) and not vanished:
+        copy_static(output)
+        print("[更新] " + "・".join(p.name for p in dirty))
         return True
 
     # 構成やテンプレートが変わると全ページに響く
@@ -591,9 +598,9 @@ def rebuild_changed(output: Path, state: dict) -> bool:
         print("[更新] 全ページ")
         return True
 
-    if STYLE in dirty:
-        copy_style(output)
-        print("[更新] style.css")
+    if set(dirty) & set(STATIC_ASSETS):
+        copy_static(output)
+        print("[更新] " + "・".join(p.name for p in dirty if p in STATIC_ASSETS))
         changed = True
 
     for source in dirty:
