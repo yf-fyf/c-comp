@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ポインタ同士の引き算 — 差は「要素いくつ分か」 — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">ポインタ同士の引き算 — 差は「要素いくつ分か」</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#コマ9-でやり残したこと" id="toc-コマ9-でやり残したこと">コマ9 でやり残したこと</a></li>
+      <li><a href="#なぜ要素数なのか" id="toc-なぜ要素数なのか">なぜ「要素数」なのか</a></li>
+      <li><a href="#どう直すか" id="toc-どう直すか">どう直すか</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>p - q</code>（ポインタ同士の引き算）は、この仕様がまだ意味を決めていない機能である。
+本物の C の慣習にならい、<strong>要素いくつ分離れているか</strong>を返す意味を与えて実装する。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ12（<code>malloc</code>）まで。差の考え方そのものはポインタ演算までで足りるが、<code>tests/count.c</code> が <code>malloc</code> を、<code>tests/use_result.c</code> が <code>struct</code> と <code>malloc</code> を使う。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、ラッパー <code>langcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>ptrdiff.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が「修正なしで落ち、修正ありで通る」ことと <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>仕様との関係</td>
+<td><strong>仕様の外側</strong>。<code>language_spec.md</code> は「ポインタ同士の減算…はない」と明示的に除外している。「要素いくつ分か」を返す意味はこの回で自分で決めて足す。判定基準どおりの <strong>L 系</strong>である</td>
+</tr>
+<tr class="even">
+<td>備考</td>
+<td>言語機能発展シリーズ。L2・L3 とは独立している。3本の中では最も小さい</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="なぜ-l-系なのか">なぜ L 系なのか</h3>
+<p>S 系と L 系は、<strong>その回で作る振る舞いの「正解」がどこに書いてあるか</strong>で分かれる。
+仕様が意味を決めている構文の、仕様と実装のずれを埋めるのが S 系。
+仕様が対象外と決めた機能に、意味を自分で決めて足すのが L 系である
+（<a href="../../advanced/">発展課題の索引</a>の「S と L の判定基準」節）。</p>
+<p>S1 は「仕様が C とわざと違えている <code>&amp;&amp;</code> / <code>||</code> の意味論を、C の側へ寄せる回」、
+S2 は「仕様が要求している 32 ビットの折り返しに実装のずれを合わせる回」で、
+どちらも仕様の該当行から出発する S 系である。
+この回はどちらとも違う。仕様は<strong>ポインタ同士の減算・ポインタの関係比較を
+「無い」と明示的に除外している</strong>ので、埋めるべきずれがそもそも存在しない。
+これは意味論の付け替えでも実装のずれでもなく、
+<strong>仕様が意図的に落とした機能を、意味を自分で決めて追加する回</strong>——
+すなわち判定基準どおりの <strong>L 系</strong>である。</p>
+<blockquote>
+<p><strong>この回は 2026-08-01 に <code>S3_ptrdiff</code> から <code>L1_ptrdiff</code> へ改名した。</strong>
+以前は判定が L 系なのに ID が <code>S3</code> のままという食い違いがあり、それを解消した。
+ラッパーも S ファミリの <code>semcc.py</code> から L ファミリの <code>langcc.py</code> に変わっている。</p>
+</blockquote>
+<h2 id="コマ9-でやり残したこと">コマ9 でやり残したこと</h2>
+<p>コマ9 では、ポインタと整数の演算に<strong>要素サイズを掛ける</strong>ことを学んだ。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>p <span class="op">+</span> <span class="dv">2</span><span class="op">;</span>      <span class="co">// 2 * sizeof(int) = 8 バイト進む</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>p <span class="op">-</span> <span class="dv">1</span><span class="op">;</span>      <span class="co">// 4 バイト戻る</span></span></code></pre></div>
+<p>いまの実装は、この「ポインタ ± 整数」を正しく処理している。
+しかし C には、もう1つのポインタ演算がある。</p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>q<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>q <span class="op">-</span> p<span class="op">;</span>      <span class="co">// ポインタ同士の引き算</span></span></code></pre></div>
+<p>これは<strong>アドレスの差ではなく、要素いくつ分離れているか</strong>を返す規則になっている。</p>
+<div class="sourceCode" id="cb3" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>q<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">10</span><span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> a<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> <span class="op">&amp;</span>a<span class="op">[</span><span class="dv">7</span><span class="op">];</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>q <span class="op">-</span> p<span class="op">;</span>      <span class="co">// C の答え: 7(要素7個分)</span></span></code></pre></div>
+<p>いまの実装は <code>sub</code> するだけなので、<strong>28</strong>（バイト差）を返してしまう。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p>これは S2（32 ビットの折り返し）のような「未定義動作（符号付きオーバーフロー）の範囲内で、
+選んだ挙動からずれている実装の詳細」とも違う。
+仕様書はそもそも <code>p - q</code> の意味を定めていない
+（<code>p - q</code> はポインタ同士の減算として明示的に除外されている）。
+何も足さずに <code>Sub</code> の既存コード生成へ流すと、たまたま <code>sub</code> 命令が
+そのまま出てバイト差が返ってしまう——だがこれは「仕様違反」ではなく、
+<strong>単に誰も意味を決めていない</strong>だけである。コマ9 のテストは <code>a[i]</code> と
+<code>*(p + 2)</code> しか書いていないので、<code>q - p</code> を書いた人だけが
+「なぜか7倍ずれる」現象に出会う。</p>
+</div>
+<h2 id="なぜ要素数なのか">なぜ「要素数」なのか</h2>
+<p>一貫性のためである。C のポインタ演算は、次の等式が成り立つように設計されている。</p>
+<pre data-lang="text"><code>(p + n) - p  ==  n</code></pre>
+<p><code>p + n</code> が「n 要素進む」なら、その差は「n」でなければ辻褄が合わない。
+<code>p + 2</code> は 8 バイト進むが、<code>(p + 2) - p</code> は 2 になる。</p>
+<p>この規則のおかげで、次のような書き方が自然にできる。</p>
+<div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_strlen<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>s<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> s<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(*</span>p <span class="op">!=</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> p <span class="op">=</span> p <span class="op">+</span> <span class="dv">1</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> p <span class="op">-</span> s<span class="op">;</span>        <span class="co">// 進んだ「文字数」がそのまま長さ</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><code>char</code> は1バイトなので、この場合はバイト差と要素数が一致する
+（だから <code>char*</code> では誤りが表面化しない）。
+<code>int*</code> や構造体ポインタで初めてずれる。</p>
+<h2 id="どう直すか">どう直すか</h2>
+<p>引き算のあとに、要素サイズで割る。</p>
+<pre data-lang="text"><code>      左辺を評価して退避
+      右辺を評価
+      sub a0, a1, a0      ← アドレスの差(バイト数)
+      li  a1, 4           ← 要素サイズ
+      div a0, a0, a1      ← 要素数に直す</code></pre>
+<p>要素サイズが 1（<code>char*</code>）のときは、割り算を出す必要がない。</p>
+<p>判定も要る。<code>Sub</code> ノードは3種類が同居している。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>式</th>
+<th>型</th>
+<th>生成</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>p - q</code></td>
+<td>ポインタ − ポインタ</td>
+<td><strong>今回追加</strong>: 引いてから割る</td>
+</tr>
+<tr class="even">
+<td><code>p - 3</code></td>
+<td>ポインタ − 整数</td>
+<td>既存: 3 に要素サイズを掛けてから引く</td>
+</tr>
+<tr class="odd">
+<td><code>i - j</code></td>
+<td>整数 − 整数</td>
+<td>既存: そのまま引く</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>左右の型を <code>cg._type_of_expr()</code> で調べ、<strong>両方がポインタのときだけ</strong>新しい生成に回す。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>結果の型も変わる。</strong>
+<code>p - 3</code> の型はポインタ（<code>int*</code>）だが、<code>p - q</code> の型は<strong>整数</strong>である。
+そうでないと <code>(q - p) + 1</code> がポインタ演算になり、1 ではなく 4 足されてしまう。
+この型の修正はラッパー <code>langcc.py</code> の側で行っている（<code>_type_of_expr</code> の差し替え）。
+本物の C では、この型に <code>ptrdiff_t</code> という名前が付いている。</p>
+</div>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>is_ptr_diff</code></td>
+<td>両辺がポインタの <code>Sub</code> かを判定する</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>gen_ptr_diff</code></td>
+<td>引いてから要素サイズで割る</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>生成の骨格（退避 → 評価 → 復元 → 演算）は、コマ2 以来の二項演算パターンそのままである。</p>
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/count.c</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/count.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A2</span> sub</span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 判定と生成命令列を確認(未実装は SKIP)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 修正なしで落ち、修正ありで通ること + fixed17</span></span></code></pre></div>
+<p>最後に回す <a href="../../advanced/#fixed17"><code>fixed17</code></a> は、
+ポインタ以外の引き算まで巻き込んで壊していないことを確かめるためのものである。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>count.c</code></td>
+<td><code>&amp;a[7] - a</code> が 7 になる（28 ではない）</td>
+</tr>
+<tr class="even">
+<td><code>char_diff.c</code></td>
+<td><code>char*</code> の差（要素サイズ 1）が壊れていない</td>
+</tr>
+<tr class="odd">
+<td><code>use_result.c</code></td>
+<td>差の結果が <code>int</code> として扱われる（<code>(q-p)*2</code>、<code>(q-p)+1</code>）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>ポインタの関係比較</strong>: <code>p &lt; q</code> はこの仕様ではポインタの関係比較ごと
+「無い」機能である。追加するなら、何を決める必要があるか
+（符号付き比較でよいか、<code>==</code>/<code>!=</code> とは扱いが違うか、など）</li>
+<li><strong>負の差</strong>: <code>p - q</code> で <code>p &lt; q</code> のとき、結果は負になる。
+<code>div</code> は符号付き除算なので正しく動くはずだが、実際に確かめる</li>
+<li><strong>要素数の持ち回り</strong>: この言語には配列型が無いので
+<code>sizeof(a) / sizeof(a[0])</code> という定番の書き方はそもそも書けない。
+<code>malloc</code> した領域の要素数をどう持ち回ればよいか
+（たとえば個数を別変数で保持する）を考える</li>
+<li><strong>異なる型のポインタの差</strong>: <code>int *p; char *s; p - s;</code> は C では<strong>コンパイルエラー</strong>である。
+Q1 の型検査に「ポインタ同士の引き算は同じ型でなければならない」を追加する
+（※この課題は L1 の <code>ptrdiff.py</code> を実装している場合のみ意味を持つ）</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: なぜ <code>div</code> が要るのか。</strong>
+要素サイズが 2 の冪（4 や 8）なら、割り算ではなく<strong>右シフト</strong>（<code>srai</code>）で済む。
+除算命令は乗算より数倍遅いので、実際のコンパイラは
+「サイズが 2 の冪ならシフト」という最適化を必ず行っている。
+B1 のピープホール最適化の練習問題として、
+<code>li a1, 4</code> + <code>div a0, a0, a1</code> を <code>srai a0, a0, 2</code> に置き換える規則を書いてみるとよい。
+（言語からシフト演算子 <code>&lt;&lt;</code>/<code>&gt;&gt;</code> そのものは消えたが、<code>srai</code> は命令としては
+最適化で普通に使われる——ここで言うシフトは言語機能ではなく命令選択の話である。）</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/S3_struct/"><span class="label">前へ</span>構造体の代入 — レジスタに載らないものを運ぶ</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/L2_compound_assign/"><span class="label">次へ</span>複合代入 — 左辺を1回しか評価しない</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/L1_ptrdiff.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

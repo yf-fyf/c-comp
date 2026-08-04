@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コピー伝播と死コード除去 — 順番が結果を決める — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">コピー伝播と死コード除去 — 順番が結果を決める</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#いま残っているもの" id="toc-いま残っているもの">いま残っているもの</a></li>
+      <li><a href="#コピー伝播" id="toc-コピー伝播">コピー伝播</a></li>
+      <li><a href="#打ち切る条件" id="toc-打ち切る条件">打ち切る条件</a></li>
+      <li><a href="#死コード除去" id="toc-死コード除去">死コード除去</a></li>
+      <li><a href="#繰り返す理由" id="toc-繰り返す理由">繰り返す理由</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#測ってみると" id="toc-測ってみると">測ってみると</a></li>
+      <li><a href="#正確な解析は畳み込みを増やすか-o3-の宿題" id="toc-正確な解析は畳み込みを増やすか-o3-の宿題">正確な解析は畳み込みを増やすか — O3 の宿題</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>O4 が残した <code>mv a0, s1</code> の連なりを消す。
+そして「<strong>同じパスでも、前に何を掛けたかで効果が変わる</strong>」ことを、測って確かめる。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>O1（測定基盤）、O2（フローグラフ）、O4（これが無いと消す対象の <code>mv</code> が出てこない）、O5（生存解析）</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>O3（命令選択）。実質必須に近い。資料の「測ってみると」の比較表が「isel だけ」を基準にしているので、O3 が無いと表と突き合わせられない</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、<code>optcc.py</code></td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>copyprop.py</code>、<code>dce.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が <a href="../../advanced/#fixed17"><code>fixed17</code></a> 全通と4構成の比較表を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>最適化発展シリーズの第6回。コマ1は <code>copyprop.py</code>（Step 1〜3）、コマ2は <code>dce.py</code>（Step 4〜6）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>2コマの区切りは次のとおりである。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 41%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>コマ</th>
+<th>やること</th>
+<th>到達点</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>copyprop.py</code>（Step 1〜3）</td>
+<td><code>check.py</code> が PASS。ただし<strong>命令はまだ1つも減らない</strong></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>dce.py</code>（Step 4〜6）</td>
+<td>4構成の比較表が出る</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="いま残っているもの">いま残っているもの</h2>
+<p>O4 の後、<code>s = s + i</code> はこうなっている。</p>
+<div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  mv     a0<span class="op">,</span> s2       <span class="co"># s を読む</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  addi   <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  sd     a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  mv     a0<span class="op">,</span> s1       <span class="co"># i を読む</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  ld     a1<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  addi   <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  add    a0<span class="op">,</span> a1<span class="op">,</span> a0</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  sext.w s2<span class="op">,</span> a0       <span class="co"># s へ書く</span></span></code></pre></div>
+<p><code>add</code> が足しているのは、結局 <code>s2</code> と <code>s1</code> の値である。
+<code>a0</code> を経由する必要はない。</p>
+<h2 id="コピー伝播">コピー伝播</h2>
+<p><code>mv rD, rS</code> の後で <code>rD</code> を読んでいる箇所を、<code>rS</code> に置き換える。</p>
+<figure>
+<img src="../../figures/O6_copyprop.svg" alt="コピー伝播が死コードを作り、死コード除去が消す" />
+<figcaption aria-hidden="true">コピー伝播が死コードを作り、死コード除去が消す</figcaption>
+</figure>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p><strong>コピー伝播だけでは、命令は1つも減らない。</strong>
+<code>mv</code> は残ったままである。減らすのは次の死コード除去の仕事で、
+コピー伝播はその<strong>機会を作る</strong>だけである。</p>
+<p>コマ1の終わりで <code>golden.py</code> を走らせると効果がゼロに見えるが、それで正しい。</p>
+</div>
+<h2 id="打ち切る条件">打ち切る条件</h2>
+<p>置き換えてよいのは、<code>mv</code> を実行したときの値がまだ有効な間だけである。
+途中でどちらかのレジスタが書き換えられたら、そこで打ち切る。</p>
+<div class="sourceCode" id="cb2" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>  mv  a1<span class="op">,</span> s1</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  li  s1<span class="op">,</span> <span class="dv">0</span>          <span class="co"># ← 元のレジスタが変わった</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  add a0<span class="op">,</span> a1<span class="op">,</span> a1     <span class="co">#   ここで a1 を s1 に置き換えたら、値が違う</span></span></code></pre></div>
+<div class="sourceCode" id="cb3" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>  mv  a1<span class="op">,</span> s1</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  li  a1<span class="op">,</span> <span class="dv">0</span>          <span class="co"># ← 置き換え先が変わった</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  add a0<span class="op">,</span> a1<span class="op">,</span> a1     <span class="co">#   この a1 はもう s1 のコピーではない</span></span></code></pre></div>
+<p><code>copy_prop_block</code> は、命令を1つ見るたびに
+「書き込み先が絡む表の項目を消す」ことでこれを実現する。</p>
+<p><strong>ブロックをまたがない。</strong> またぐには「この地点にどの定義が届くか」を知る必要があり、
+それは<strong>到達定義解析</strong>という別の解析になる（O5 の枠組みで書ける。発展課題）。</p>
+<h2 id="死コード除去">死コード除去</h2>
+<p>O5 の <code>live_after</code> を使う。<strong>書いた値が誰にも読まれない命令</strong>は消してよい。</p>
+<div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>書き込み先 ∩ 直後の生存集合 <span class="op">=</span> ∅   →  消せる</span></code></pre></div>
+<p>ただし、<strong>副作用のある命令は消せない</strong>。</p>
+<div class="table-scroll">
+<table style="width:100%;">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 42%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>命令</th>
+<th>消せるか</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>add a0, a1, a2</code></td>
+<td>消せる可能性</td>
+<td>a0 が読まれなければ不要</td>
+</tr>
+<tr class="even">
+<td><code>sw a0, -24(s0)</code></td>
+<td><strong>消せない</strong></td>
+<td>レジスタには書かないが、<strong>メモリを書き換える</strong></td>
+</tr>
+<tr class="odd">
+<td><code>call f</code></td>
+<td><strong>消せない</strong></td>
+<td>何をするか分からない</td>
+</tr>
+<tr class="even">
+<td><code>beqz</code> / <code>j</code> / <code>ret</code></td>
+<td><strong>消せない</strong></td>
+<td>制御の流れを変える</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>sw</code> が危ないのは、生存解析から見ると「書き込み先が空集合」なので
+<strong>必ず死んでいるように見える</strong>ためである。特別扱いが要る。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p><strong>エピローグの復帰も消えてはいけない。</strong></p>
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">.L1:</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  ld s1<span class="op">,</span> <span class="op">-</span><span class="dv">40</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># s1 は「この先で読まれない」ように見える</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  ld s0<span class="op">,</span> <span class="dv">32</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ret</span></span></code></pre></div>
+<p><code>ret</code> の use に callee-saved を入れておかないと、この <code>ld</code> が死コードとして消える。
+消えると<strong>呼び出し元の <code>s1</code> が壊れる</strong>。</p>
+<p><code>main</code> だけのプログラムでは気づかない。関数を呼ぶプログラムで、
+呼び出し元のループ変数が壊れて<strong>無限ループになる</strong>という形で表面化する。
+<code>s1</code>〜<code>s11</code> を無条件にではなく、O5 の <code>restored_saved</code> が関数ごとに数える
+「実際に復帰する callee-saved」が <code>ret</code> の use に入る設計がここで効いてくる。</p>
+</div>
+<h2 id="繰り返す理由">繰り返す理由</h2>
+<p>1つ消すと、その命令が読んでいた値が誰にも読まれなくなり、別の命令が新たに死ぬ。</p>
+<div class="sourceCode" id="cb6" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  mv  a1<span class="op">,</span> s1        <span class="co"># 2周目で死ぬ</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  add a0<span class="op">,</span> a1<span class="op">,</span> a1    <span class="co"># 1周目で死ぬ(a0 が後で上書きされるとき)</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  li  a0<span class="op">,</span> <span class="dv">7</span></span></code></pre></div>
+<p>だから、消せる命令が無くなるまで繰り返す。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>ファイル</th>
+<th>実装対象</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>copyprop.py</code></td>
+<td><code>replace_uses</code>（読んでいる側だけ置き換える）</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>copyprop.py</code></td>
+<td><code>copy_prop_block</code>（打ち切り条件が肝）</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>copyprop.py</code></td>
+<td><code>run</code></td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>dce.py</code></td>
+<td><code>has_side_effect</code></td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>dce.py</code></td>
+<td><code>is_dead</code></td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td><code>dce.py</code></td>
+<td><code>run</code>（消えなくなるまで繰り返す）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="va">B</span><span class="op">=</span>../O1_measure/bench/loop_sum.c</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../optcc.py <span class="at">--regalloc</span> <span class="at">--passes</span> isel,copyprop,dce <span class="va">$B</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../optcc.py            <span class="at">--passes</span> isel,copyprop,dce <span class="va">$B</span></span></code></pre></div>
+<p>2つ目（レジスタ割り当てなし）がほとんど何も減らないことを、自分で確かめてほしい。</p>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 各関数の単体テスト(未実装は SKIP)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># fixed17 + 4構成の比較表</span></span></code></pre></div>
+<p><code>golden.py</code> は、まず <a href="../../advanced/#fixed17"><code>fixed17</code></a> の全通で
+意味を壊していないことを確かめてから、4構成の比較表を出す。</p>
+<h2 id="測ってみると">測ってみると</h2>
+<p>数字はすべて O1 の<a href="../../advanced/O1_measure/#baseline">全構成の基準表</a>の
+<code>+regalloc</code> 列と <code>+copyprop,dce</code> 列である。この回はその差分を作る。</p>
+<p>まず、O4 の後にこの回をかけた効果。</p>
+<pre data-lang="text"><code>ベンチマーク   静的:O4後   +O6   削減   動的:O4後      +O6    削減
+bubble             264    234  11.4%     18824    16161  14.1%
+fib_rec             73     72   1.4%     69061    69060   0.0%
+loop_sum            49     44  10.2%      5032     4230  15.9%
+matmul             344    309  10.2%     21589    18814  12.9%
+strops             192    176   8.3%     59877    51875  13.4%
+合計               922    835   9.4%    174383   160140   8.2%</code></pre>
+<p>そして、この回の主題である<strong>順番の効果</strong>。
+2行目だけが基準表に無い構成（レジスタ割り当てを外して <code>copyprop,dce</code> をかけたもの）で、
+残りの3行は基準表の <code>+isel</code> / <code>+regalloc</code> / <code>+copyprop,dce</code> 列そのものである。</p>
+<pre data-lang="text"><code>構成                        静的     削減      動的      削減
+isel だけ(基準)            1075    0.0%    190337    0.0%
+isel,copyprop,dce          1074    0.1%    190336    0.0%   ← 割り当てなし
+regalloc + isel             922   14.2%    174383    8.4%
+regalloc + 全部             835   22.3%    160140   15.9%</code></pre>
+<p><strong>まったく同じ <code>copyprop,dce</code> が、1075命令中1命令しか減らせない場合と、
+87命令減らせる場合がある。</strong> 違いは「前にレジスタ割り当てを掛けたかどうか」だけである。</p>
+<p>レジスタ割り当ての前は、値がすべてスタックを経由するので <code>mv</code> がほとんど出てこない。
+消す対象が無いのだから、どんなに正確な解析をしても結果は変わらない。</p>
+<p><strong>O4 が O6 の仕事を作っている。</strong> これを <strong>phase ordering</strong> という。</p>
+<p><a id="isel-precision"></a></p>
+<h2 id="正確な解析は畳み込みを増やすか-o3-の宿題">正確な解析は畳み込みを増やすか — O3 の宿題</h2>
+<p>同じ論点が、もう1つ持ち越されている。</p>
+<p>O3 の <code>is_dead_after</code> は、ラベルや分岐に出会うと「ブロックを出るので判断できない」と
+答えて畳み込みをあきらめる、前向きの1パス走査だった。
+O2 のフローグラフと O5 の生存解析があれば、ブロックを越えて正確に答えられる。
+<strong>では、正確にすれば畳める箇所は増えるのか。</strong></p>
+<p>数えれば分かる。<code>is_dead_after</code> が返した答えを、理由別に分類する。</p>
+<pre data-lang="text"><code>対象: bench 5本 + fixed17 17本 = 22本（素の出力に isel をかける）
+
+畳めない（そのレジスタが後で読まれる）        543回
+畳める  （読まれる前に上書きされる）           25回
+畳めない（ブロック境界で判断がつかない）        0回   ← 正確にすれば救える分</code></pre>
+<p><strong>0回である。</strong> つまり O5 の生存解析を持ち込んでも、この3つの畳み込みが
+増える箇所は1つも無い。いまのコード生成が出すアドレス計算と load/store は、
+必ず同じ基本ブロックの中で完結しているからである。</p>
+<div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 自分でも確かめられる。O3 の is_dead_after に print を1行入れて、</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 「ブロック境界で return False した」回数を数える</span></span></code></pre></div>
+<p>O4 → O6 は「前のパスが次のパスの機会を作った」例だった。
+O5 → O3 は「解析を正確にしても機会が増えなかった」例である。
+<strong>解析の精度と最適化の効きは、別の話である。</strong>
+どちらなのかは、設計を議論しても分からない。数えるしかない。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>順番を入れ替える</strong>: <code>dce,copyprop</code> の順にすると結果は変わるか。
+<code>copyprop,dce,copyprop,dce</code> と2回繰り返すとどうなるか</li>
+<li><strong>ストア転送</strong>: <code>sd a0, 0(sp)</code> の直後に <code>ld a1, 0(sp)</code> があれば、
+<code>mv a1, a0</code> にできる。すると push/pop が死ぬ。B2（レジスタスタック）と
+同じ効果が、解析から導ける</li>
+<li><strong>到達定義解析</strong>: ブロックをまたぐコピー伝播に必要な、前向きの解析。
+O5 の枠組みで書ける。方程式はどうなるか</li>
+<li><strong><code>fib_rec</code> が 0.0% の理由</strong>: O4 が昇格しなかったので <code>mv</code> が出ていない。
+O4 の <code>worth_promoting</code> を無効にして測ると、この回の効果はどう変わるか</li>
+<li><strong>どこまで減るか</strong>: <code>regalloc + isel,copyprop,dce,layout</code> を測る。
+残った命令のうち、まだ無駄に見えるものはあるか</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 最適化の順番には「正解」が無い。</strong>
+A を先にかけると B の機会が増え、B を先にかけると A の機会が増える —— という
+関係はよくある。どちらを先にするかで結果が変わり、
+しかも<strong>プログラムによって最適な順番が違う</strong>。</p>
+<p>実在のコンパイラは、経験的に決めた順番でパスを並べ、
+同じパスを何度も繰り返しかける（LLVM の <code>-O2</code> は数十個のパスを決まった順に走らせる）。
+「最適な順番を求める」問題自体が難しいので、
+実務では<strong>測って決める</strong>。この回でやったことが、まさにそれである。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/O5_liveness/"><span class="label">前へ</span>生存変数解析 — 「この値はまだ使われるか」を解く</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/O7_layout/"><span class="label">次へ</span>ブロック整列とループ回転 — 命令を減らさずに速くする</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/O6_copyprop.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

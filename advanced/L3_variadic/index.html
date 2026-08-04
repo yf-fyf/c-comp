@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>可変長引数の定義 — printf の側に立つ — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">可変長引数の定義 — <code>printf</code> の側に立つ</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#呼ぶのはできるが定義はできない" id="toc-呼ぶのはできるが定義はできない">呼ぶのはできるが、定義はできない</a></li>
+      <li><a href="#構文-定義側の-...-を通すラッパー担当" id="toc-構文-定義側の-...-を通すラッパー担当">構文 — 定義側の <code>...</code> を通す（ラッパー担当）</a></li>
+      <li><a href="#問題1-レジスタはすぐ消える" id="toc-問題1-レジスタはすぐ消える">問題1: レジスタはすぐ消える</a></li>
+      <li><a href="#問題2-添字で読めなければ意味がない" id="toc-問題2-添字で読めなければ意味がない">問題2: 添字で読めなければ意味がない</a></li>
+      <li><a href="#argi-組み込み関数という手" id="toc-argi-組み込み関数という手"><code>__arg(i)</code> — 組み込み関数という手</a></li>
+      <li><a href="#呼び出し側は何も変えなくてよい" id="toc-呼び出し側は何も変えなくてよい">呼び出し側は何も変えなくてよい</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>int sum(int n, ...)</code> のような可変長引数の関数を、<strong>自分で定義</strong>できるようにする。
+引数レジスタをフレームに退避し、添字で読み出す仕組みを作る。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ10（<code>printf</code> の呼び出し）まで。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>（<code>parser.py</code> を含む）、ラッパー <code>langcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>variadic.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が可変長関数のテストの通過と <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>仕様との関係</td>
+<td><strong>仕様の外側</strong>。<code>language_spec.md</code> は可変長引数関数の定義を「外部プロトタイプのみ許可」として外しており、定義を書くと構文解析エラーになる。呼び出し規約に合わせた意味をこの回で決めて足す</td>
+</tr>
+<tr class="even">
+<td>備考</td>
+<td>言語機能発展シリーズ。R2（自前 <code>printf</code>）が <code>printf1(fmt, iarg, sarg)</code> という不格好な形を強いられた、その理由を解消する回でもある</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>仕様は「可変長引数関数の定義」を<strong>非対応と決めて外している</strong>
+（「除外機能の一覧」の欄は「外部プロトタイプのみ許可」）。
+つまり<strong>仕様が意図的に落とした機能を、自分で足す回</strong>である
+（L2 の複合代入、L1 の <code>p - q</code> と同じ性格の、言語設計そのものへの追加）。</p>
+<h2 id="呼ぶのはできるが定義はできない">呼ぶのはできるが、定義はできない</h2>
+<p>コマ10 から <code>printf("x=%d\n", 42)</code> を呼んできた。
+呼び出し側は簡単である。引数を <code>a0</code>, <code>a1</code>, … に並べて <code>call</code> するだけで、
+<strong>個数が可変であることを気にする必要がない</strong>。</p>
+<p>難しいのは<strong>呼ばれる側</strong>である。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> sum<span class="op">(</span><span class="dt">int</span> n<span class="op">,</span> <span class="op">...)</span> <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 引数がいくつ来たのか？ どこにあるのか？</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>いまのコンパイラでこれを書くと、<strong>構文解析の時点で止まる</strong>。</p>
+<pre data-lang="text"><code>構文解析エラー: [line 5] 可変長 &#39;...&#39; はプロトタイプ宣言でのみ使えます</code></pre>
+<p><code>...</code> を読めないのではない。<code>printf</code> のような外部関数の<strong>プロトタイプ</strong>では
+<code>...</code> を書けるのだから、字句も構文も <code>...</code> 自体は知っている。
+スキャフォールド のパーサは、<code>...</code> の付いた宣言が <code>;</code> で終わらず本体 <code>{</code> に続いたときだけ、
+<strong>わざわざこのエラーを出している</strong>。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p>これは実装のサボりではなく、<strong>仕様どおりの拒否</strong>である。
+言語仕様の対応表は「可変長引数関数の定義」の欄を
+「外部プロトタイプのみ許可」としている。
+<code>printf</code> を呼ぶために <code>...</code> の<strong>宣言</strong>は要るが、<code>...</code> の<strong>定義</strong>は
+register save area という呼び出し規約の知識を丸ごと要求するので、
+Core プロファイルはそこで線を引いた。
+この回でやるのは、その線を自分の手で引き直すことである。</p>
+</div>
+<p>だから今回の追加は、コード生成だけでは済まない。
+<strong>構文の受理範囲を広げる</strong>ところから始まる。</p>
+<h2 id="構文-定義側の-...-を通すラッパー担当">構文 — 定義側の <code>...</code> を通す（ラッパー担当）</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 52%" />
+<col style="width: 24%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>段階</th>
+<th>追加すること</th>
+<th>担当</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>字句</td>
+<td>なし（<code>...</code> は3文字トークンとしてもう読める）</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td>構文</td>
+<td>定義側の <code>...</code> を受理し、その関数名を覚える</td>
+<td><code>langcc.py</code></td>
+</tr>
+<tr class="odd">
+<td>コード生成</td>
+<td>save area の確保・退避・<code>__arg(i)</code> の読み出し</td>
+<td>Step 1・2・3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>構文の広げ方は、L2 の複合代入と同じ手を使う。
+スキャフォールド の <code>Parser</code> を<strong>継承した複製クラス</strong>を作り、<code>_parse_func</code> だけを
+差し替えたものを <code>sys.modules["parser"]</code> に置く。
+あとから読み込まれる <code>mycc.py</code> は <code>from parser import parse</code> で、
+何も知らないままこの複製を掴む。
+<code>workbook/scaffold/parser.py</code> のファイル自体は1文字も変わらない。</p>
+<p>差分は本当に1か所しかない。</p>
+<div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 関数定義</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> variadic:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    _parse_error(<span class="st">&quot;可変長 &#39;...&#39; はプロトタイプ宣言でのみ使えます&quot;</span>, <span class="va">self</span>.cur.line)   <span class="co"># ← 本家</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>body <span class="op">=</span> <span class="va">self</span>.parse_func_body()</span></code></pre></div>
+<p>複製側はこの <code>_parse_error</code> を消し、代わりに関数名を <code>VARIADIC_FUNCS</code> に記録して
+そのまま本体を読む。プロトタイプ（<code>;</code> で終わる側）の扱いは本家のままにしておく
+——<code>printf</code> の宣言は、この回の前から正しく通っていたのだから触る理由がない。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>「仕様を広げる」とは、拒否を1つ消すことである。</strong>
+言語に機能を足すと聞くと、新しい構文規則を書き足す作業を想像しやすい。
+しかし実際には、こうして<strong>エラーを出していた行を外す</strong>だけで済むことが多い。
+仕様の境界は文法の中に散らばった「ここは駄目」の集合として書かれていて、
+非対応の機能ほど、その一文だけで表現されている。
+逆に言えば、パーサのエラーメッセージを読むと、
+その言語がどこに線を引いたのかが分かる。</p>
+</div>
+<h2 id="問題1-レジスタはすぐ消える">問題1: レジスタはすぐ消える</h2>
+<p>関数に入った直後、引数は <code>a0</code>〜<code>a7</code> に入っている。
+しかし、これらは<strong>すぐ上書きされる</strong>。</p>
+<div class="sourceCode" id="cb4" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">32</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  ...</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">0</span>          ← この時点で第1引数は消えた</span></code></pre></div>
+<p>コマ6 で「引数はプロローグでスタックに保存する」と学んだが、
+それは<strong>名前のついた引数だけ</strong>だった。名前のない引数（<code>...</code> の分）は
+保存されないまま捨てられている。</p>
+<p>そこで、関数の先頭で <strong><code>a0</code>〜<code>a7</code> を8本まとめて</strong>フレームに書き出す。
+この領域を <strong>register save area</strong> と呼ぶ。</p>
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>      ← save area の先頭</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  sd a1<span class="op">,</span> <span class="op">-</span><span class="dv">32</span><span class="op">(</span>s0<span class="op">)</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  sd a2<span class="op">,</span> <span class="op">-</span><span class="dv">40</span><span class="op">(</span>s0<span class="op">)</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  ...</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  sd a7<span class="op">,</span> <span class="op">-</span><span class="dv">80</span><span class="op">(</span>s0<span class="op">)</span></span></code></pre></div>
+<p>「まだ何もしていない」タイミングでしか正しい値が読めないので、
+<strong>本体の最初の命令として</strong>行う必要がある。</p>
+<h2 id="問題2-添字で読めなければ意味がない">問題2: 添字で読めなければ意味がない</h2>
+<p>保存できても、<code>__arg(3)</code> のように<strong>実行時に決まる添字</strong>で読めなければ、
+ループで引数を回せない。</p>
+<p>そこで save area を<strong>連続した領域</strong>として確保する。
+<code>alloc_local</code> を8回続けて呼ぶと、8バイトずつ下がる連続領域になる。</p>
+<pre data-lang="text"><code>s0 - 24    a0 の値      ← 先頭(base)
+s0 - 32    a1 の値
+s0 - 40    a2 の値
+   ...
+s0 - 80    a7 の値</code></pre>
+<p>すると <code>i</code> 番目の引数のアドレスは、掛け算と引き算で求まる。</p>
+<pre data-lang="text"><code>アドレス = base - i * 8</code></pre>
+<p>コマ9 のポインタ添字 <code>p[i]</code>（<code>*(p + i)</code> の略記で、内部では
+<code>base + i * サイズ</code> を計算している）と同じ計算で、
+<strong>向きが下向きなだけ</strong>である。</p>
+<h2 id="argi-組み込み関数という手"><code>__arg(i)</code> — 組み込み関数という手</h2>
+<p>本物の C は <code>va_start</code> / <code>va_arg</code> / <code>va_end</code> というマクロで これを行う。
+しかし Core プロファイルには関数形式マクロがないので、この回では
+<strong>コンパイラが特別扱いする組み込み関数</strong> <code>__arg(i)</code> を用意する。</p>
+<div class="sourceCode" id="cb8" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> __arg<span class="op">(</span><span class="dt">int</span> i<span class="op">);</span>          <span class="co">// 宣言だけ書く。実体は要らない</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> sum<span class="op">(</span><span class="dt">int</span> n<span class="op">,</span> <span class="op">...)</span> <span class="op">{</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> total<span class="op">;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> i <span class="op">&lt;=</span> n<span class="op">;</span> i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        total <span class="op">=</span> total <span class="op">+</span> __arg<span class="op">(</span>i<span class="op">);</span>      <span class="co">// i 番目の引数</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> total<span class="op">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><code>__arg(i)</code> は関数呼び出しの形をしているが、<code>call</code> は生成されない。
+コード生成器が「この名前の呼び出しを見たら、save area からの読み出しに置き換える」
+という特別扱いをする。</p>
+<p>添字は<strong>すべての引数を 0 から数える</strong>。
+<code>sum(3, 10, 20, 30)</code> なら <code>__arg(0)</code> が <code>n</code>（= 3）、
+<code>__arg(1)</code> 〜 <code>__arg(3)</code> が可変長の分になる。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>組み込み関数（intrinsic）という考え方。</strong>
+「関数の顔をしているが、コンパイラが直接コードに置き換えるもの」を
+組み込み関数（intrinsic）という。
+<code>__builtin_va_arg</code>（gcc）や <code>__builtin_popcount</code> などが実物である。
+ライブラリでは書けない処理（レジスタを直接触る、特殊命令を出す）を
+言語の枠内で書けるようにするための逃げ道であり、実務でもよく使われる。</p>
+</div>
+<h2 id="呼び出し側は何も変えなくてよい">呼び出し側は何も変えなくてよい</h2>
+<p>面白いことに、<strong>呼び出し側のコード生成は1行も変えない</strong>。
+<code>sum(3, 10, 20, 30)</code> は、コマ6 で作った通常の呼び出し
+（引数を <code>a0</code>〜<code>a3</code> に置いて <code>call</code>）のままで正しく動く。</p>
+<p>可変長引数が「呼ぶ側は普通、呼ばれる側だけ特別」という設計になっているのは、
+まさにこのためである。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 45%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>reserve_save_area</code></td>
+<td>8個のスロットを連続して確保する</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>gen_save_registers</code></td>
+<td>本体の先頭で <code>a0</code>〜<code>a7</code> を書き出す</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>is_arg_builtin</code> / <code>gen_arg_access</code></td>
+<td><code>__arg(i)</code> を読み出しに変換する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>構文側（定義側の <code>...</code> を受理し、その関数名を覚えておく）はラッパーが担当する。
+<code>Parser</code> を継承した複製で <code>_parse_func</code> を差し替えているので、
+<strong><code>...</code> は捨てられずに <code>VARIADIC_FUNCS</code> に残る</strong>。
+Step 1〜3 はその集合を見て、可変長の関数だけに save area を作る。</p>
+<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/sum.c <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;sd a7&quot;</span>     <span class="co"># save area ができているか</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/sum.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&quot;call __arg&quot;</span>   <span class="co"># 0 のはず(呼び出しは生成されない)</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 可変長関数のテスト + fixed17</span></span></code></pre></div>
+<p><a href="../../advanced/#fixed17"><code>fixed17</code></a> を最後に回すのは、
+可変長でない関数のフレームまで大きくしていないかを見るためである。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>sum.c</code></td>
+<td>引数の個数を変えて合計する（0個の場合も）</td>
+</tr>
+<tr class="even">
+<td><code>max.c</code></td>
+<td>ループで全引数を走査して最大値を取る</td>
+</tr>
+<tr class="odd">
+<td><code>named.c</code></td>
+<td>名前つき引数も <code>__arg</code> で読める / 通常の関数が壊れていない</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>R2 の <code>printf</code> を作り直す</strong>: <code>printf1(fmt, iarg, sarg)</code> をやめ、
+本物と同じ <code>int my_printf(char *fmt, ...)</code> にする。
+書式指定子を読むたびに <code>__arg(i)</code> の <code>i</code> を進める</li>
+<li><strong>9個以上の引数</strong>: いまは <code>a0</code>〜<code>a7</code> の8個しか保存していない。
+9個目以降は呼び出し側がスタックに積む規約なので、
+save area の「続き」としてそこも読めるようにする</li>
+<li><strong><code>va_list</code> 相当</strong>: <code>__arg(i)</code> は「何番目か」を呼ぶ側が管理する。
+代わりに「次の引数を返す」形（<code>va_arg</code> 相当）にするには、
+どこに状態を持てばよいか</li>
+<li><strong>型の問題</strong>: いまは全部8バイトとして読んでいる。
+<code>char *</code> を渡したときはたまたま動くが、<code>double</code> があったらどうなるか
+（RV64 の浮動小数点は別のレジスタ <code>fa0</code>〜<code>fa7</code> を使う）</li>
+<li><strong>無駄を減らす</strong>: 可変長でない関数では save area を作っていないことを、
+生成コードで確認する。作ってしまうと全関数のフレームが64バイト増える</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: なぜ可変長引数は「危険」と言われるのか。</strong>
+<code>printf("%d %d", 1)</code> と書いても、コンパイラは止めてくれない
+（引数が足りないので、2つ目には<strong>ゴミが読まれる</strong>）。
+呼ばれる側は「いくつ来たか」を知る方法がなく、
+書式文字列や番兵（<code>NULL</code> 終端）など<strong>別の手段で教えてもらう</strong>しかないからである。
+いま作った <code>__arg(i)</code> も、<code>n</code> を超えた <code>i</code> を渡せば save area の外を読む。
+C++ の可変長テンプレートや Rust のマクロが、
+型と個数を静的に検査する方向へ進化したのは、この弱点が理由である。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/L2_compound_assign/"><span class="label">前へ</span>複合代入 — 左辺を1回しか評価しない</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/L4_sizeof_expr/"><span class="label">次へ</span>sizeof 単項式 — 答えは合っているのに、間違っている</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/L3_variadic.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

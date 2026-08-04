@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RV64 リファレンス — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/" aria-current="page">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../docs/">仕様・参考文書</a></nav>
+    <h1 class="page-title">RV64 リファレンス</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#ターゲットアーキテクチャ" id="toc-ターゲットアーキテクチャ">ターゲットアーキテクチャ</a></li>
+      <li><a href="#呼び出し規約" id="toc-呼び出し規約">呼び出し規約</a></li>
+      <li><a href="#スタックフレーム" id="toc-スタックフレーム">スタックフレーム</a></li>
+      <li><a href="#よく使う命令" id="toc-よく使う命令">よく使う命令</a></li>
+      <li><a href="#実行環境" id="toc-実行環境">実行環境</a></li>
+      <li><a href="#参考" id="toc-参考">参考</a></li>
+      </ul>
+    </nav>
+    
+<p>コード生成中に引くための、ターゲットアーキテクチャと呼び出し規約のまとめ。</p>
+<hr />
+<h2 id="ターゲットアーキテクチャ">ターゲットアーキテクチャ</h2>
+<p>RISC-V RV64IM（整数 + M拡張、C拡張なし・全命令 32bit 固定長）。</p>
+<p>RV64 を選ぶ理由（可変長命令や暗黙のフラグレジスタがないこと）は、
+開発リポジトリの <code>design/curriculum.md</code> にある RISC-V 導入戦略に書いてある。</p>
+<h2 id="呼び出し規約">呼び出し規約</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>役割</th>
+<th>レジスタ</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>引数</td>
+<td><code>a0</code>–<code>a7</code>（第1引数が <code>a0</code>）</td>
+</tr>
+<tr class="even">
+<td>戻り値</td>
+<td><code>a0</code></td>
+</tr>
+<tr class="odd">
+<td>フレームポインタ</td>
+<td><code>s0</code></td>
+</tr>
+<tr class="even">
+<td>リンクレジスタ</td>
+<td><code>ra</code></td>
+</tr>
+<tr class="odd">
+<td>callee-saved</td>
+<td><code>s0</code>–<code>s11</code>（使うなら関数の入口で退避する）</td>
+</tr>
+<tr class="even">
+<td>caller-saved</td>
+<td><code>t0</code>–<code>t6</code>、<code>a0</code>–<code>a7</code>（関数呼び出しをまたいで保持されない）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>通常回で扱うのは、8個以下の整数引数を持つ関数の呼び出しまでである。
+本格的な呼び出し規約には、この範囲の外に次のような話題がある。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>話題</th>
+<th>内容</th>
+<th>扱い</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>9個以上の引数</td>
+<td><code>a0</code>–<code>a7</code> に入りきらない分はスタックで渡す</td>
+<td>扱わない</td>
+</tr>
+<tr class="even">
+<td>可変長引数</td>
+<td><code>printf</code> のように引数個数が変わる関数</td>
+<td>発展課題 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L3_variadic/README.md">L3</a></td>
+</tr>
+<tr class="odd">
+<td>型チェック</td>
+<td>宣言と呼び出しの引数個数・型が一致するか確認する</td>
+<td>発展課題 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/Q1_typecheck/README.md">Q1</a></td>
+</tr>
+<tr class="even">
+<td>外部関数呼び出し</td>
+<td>libc の <code>printf</code> や <code>malloc</code> を呼ぶ</td>
+<td>コマ10・コマ12</td>
+</tr>
+<tr class="odd">
+<td>caller-saved / callee-saved</td>
+<td>呼び出し前後でどのレジスタを誰が保存するか</td>
+<td>上表の <code>a0</code>–<code>a7</code>・<code>ra</code>・<code>s0</code> の基本だけ</td>
+</tr>
+<tr class="even">
+<td>末尾呼び出し最適化</td>
+<td><code>return f(x);</code> をジャンプに変える最適化</td>
+<td>発展課題 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/B3_tailcall/README.md">B3</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="スタックフレーム">スタックフレーム</h2>
+<p>スタックポインタ <code>sp</code> は、<strong><code>call</code> を出す時点で 16 バイト境界</strong>に揃っている必要がある。
+違反すると <code>Illegal instruction</code> や <code>Bus error</code> として現れ、原因の特定が難しい。
+qemu は 8 バイトのずれを黙って通してしまうことがあるので、
+「テストが通る」ことは揃っている証拠にならない。</p>
+<div class="sourceCode" id="cb1" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> align_to(n, align):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (n <span class="op">+</span> align <span class="op">-</span> <span class="dv">1</span>) <span class="op">//</span> align <span class="op">*</span> align</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>frame_size <span class="op">=</span> align_to(<span class="va">self</span>._stack_offset, <span class="dv">16</span>)   <span class="co"># 必ずこれを使う</span></span></code></pre></div>
+<p><code>sp</code> を動かす場所は2つあり、揃える責任の持ち方が異なる。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>箇所</th>
+<th>対象</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>関数のプロローグ</td>
+<td>フレームサイズ。<code>align_to(_stack_offset, 16)</code> を通すので常に 16 の倍数（コマ3 以降）</td>
+</tr>
+<tr class="even">
+<td><code>call</code> を出す直前</td>
+<td>そのとき積んでいる一時値（<code>_push_a0()</code> の分、1個 8 バイト）。奇数個なら 8 詰める（コマ6 以降）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>プロローグが常に 16 の倍数である以上、<code>call</code> 時にずれる原因は一時値の積み方だけである。
+引数の個数ではないことに注意する。引数は <code>call</code> の前にレジスタへ移して <code>sp</code> を戻すため、
+<code>call</code> の時点では消えている。残るのは呼び出しを囲む式が積んだ分である
+（例: <code>n * fact(n - 1)</code> は <code>*</code> の左辺を1個積んだまま <code>fact</code> を呼ぶ）。</p>
+<p>プロローグ／エピローグの形:</p>
+<div class="sourceCode" id="cb2" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># プロローグ（frame_size は 16 の倍数）</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-(</span>frame_size <span class="op">+</span> <span class="dv">16</span><span class="op">)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  sd   ra<span class="op">,</span> frame_size <span class="op">+</span> <span class="dv">8</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  sd   s0<span class="op">,</span> frame_size<span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  addi s0<span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> frame_size <span class="op">+</span> <span class="dv">16</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># エピローグ</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  ld   s0<span class="op">,</span> frame_size<span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  ld   ra<span class="op">,</span> frame_size <span class="op">+</span> <span class="dv">8</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> frame_size <span class="op">+</span> <span class="dv">16</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ret</span></span></code></pre></div>
+<p>プロローグ直後、<code>s0</code> は「関数に入る前の <code>sp</code>」と同じ位置を指す。
+ローカル変数は <code>s0</code> から負の方向に並ぶ（1個目が <code>s0-24</code>、2個目が <code>s0-32</code>、…）。</p>
+<h2 id="よく使う命令">よく使う命令</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>命令</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>li rd, imm</code></td>
+<td>即値ロード</td>
+</tr>
+<tr class="even">
+<td><code>mv rd, rs</code></td>
+<td>レジスタコピー</td>
+</tr>
+<tr class="odd">
+<td><code>ld rd, off(rs)</code> / <code>sd rs2, off(rs1)</code></td>
+<td>8バイトのロード / ストア</td>
+</tr>
+<tr class="even">
+<td><code>lw</code> / <code>sw</code>、<code>lb</code> / <code>sb</code></td>
+<td>4バイト / 1バイトのロード・ストア</td>
+</tr>
+<tr class="odd">
+<td><code>add</code> / <code>sub</code> / <code>mul</code> / <code>div</code> / <code>rem</code></td>
+<td>算術（<code>div</code> / <code>rem</code> は M 拡張）</td>
+</tr>
+<tr class="even">
+<td><code>slt</code> / <code>sltu</code></td>
+<td>比較（小なりで1）</td>
+</tr>
+<tr class="odd">
+<td><code>seqz</code> / <code>snez</code></td>
+<td>0 と等しい / 等しくない を 0/1 に</td>
+</tr>
+<tr class="even">
+<td><code>and</code> / <code>or</code> / <code>xori</code></td>
+<td>論理演算（<code>&amp;&amp;</code> / <code>\|\|</code> / <code>!</code>）の下位化に使う</td>
+</tr>
+<tr class="odd">
+<td><code>beqz rs, label</code> / <code>bnez</code></td>
+<td>0 なら / 0 でなければ分岐</td>
+</tr>
+<tr class="even">
+<td><code>j label</code> / <code>call sym</code> / <code>ret</code></td>
+<td>無条件ジャンプ / 関数呼び出し / 復帰</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="実行環境">実行環境</h2>
+<p>RV64 は <code>qemu-riscv64</code>（Linux user-mode emulation）で実行する。</p>
+<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-static</span> hello.s <span class="at">-o</span> hello</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./hello<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<p>環境の用意は <a href="../../docs/getting_started/"><code>getting_started.md</code></a> を参照。</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li>RISC-V 仕様書 Volume I (User-Level ISA) — 命令セットの一次資料</li>
+</ul>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../docs/language_spec/"><span class="label">前へ</span>Core プロファイル — 言語仕様</a><a class="index" href="../../docs/"><span class="label">一覧</span>仕様・参考文書</a><a class="next" href="../../docs/code_example/"><span class="label">次へ</span>コンパイル到達目標コード集</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/docs/rv64_reference.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

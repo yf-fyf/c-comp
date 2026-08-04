@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>int は32ビット — 桁あふれを正しく折り返す — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title"><code>int</code> は32ビット — 桁あふれを正しく折り返す</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#いまのコンパイラは何をしているか" id="toc-いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</a></li>
+      <li><a href="#何が違うのか" id="toc-何が違うのか">何が違うのか</a></li>
+      <li><a href="#どう直すか-命令を書き換える" id="toc-どう直すか-命令を書き換える">どう直すか — 命令を書き換える</a></li>
+      <li><a href="#難しいのはどこを書き換えないか" id="toc-難しいのはどこを書き換えないか">難しいのは「どこを書き換えないか」</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>int</code> の演算を 32bit 命令（<code>addw</code> など）で行い、
+桁あふれの振る舞いを「ホスト gcc と同じ 32bit 折り返し」に揃える。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ12（<code>malloc</code>）まで。折り返しの考え方そのものは型サイズまでで足りるが、安全網の <code>tests/pointer_ok.c</code> が <code>struct</code> と <code>malloc</code> を使う。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、ラッパー <code>semcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>narrow.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が折り返しのテストの通過と <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>仕様との関係</td>
+<td><strong>仕様の内側</strong>。<code>language_spec.md</code> は <code>int</code> を「4 バイト符号付き整数（32 ビット 2 の補数）」と定めているのに、実装は演算を 64bit 命令で行っている。実装を仕様へ合わせる</td>
+</tr>
+<tr class="even">
+<td>備考</td>
+<td>意味論発展シリーズの第2回。S1・S3 とは独立している。3本の中では最も気づきにくいずれである</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</h2>
+<p>コマ8 で「<code>int</code> は4バイト」と決め、<code>lw</code> / <code>sw</code> で読み書きするようにした。
+しかし<strong>計算</strong>のほうは、ずっと64bit命令のままである。</p>
+<div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  add a0<span class="op">,</span> a1<span class="op">,</span> a0      <span class="co"># 64bit で足している</span></span></code></pre></div>
+<p>RV64 には、同じ演算の32bit版がある。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 27%" />
+<col style="width: 44%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>64bit 版</th>
+<th>32bit 版</th>
+<th>32bit 版の意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>add</code></td>
+<td><code>addw</code></td>
+<td>下位32bitで足し、結果を符号拡張する</td>
+</tr>
+<tr class="even">
+<td><code>sub</code> / <code>mul</code> / <code>div</code> / <code>rem</code></td>
+<td><code>subw</code> / <code>mulw</code> / <code>divw</code> / <code>remw</code></td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>w</code> は word（RV64 では32bit）の意味である。
+<code>int</code> の計算には、本来こちらを使わなければならない。</p>
+<h2 id="何が違うのか">何が違うのか</h2>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="dv">2147483647</span><span class="op">;</span>   <span class="co">// int の最大値</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> x <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span></code></pre></div>
+<p>この言語の仕様（<code>language_spec.md</code>）は、符号付き整数のオーバーフローを
+<strong>未定義動作（UB）と明記している</strong>。規格上は「何が起きてもよい」ということだが、
+それでは実装の方針が立たない。そこでこの回では、
+<strong>「ホスト gcc（および RISC-V の実際の挙動）と同じく、32bitで折り返す」</strong>
+という具体的な振る舞いを選んで実装する（UB の中で最もよく採用される選択であり、
+<code>-fwrapv</code> 相当の挙動と考えてよい）。この方針のもとでは、<code>x</code> は
+<strong>最小値 <code>-2147483647 - 1</code> に折り返す</strong>。</p>
+<p>いまの実装は64bitで計算するので、<code>2147483648</code> という
+<strong><code>int</code> に存在しないはずの値</strong>がそのまま残る。</p>
+<div class="sourceCode" id="cb3" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> y<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> <span class="dv">100000</span> <span class="op">*</span> <span class="dv">100000</span><span class="op">;</span>   <span class="co">// 折り返す方針では: 1410065408</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                        <span class="co">// いまの実装: 10000000000</span></span></code></pre></div>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p>このずれも、S1 と同じく<strong>テストが通ってしまう</strong>種類のものである。
+講義のテストは小さい値しか使わないので、64bitでも32bitでも同じ答えになる。
+大きな値を扱った瞬間に、初めて食い違う。</p>
+<p>「小さい入力でテストする」のは正しい習慣だが、
+<strong>境界値を試さないと見つからないバグがある</strong>ことも同時に示している。</p>
+</div>
+<h2 id="どう直すか-命令を書き換える">どう直すか — 命令を書き換える</h2>
+<p>コード生成のあちこちに散らばった <code>add</code> / <code>sub</code> / <code>mul</code> … を
+すべて書き直すのは大変である。そこで、<strong>出力される命令行を通り道で書き換える</strong>。</p>
+<pre data-lang="text"><code>codegen が emit(&quot;  add a0, a1, a0&quot;) を呼ぶ
+    ↓
+narrow(line, ty) が「型が int なら addw に」書き換える
+    ↓
+実際に出力される</code></pre>
+<p><code>narrow</code> は<strong>純粋な文字列変換</strong>なので、テストが書きやすい。
+ラッパー <code>semcc.py</code> が <code>emit</code> を包んでこれを呼ぶ。</p>
+<h2 id="難しいのはどこを書き換えないか">難しいのは「どこを書き換えないか」</h2>
+<p>素朴に「<code>add</code> を全部 <code>addw</code> にする」と、<strong>コンパイラは壊れる</strong>。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>命令</th>
+<th>用途</th>
+<th>32bit にすると</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>add a0, a1, a0</code></td>
+<td><code>x + y</code>（int の足し算）</td>
+<td><strong>正しい</strong></td>
+</tr>
+<tr class="even">
+<td><code>add a0, a1, a0</code></td>
+<td><code>p + i</code>（ポインタ演算）</td>
+<td>アドレスが壊れる</td>
+</tr>
+<tr class="odd">
+<td><code>addi a0, s0, -24</code></td>
+<td>変数のアドレス計算</td>
+<td>アドレスが壊れる</td>
+</tr>
+<tr class="even">
+<td><code>addi sp, sp, -16</code></td>
+<td>スタックの確保</td>
+<td><code>sp</code> が壊れる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>アドレスは64bit</strong>である。同じ <code>add</code> でも、
+「何を計算しているか」で扱いが変わる。</p>
+<p>そこで2つの仕掛けを使う。</p>
+<ol type="1">
+<li><strong><code>addi</code> は対象外にする</strong> — アドレス計算専用と割り切る
+（このコンパイラは int の加算に <code>addi</code> を使わない）</li>
+<li><strong>型コンテキストを見る</strong> — いま生成している式の型が <code>int</code> / <code>char</code> のときだけ書き換える</li>
+</ol>
+<p>2つ目はラッパーが用意する。<code>codegen</code> を包んで、
+「いま生成中のノードの型」をスタックで持ち回り、<code>emit</code> のときに参照する。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>入れ子のアドレス計算に注意。</strong>
+<code>int *p;</code> に対する <code>s = s + p[i]</code> を考える。外側の <code>+</code> は int だが、
+その中の <code>p[i]</code>（<code>*(p + i)</code> の略記）は<strong>アドレス計算</strong>（<code>base + i*4</code>）である。
+外側の型を内側にも適用してしまうと、アドレスが32bitに切り詰められて落ちる。</p>
+<p>ラッパーは、算術ノード以外では型を <code>None</code> にして積み直すことでこれを防いでいる。
+実際に作る途中でこの罠を踏み、<code>f11_ptr_arith.c</code> が SIGSEGV で落ちた
+——「型は式ごとに違う」ことを、身をもって確かめられる箇所である。</p>
+</div>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 45%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>narrow(line, ty)</code></td>
+<td>型が int 系のときだけ、対象命令に <code>w</code> を付ける</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>書くのは20行ほどの文字列処理である。難しいのはコードではなく、
+<strong>何を対象にして何を対象にしないか</strong>の判断である。</p>
+<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/overflow.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-E</span> <span class="st">&quot;addw|subw|mulw&quot;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/pointer_ok.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> addiw   <span class="co"># 0 でなければ危険</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># narrow の入出力を直接確認(未実装は SKIP)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 折り返しのテスト + fixed17</span></span></code></pre></div>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>overflow.c</code></td>
+<td>最大値 + 1 が最小値に折り返す</td>
+</tr>
+<tr class="even">
+<td><code>mul_wrap.c</code></td>
+<td><code>100000 * 100000</code> が 32bit で折り返す</td>
+</tr>
+<tr class="odd">
+<td><code>wrap_sub.c</code></td>
+<td>引き算で <code>INT_MIN</code> をまたいで折り返す</td>
+</tr>
+<tr class="even">
+<td><code>pointer_ok.c</code></td>
+<td><strong>malloc 領域・ポインタ・構造体が壊れていない</strong>（narrow しすぎの検出）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>pointer_ok.c</code> が安全網である。<a href="../../advanced/#fixed17"><code>fixed17</code></a> と合わせて、
+「直しすぎていないこと」を保証する。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong><code>unsigned</code> を考える</strong>: <code>unsigned int</code> があれば <code>divu</code> / <code>remu</code> が要る。
+Core プロファイルに <code>unsigned</code> がないのはなぜか、あると何が増えるか</li>
+<li><strong><code>long</code> との違い</strong>: C の <code>long</code> は64bitである。
+仕様に <code>long</code> を足すとしたら、<code>narrow</code> はどう変わるか</li>
+<li><strong><code>char</code> の扱い</strong>: <code>char</code> は1バイトだが、計算は int に格上げされる（整数拡張）。
+いまの実装は <code>char</code> も32bitで計算しているが、これで正しいか</li>
+<li><strong>比較は大丈夫か</strong>: <code>slt</code> は64bit比較だが、32bitで符号拡張された値同士なら
+正しく比較できる。なぜそう言えるか説明する</li>
+<li><strong>B1 と組み合わせる</strong>: 定数畳み込み（B1）の <code>to_i64</code> は64bitで丸めている。
+<code>int</code> の式なら32bitで丸めるべきではないか。両者の整合を取る</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: なぜ RV64 に32bit命令があるのか。</strong>
+RISC-V は64bit CPU だが、C の <code>int</code> が32bitであることを前提に、
+32bit演算を1命令でできるようにしてある（<code>addw</code> など）。
+これがないと、足すたびに「下位32bitを取り出して符号拡張する」処理が余分に要る。
+<strong>言語の都合が命令セットの設計に影響している</strong>例である。
+x86-64 も同じ理由で、32bit レジスタ名（<code>eax</code>）での演算が用意されている。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/S1_shortcircuit/"><span class="label">前へ</span>短絡評価 — &amp;&amp; と || の本当の意味</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/S3_struct/"><span class="label">次へ</span>構造体の代入 — レジスタに載らないものを運ぶ</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/S2_int32.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

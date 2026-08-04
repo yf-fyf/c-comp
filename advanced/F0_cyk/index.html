@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>字句解析と構文解析 — CYK 法で数式を解く — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">字句解析と構文解析 — CYK 法で数式を解く</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#言語と文法" id="toc-言語と文法">言語と文法</a></li>
+      <li><a href="#字句解析とは" id="toc-字句解析とは">字句解析とは</a></li>
+      <li><a href="#構文解析の出力は木-曖昧性" id="toc-構文解析の出力は木-曖昧性">構文解析の出力は「木」— 曖昧性</a></li>
+      <li><a href="#cyk-法の考え方" id="toc-cyk-法の考え方">CYK 法の考え方</a></li>
+      <li><a href="#チョムスキー標準形" id="toc-チョムスキー標準形">チョムスキー標準形</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#優先順位は文法で表現できる" id="toc-優先順位は文法で表現できる">優先順位は文法で表現できる</a></li>
+      <li><a href="#動かし方" id="toc-動かし方">動かし方</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      <li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>数式の文字列をトークン列に区切り（字句解析）、CYK 法で構文木を組み立て（構文解析）、
+木を評価して値を出すところまでを、独立した小さなプログラムで一通り体験する。</p>
+<p>これまでの回では、Lexer と Parser は教員提供のブラックボックスだった。
+この回では、そのブラックボックスが何をしているのかを、最も愚直で確実な方法で自分の手で作って理解する。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ1（<code>eval_ast</code>）まで</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>（この回はコンパイラ本編と独立している）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>cyk.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になる（このトピックに <code>golden.py</code> は無い）</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>フロントエンド発展シリーズの第0回。対象にする言語は、整数と <code>+</code> <code>*</code> <code>(</code> <code>)</code> だけの数式である</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>続きの F1〜F4（Lexer / Parser の自作、スキャフォールドの置き換え）は選択制の発展課題として用意する。</p>
+<h2 id="言語と文法">言語と文法</h2>
+<p>プログラミング言語を作るとき、まず決めるのは「どんな文字列を正しいプログラムと認めるか」である。
+この「正しい文字列の集合」を<strong>言語</strong>と呼び、言語を定義する規則を<strong>文法</strong>と呼ぶ。</p>
+<p>数式の文法は、たとえば次のように書ける。</p>
+<pre data-lang="text"><code>E → E + E
+E → E * E
+E → ( E )
+E → num</code></pre>
+<p><code>E</code> は「式」を表す記号である。
+この規則は「式とは、式 + 式 か、式 * 式 か、カッコで囲んだ式か、数である」と読む。</p>
+<p>規則を繰り返し適用して文字列を作ることを<strong>導出</strong>という。</p>
+<pre data-lang="text"><code>E ⇒ E + E ⇒ num + E ⇒ num + E * E ⇒ num + num * E ⇒ num + num * num</code></pre>
+<p><code>1 + 2 * 3</code> はこの文法から導出できるので、この言語の文である。
+<code>1 + * 2</code> はどう頑張っても導出できないので、この言語の文ではない。</p>
+<p>構文解析とは、この向きを逆にした問題である。</p>
+<blockquote>
+<p><strong>文字列が与えられたとき、それを導出できるか判定し、導出の過程（= 構文木）を復元すること。</strong></p>
+</blockquote>
+<h2 id="字句解析とは">字句解析とは</h2>
+<p>文法の規則に出てきた <code>num</code> は「数」というひとかたまりを表していた。
+しかし入力は <code>"12 + 3 * 4"</code> のような文字の並びであり、<code>1</code> と <code>2</code> はまだバラバラの文字である。</p>
+<p>そこで、構文解析の前に、文字列を意味のある最小単位（<strong>トークン</strong>）の列に区切る。
+これが<strong>字句解析</strong>である。</p>
+<figure>
+<img src="../../figures/F0_tokenize.svg" alt="字句解析: 文字列をトークン列に区切る" />
+<figcaption aria-hidden="true">字句解析: 文字列をトークン列に区切る</figcaption>
+</figure>
+<ul>
+<li>空白は捨てる</li>
+<li>数字の並びは、数字が続く限り読み進めて1つの <code>num</code> トークンにまとめる（<strong>最長一致</strong>）</li>
+<li><code>+</code> <code>*</code> <code>(</code> <code>)</code> は1文字で1トークン</li>
+</ul>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>なぜ2段階に分けるのか。</strong>
+トークンの中身（「数字の並び」など）は、隣の文字を見るだけで切れる単純なパターンである。
+一方、トークンの並び（カッコの対応など）は、いくら長い範囲を眺めても「パターン照合」だけでは判定できず、
+数えたり対応を取ったりする仕組みが要る。
+性質の違う2つの仕事を分けることで、それぞれが単純になる。
+<code>(((...)))</code> のようなカッコの対応が正規表現で書けないことは、形式言語理論で証明できる
+（正規言語と文脈自由言語の違い）。</p>
+</div>
+<p>この回では、トークンを Python のタプル <code>(kind, value)</code> で表す。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>入力</th>
+<th>トークン列</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>12 + 3</code></td>
+<td><code>[('num', 12), ('+', None), ('num', 3)]</code></td>
+</tr>
+<tr class="even">
+<td><code>(1)</code></td>
+<td><code>[('(', None), ('num', 1), (')', None)]</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="構文解析の出力は木-曖昧性">構文解析の出力は「木」— 曖昧性</h2>
+<p><code>1 + 2 * 3</code> を先ほどの文法で導出する方法は、実は1通りではない。</p>
+<figure>
+<img src="../../figures/F0_two_trees.svg" alt="同じ文字列から作れる2つの木" />
+<figcaption aria-hidden="true">同じ文字列から作れる2つの木</figcaption>
+</figure>
+<p>どちらも文法的には正しい導出である。
+しかし木A を評価すると 7、木B を評価すると 9 になる。
+<strong>構文解析の出力は木であり、どの木を選ぶかで式の意味が決まる</strong>。</p>
+<p>同じ文字列に2つ以上の木を許してしまう文法を<strong>曖昧な文法</strong>という。
+コマ1 で <code>parse_viewer.py</code> が常に「掛け算が先」の木を返していたのは、
+Parser が曖昧さのない形で木を決めていたからである。
+その仕組み（優先順位を文法に組み込む方法）はこの回の最後に扱う。</p>
+<h2 id="cyk-法の考え方">CYK 法の考え方</h2>
+<p>いよいよ構文解析を行う。この回で使うのは <strong>CYK 法</strong>（Cocke–Younger–Kasami 法）である。</p>
+<p>CYK 法のアイデアは1つだけ。</p>
+<blockquote>
+<p><strong>「トークン列の区間 tokens[i:j] は、どの記号から導出できるか？」を、短い区間から順に表に埋めていく。</strong></p>
+</blockquote>
+<ul>
+<li>長さ1の区間は、トークン1個を直接作れる規則で埋まる</li>
+<li>長さ2以上の区間 <code>tokens[i:j]</code> は、分割点 <code>k</code> で2つに割り、
+「左半分 <code>tokens[i:k]</code> を作れる記号 B」と「右半分 <code>tokens[k:j]</code> を作れる記号 C」の組が
+規則 <code>A → B C</code> に一致すれば、<code>A</code> を書き込む</li>
+<li>最後に、全体の区間に開始記号 <code>E</code> があれば受理</li>
+</ul>
+<p>短い区間の答えを使い回して長い区間を埋める、<strong>動的計画法</strong>である。</p>
+<figure>
+<img src="../../figures/F0_cyk_table.svg" alt="1 + 2 * 3 を解析した CYK の表（曖昧文法 G1）" />
+<figcaption aria-hidden="true"><code>1 + 2 * 3</code> を解析した CYK の表（曖昧文法 G1）</figcaption>
+</figure>
+<p>一番上のマスに <code>E</code> があるので <code>1 + 2 * 3</code> は受理される。
+さらに、このマスへの「作り方」が2通り記録されており、これがそのまま木A・木B の2本に対応する。
+CYK 法は<strong>すべての構文木を同時に見つける</strong>方法でもある。</p>
+<div class="adm adm-exercise">
+<div class="adm-title">
+作業
+</div>
+<p><strong>手で表を埋める</strong>: <code>2 * 3 + 4</code> をトークン列にし、上の図と同じ要領で表を埋めよ。
+一番上のマスに <code>E</code> は入るか。作り方は何通りあるか。
+それぞれの木を評価すると、値はいくつになるか。
+（実装が終わったら <code>python3 cyk.py --table '2 * 3 + 4'</code> で答え合わせできる）</p>
+</div>
+<h2 id="チョムスキー標準形">チョムスキー標準形</h2>
+<p>CYK 法は「区間を2つに割る」ことを繰り返すので、文法の規則が次の2形だけである必要がある。</p>
+<pre data-lang="text"><code>A → B C      （右辺は記号ちょうど2個）
+A → &#39;tok&#39;    （右辺はトークン1個）</code></pre>
+<p>この形の文法を<strong>チョムスキー標準形</strong>（CNF）という。
+どんな文法もこの形に機械的に変換できる（付録参照）。この回では変換済みの文法を配布する。</p>
+<p>たとえば <code>E → E + E</code> は、<code>+ E</code> の部分に <code>PLUS_REST</code> という補助記号を導入して2個ずつに割る。</p>
+<pre data-lang="text"><code>E → E PLUS_REST        PLUS_REST → PLUS E        PLUS → &#39;+&#39;</code></pre>
+<p><code>cyk.py</code> では、文法を Python の辞書で表す。</p>
+<div class="sourceCode" id="cb5" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>GRAMMAR_AMBIG <span class="op">=</span> {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;start&quot;</span>: <span class="st">&quot;E&quot;</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;terminal_rules&quot;</span>: [        <span class="co"># A → &#39;tok&#39;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;E&quot;</span>, <span class="st">&quot;num&quot;</span>),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;PLUS&quot;</span>, <span class="st">&quot;+&quot;</span>), (<span class="st">&quot;MUL&quot;</span>, <span class="st">&quot;*&quot;</span>), (<span class="st">&quot;OPEN&quot;</span>, <span class="st">&quot;(&quot;</span>), (<span class="st">&quot;CLOSE&quot;</span>, <span class="st">&quot;)&quot;</span>),</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;binary_rules&quot;</span>: [          <span class="co"># A → B C</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;E&quot;</span>, <span class="st">&quot;E&quot;</span>, <span class="st">&quot;PLUS_REST&quot;</span>),</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;E&quot;</span>, <span class="st">&quot;E&quot;</span>, <span class="st">&quot;MUL_REST&quot;</span>),</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;E&quot;</span>, <span class="st">&quot;OPEN&quot;</span>, <span class="st">&quot;CLOSE_REST&quot;</span>),</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;PLUS_REST&quot;</span>, <span class="st">&quot;PLUS&quot;</span>, <span class="st">&quot;E&quot;</span>),</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;MUL_REST&quot;</span>, <span class="st">&quot;MUL&quot;</span>, <span class="st">&quot;E&quot;</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;CLOSE_REST&quot;</span>, <span class="st">&quot;E&quot;</span>, <span class="st">&quot;CLOSE&quot;</span>),</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="実装">実装</h2>
+<p><code>cyk.py</code> のスケルトンには TODO が5つある。上から順に実装する。
+各 Step が終わるたびに <code>python3 check.py</code> で確認できる（未実装の Step は SKIP と表示される）。</p>
+<h3 id="step-1-tokenize-字句解析">Step 1: <code>tokenize</code> — 字句解析</h3>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>処理</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>空白</td>
+<td>読み飛ばす</td>
+</tr>
+<tr class="even">
+<td>数字</td>
+<td>数字が続く限り読み、<code>('num', 値)</code> にする</td>
+</tr>
+<tr class="odd">
+<td><code>+ * ( )</code></td>
+<td><code>(文字, None)</code> にする</td>
+</tr>
+<tr class="even">
+<td>それ以外</td>
+<td><code>SyntaxError</code> を投げる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="step-2-cyk_chart-表を埋める">Step 2: <code>cyk_chart</code> — 表を埋める</h3>
+<p>表は辞書で表す。<code>chart[(i, j)]</code> が区間 <code>tokens[i:j]</code> のマスである。
+マスの中身は「記号 → 作り方のリスト」の辞書とする。</p>
+<div class="sourceCode" id="cb6" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>chart[(i, j)] <span class="op">=</span> {記号: [作り方, ...]}</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 作り方は (&#39;tok&#39;, トークン) または (k, B, C)</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># (k, B, C) は「tokens[i:k] が B、tokens[k:j] が C」という分割</span></span></code></pre></div>
+<p>埋める手順は2段階である。</p>
+<pre data-lang="text"><code>1. 長さ1: 各 i について、tokens[i] の kind に一致する terminal_rules の
+   記号 sym ごとに、(&#39;tok&#39;, tokens[i]) を cell[sym] に追加する
+
+2. 長さ2以上: 長さの短い順に、各区間 (i, j) について
+   分割点 k（i &lt; k &lt; j）を全部試す。
+   binary_rules の (sym, B, C) について、B が chart[(i, k)] にあり
+   C が chart[(k, j)] にあれば、(k, B, C) を cell[sym] に追加する</code></pre>
+<p>受理判定 <code>accepts()</code> はスケルトンに完成済みで、
+<code>chart[(0, len(tokens))]</code> に開始記号があるかを見るだけである。</p>
+<h3 id="step-3-build_tree-木を1本復元する">Step 3: <code>build_tree</code> — 木を1本復元する</h3>
+<p>表には「作り方」が記録してあるので、それを逆にたどれば木になる。</p>
+<pre data-lang="text"><code>chart[(i, j)][sym] の最初の作り方を見る
+- (&#39;tok&#39;, トークン) なら葉 (sym, トークン)
+- (k, B, C) なら、左 (i, k) の B と右 (k, j) の C を再帰的に復元して
+  (sym, [左の木, 右の木])</code></pre>
+<p>復元されるのは補助記号（<code>PLUS_REST</code> など）を含んだ CNF の導出木である。
+これを見慣れた AST（<code>('add', 左, 右)</code> など）に直す <code>to_ast()</code> と、
+S 式にする <code>to_sexpr()</code> は完成済みである。
+S 式の形式は <code>parse_viewer.py</code> と同じにしてある。</p>
+<pre data-lang="text"><code>(add (num 1) (mul (num 2) (num 3)))</code></pre>
+<h3 id="step-4-count_trees-木を数える">Step 4: <code>count_trees</code> — 木を数える</h3>
+<p>作り方ごとに本数を求めて合計する。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>作り方</th>
+<th>本数</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>('tok', トークン)</code></td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td><code>(k, B, C)</code></td>
+<td>左 B の本数 × 右 C の本数</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>曖昧文法 G1 では <code>1 + 2 * 3</code> が2本、<code>1 + 2 * 3 + 4</code> が5本になるはずである。</p>
+<h3 id="step-5-eval_ast-評価">Step 5: <code>eval_ast</code> — 評価</h3>
+<p>コマ1 で書いたものと同じ考え方である。
+<code>('num', 値)</code> は値を返し、<code>('add', 左, 右)</code> / <code>('mul', 左, 右)</code> は左右を評価して足す / 掛ける。</p>
+<h2 id="優先順位は文法で表現できる">優先順位は文法で表現できる</h2>
+<p>スケルトンには2つ目の文法 <code>GRAMMAR_PREC</code> が入っている。
+これは次の文法を CNF にしたものである。</p>
+<pre data-lang="text"><code>E → E + T | T        （式 = 項を + でつないだもの）
+T → T * F | F        （項 = 因子を * でつないだもの）
+F → ( E ) | num      （因子 = カッコ式か数）</code></pre>
+<p><code>+</code> の材料は「項 T」まで、<code>*</code> の材料は「因子 F」までしか許さない。
+この制限によって「足し算を先にまとめる木」は文法的に作れなくなる。</p>
+<p>同じ入力を2つの文法で解析して、木の本数を比べてみる。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>入力</th>
+<th>G1（曖昧）</th>
+<th>G2（優先順位つき）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>1 + 2 * 3</code></td>
+<td>2本</td>
+<td><strong>1本</strong></td>
+</tr>
+<tr class="even">
+<td><code>1 + 2 * 3 + 4</code></td>
+<td>5本</td>
+<td><strong>1本</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>G2 では木が常に1本に定まり、その木は「掛け算が先」になっている。
+<strong>演算子の優先順位とは、パーサーに埋め込まれた特別な仕組みではなく、文法の書き方そのもの</strong>である。
+コマ1 以降ずっと使ってきた Parser の優先順位処理の正体はこれである。
+なお <code>language_spec.md</code> の本文では、この階層を<strong>優先順位表</strong>の形に畳んで示している
+（表の1行が上の <code>E</code> / <code>T</code> のような1段に対応する）。</p>
+<h2 id="動かし方">動かし方</h2>
+<div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> cyk.py <span class="st">&#39;1 + 2 * 3&#39;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> cyk.py <span class="at">--table</span> <span class="st">&#39;1 + 2 * 3&#39;</span>   <span class="co"># CYK の表も表示する</span></span></code></pre></div>
+<p>すべて実装できると、次のように表示される。</p>
+<pre data-lang="text"><code>入力       : 1 + 2 * 3
+トークン列 : [(&#39;num&#39;, 1), (&#39;+&#39;, None), (&#39;num&#39;, 2), (&#39;*&#39;, None), (&#39;num&#39;, 3)]
+--- 曖昧な文法 G1 ---
+受理       : Yes（構文木は 2 本）
+最初の木   : (add (num 1) (mul (num 2) (num 3)))
+評価結果   : 7
+--- 優先順位つき文法 G2 ---
+受理       : Yes（構文木は 1 本）
+最初の木   : (add (num 1) (mul (num 2) (num 3)))
+評価結果   : 7</code></pre>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>cyk.py</code></li>
+</ul>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>実装対象</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>tokenize(src)</code></td>
+<td>Step 1: 字句解析</td>
+</tr>
+<tr class="even">
+<td><code>cyk_chart(tokens, grammar)</code></td>
+<td>Step 2: CYK の表を埋める</td>
+</tr>
+<tr class="odd">
+<td><code>build_tree(chart, i, j, sym)</code></td>
+<td>Step 3: 木を1本復元する</td>
+</tr>
+<tr class="even">
+<td><code>count_trees(chart, i, j, sym)</code></td>
+<td>Step 4: 木の本数を数える</td>
+</tr>
+<tr class="odd">
+<td><code>eval_ast(ast)</code></td>
+<td>Step 5: 評価（コマ1 の再利用）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py</span></code></pre></div>
+<p>Step ごとに PASS / FAIL / SKIP が表示される。
+途中の Step までしか終わっていなくても、そこまでが PASS していれば前進である。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><code>-</code> と <code>/</code> を追加する（<code>tokenize</code>・両方の文法・<code>to_ast</code>・<code>eval_ast</code> を拡張する）</li>
+<li><code>build_tree</code> を全列挙版 <code>all_trees</code> に拡張し、G1 の <code>1 + 2 * 3</code> から
+7 と 9 の両方の値が出てくることを確かめる</li>
+<li>G1 での木の本数を <code>num + num + ... + num</code> で数え、演算子 n 個のときの本数の規則性を見つける</li>
+<li>長い式で実行時間を計り、トークン数に対してどう増えるか観察する（CYK は O(n³) である）</li>
+<li>付録を読んで、<code>E → E + T | T</code> の CNF 変換を自分の手でやってみる</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>付録: CNF 変換の概略。</strong>
+どんな文法も次の2操作でチョムスキー標準形にできる。
+（1） 右辺が3個以上の規則は、補助記号を導入して2個ずつに割る
+（<code>F → ( E )</code> は <code>F → OPEN CLOSE_REST</code>、<code>CLOSE_REST → E CLOSE</code>）。
+（2） <code>E → T</code> のような「右辺が記号1個」の規則（単位規則）は、
+<code>T</code> の規則を <code>E</code> に展開して消す。
+<code>GRAMMAR_PREC</code> で <code>E</code> にも <code>T</code> にも <code>("E", "num")</code> <code>("T", "num")</code> があるのはこのためである。</p>
+</div>
+<h2 id="次回予告">次回予告</h2>
+<p>CYK 法はどんな文脈自由文法でも扱える汎用の方法だが、計算量は O(n³) で、
+1万トークンのソースコードには使えない。</p>
+<p>実際のコンパイラは、文法の側を「先読み1トークンで迷わず進める形」に工夫して、
+表を作らずに<strong>一直線に</strong>解析する。それが<strong>再帰下降構文解析</strong>であり、
+スキャフォールドの <code>parser.py</code> の正体である。</p>
+<p>続きの F1〜F4 では、<code>scaffold/lexer.py</code> と <code>parser.py</code> を読み、
+同じものを自作してスキャフォールドを置き換える。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/"><span class="label">前へ</span>発展課題</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/F1_lexer/"><span class="label">次へ</span>字句解析器を作る — ブラックボックスを開ける（前編）</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/F0_cyk.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

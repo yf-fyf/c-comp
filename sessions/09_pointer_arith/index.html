@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ9: ポインタ演算とスケーリング — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ9: ポインタ演算とスケーリング</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+      <li><a href="#ast-を確認する-malloc-領域の添字アクセス" id="toc-ast-を確認する-malloc-領域の添字アクセス">AST を確認する: malloc 領域の添字アクセス</a></li>
+      <li><a href="#ast-を確認する-ポインタ演算" id="toc-ast-を確認する-ポインタ演算">AST を確認する: ポインタ演算</a></li>
+      <li><a href="#sizeof型名-のコード生成" id="toc-sizeof型名-のコード生成"><code>sizeof(型名)</code> のコード生成</a></li>
+      <li><a href="#pi-のコード生成" id="toc-pi-のコード生成"><code>p[i]</code> のコード生成</a></li>
+      <li><a href="#ポインタ演算" id="toc-ポインタ演算">ポインタ演算</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>コマ8 で入れた型サイズを使って、ポインタ演算・<code>sizeof(型名)</code>・添字 <code>p[i]</code> を実装する。</p>
+<p>コマ8 で、コンパイラは変数の型を覚え、型サイズで命令を選べるようになった。
+その型サイズには、もう一つの使い道がある。ポインタを進めるときの<strong>尺度</strong>である。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>p <span class="op">+</span> <span class="dv">2</span><span class="op">;</span>   <span class="co">// 2バイト進むのではなく、2 * sizeof(int) バイト進む</span></span></code></pre></div>
+<p>この回では、次の3つを実装する。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>機能</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ポインタ演算</td>
+<td><code>p + 2</code>, <code>p - 1</code></td>
+</tr>
+<tr class="even">
+<td><code>sizeof(型名)</code></td>
+<td><code>sizeof(int)</code></td>
+</tr>
+<tr class="odd">
+<td>添字</td>
+<td><code>p[i]</code>（<code>*(p + i)</code> の略記）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>新しい概念は「スケーリング（要素サイズ倍）」と「多段ポインタ」の2つで、
+どちらもコマ8 の <code>size_of_ty_str</code> / <code>elem_ty_str</code> の上に載る。</p>
+</section>
+<h2 id="この回で扱う範囲">この回で扱う範囲</h2>
+<p>この言語に配列はない。連続した int の並びが必要なときは、
+<code>malloc(sizeof(int) * N)</code> で確保したヒープ上の領域をポインタで指して使う。</p>
+<p><code>malloc</code> は、指定されたバイト数ぶんの領域を確保して、その先頭アドレスを返すライブラリ関数である。
+自作はしない。コンパイラから見れば普通の関数呼び出しなので、
+コマ6 で実装済みの関数呼び出しがそのまま使える。
+実体はリンク時に libc の <code>malloc</code> に解決される。</p>
+<p>この回のテストプログラムは、先頭に次の1行を置く。</p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span></code></pre></div>
+<p><code>scaffold/lib.h</code> は提供物で、<code>malloc</code> などの宣言が書いてある。
+この行がないと、Parser は <code>malloc</code> という名前を知らないまま呼び出しを読むことになる。
+今はこの1行を「そう書くもの」として置いてよい。
+<code>#include</code> が何をしているか（ファイルの中身をその場に展開する）はコマ10 で、
+自作ヘッダを含む一般の展開規則はコマ14 で扱う。</p>
+<p>構造体、連結リストの本格的な利用、グローバル変数は後の回で扱う。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<p><code>#include</code> はこの回から書くが、指令行（行頭の <code>#</code> から改行まで）は構文解析より前に処理されるため、
+以下の <code>include_dir</code> 以外の規則には現れない。この回で書けるのは提供物の <code>lib.h</code> の取込みだけで、
+自作ヘッダと入れ子の取込み、<code>#define</code> はコマ14 で扱う。</p>
+<pre class="ebnf" data-lang="ebnf"><code>include_dir ::= &#39;#&#39; &#39;include&#39; &#39;&quot;&#39; FILENAME &#39;&quot;&#39; NEWLINE   /* #define はコマ14 */
+
+stars       ::= &#39;*&#39; { &#39;*&#39; }
+
+scalar_type ::= &#39;int&#39;  [ stars ]
+              | &#39;char&#39; [ stars ] /* struct はコマ11、void * はコマ12 */
+obj_type    ::= scalar_type      /* struct Tag はコマ12 */
+ret_type    ::= scalar_type
+              | &#39;void&#39;
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= func_proto
+                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
+var_decl      ::= obj_type IDENT &#39;;&#39;
+
+param       ::= scalar_type IDENT
+param_list  ::= param { &#39;,&#39; param }
+func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; &#39;;&#39;   /* &#39;...&#39; はコマ10 */
+func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
+func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | &#39;break&#39; &#39;;&#39;
+              | &#39;continue&#39; &#39;;&#39;
+              | &#39;return&#39; [ expr ] &#39;;&#39;
+expr_stmt   ::= [ expr ] &#39;;&#39;
+block       ::= &#39;{&#39; { stmt } &#39;}&#39;
+if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
+while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
+for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
+              | &#39;+&#39; | &#39;-&#39;
+              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
+              | &#39;==&#39; | &#39;!=&#39;
+unary_expr  ::= postfix_expr
+              | &#39;-&#39;  unary_expr
+              | &#39;*&#39;  unary_expr
+              | &#39;&amp;&#39;  unary_expr
+              | &#39;++&#39; unary_expr
+              | &#39;--&#39; unary_expr
+              | &#39;sizeof&#39; &#39;(&#39; type_name &#39;)&#39;
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= &#39;[&#39; expr &#39;]&#39;  /* . と -&gt; はコマ12 */
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | IDENT &#39;(&#39; [ arg_list ] &#39;)&#39;
+               | IDENT
+               | &#39;(&#39; expr &#39;)&#39;
+arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>==</code> <code>!=</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>表の読み方はコマ1の「木の形は規則で決まっている」と
+<a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
+<p><code>p + 1</code> の <code>+</code> はコマ2 から形が変わっていない。変わったのは意味（要素サイズ倍のスケーリング）だけである。
+<code>sizeof</code> は型名形式のみで、<code>sizeof(x)</code> のように式を書くと構文エラーになる。
+式形式の <code>sizeof x</code> は発展 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L4_sizeof_expr/README.md">L4</a> で扱う。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="ast-を確認する-malloc-領域の添字アクセス">AST を確認する: malloc 領域の添字アクセス</h2>
+<p>まず、malloc で確保した領域を添字で使うプログラムがどのような AST になるか確認する。</p>
+<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/09_pointer_arith/tests/ptr_sum.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> sum<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">5</span><span class="op">);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">2</span><span class="op">]</span> <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">3</span><span class="op">]</span> <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">4</span><span class="op">]</span> <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">5</span><span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        sum <span class="op">=</span> sum <span class="op">+</span> a<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>実行すると、<code>lib.h</code> の関数プロトタイプが並んだ後に、次のような <code>main</code> が表示される。</p>
+<div class="sourceCode" id="cb6" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>      (decl <span class="st">&quot;a&quot;</span> <span class="bu">:type</span> (ptr int))</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>      (decl <span class="st">&quot;i&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>      (decl <span class="st">&quot;sum&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;a&quot;</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>          (call <span class="st">&quot;malloc&quot;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>            (args</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>              (mul (sizeof-type int) (num <span class="dv">5</span>))))))</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        (assign</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>          (index (var <span class="st">&quot;a&quot;</span>) (num <span class="dv">0</span>))</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>          (num <span class="dv">1</span>)))</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>      ...</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>      (for</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        (init</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>          (assign (var <span class="st">&quot;i&quot;</span>) (num <span class="dv">0</span>)))</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">cond</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>          (lt (var <span class="st">&quot;i&quot;</span>) (num <span class="dv">5</span>)))</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">step</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>          (preinc (var <span class="st">&quot;i&quot;</span>)))</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>        (body</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>            (exprstmt</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>              (assign (var <span class="st">&quot;sum&quot;</span>)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>                (add (var <span class="st">&quot;sum&quot;</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>                  (index (var <span class="st">&quot;a&quot;</span>) (var <span class="st">&quot;i&quot;</span>))))))))</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (var <span class="st">&quot;sum&quot;</span>)))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/09_ptr_sum_ast.svg" alt="ptr_sum.c の AST" />
+<figcaption aria-hidden="true"><code>ptr_sum.c</code> の AST</figcaption>
+</figure>
+<p><code>a[i]</code> は AST 上では <code>(index (var "a") (var "i"))</code> になる。
+このノードは、<code>*(a + i)</code> と同じ意味で扱う。
+<code>sizeof(int)</code> は <code>(sizeof-type int)</code> というノードになり、実行時ではなく
+コンパイル時に値（4）が決まる。</p>
+<h2 id="ast-を確認する-ポインタ演算">AST を確認する: ポインタ演算</h2>
+<p>次に、領域の先頭アドレスを別のポインタに代入し、ポインタ演算で読む例を確認する。</p>
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/09_pointer_arith/tests/ptr_arith.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb8" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">4</span><span class="op">);</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">2</span><span class="op">]</span> <span class="op">=</span> <span class="dv">30</span><span class="op">;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">3</span><span class="op">]</span> <span class="op">=</span> <span class="dv">40</span><span class="op">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> a<span class="op">;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">*(</span>p <span class="op">+</span> <span class="dv">2</span><span class="op">)</span> <span class="op">+</span> <span class="op">*(</span>p <span class="op">+</span> <span class="dv">3</span><span class="op">);</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><code>main</code> の部分の S式は次のようになる。</p>
+<div class="sourceCode" id="cb9" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>      (decl <span class="st">&quot;a&quot;</span> <span class="bu">:type</span> (ptr int))</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>      (decl <span class="st">&quot;p&quot;</span> <span class="bu">:type</span> (ptr int))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;a&quot;</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>          (call <span class="st">&quot;malloc&quot;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>            (args</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>              (mul (sizeof-type int) (num <span class="dv">4</span>))))))</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>      ...</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;p&quot;</span>) (var <span class="st">&quot;a&quot;</span>)))</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        (add</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>          (deref</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>            (add (var <span class="st">&quot;p&quot;</span>) (num <span class="dv">2</span>)))</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>          (deref</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>            (add (var <span class="st">&quot;p&quot;</span>) (num <span class="dv">3</span>))))))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/09_ptr_arith_ast.svg" alt="ptr_arith.c の AST" />
+<figcaption aria-hidden="true"><code>ptr_arith.c</code> の AST</figcaption>
+</figure>
+<p><code>p + 2</code> は、単にアドレスに <code>2</code> を足すのではない。
+<code>p</code> は <code>int *</code> なので、<code>2 * sizeof(int)</code>、つまり8バイト進む。</p>
+<h2 id="sizeof型名-のコード生成"><code>sizeof(型名)</code> のコード生成</h2>
+<p><code>sizeof</code> は値を計算する式だが、実行時にメモリを読む必要はない。
+型名から <code>size_of_ty_str()</code> でサイズを求め、即値として出力するだけでよい。</p>
+<div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_SizeofType(<span class="va">self</span>, node):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;  li a0, </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>size_of_ty_str(node.ty_str)<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+<p><code>malloc(sizeof(int) * 5)</code> のように、確保サイズの計算に使うのが典型的な用途である。</p>
+<h2 id="pi-のコード生成"><code>p[i]</code> のコード生成</h2>
+<p><code>p[i]</code> は、ポインタ <code>p</code> の値に <code>i * 要素サイズ</code> を足した場所を表す。</p>
+<pre data-lang="text"><code>address(p[i]) = value(p) + i * sizeof(element)</code></pre>
+<figure>
+<img src="../../figures/09_malloc_ptr.svg" alt="malloc した領域のメモリ配置と p[i] / p + 2 のアドレス計算" />
+<figcaption aria-hidden="true">malloc した領域のメモリ配置と <code>p[i]</code> / <code>p + 2</code> のアドレス計算</figcaption>
+</figure>
+<p>要素1つは <code>sizeof(int)</code> = 4 バイトなので、<code>p + 2</code> はアドレスを 8 バイト進める。
+この倍率を決めるために、要素型のサイズが必要になる。</p>
+<p>lvalue としての <code>p[i]</code> は、次の流れでアドレスを作る。</p>
+<div class="sourceCode" id="cb12" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.codegen(node.lhs)   <span class="co"># p の値（領域の先頭アドレス）</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>push a0</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.codegen(node.rhs)   <span class="co"># 添字 i</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>scale by element size</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>pop a1</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>add a0, a1, a0           <span class="co"># a0 = base + i * size</span></span></code></pre></div>
+<p>rvalue としての <code>p[i]</code> は、このアドレスから値を読む。読む幅は要素型で決まるので、
+コマ8 の <code>_load_ty</code> をそのまま使う。</p>
+<h2 id="ポインタ演算">ポインタ演算</h2>
+<p><code>p + n</code> では、<code>n</code> に要素サイズを掛けてからアドレスに加える。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>式</th>
+<th>実際に足す値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>int *p; p + 2</code></td>
+<td><code>2 * 4</code></td>
+</tr>
+<tr class="even">
+<td><code>char *p; p + 2</code></td>
+<td><code>2 * 1</code></td>
+</tr>
+<tr class="odd">
+<td><code>int **p; p + 2</code></td>
+<td><code>2 * 8</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>self.elem_ty_str()</code> がないと、この倍率を決められない。</p>
+<p><code>p + 2</code> の型は <code>p</code> の型（<code>int *</code>）である。<code>2 + p</code> のように整数が左にある形も同じ意味なので、
+どちらがポインタ側かを <code>is_ptr_ty_str()</code> で見分けて、整数側だけをスケールする。</p>
+<p>前置 <code>++</code>（コマ5）もこの回で型対応になる。<code>++p</code> は <code>p</code> を
+「1 要素ぶん」、つまり指し先型のサイズだけ進める。
+<code>int</code> や <code>char</code> の変数に対しては、これまで通り 1 だけ動く。</p>
+<h3 id="多段ポインタ">多段ポインタ</h3>
+<p><code>int **pp;</code> のような多段ポインタも、<code>ty_str</code> の末尾の <code>*</code> を 1 つ剥がす
+<code>elem_ty_str()</code> がそのまま働くので、専用の処理は要らない。
+<code>elem_ty_str("int**")</code> は <code>"int*"</code> で、そのサイズは 8 である。
+<code>*pp</code> は 8 バイトを読み、<code>**pp</code> はさらにその先の 4 バイトを読む、という具合に
+段数ぶん <code>_load_ty</code> が重なるだけである。</p>
+<p><code>int main(int argc, char **argv)</code> というエントリポイントの形も、同じ仕組みで動く。
+<code>argv[0]</code> は <code>char *</code>（8 バイト尺度）、<code>*argv[0]</code> は <code>char</code>（1 バイト）である。</p>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>mycc.py</code></li>
+</ul>
+<p><code>importlib</code> でコマ8 の <code>Codegen08</code> を継承した <code>Codegen09</code> に、以下の機能を追加する。</p>
+<p>スケルトンに<strong>あらかじめ書かれている</strong>ものは次の通りで、実装対象ではない。
+コマ8 で自分が実装したものと合わせて、呼び出して使う。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>提供済み</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>size_of_ty_str(ty)</code> / <code>elem_ty_str(ty)</code> / <code>is_ptr_ty_str(ty)</code></td>
+<td>型サイズ・指し先型・ポインタ判定（コマ8 と同じ）</td>
+</tr>
+<tr class="even">
+<td><code>_load_ty(ty)</code> / <code>_store_ty(ty)</code></td>
+<td>コマ8 で実装済みの型付きロード・ストア</td>
+</tr>
+<tr class="odd">
+<td><code>_push_a0()</code> / <code>_pop_into(reg)</code></td>
+<td>一時値の退避と復帰</td>
+</tr>
+<tr class="even">
+<td><code>_type_of_expr</code> / <code>_type_of_lval</code> / <code>codegen</code> / <code>codegen_lval</code> の <code>match</code></td>
+<td>各ハンドラへの振り分け（<code>Index</code> などを足した版）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>実装対象は次の通りである。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>実装対象</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>type_of_expr_Index</code> / <code>type_of_lval_Index</code></td>
+<td><code>p[i]</code> の型を求める</td>
+</tr>
+<tr class="even">
+<td><code>type_of_expr_Add</code> / <code>type_of_expr_Sub</code></td>
+<td>ポインタ ± 整数の結果型を求める</td>
+</tr>
+<tr class="odd">
+<td><code>_scale_index(elem_ty)</code></td>
+<td>添字 <code>a0</code> に要素サイズを掛ける</td>
+</tr>
+<tr class="even">
+<td><code>codegen_lval_Index(node)</code></td>
+<td><code>p[i]</code> のアドレス計算</td>
+</tr>
+<tr class="odd">
+<td><code>codegen_Index(node)</code></td>
+<td><code>p[i]</code> の値（lval → <code>_load_ty</code>）</td>
+</tr>
+<tr class="even">
+<td><code>codegen_Add</code> / <code>codegen_Sub</code></td>
+<td>ポインタ演算：整数側に要素サイズを掛ける</td>
+</tr>
+<tr class="odd">
+<td><code>codegen_SizeofType(node)</code></td>
+<td><code>sizeof(型名)</code> を即値で出力</td>
+</tr>
+<tr class="even">
+<td><code>codegen_PreInc</code> / <code>codegen_PreDec</code></td>
+<td>前置 <code>++</code>/<code>--</code> を型対応にする（ポインタは要素サイズで進む）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>スケルトンの <code>Codegen09</code> が <code>Codegen08</code> を <code>importlib</code> で継承していることを確認する</li>
+<li><code>type_of_expr_Index</code> / <code>type_of_lval_Index</code> / <code>type_of_expr_Add</code> / <code>type_of_expr_Sub</code> を埋める</li>
+<li><code>_scale_index</code> と <code>codegen_lval(node)</code> の <code>'Index'</code> handler を実装する（<code>a0 = base + i * elem_size</code>）</li>
+<li><code>codegen(node)</code> の <code>'Index'</code> handler を実装する（lval → <code>_load_ty</code>）</li>
+<li><code>codegen(node)</code> の <code>'SizeofType'</code> handler を実装する（翻訳時定数）</li>
+<li><code>codegen(node)</code> の <code>'Add'</code> / <code>'Sub'</code> handler でポインタ演算を実装する</li>
+<li><code>codegen_PreInc</code> / <code>codegen_PreDec</code> を型対応にする</li>
+<li><code>ptr_to_ptr.c</code>（多段ポインタ）・<code>main_argv.c</code>（<code>main(int argc, char **argv)</code>）を通す<br>（2〜7 が正しくできていれば新しく書く処理はない。取りこぼしの検出用である。）</li>
+</ol>
+<h2 id="tests">tests/</h2>
+<p>機能単位で切ったテストを先に置いてある。上から順に通していくと、
+どこで詰まっているかが1機能ぶんに絞られる。「通る目安」は実装手順の番号である。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 12%" />
+<col style="width: 29%" />
+<col style="width: 20%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>主に見る実装</th>
+<th>通る目安</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>index_scale.c</code></td>
+<td><code>a[i]</code> のアドレス計算を要素サイズ 1/4/8 で確かめる</td>
+<td><code>_scale_index</code> / <code>codegen_lval_Index</code> / <code>codegen_Index</code></td>
+<td>手順3〜4</td>
+<td><code>42</code></td>
+</tr>
+<tr class="even">
+<td><code>sizeof_type.c</code></td>
+<td><code>sizeof(型名)</code> だけを単体で確かめる</td>
+<td><code>codegen_SizeofType</code></td>
+<td>手順5</td>
+<td><code>40</code></td>
+</tr>
+<tr class="odd">
+<td><code>ptr_sum.c</code></td>
+<td>malloc 領域を <code>a[i]</code> で合計</td>
+<td>添字＋ループ</td>
+<td>手順6</td>
+<td><code>15</code></td>
+</tr>
+<tr class="even">
+<td><code>ptr_arith.c</code></td>
+<td><code>*(p + 2)</code> と <code>*(p + 3)</code></td>
+<td><code>codegen_Add</code> / <code>codegen_Sub</code></td>
+<td>手順6</td>
+<td><code>70</code></td>
+</tr>
+<tr class="odd">
+<td><code>ptr_incdec.c</code></td>
+<td><code>++</code>/<code>--</code> が <code>int *</code> は4、<code>char *</code> は1、<code>int</code> は1だけ動くこと</td>
+<td><code>codegen_PreInc</code> / <code>codegen_PreDec</code></td>
+<td>手順7</td>
+<td><code>104</code></td>
+</tr>
+<tr class="even">
+<td><code>ptr_to_ptr.c</code></td>
+<td>多段ポインタ <code>int **</code>（<code>&amp;</code>/<code>*</code> の重ね掛けと 8 バイト尺度）</td>
+<td>取りこぼし検出</td>
+<td>手順8</td>
+<td><code>20</code></td>
+</tr>
+<tr class="odd">
+<td><code>main_argv.c</code></td>
+<td><code>int main(int argc, char **argv)</code> 形のエントリポイント</td>
+<td>取りこぼし検出</td>
+<td>手順8</td>
+<td><code>41</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/09_pointer_arith</span></code></pre></div>
+<p><code>tests/ptr_sum.c</code> がコンパイルでき、終了コード <code>15</code> になれば基本形は成功。</p>
+<p>個別に動かす場合は、次のようにする。</p>
+<div class="sourceCode" id="cb14" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/09_pointer_arith/mycc.py sessions/09_pointer_arith/tests/ptr_sum.c <span class="dt">\</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="注意">注意</h2>
+<p>この言語に配列はない。<code>int a[10];</code> のような宣言は書けず、<code>p[i]</code> も <code>*(p + i)</code> の略記でしかない。
+連続した領域が必要なときは <code>malloc(sizeof(int) * N)</code> で確保し、ポインタで指して使う。</p>
+<p>スケールするのは整数側だけである。<code>p + 2</code> で <code>p</code> の値まで 4 倍すると、
+アドレスそのものが壊れる。どちらがポインタかは型で決まる。</p>
+<p><code>sizeof(型名)</code> は翻訳時に決まる定数で、実行時にメモリを読まない。
+<code>sizeof(式)</code> の形はこの言語にはなく、コマ12 で <code>sizeof(struct タグ名)</code> を足すまで、
+引数に書けるのは <code>int</code> / <code>char</code> / ポインタの型名だけである。</p>
+<p><code>char *p; ++p</code> は 1 バイト、<code>int *p; ++p</code> は 4 バイト、<code>int **p; ++p</code> は 8 バイト進む。
+<code>int n; ++n</code> はこれまで通り 1 である。<code>+ 1</code> を固定で出していると <code>ptr_incdec.c</code> で落ちる。</p>
+<h2 id="ここまでで着手できる発展課題">ここまでで着手できる発展課題</h2>
+<p>ポインタ演算まで進んだので、ポインタ同士の引き算に意味を足す
+<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L1_ptrdiff/README.md">L1</a> に着手できる。
+<code>sizeof</code> を式にも広げる <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L4_sizeof_expr/README.md">L4</a> は、
+構造体まで進んだコマ12 以降に着手できる。</p>
+<p>生成したアセンブリでポインタ演算のアドレス計算を1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/08_types/"><span class="label">前へ</span>コマ8: 型検査の導入</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/10_strings_data_section/"><span class="label">次へ</span>コマ10: 文字列リテラルと .data セクション</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/09_pointer_arith.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

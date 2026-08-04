@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ11: 式の走査と libc 活用 — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ11: 式の走査と libc 活用</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回は新しい概念の回ではない" id="toc-この回は新しい概念の回ではない">この回は新しい概念の回ではない</a></li>
+      <li><a href="#つの型に分かれる" id="toc-つの型に分かれる">3つの型に分かれる</a></li>
+      <li><a href="#実行されない枝も走査する" id="toc-実行されない枝も走査する">実行されない枝も走査する</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+      <li><a href="#lib.h-の残りの関数-ストリーム" id="toc-lib.h-の残りの関数-ストリーム"><code>lib.h</code> の残りの関数: ストリーム</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>文字列リテラルの走査を式全体へ広げ、どこに書かれた文字列でも <code>.data</code> に出るようにする。
+そのうえで、<code>lib.h</code> に残っているストリーム関数と <code>exit</code> を使ってみる。</p>
+</section>
+<h2 id="この回は新しい概念の回ではない">この回は新しい概念の回ではない</h2>
+<p>先に断っておく。<strong>この回に新しい仕組みはほとんど無い。</strong></p>
+<p>コマ10 で、文字列を集める走査の仕組み（<code>_intern</code> / <code>emit_data_section</code> / <code>codegen_Str</code>）は
+すでに全部そろっている。足りないのは走査の<strong>網羅</strong>だけである。
+コマ10 の <code>collect_strings_expr()</code> は <code>Str</code> / <code>Assign</code> / <code>Call</code> の3種類しか枝を持っておらず、
+それ以外の式の下にある文字列は素通りしていた。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span><span class="st">&quot;abc&quot;</span><span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">!=</span> <span class="ch">&#39;b&#39;</span><span class="op">)</span> <span class="op">{</span>   <span class="co">// Index の下にある &quot;abc&quot; を、コマ10 はまだ拾えない</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>この回でやるのは、コマ10 で文に対して書いたのと同じ形のハンドラを、式の種類の数だけ書くことである。
+1つあたり2〜3行で、種類が多いだけの作業になる。
+<strong>回が分かれているのは概念が変わったからではなく、書く量をならすためである。</strong></p>
+<p>作業そのものには意味がある。AST を手でたどる練習は、後のコマ（グローバル変数の走査、
+<code>sizeof</code> の型計算、多ファイル対応）でも同じ形で繰り返し出てくる。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<p>文法もコマ10 とほぼ同じで、増えるのは <code>scalar_type</code> の <code>'struct' IDENT stars</code> の1行だけである。
+<code>lib.h</code> のストリーム関数を使うために <code>struct FILE *</code> と書くようになるためで、
+構造体そのもの（定義・フィールド・<code>.</code> と <code>-&gt;</code>）はコマ12 で扱う。
+この回で書ける <code>#include</code> は提供物の <code>lib.h</code> の取込みだけで、
+自作ヘッダと入れ子の取込み、<code>#define</code> はコマ14 で扱う。</p>
+<pre class="ebnf" data-lang="ebnf"><code>include_dir ::= &#39;#&#39; &#39;include&#39; &#39;&quot;&#39; FILENAME &#39;&quot;&#39; NEWLINE   /* #define はコマ14 */
+
+stars       ::= &#39;*&#39; { &#39;*&#39; }
+
+scalar_type ::= &#39;int&#39;  [ stars ]
+              | &#39;char&#39; [ stars ]
+              | &#39;struct&#39; IDENT stars   /* void * はコマ12 */
+obj_type    ::= scalar_type      /* struct Tag はコマ12 */
+ret_type    ::= scalar_type
+              | &#39;void&#39;
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= func_proto
+                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
+var_decl      ::= obj_type IDENT &#39;;&#39;
+
+param       ::= scalar_type IDENT
+param_list  ::= param { &#39;,&#39; param }
+func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list [ &#39;,&#39; &#39;...&#39; ] ] &#39;)&#39; &#39;;&#39;
+func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
+func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | &#39;break&#39; &#39;;&#39;
+              | &#39;continue&#39; &#39;;&#39;
+              | &#39;return&#39; [ expr ] &#39;;&#39;
+expr_stmt   ::= [ expr ] &#39;;&#39;
+block       ::= &#39;{&#39; { stmt } &#39;}&#39;
+if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
+while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
+for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
+              | &#39;+&#39; | &#39;-&#39;
+              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
+              | &#39;==&#39; | &#39;!=&#39;
+unary_expr  ::= postfix_expr
+              | &#39;-&#39;  unary_expr
+              | &#39;*&#39;  unary_expr
+              | &#39;&amp;&#39;  unary_expr
+              | &#39;++&#39; unary_expr
+              | &#39;--&#39; unary_expr
+              | &#39;sizeof&#39; &#39;(&#39; type_name &#39;)&#39;
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= &#39;[&#39; expr &#39;]&#39;  /* . と -&gt; はコマ12 */
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | STRING_LITERAL
+               | IDENT &#39;(&#39; [ arg_list ] &#39;)&#39;
+               | IDENT
+               | &#39;(&#39; expr &#39;)&#39;
+arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>==</code> <code>!=</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>表の読み方はコマ1の「木の形は規則で決まっている」と
+<a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
+<p>字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="つの型に分かれる">3つの型に分かれる</h2>
+<p>書くハンドラは、子の数で3つの型に分かれる。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 28%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>型</th>
+<th>子</th>
+<th>対象</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>単項</td>
+<td><code>node.operand</code></td>
+<td><code>Neg</code> / <code>Addr</code> / <code>Deref</code>（<code>PreInc</code> / <code>PreDec</code> も同じ枝を使う）</td>
+</tr>
+<tr class="even">
+<td>二項</td>
+<td><code>node.lhs</code> と <code>node.rhs</code></td>
+<td><code>Add</code> / <code>Sub</code> / <code>Mul</code> / <code>Div</code> / <code>Mod</code> / <code>Eq</code> / <code>Ne</code> / <code>Lt</code> / <code>Le</code> / <code>Index</code></td>
+</tr>
+<tr class="odd">
+<td>三項</td>
+<td><code>node.cond</code> と <code>node.then</code> と <code>node.else_</code></td>
+<td><code>Cond</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>どれも、子を <code>collect_strings_expr()</code> に渡して降りるだけである。</p>
+<div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> collect_strings_expr_Add(<span class="va">self</span>, node: Node) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.collect_strings_expr(node.lhs)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.collect_strings_expr(node.rhs)</span></code></pre></div>
+<p>dispatch の <code>match</code> はスケルトンに書いてある（<code>Codegen11.collect_strings_expr()</code> が
+コマ10 版を上書きし、すべての式の種類を枝に持つ）。実装するのは呼ばれる側だけである。</p>
+<p>同じ本体を何度も書くのが冗長に見えるなら、共通の実体を1つ書いて名前を束ねてもよい。</p>
+<div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _collect_binary(<span class="va">self</span>, node: Node) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.collect_strings_expr(node.lhs)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.collect_strings_expr(node.rhs)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>collect_strings_expr_Add <span class="op">=</span> _collect_binary</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>collect_strings_expr_Sub <span class="op">=</span> _collect_binary</span></code></pre></div>
+<p>ただし最初の数個は展開して書き、AST のどのフィールドに子がぶら下がっているかを
+自分の手で確かめてから束ねること。</p>
+<h2 id="実行されない枝も走査する">実行されない枝も走査する</h2>
+<p>三項演算子で気をつけるのはここである。</p>
+<div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>printf<span class="op">(</span><span class="st">&quot;</span><span class="sc">%s\n</span><span class="st">&quot;</span><span class="op">,</span> n <span class="op">&lt;</span> <span class="dv">2</span> <span class="op">?</span> <span class="st">&quot;then side&quot;</span> <span class="op">:</span> <span class="st">&quot;else side&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>実行時に選ばれるのは片方だけだが、<code>.data</code> には<strong>両方</strong>の文字列が必要である。
+選ばれなかった側のラベルが <code>.data</code> に無いと、<code>la</code> の参照先が未定義になってリンクに失敗する。
+コマ10 の <code>if</code> / <code>else</code> と同じ理由である。</p>
+<p>走査は「実行される経路」ではなく「AST に書かれているもの全部」を対象にする。</p>
+<figure>
+<img src="../../figures/11_expr_walk_coverage.svg" alt="コマ10 の走査が届く範囲と、コマ11 が全ノードをたどって .data を揃える様子" />
+<figcaption aria-hidden="true">コマ10 の走査が届く範囲と、コマ11 が全ノードをたどって <code>.data</code> を揃える様子</figcaption>
+</figure>
+<p>コマ10 の走査は <code>Call</code> の引数まで降りたところで <code>Cond</code> に当たって止まり、その下の
+2 つの文字列に届かない。ハンドラを式の種類の数だけ足すと、走査が破線の枝まで伸びて
+<code>.LC1</code> から <code>.LC3</code> までが <code>.data</code> に揃う。</p>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>mycc.py</code></li>
+</ul>
+<p><code>importlib</code> でコマ10 の <code>Codegen10</code> を継承した <code>Codegen11</code> に、以下を追加する。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>実装対象</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>collect_strings_expr_Neg</code> / <code>_Addr</code> / <code>_Deref</code></td>
+<td>単項式の <code>operand</code> をたどる</td>
+</tr>
+<tr class="even">
+<td><code>collect_strings_expr_Add</code> / <code>_Sub</code> / <code>_Mul</code> / <code>_Div</code> / <code>_Mod</code></td>
+<td>算術二項演算の <code>lhs</code> と <code>rhs</code> をたどる</td>
+</tr>
+<tr class="odd">
+<td><code>collect_strings_expr_Eq</code> / <code>_Ne</code> / <code>_Lt</code> / <code>_Le</code></td>
+<td>比較演算の <code>lhs</code> と <code>rhs</code> をたどる</td>
+</tr>
+<tr class="even">
+<td><code>collect_strings_expr_Index</code></td>
+<td>添字式の <code>lhs</code> と <code>rhs</code> をたどる</td>
+</tr>
+<tr class="odd">
+<td><code>collect_strings_expr_Cond</code></td>
+<td>三項演算子の <code>cond</code> / <code>then</code> / <code>else_</code> をたどる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>_intern</code> / <code>emit_data_section</code> / <code>type_of_expr_Str</code> / <code>codegen_Str</code> と、文のハンドラは
+コマ10 の実装をそのまま継承する。書き直す必要はない。</p>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>単項の3種（<code>Neg</code> / <code>Addr</code> / <code>Deref</code>）を書く</li>
+<li>二項の10種（算術5・比較4・<code>Index</code>）を書く</li>
+<li><code>Cond</code> を書く</li>
+<li><code>str_in_expr.c</code> を通す（添字・ポインタ加算・間接参照・比較の奥にある文字列）</li>
+<li><code>str_cond_select.c</code> を通す（三項演算子の両方の枝）</li>
+<li><code>strlen_literal.c</code> を通す（文字列リテラルを自作関数に渡し、<code>'\0'</code> まで読む）</li>
+<li>次節の <code>lib.h</code> の残りの関数に目を通し、<code>file_stream.c</code> と <code>lib_exit.c</code> を通す</li>
+</ol>
+<p>手を動かして書くのは 1〜3 だけで、そこまで終われば文字列リテラルはプログラムの
+どこに書かれていても <code>.data</code> に出るようになる。4 以降は書いたものを確かめる作業で、
+7 で新しく書くコードは無い（理由は次節）。</p>
+<h2 id="lib.h-の残りの関数-ストリーム"><code>lib.h</code> の残りの関数: ストリーム</h2>
+<p>走査が済んだら、<code>lib.h</code> の残りの宣言を使ってみる。
+言語仕様の「標準ライブラリ」節に載っている関数はこれで全部で、
+どれも libc にそのままリンクされる。</p>
+<div class="sourceCode" id="cb6" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> <span class="dt">FILE</span><span class="op">;</span>                                    <span class="co">// 不透明型。中身は見ない</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> fprintf<span class="op">(</span><span class="kw">struct</span> <span class="dt">FILE</span> <span class="op">*</span>f<span class="op">,</span> <span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> <span class="dt">FILE</span> <span class="op">*</span>fdopen<span class="op">(</span><span class="dt">int</span> fd<span class="op">,</span> <span class="dt">char</span> <span class="op">*</span>mode<span class="op">);</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> <span class="dt">FILE</span> <span class="op">*</span>fopen<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>path<span class="op">,</span> <span class="dt">char</span> <span class="op">*</span>mode<span class="op">);</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> fread<span class="op">(</span><span class="dt">void</span> <span class="op">*</span>buf<span class="op">,</span> <span class="dt">int</span> size<span class="op">,</span> <span class="dt">int</span> n<span class="op">,</span> <span class="kw">struct</span> <span class="dt">FILE</span> <span class="op">*</span>f<span class="op">);</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> fclose<span class="op">(</span><span class="kw">struct</span> <span class="dt">FILE</span> <span class="op">*</span>f<span class="op">);</span></span></code></pre></div>
+<p><code>struct FILE</code> は<strong>前方宣言だけがあって定義がない</strong>型である。
+フィールドを持たないので <code>.</code> や <code>-&gt;</code> は書けず、使い方は <code>struct FILE *</code> という
+ポインタを受け渡すことに限られる。ポインタのサイズは指し先の中身によらず 8 バイトなので、
+構造体そのものを扱えるようになる<strong>コマ12 を待たずにこの回で使える</strong>。</p>
+<p>コード生成としては、コマ6 の関数呼び出しとコマ8 の <code>ty_str</code> 管理がそのまま働くので、
+<strong>ここで新しく書くコードは無い</strong>。すでに書いたものが通ることを確かめる節である。</p>
+<p>用途は主に 2 つある。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 63%" />
+<col style="width: 36%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>やりたいこと</th>
+<th>書き方</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>標準エラーへ出す</td>
+<td><code>fdopen(2, "w")</code> でストリームを作り、そこへ <code>fprintf</code> する</td>
+</tr>
+<tr class="even">
+<td>ファイルを読む</td>
+<td><code>fopen</code> → <code>fread</code> → <code>fclose</code>。<code>fopen</code> は失敗すると <code>NULL</code> を返す</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> <span class="dt">FILE</span> <span class="op">*</span>err<span class="op">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>err <span class="op">=</span> fdopen<span class="op">(</span><span class="dv">2</span><span class="op">,</span> <span class="st">&quot;w&quot;</span><span class="op">);</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>fprintf<span class="op">(</span>err<span class="op">,</span> <span class="st">&quot;error: unexpected token</span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>自作コンパイラのエラーメッセージを標準エラーへ出す形は、
+発展課題 P1（セルフホスト）で実際に使うことになる。</p>
+<p>残る <code>exit(code)</code> は、指定した終了コードでその場でプログラムを終わらせる。
+戻ってこないので、<code>exit</code> の後に書いた文は実行されない。
+これで <code>lib.h</code> の宣言は全部使ったことになる（<code>malloc</code> はコマ9 で使っている）。</p>
+<p>最後に <code>file_stream.c</code> と <code>lib_exit.c</code> を通す。
+上に書いたとおり、実装手順の 6 までができていれば新しく書く処理はない。
+落ちるとしたら走査か型の扱いが原因なので、そこを疑う。</p>
+<h2 id="tests">tests/</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 25%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>str_in_expr.c</code></td>
+<td>添字・ポインタ加算・間接参照・比較の奥にある文字列（式の走査）</td>
+<td>終了コード <code>42</code></td>
+</tr>
+<tr class="even">
+<td><code>str_cond_select.c</code></td>
+<td>三項演算子の両方の枝にある文字列（<code>Cond</code> の走査）</td>
+<td><code>big</code> / <code>else side</code></td>
+</tr>
+<tr class="odd">
+<td><code>strlen_literal.c</code></td>
+<td>文字列を自作の <code>my_strlen</code> に渡す</td>
+<td>終了コード <code>3</code></td>
+</tr>
+<tr class="even">
+<td><code>file_stream.c</code></td>
+<td><code>fdopen</code>/<code>fprintf</code>/<code>fopen</code>/<code>fread</code>/<code>fclose</code></td>
+<td><code>stream ok</code> / 終了コード <code>42</code></td>
+</tr>
+<tr class="odd">
+<td><code>lib_exit.c</code></td>
+<td><code>exit</code> で終了コードを指定して打ち切る</td>
+<td><code>before exit</code> / 終了コード <code>7</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/11_expr_walk_libc</span></code></pre></div>
+<p>コマ10 のテストも引き続き通ることを確かめる。
+<code>Codegen11</code> はコマ10 の実装を継承しているので、両方が通って初めて走査が完成したと言える。</p>
+<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/10_strings_data_section</span></code></pre></div>
+<p>個別に動かす場合は、次のようにする。</p>
+<div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/11_expr_walk_libc/mycc.py sessions/11_expr_walk_libc/tests/str_in_expr.c <span class="dt">\</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="注意">注意</h2>
+<p>走査の抜けは、コンパイルでもアセンブルでもなく<strong>リンクで</strong>見つかる。
+<code>.LCn</code> が未定義だというエラーが出たら、その文字列がどの式の下にあるかを見て、
+対応するハンドラが <code>case _: pass</code> に落ちていないかを疑う。</p>
+<p>逆に、走査で拾っただけの文字列は <code>.data</code> に出るが、実行時に使われるとは限らない。
+選ばれなかった三項演算子の枝の文字列は <code>.data</code> に残る。これは正しい状態である。</p>
+<p><code>fread</code> の戻り値は読めた個数である。<code>fopen</code> は失敗すると <code>NULL</code> を返すので、
+戻り値を確かめずに <code>fread</code> へ渡さない。</p>
+<p><code>exit</code> の後ろに書いた文は実行されない。<code>lib_exit.c</code> の <code>.stdout</code> が
+<code>exit</code> の前の1行だけになっているのはそのためである。</p>
+<h2 id="ここまでで着手できる発展課題">ここまでで着手できる発展課題</h2>
+<p>新しく開くトピックはない。コマ10 で挙げた
+<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/R1_nolibc/README.md">R1</a>（libc なしで動かす）と
+<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L3_variadic/README.md">L3</a>（可変長引数の定義）が引き続き着手できる。</p>
+<p>生成したアセンブリで文字列のロードと <code>printf</code> の呼び出しを1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/10_strings_data_section/"><span class="label">前へ</span>コマ10: 文字列リテラルと .data セクション</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/12_struct_malloc_list/"><span class="label">次へ</span>コマ12: 構造体とヒープ（struct / . / -&gt; / sizeof / malloc / 連結リスト）</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/11_expr_walk_libc.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

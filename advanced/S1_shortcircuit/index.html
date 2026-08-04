@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>短絡評価 — &amp;&amp; と || の本当の意味 — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">短絡評価 — <code>&amp;&amp;</code> と <code>||</code> の本当の意味</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#いまのコンパイラは何をしているか" id="toc-いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</a></li>
+      <li><a href="#何が壊れるのか" id="toc-何が壊れるのか">何が壊れるのか</a></li>
+      <li><a href="#どう直すか-分岐で作る" id="toc-どう直すか-分岐で作る">どう直すか — 分岐で作る</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>&amp;&amp;</code> と <code>||</code> を、<strong>ISO C の規格どおり必要なときだけ右辺を評価する</strong>形に直す。
+<code>if (p != 0 &amp;&amp; p-&gt;val &gt; 0)</code> のような、いまは書けない書き方が書けるようになる。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ12（構造体）まで。短絡の考え方そのものは関数呼び出しまでで足りるが、<code>tests/null_guard.c</code> が <code>struct</code> を使う（短絡が要る代表例の <code>p != 0 &amp;&amp; p-&gt;val &gt; 0</code> がポインタとフィールド参照そのものなので避けられない）。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、ラッパー <code>semcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>shortcircuit.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が短絡の要るテストの通過と <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>仕様との関係</td>
+<td><strong>仕様の内側</strong>。<code>language_spec.md</code> は <code>&amp;&amp;</code> / <code>||</code> を「短絡しない」と定めており、実装はそのとおりに動いている。この回はずれを仕様の側で直す — 仕様が例外 E3 として自ら明記している ISO C との差を、C の側へ寄せる</td>
+</tr>
+<tr class="even">
+<td>備考</td>
+<td>意味論発展シリーズの第1回。仕様が本物の C とわざと違えている点（例外 E3）を C の側へ寄せる回</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>この言語の仕様が本物の C とわざと違えている</strong>点を、C の側へ寄せる回である。
+<code>language_spec.md</code> は <code>&amp;&amp;</code> / <code>||</code> について「両辺を必ず評価する（短絡しない）」と
+明記している（例外 E3）。実装はそのとおりに動いており、バグではない。
+この回で書き換えるのは<strong>言語の意味論のほう</strong>である。</p>
+<h2 id="いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</h2>
+<p><code>a &amp;&amp; b</code> に対して、いまのコード生成はこうなっている。</p>
+<div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 左辺を評価して a0 へ</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># a0 をスタックへ退避</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 右辺を評価して a0 へ</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 退避した左辺を a1 へ</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  snez a1<span class="op">,</span> a1      <span class="co"># 左辺を 0/1 に</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  snez a0<span class="op">,</span> a0      <span class="co"># 右辺を 0/1 に</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">and</span>  a0<span class="op">,</span> a1<span class="op">,</span> a0</span></code></pre></div>
+<p><strong>両辺を必ず評価している。</strong> これは <code>language_spec.md</code> の演算子節・評価順序節が
+定めているとおりの動作で、実装のバグではない（例外 E3）。</p>
+<p>しかし本物の C では、<code>&amp;&amp;</code> と <code>||</code> は特別扱いされている。</p>
+<blockquote>
+<p>左辺だけで結果が決まる場合、<strong>右辺は評価されない</strong>（short-circuit evaluation）。</p>
+</blockquote>
+<p>これは「速くするための最適化」ではなく、<strong>言語の意味そのもの</strong>である。
+右辺が評価されないことに依存した書き方が、C では日常的に使われるからである。
+この回でやるのは、自分の言語をその意味論へ寄せることである。</p>
+<h2 id="何が壊れるのか">何が壊れるのか</h2>
+<figure>
+<img src="../../figures/S1_shortcircuit.svg" alt="いまの生成と、短絡する生成" />
+<figcaption aria-hidden="true">いまの生成と、短絡する生成</figcaption>
+</figure>
+<p>いまの実装で次を書くと、実際に落ちる。</p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>p <span class="op">!=</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> p<span class="op">-&gt;</span>val <span class="op">&gt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="op">...</span> <span class="op">}</span>    <span class="co">// p が NULL でも p-&gt;val を読む → クラッシュ</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>i <span class="op">&lt;</span> n <span class="op">&amp;&amp;</span> p<span class="op">[</span>i<span class="op">]</span> <span class="op">==</span> x<span class="op">)</span>  <span class="op">{</span> <span class="op">...</span> <span class="op">}</span>     <span class="co">// 範囲外アクセス</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>x <span class="op">!=</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> <span class="dv">100</span> <span class="op">/</span> x <span class="op">&gt;</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span> <span class="op">...</span> <span class="op">}</span>   <span class="co">// x が 0 でも割る</span></span></code></pre></div>
+<p>1行目は、コマ12 の連結リストで自然に書きたくなる形である
+（実際、コマ12 の <code>list_sum</code> は <code>while (head != 0)</code> と <code>head-&gt;val</code> を
+<strong>2つの文に分けて</strong>書いてある。分けざるを得なかった、とも言える）。</p>
+<p><code>||</code> も同じで、<code>if (p == 0 || p-&gt;val == 0)</code> は「NULL なら真、そうでなければ中身を見る」
+という定番の書き方である。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p>この C との差は、<strong>テストが通ってしまう</strong>のが厄介なところである。
+値としては正しいので、コマ4〜15 のどのテストでも露見しない。
+C のつもりで <code>p != 0 &amp;&amp; p-&gt;val</code> と書いた瞬間に、初めて牙をむく。</p>
+<p>だから仕様はこの差を例外 E3 として明記し、コマ4・コマ12 でも
+「条件は2つの <code>if</code> に分けて書くこと」と繰り返している。
+「テストが通る = C と同じ」ではない。テストは<strong>書いたことしか確かめない</strong>。</p>
+</div>
+<h2 id="どう直すか-分岐で作る">どう直すか — 分岐で作る</h2>
+<p>短絡評価は、算術ではなく<strong>制御フロー</strong>である。
+コマ4 の <code>if</code> と同じく、ラベルと <code>beqz</code> で作る。</p>
+<pre data-lang="text"><code>a &amp;&amp; b:
+      左辺を評価         → a0
+      beqz a0, Lfalse    ← 左が偽なら、右辺の命令を飛び越す
+      右辺を評価         → a0
+      beqz a0, Lfalse
+      li a0, 1
+      j Lend
+   Lfalse:
+      li a0, 0
+   Lend:</code></pre>
+<p><code>||</code> はこの裏返しで、<code>bnez</code>（0 以外なら飛ぶ）を使い、
+左辺が真なら <code>Ltrue</code> へ飛んで <code>1</code> にする。</p>
+<p>結果が 1 か 0 に正規化される点は、いままでと同じである
+（だから <a href="../../advanced/#fixed17"><code>fixed17</code></a> は通り続ける）。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>なぜ <code>&amp;&amp;</code> は「演算子」なのに分岐が要るのか。</strong>
+<code>+</code> や <code>*</code> は、両辺の値が揃ってはじめて計算できる。
+一方 <code>&amp;&amp;</code> は、<strong>左辺の値によって右辺を評価するかどうかが変わる</strong>。
+これは <code>if</code> と同じ性質で、実は演算子の顔をした制御構文である。</p>
+<p>実は、この性質を持つ演算子はもう1つ実装済みである。三項演算子 <code>a ? b : c</code> は
+「条件によって片方しか評価しない」ため、lecture の <code>codegen_Cond</code> は最初から
+<code>beqz</code> で分岐してどちらか一方の腕しか評価しない形で生成している
+（<code>then</code> と <code>else_</code> の両方を評価してから選ぶ、という実装にはなっていない）。
+つまり <code>?:</code> は<strong>既に正しく分岐生成している兄弟</strong>であり、
+<code>&amp;&amp;</code> / <code>||</code> だけが両辺を評価する形のまま取り残されていた、ということになる。</p>
+</div>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>gen_and</code></td>
+<td><code>beqz</code> で右辺を飛ばす</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>gen_or</code></td>
+<td><code>bnez</code> で右辺を飛ばす</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>cg.new_label()</code>（コマ4 で使ったラベル生成）で飛び先を2つ作る。</p>
+<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/null_guard.c          <span class="co"># 生成結果を見る</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/null_guard.c <span class="kw">|</span> <span class="fu">grep</span> beqz</span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 生成された命令列の構造を確認(未実装は SKIP)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 短絡が要るテスト + fixed17</span></span></code></pre></div>
+<p><code>golden.py</code> は3つを続けて確認する。</p>
+<ol type="1">
+<li><strong>短絡なし（いまの mycc）</strong>では <code>tests/</code> が落ちること</li>
+<li><strong>短絡あり</strong>で全部通ること</li>
+<li><code>fixed17</code> が壊れていないこと</li>
+</ol>
+<p><code>tests/</code> の中身は次の4本である。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>null_guard.c</code></td>
+<td><code>p != 0 &amp;&amp; p-&gt;val</code> が NULL でも落ちない</td>
+</tr>
+<tr class="even">
+<td><code>div_guard.c</code></td>
+<td><code>x != 0 &amp;&amp; 100 / x</code> がゼロ除算しない</td>
+</tr>
+<tr class="odd">
+<td><code>value.c</code></td>
+<td><code>&amp;&amp;</code> / <code>||</code> が返す値（1 か 0）が正しい</td>
+</tr>
+<tr class="even">
+<td><code>side_effect.c</code></td>
+<td>右辺の関数呼び出しが<strong>実際に呼ばれない</strong>（グローバル変数で観測）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>side_effect.c</code> が本質的である。「評価されないこと」は、
+副作用を観測してはじめて確かめられる。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong><code>!</code> との組み合わせ</strong>: <code>!(a &amp;&amp; b)</code> と <code>!a || !b</code>（ド・モルガン）が
+同じ結果になることを確かめる。ただし<strong>評価される回数</strong>は違う。どう違うか</li>
+<li><strong><code>?:</code> と見比べる</strong>: lecture の <code>codegen_Cond</code>（すでに正しく分岐生成している）を読み、
+自作の <code>gen_and</code> と見比べる。<code>a &amp;&amp; b</code> を <code>a ? (b != 0) : 0</code> に書き換え、
+生成される命令列を比較する</li>
+<li><strong>B1 の定数畳み込みと組み合わせる</strong>: <code>0 &amp;&amp; f()</code> は畳み込んでよいか。
+<code>f()</code> に副作用があっても消してよいのか考える
+（C の規格では、短絡により <code>f()</code> は呼ばれないので消してよい）</li>
+<li><strong>命令数を測る</strong>: <code>count_insns.py</code> で短絡あり／なしを比べる。
+条件が複雑なプログラムでは、短絡版のほうが命令数は増えることもある
+（分岐とラベルが増えるため）。それでも短絡が正しい理由を説明する</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 言語ごとの違い。</strong>
+<code>&amp;&amp;</code> / <code>||</code> の短絡は C・Java・Python などほとんどの言語にあるが、
+<strong>短絡しない論理演算子</strong>を別に持つ言語もある（Ada の <code>and</code> / <code>and then</code>、
+VB の <code>And</code> / <code>AndAlso</code>、Pascal の処理系オプションなど）。
+「両方必ず評価してほしい」場面（両辺に副作用がある場合）があるからである。
+本物の C では、短絡しない版がほしければビット演算 <code>&amp;</code> / <code>|</code> で書ける
+（値が 0/1 に正規化されないので意味は微妙に違う）
+—— ただし、この言語にはビット演算 <code>&amp;</code> / <code>|</code> そのものが無い。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/R3_malloc/"><span class="label">前へ</span>自前 malloc — ヒープを自分で管理する</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/S2_int32/"><span class="label">次へ</span>int は32ビット — 桁あふれを正しく折り返す</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/S1_shortcircuit.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

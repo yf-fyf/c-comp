@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>型検査パス — 実行する前に間違いを見つける — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">型検査パス — 実行する前に間違いを見つける</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#いまのコンパイラは何を見逃しているか" id="toc-いまのコンパイラは何を見逃しているか">いまのコンパイラは何を見逃しているか</a></li>
+      <li><a href="#独立したパスにする" id="toc-独立したパスにする">独立したパスにする</a></li>
+      <li><a href="#何を検査するか" id="toc-何を検査するか">何を検査するか</a></li>
+      <li><a href="#スコープの持ち方" id="toc-スコープの持ち方">スコープの持ち方</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>コード生成の前に AST を検査して、<strong>未定義の変数・未定義の関数・引数の個数違い・
+代入できない左辺</strong>を見つけるパスを書く。
+誤りは1件で止めず、<strong>まとめて報告</strong>する。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ12 まで</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>コマ15（<code>golden.py</code> の正常系コーパスに <code>final/tests</code>（<a href="../../advanced/#fixed17"><code>fixed17</code></a>）が含まれるので、未了だとその分だけ確認できない）</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、ラッパー <code>checkcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>typecheck.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> がエラーコーパスの全件で <code>*.expected</code> と一致し、<code>golden.py</code> が正常系のテスト入力全体で誤検出ゼロを報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>品質発展シリーズの第1回。コンパイラ本体には手を入れず、独立したパスとして追加する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ラッパー <code>checkcc.py</code>（完成品）が、Parser の出口に検査を差し込む。</p>
+<h2 id="いまのコンパイラは何を見逃しているか">いまのコンパイラは何を見逃しているか</h2>
+<p>次のプログラムを、いまのコンパイラに食わせてみる。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> f<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> a <span class="op">+</span> b<span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> y <span class="op">+</span> <span class="dv">1</span><span class="op">;</span>      <span class="co">// y なんて変数はない</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    f<span class="op">(</span><span class="dv">1</span><span class="op">);</span>           <span class="co">// f は引数2個のはず</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    g<span class="op">(</span><span class="dv">2</span><span class="op">);</span>           <span class="co">// g という関数はない</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span> <span class="op">+</span> <span class="dv">2</span> <span class="op">=</span> <span class="dv">3</span><span class="op">;</span>      <span class="co">// 1 + 2 に代入はできない</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>結果は、たとえばこうなる。</p>
+<pre data-lang="text"><code>RuntimeError: [line 4] 未定義の変数 (type_of): &#39;y&#39;
+Traceback (most recent call last):
+  File &quot;.../mycc.py&quot;, line 855, in gen_program
+  ...</code></pre>
+<p>問題が2つある。</p>
+<ol type="1">
+<li><strong>1件目で止まる</strong>。<code>y</code> を直しても、次は <code>f(1)</code> で止まる。1つずつしか進めない</li>
+<li><strong>エラーがコード生成の都合で出ている</strong>。「型を調べようとしたら見つからなかった」
+という内部の事情であり、<code>g(2)</code> や <code>1 + 2 = 3</code> に至っては、
+運が良ければ動いてしまう（間違ったコードが生成される）</li>
+</ol>
+<p>原因は、<strong>検査とコード生成が混ざっている</strong>ことである。
+コード生成は「正しいプログラムが来る」前提で書かれているので、
+誤りへの対応が場当たりになる。</p>
+<h2 id="独立したパスにする">独立したパスにする</h2>
+<p>そこで、コード生成の<strong>前</strong>に、検査だけを行うパスを置く。</p>
+<pre data-lang="text"><code>ソース → 字句解析 → 構文解析 → [型検査] → コード生成 → アセンブリ
+                                    ↓
+                              誤りがあれば全部報告して終了</code></pre>
+<p>この配置には、はっきりした利点がある。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>利点</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>誤りをまとめて報告できる</td>
+<td>木を最後まで歩いてから結果を返せる</td>
+</tr>
+<tr class="even">
+<td>メッセージが分かりやすい</td>
+<td>「未定義の変数 y」— 内部事情が混ざらない</td>
+</tr>
+<tr class="odd">
+<td>コード生成が単純なまま</td>
+<td>「正しい木しか来ない」前提を守れる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>実際のコンパイラでは、この段階を<strong>意味解析</strong>（semantic analysis）と呼ぶ。
+型検査はその中心的な仕事である。</p>
+<h2 id="何を検査するか">何を検査するか</h2>
+<p>この回で扱うのは5種類である。どれも「AST を見れば分かる」ものに絞ってある。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 19%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>検査</th>
+<th>例</th>
+<th>メッセージ</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>未定義の変数</td>
+<td><code>x = y + 1;</code></td>
+<td>未定義の変数: y</td>
+</tr>
+<tr class="even">
+<td>未定義の関数</td>
+<td><code>g(2);</code></td>
+<td>未定義の関数: g</td>
+</tr>
+<tr class="odd">
+<td>引数の個数違い</td>
+<td><code>f(1)</code>（f は2引数）</td>
+<td>関数 f の引数の個数が合いません（宣言 2 個、呼び出し 1 個）</td>
+</tr>
+<tr class="even">
+<td>代入先が lvalue でない</td>
+<td><code>1 + 2 = 3;</code></td>
+<td>代入先にできない式です（Add）</td>
+</tr>
+<tr class="odd">
+<td>前置 <code>++</code>/<code>--</code> の対象が lvalue でない</td>
+<td><code>++(a + b);</code></td>
+<td>++/– の対象にできない式です（Add）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>最後の2つは、コマ7 で学んだ <strong>lvalue / rvalue</strong> の区別そのものである。
+<code>codegen_lval()</code> が扱えるノード（<code>Var</code> / <code>Deref</code> / <code>Index</code> / <code>Member</code>）だけが
+代入先・前置 <code>++</code>/<code>--</code> の対象になれる、という規則を検査に写す。
+EBNF の注釈「lvalue 制約は意味解析フェーズで検査」（F2 で触れた箇所）が、
+ここで実装される。</p>
+<h2 id="スコープの持ち方">スコープの持ち方</h2>
+<p>変数を探すときは、コマ13 と同じ順序で調べる。</p>
+<pre data-lang="text"><code>locals（いまの関数）→ globals（プログラム全体）→ 見つからなければエラー</code></pre>
+<p><code>collect()</code>（完成済み）がトップレベルを一巡して <code>globals</code> と <code>funcs</code> の一覧を作り、
+関数ごとに <code>locals</code> を作り直す。
+関数の一覧を<strong>先に</strong>作るので、後ろで定義された関数を前から呼んでも誤検出しない。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p><strong>引数の個数を検査してよいのは、定義がこのプログラム内にある関数だけ</strong>である。</p>
+<p><code>int printf(char *fmt, ...);</code> のような宣言だけの関数は、可変長引数かもしれない。
+しかもスキャフォールドの Parser は <code>...</code> を検証するが AST には残らないため、
+<strong>AST に可変長かどうかの情報が残らない</strong>（F4 で見た「何を AST に残すかも設計」の実例）。
+そこで <code>FuncDef</code>（定義）がある関数だけ個数を検査する。</p>
+<p>「確実に言えることだけ言う」— 検査を作るときの基本姿勢である。
+誤検出（正しいプログラムをエラーにする）は、見逃しよりたちが悪い。</p>
+</div>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>check_var</code></td>
+<td>未定義の変数</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>check_call</code></td>
+<td>未定義の関数・引数の個数</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>check_assign</code></td>
+<td>代入先が lvalue か</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>check_incdec</code></td>
+<td>前置 <code>++</code>/<code>--</code> の対象が lvalue か</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>収集（<code>collect</code>）と木の走査（<code>walk</code>）は完成済みで、
+書くのは「何を誤りとみなすか」だけである。</p>
+<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 検査だけする</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> checkcc.py <span class="at">--check-only</span> tests/undefined_var.c</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 検査してから、問題なければコンパイルする</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> checkcc.py ../../final/tests/f09_recur.c</span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># エラーコーパス(自分の書いた検査の合否)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 正常系(講義のテスト入力を1本も拒まないこと)</span></span></code></pre></div>
+<p>2種類の確認をする。</p>
+<ol type="1">
+<li><strong>エラーコーパス</strong>（<code>check.py</code>）: <code>tests/*.c</code> を検査し、報告内容が <code>tests/*.expected</code> と
+一致するか（行番号とメッセージまで一致させる）</li>
+<li><strong>正常系</strong>（<code>golden.py</code>）: 講義のテスト入力（101ファイル。<code>sessions/*/tests/*.c</code> と
+<a href="../../advanced/#fixed17"><code>fixed17</code></a>）を検査し、<strong>1件も誤検出しない</strong>こと</li>
+</ol>
+<p>2番目が重要である。検査は厳しすぎても使えない。
+「正しいプログラムを1つも拒まない」ことを、既存の資産で保証する。
+これは他のトピックの <code>golden.py</code> と同じ役割 — 自分の追加が
+既にあるものを壊していないことの確認 — なので、<code>golden.py</code> に置いてある。
+先に <code>check.py</code> を全 PASS にしてから <code>golden.py</code> を回すこと。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>型の不一致を見つける</strong>: <code>int</code> に <code>int *</code> を代入している箇所を報告する。
+ただし <code>malloc</code> の戻り値のように、意図的に許している変換もある
+（<code>language_spec.md</code> の「<code>void *</code> は暗黙変換可」）。どこまで厳しくするか設計する</li>
+<li><strong>未定義メンバの参照</strong>: <code>p-&gt;nonexistent</code> を検出する
+（コマ12 の <code>_struct_defs</code> を検査側でも作る必要がある）</li>
+<li><strong>未使用変数の警告</strong>: 宣言されたが一度も読まれない変数を報告する。
+エラーではなく<strong>警告</strong>として、別の一覧にする</li>
+<li><strong><code>return</code> の検査</strong>: 戻り値型が <code>int</code> の関数で、値なしの <code>return;</code> を報告する。
+逆に <code>void</code> 関数で値を返している場合も</li>
+<li><strong>エラーの上限</strong>: 誤りが100件を超えたら「多すぎます」と打ち切る
+（壊れた入力で数千件出ても読めない）</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 型検査はどこまでやるべきか。</strong>
+C の型検査は緩い（<code>int</code> と ポインタの混同を警告止まりにする処理系も多い）。
+一方 Rust や Haskell は、型検査を通ったプログラムは
+ある種の誤りを<strong>決して起こさない</strong>ことを保証する。
+検査を厳しくするほど早く誤りを見つけられるが、正しいプログラムまで拒む危険と、
+書き手の負担が増える。この綱引きが言語設計の中心的な論点になっている。</p>
+<p>いま書いたパスは、C コンパイラが出す診断の中で
+最も基本的なもの（<code>undeclared identifier</code>、<code>too few arguments</code>、
+<code>lvalue required as left operand of assignment</code>）に対応している。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/L5_struct_byval/"><span class="label">前へ</span>構造体の値渡し・値返し — 呼び出し規約を自分で決める</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/P1_selfhost/"><span class="label">次へ</span>C 移植・セルフホスト — Python 版を C で書き直す</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/Q1_typecheck.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

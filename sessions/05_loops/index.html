@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ5: while / for / break / continue — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ5: while / for / break / continue</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+      <li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
+      <li><a href="#while-の生成パターン" id="toc-while-の生成パターン">while の生成パターン</a></li>
+      <li><a href="#for-の生成パターン" id="toc-for-の生成パターン">for の生成パターン</a></li>
+      <li><a href="#break-と-continue" id="toc-break-と-continue">break と continue</a></li>
+      <li><a href="#ラベルスタック" id="toc-ラベルスタック">ラベルスタック</a></li>
+      <li><a href="#前置----ループの更新式の慣用形" id="toc-前置----ループの更新式の慣用形">前置 <code>++</code>/<code>--</code>: ループの更新式の慣用形</a></li>
+      <li><a href="#gen_stmt-に追加する処理" id="toc-gen_stmt-に追加する処理">gen_stmt に追加する処理</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>ループとジャンプ制御、そして前置 <code>++</code>/<code>--</code> を実装する。</p>
+<p>コマ4までは、プログラムは常に先頭から末尾へ1回だけ実行された。
+この回では、条件が成り立つ間、同じ処理を繰り返す <code>while</code> と <code>for</code> を扱う。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> sum<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span>i <span class="op">&lt;=</span> <span class="dv">10</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        sum <span class="op">=</span> sum <span class="op">+</span> i<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>目標は、条件判定・反復・途中脱出・スキップを正しく生成できるようにすることである。</p>
+</section>
+<h2 id="この回で扱う範囲">この回で扱う範囲</h2>
+<p>対象にするプログラムは、<code>main</code> 関数内に以下の要素を含むものに限定する。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>種類</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>while 文</td>
+<td><code>while (cond) { ... }</code></td>
+</tr>
+<tr class="even">
+<td>for 文</td>
+<td><code>for (init; cond; step) { ... }</code></td>
+</tr>
+<tr class="odd">
+<td>break 文</td>
+<td><code>break;</code></td>
+</tr>
+<tr class="even">
+<td>continue 文</td>
+<td><code>continue;</code></td>
+</tr>
+<tr class="odd">
+<td>入れ子ループ</td>
+<td><code>while</code> の中に <code>while</code> など</td>
+</tr>
+<tr class="even">
+<td>ループ内の if</td>
+<td><code>while (cond) { if (...) break; }</code></td>
+</tr>
+<tr class="odd">
+<td>前置 <code>++</code>/<code>--</code></td>
+<td><code>for (i = 0; i &lt; n; ++i)</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>これまでに扱った変数宣言・代入・算術・比較・if/else は、ループの内部でも使用できる。</p>
+<p>関数呼び出しとポインタはまだ扱わない。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<pre class="ebnf" data-lang="ebnf"><code>scalar_type ::= &#39;int&#39;            /* ポインタはコマ7、char はコマ8 */
+obj_type    ::= scalar_type
+
+program       ::= func_def        /* ユーザー定義関数はコマ6 */
+var_decl      ::= obj_type IDENT &#39;;&#39;
+
+func_def    ::= &#39;int&#39; &#39;main&#39; &#39;(&#39; &#39;)&#39; func_body   /* 一般の関数定義はコマ6 */
+func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | &#39;break&#39; &#39;;&#39;
+              | &#39;continue&#39; &#39;;&#39;
+              | &#39;return&#39; expr &#39;;&#39;
+expr_stmt   ::= [ expr ] &#39;;&#39;
+block       ::= &#39;{&#39; { stmt } &#39;}&#39;
+if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
+while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
+for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
+              | &#39;+&#39; | &#39;-&#39;
+              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
+              | &#39;==&#39; | &#39;!=&#39;
+unary_expr  ::= primary_expr
+              | &#39;-&#39;  unary_expr
+              | &#39;++&#39; unary_expr
+              | &#39;--&#39; unary_expr
+primary_expr ::= INT_LITERAL
+               | IDENT
+               | &#39;(&#39; expr &#39;)&#39;</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>==</code> <code>!=</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>表の読み方はコマ1の「木の形は規則で決まっている」と
+<a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
+<p><code>for</code> の3つの式と <code>expr_stmt</code> の式が省略可能になったのがこの回である
+（<code>for (;;)</code> と空文 <code>;</code> が書けるようになる）。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="ast-を確認する">AST を確認する</h2>
+<h3 id="while-のast">while のAST</h3>
+<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/05_loops/tests/target.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> sum<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span>i <span class="op">&lt;=</span> <span class="dv">10</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        sum <span class="op">=</span> sum <span class="op">+</span> i<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb5" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span> (decl <span class="st">&quot;i&quot;</span> <span class="bu">:type</span> int) (decl <span class="st">&quot;sum&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;i&quot;</span>) (num <span class="dv">1</span>)))</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;sum&quot;</span>) (num <span class="dv">0</span>)))</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      (while</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">cond</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>          (le (var <span class="st">&quot;i&quot;</span>) (num <span class="dv">10</span>)))</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        (body</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            (exprstmt</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>              (assign (var <span class="st">&quot;sum&quot;</span>)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>                (add (var <span class="st">&quot;sum&quot;</span>) (var <span class="st">&quot;i&quot;</span>))))</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            (exprstmt</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>              (assign (var <span class="st">&quot;i&quot;</span>)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>                (add (var <span class="st">&quot;i&quot;</span>) (num <span class="dv">1</span>)))))))</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (var <span class="st">&quot;sum&quot;</span>)))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/05_while_ast.svg" alt="while ループの AST" />
+<figcaption aria-hidden="true">while ループの AST</figcaption>
+</figure>
+<p><code>while</code> ノードは次のフィールドを持つ。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>フィールド</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>cond</code></td>
+<td>条件式ノード。0でなければループを続ける</td>
+</tr>
+<tr class="even">
+<td><code>body</code></td>
+<td>ループ本体の文ノード</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="for-のast">for のAST</h3>
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/05_loops/tests/for_count.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> sum<span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">5</span><span class="op">;</span> i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        sum <span class="op">=</span> sum <span class="op">+</span> i<span class="op">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb8" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span> (decl <span class="st">&quot;i&quot;</span> <span class="bu">:type</span> int) (decl <span class="st">&quot;sum&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;sum&quot;</span>) (num <span class="dv">0</span>)))</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      (for</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        (init</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>          (assign (var <span class="st">&quot;i&quot;</span>) (num <span class="dv">0</span>)))</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">cond</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>          (lt (var <span class="st">&quot;i&quot;</span>) (num <span class="dv">5</span>)))</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">step</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>          (assign (var <span class="st">&quot;i&quot;</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            (add (var <span class="st">&quot;i&quot;</span>) (num <span class="dv">1</span>))))</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        (body</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>            (exprstmt</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>              (assign (var <span class="st">&quot;sum&quot;</span>)</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>                (add (var <span class="st">&quot;sum&quot;</span>) (var <span class="st">&quot;i&quot;</span>)))))))</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (var <span class="st">&quot;sum&quot;</span>)))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/05_for_ast.svg" alt="for ループの AST" />
+<figcaption aria-hidden="true">for ループの AST</figcaption>
+</figure>
+<p><code>for</code> ノードは次のフィールドを持つ。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>フィールド</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>init</code></td>
+<td>初期化式ノード。最初に1回だけ実行する</td>
+</tr>
+<tr class="even">
+<td><code>cond</code></td>
+<td>条件式ノード。0でなければループを続ける</td>
+</tr>
+<tr class="odd">
+<td><code>step</code></td>
+<td>ステップ式ノード。各反復のbody実行後に実行する</td>
+</tr>
+<tr class="even">
+<td><code>body</code></td>
+<td>ループ本体の文ノード</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>init</code>、<code>cond</code>、<code>step</code> は省略可能である。
+省略された部分はAST上で <code>None</code> になる。
+たとえば <code>for (;;)</code> はすべての要素が <code>None</code> になる。</p>
+<h2 id="while-の生成パターン">while の生成パターン</h2>
+<div class="sourceCode" id="cb9" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    body</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>これは次の流れに変換する。</p>
+<pre data-lang="text"><code>Lcond:
+cond を codegen する
+もし cond の結果が 0 なら Lend に飛ぶ
+body を gen_stmt する
+Lcond に戻る
+Lend:</code></pre>
+<p>アセンブリの形は次のようになる。</p>
+<div class="sourceCode" id="cb11" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">.Lcond:</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># cond -&gt; a0</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  beqz a0<span class="op">,</span> .Lend</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># body</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  j .Lcond</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">.Lend:</span></span></code></pre></div>
+<p><code>cond</code> の計算結果が <code>a0</code> に入った状態で <code>beqz</code> を置き、偽なら終了ラベルに飛ばす。
+真なら body を実行し、<code>j</code> で条件判定に戻る。</p>
+<h2 id="for-の生成パターン">for の生成パターン</h2>
+<div class="sourceCode" id="cb12" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span>init<span class="op">;</span> cond<span class="op">;</span> step<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    body</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>これは次の流れに変換する。</p>
+<pre data-lang="text"><code>init を codegen する
+Lcond:
+cond を codegen する
+もし cond の結果が 0 なら Lend に飛ぶ
+body を gen_stmt する
+Lstep:
+step を codegen する
+Lcond に戻る
+Lend:</code></pre>
+<p>アセンブリの形は次のようになる。</p>
+<div class="sourceCode" id="cb14" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># init</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">.Lcond:</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># cond -&gt; a0</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  beqz a0<span class="op">,</span> .Lend</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># body</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">.Lstep:</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># step</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  j .Lcond</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="fu">.Lend:</span></span></code></pre></div>
+<p><code>cond</code> が省略されている場合は、常に真として扱う。
+その場合、<code>beqz</code> は出さない。</p>
+<h2 id="break-と-continue">break と continue</h2>
+<p><code>break</code> は、現在のループを終了する文である。
+コード生成では、現在のループの終了ラベルへジャンプする。</p>
+<div class="sourceCode" id="cb15" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>j Lend</span></code></pre></div>
+<p><code>continue</code> は、現在のループの次の反復へ進む文である。
+飛び先は <code>while</code> と <code>for</code> で異なる。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>ループ</th>
+<th><code>continue</code> の飛び先</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>while</code></td>
+<td>条件判定ラベル <code>Lcond</code></td>
+</tr>
+<tr class="even">
+<td><code>for</code></td>
+<td>step実行ラベル <code>Lstep</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>for</code> の <code>continue</code> が <code>Lcond</code> に直接飛んでしまうと、<code>i = i + 1</code> のようなstep処理が実行されず、条件が変わらないまま再チェックされる。
+その結果、無限ループになることがある。</p>
+<div class="sourceCode" id="cb16" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> i <span class="op">&lt;=</span> <span class="dv">10</span><span class="op">;</span> i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>i <span class="op">%</span> <span class="dv">2</span> <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> sum <span class="op">+</span> i<span class="op">;</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>この例では、<code>continue</code> は <code>Lstep</code> に飛ぶ必要がある。
+<code>Lcond</code> に飛ぶと <code>i</code> が更新されず、無限ループに陥る。</p>
+<figure>
+<img src="../../figures/05_loop_cfg.svg" alt="while / for の制御フローと break / continue の飛び先" />
+<figcaption aria-hidden="true">while / for の制御フローと break / continue の飛び先</figcaption>
+</figure>
+<p><code>break</code> はどちらのループでも終了ラベルへ飛ぶ。
+<code>continue</code> の飛び先だけが、while（<code>Lcond</code>）と for（<code>Lstep</code>）で異なる。</p>
+<h2 id="ラベルスタック">ラベルスタック</h2>
+<p>ループは入れ子になることがある。</p>
+<div class="sourceCode" id="cb17" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="op">(</span>i <span class="op">&lt;</span> <span class="dv">3</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span>j <span class="op">&lt;</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>このとき、内側の <code>break</code> は内側のループだけを抜ける必要がある。
+外側のループまで抜けてはいけない。</p>
+<p>そのため、現在処理中のループのラベルをスタックで管理する。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>インスタンス変数</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>self._break_stack</code></td>
+<td>現在のループの終了ラベルを積む</td>
+</tr>
+<tr class="even">
+<td><code>self._continue_stack</code></td>
+<td>現在のループの continue 先ラベルを積む</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ループのコード生成を始めるときにラベルを push し、ループ本体の生成が終わったら pop する。</p>
+<div class="sourceCode" id="cb18" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># while の例</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._break_stack.append(label_end)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._continue_stack.append(label_cond)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co"># body を生成 ...</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._continue_stack.pop()</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._break_stack.pop()</span></code></pre></div>
+<p><code>break</code> や <code>continue</code> を生成するときは、スタックの末尾を見る。
+末尾が「現在一番内側のループ」のラベルである。</p>
+<div class="sourceCode" id="cb19" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># break</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.emit(<span class="ss">f&quot;  j </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_break_stack[<span class="op">-</span><span class="dv">1</span>]<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># continue</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.emit(<span class="ss">f&quot;  j </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_continue_stack[<span class="op">-</span><span class="dv">1</span>]<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p><code>while</code> では continue先が <code>Lcond</code>、<code>for</code> では continue先が <code>Lstep</code> になる。
+ループ本体の生成中に、内側の <code>break</code> / <code>continue</code> が正しく動作するようになる。</p>
+<h2 id="前置----ループの更新式の慣用形">前置 <code>++</code>/<code>--</code>: ループの更新式の慣用形</h2>
+<p>for 文の更新式には <code>i = i + 1</code> の代わりに前置インクリメント <code>++i</code> を書くのが
+C の慣用である。この回で実装する。</p>
+<div class="sourceCode" id="cb20" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">10</span><span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> sum <span class="op">+</span> i<span class="op">;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><code>++i</code> は「<code>i</code> を 1 増やし、増やした後の値を式の値とする」式である。
+実装の要点は、<strong>左辺値のアドレスを 1 回だけ求める</strong>ことである。</p>
+<div class="sourceCode" id="cb21" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_PreInc(<span class="va">self</span>, node):</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen_lval(node.operand)   <span class="co"># アドレスを a0 に</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="st">&#39;  ld a1, 0(a0)&#39;</span>)       <span class="co"># 値を読む</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="st">&#39;  addi a1, a1, 1&#39;</span>)     <span class="co"># +1</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="st">&#39;  sd a1, 0(a0)&#39;</span>)       <span class="co"># 書き戻す</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="st">&#39;  mv a0, a1&#39;</span>)          <span class="co"># 増やした後の値が式の値</span></span></code></pre></div>
+<p><code>--i</code> は <code>-1</code> するだけで同じ形である。AST 上は <code>(preinc (var "i"))</code> /
+<code>(predec (var "i"))</code> というノードになる。
+コマ8 で型を導入すると、この実装は「ポインタなら要素サイズぶん進む」形に拡張される。</p>
+<h2 id="gen_stmt-に追加する処理">gen_stmt に追加する処理</h2>
+<div class="table-scroll">
+<table style="width:100%;">
+<colgroup>
+<col style="width: 36%" />
+<col style="width: 47%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><code>node.kind</code></th>
+<th>呼ばれる handler</th>
+<th>処理</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>'While'</code></td>
+<td><code>gen_stmt_While</code></td>
+<td>条件ラベルと終了ラベルを作る。ラベルスタックに push し、条件判定、body、戻りジャンプを生成し、pop する</td>
+</tr>
+<tr class="even">
+<td><code>'For'</code></td>
+<td><code>gen_stmt_For</code></td>
+<td>init、条件、body、step を生成する。ラベルスタックに push/pop も行う</td>
+</tr>
+<tr class="odd">
+<td><code>'Break'</code></td>
+<td><code>gen_stmt_Break</code></td>
+<td><code>self._break_stack[-1]</code> へジャンプする</td>
+</tr>
+<tr class="even">
+<td><code>'Continue'</code></td>
+<td><code>gen_stmt_Continue</code></td>
+<td><code>self._continue_stack[-1]</code> へジャンプする</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>mycc.py</code></li>
+</ul>
+<p><code>importlib</code> でコマ4 の <code>Codegen04</code> を継承した <code>Codegen05</code> に、以下の要素を追加する。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 58%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>実装対象</th>
+<th>追加する役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>gen_stmt_While(node)</code></td>
+<td>while ループのコード生成</td>
+</tr>
+<tr class="even">
+<td><code>gen_stmt_For(node)</code></td>
+<td>for ループのコード生成</td>
+</tr>
+<tr class="odd">
+<td><code>gen_stmt_Break(node)</code></td>
+<td>break 文のコード生成</td>
+</tr>
+<tr class="even">
+<td><code>gen_stmt_Continue(node)</code></td>
+<td>continue 文のコード生成</td>
+</tr>
+<tr class="odd">
+<td><code>codegen_PreInc(node)</code> / <code>codegen_PreDec(node)</code></td>
+<td>前置 <code>++</code>/<code>--</code> のコード生成</td>
+</tr>
+<tr class="even">
+<td><code>self._break_stack</code> / <code>self._continue_stack</code></td>
+<td>インスタンス変数を <code>__init__</code> で追加する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="tests">tests/</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>target.c</code></td>
+<td>while で 1..10 の総和</td>
+<td>55</td>
+</tr>
+<tr class="even">
+<td><code>for_count.c</code></td>
+<td>for で 0..4 の総和</td>
+<td>10</td>
+</tr>
+<tr class="odd">
+<td><code>nested_loop.c</code></td>
+<td>while の入れ子 (3×2)</td>
+<td>6</td>
+</tr>
+<tr class="even">
+<td><code>break_early.c</code></td>
+<td>break で抜ける</td>
+<td>15</td>
+</tr>
+<tr class="odd">
+<td><code>while_sum.c</code></td>
+<td>while による集計</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="even">
+<td><code>for_fib.c</code></td>
+<td>for によるフィボナッチ計算</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="odd">
+<td><code>break_loop.c</code></td>
+<td>break を含むループ</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="even">
+<td><code>continue_odd.c</code></td>
+<td>continue を含むループ</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="odd">
+<td><code>incr_loop.c</code></td>
+<td><code>++i</code> を更新式に使うループと <code>--s</code></td>
+<td>44</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb22" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/05_loops</span></code></pre></div>
+<p><code>tests/target.c</code> がコンパイルでき、終了コード <code>55</code> になれば基本形は成功。</p>
+<p>個別に動かす場合は、次のようにする。</p>
+<div class="sourceCode" id="cb23" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/05_loops/mycc.py sessions/05_loops/tests/target.c <span class="dt">\</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="注意">注意</h2>
+<p>この回のテストでは、<code>break</code> や <code>continue</code> はループの内側にだけ現れる。
+ループの外側に書かれた <code>break</code> や <code>continue</code> は扱わない。</p>
+<p><code>for</code> の <code>init</code>, <code>cond</code>, <code>step</code> は省略でき、省略時はAST上で <code>None</code> になる。
+<code>cond</code> 省略時は、常に真として扱い、<code>beqz</code> を出さないようにする。</p>
+<p>ループが期待どおりの回数だけ回っているか1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/04_if_else/"><span class="label">前へ</span>コマ4: if/else + 比較演算</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/06_functions_recursion/"><span class="label">次へ</span>コマ6: 関数呼び出し・再帰</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/05_loops.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

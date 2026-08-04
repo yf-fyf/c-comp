@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>末尾呼び出し最適化 — 再帰をループに変える — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">末尾呼び出し最適化 — 再帰をループに変える</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#末尾呼び出しとは" id="toc-末尾呼び出しとは">末尾呼び出しとは</a></li>
+      <li><a href="#なぜジャンプに変えられるのか" id="toc-なぜジャンプに変えられるのか">なぜジャンプに変えられるのか</a></li>
+      <li><a href="#実装の3つの注意点" id="toc-実装の3つの注意点">実装の3つの注意点</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>return f(...);</code> の形で自分自身を呼ぶ再帰を、<strong>ジャンプ</strong>に変換する。
+100万回の再帰でもスタックがあふれないコンパイラにする。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>着手はコマ6（関数呼び出し）まで。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、ラッパー <code>tccc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>tailcall.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が深い末尾再帰の通過と <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>最適化入門発展シリーズの第3回。B1・B2 とは独立している。O 系列に対応する回は無い</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>コマ6 の資料で「扱わない」とした<strong>末尾呼び出し最適化</strong>の回収である。
+B1 は O7・O3 と、B2 は O4 と題材が重なるが、
+末尾呼び出し最適化は O1〜O7 のどれにも出てこない。この回だけの題材である。
+効果を命令数で見たいときは、O1 の物差し（静的／動的命令数）をそのまま使える。</p>
+<h2 id="末尾呼び出しとは">末尾呼び出しとは</h2>
+<p>関数の<strong>最後の仕事</strong>が別の関数の呼び出しであるとき、それを末尾呼び出しという。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> sum_to<span class="op">(</span><span class="dt">int</span> n<span class="op">,</span> <span class="dt">int</span> acc<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> acc<span class="op">;</span> <span class="op">}</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum_to<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">,</span> acc <span class="op">+</span> n<span class="op">);</span>   <span class="co">// 末尾呼び出し</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>対して、次は末尾呼び出しでは<strong>ない</strong>。</p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> fact<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n <span class="op">*</span> fact<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">);</span>   <span class="co">// 呼び出しの後に掛け算が残っている</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>違いは「呼び出しから戻ってきた後に、まだやることがあるか」である。
+やることが残っていないなら、<strong>呼び出し元のフレームはもう用済み</strong>である。</p>
+<h2 id="なぜジャンプに変えられるのか">なぜジャンプに変えられるのか</h2>
+<p><code>sum_to</code> が <code>sum_to</code> を呼ぶとき、いまのコンパイラは新しいフレームを積む。</p>
+<pre data-lang="text"><code>sum_to(1000000, 0) のフレーム
+  sum_to(999999, 1000000) のフレーム
+    sum_to(999998, 1999999) のフレーム
+      ...  100万段  →  スタックがあふれる</code></pre>
+<p>しかし各フレームは、呼び出しから戻った瞬間に「戻り値をそのまま返す」だけである。
+つまり<strong>フレームを積む意味がない</strong>。引数だけ新しい値に書き換えて、
+関数の先頭に戻れば、同じ計算ができる。</p>
+<div class="sourceCode" id="cb4" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># return sum_to(n - 1, acc + n);</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 新しい引数を計算して、引数スロットに書き戻し…</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># n  ← n - 1</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  sd a1<span class="op">,</span> <span class="op">-</span><span class="dv">32</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># acc ← acc + n</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  j .Ltc_sum_to       <span class="co"># フレームを積まずに先頭へ戻る</span></span></code></pre></div>
+<p><code>call</code> が <code>j</code> になり、フレームが1つも増えない。<strong>再帰がループになった</strong>。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>関数型言語では必須の最適化。</strong>
+Scheme や OCaml では、ループを書く標準的な方法が末尾再帰である。
+そのため言語仕様のレベルで「末尾呼び出しは必ずジャンプに変換すること」
+（proper tail call）が要求される。C の規格には要求がないが、
+gcc や clang は <code>-O2</code> で同じ最適化を行う。</p>
+</div>
+<h2 id="実装の3つの注意点">実装の3つの注意点</h2>
+<h3 id="どこへ戻るか-プロローグの後">1. どこへ戻るか — プロローグの後</h3>
+<p>戻り先は関数の<strong>先頭ラベルではない</strong>。プロローグ（フレーム確保）と
+引数の保存を飛ばした、<strong>本体の直前</strong>である。</p>
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum_to:</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">32</span>       ┐ プロローグ</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  sd ra<span class="op">,</span> <span class="dv">24</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          │  ここに戻ると</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  ...                    │  フレームが増えてしまう</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>         ┘ 引数の保存</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">.Ltc_sum_to:</span>             ← ここへ戻る</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 本体</span></span></code></pre></div>
+<p>ラッパー <code>tccc.py</code> が、この位置にラベルを置いて <code>cg.tc_label</code> に入れてくれる。</p>
+<h3 id="引数は全部評価してから書き戻す">2. 引数は「全部評価してから」書き戻す</h3>
+<div class="sourceCode" id="cb6" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> sum_to<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">,</span> acc <span class="op">+</span> n<span class="op">);</span></span></code></pre></div>
+<p>第1引数を先に <code>n</code> のスロットへ書き込んでしまうと、
+第2引数の <code>acc + n</code> が<strong>新しい <code>n</code></strong> を読んでしまう。
+コマ2 以来の退避パターンと同じ理由で、
+<strong>すべて評価して退避 → まとめて書き戻す</strong>の順にする。</p>
+<h3 id="変換してよい形を厳しく判定する">3. 変換してよい形を厳しく判定する</h3>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>形</th>
+<th>変換</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>return f(a, b);</code>（f は自分自身）</td>
+<td>する</td>
+<td>純粋な末尾呼び出し</td>
+</tr>
+<tr class="even">
+<td><code>return f(a) + 1;</code></td>
+<td>しない</td>
+<td>呼び出しの後に演算が残る</td>
+</tr>
+<tr class="odd">
+<td><code>return g(a);</code>（別の関数）</td>
+<td>しない</td>
+<td>引数スロットの配置が違う</td>
+</tr>
+<tr class="even">
+<td>引数が9個以上</td>
+<td>しない</td>
+<td>レジスタに収まらない</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>「怪しいものは変換しない」— B1 と同じく、最適化の基本姿勢である。
+判定が広すぎると <a href="../../advanced/#fixed17"><code>fixed17</code></a> が壊れるので、そこで気づける。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>is_self_tail_call</code></td>
+<td>変換してよい形かの判定</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>gen_tail_call</code></td>
+<td>引数の詰め替え + ジャンプの生成</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> tccc.py tests/deep_sum.c            <span class="co"># 生成結果を見る</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> tccc.py tests/deep_sum.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> call   <span class="co"># call が減っているか</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 深い末尾再帰 + fixed17</span></span></code></pre></div>
+<p><code>golden.py</code> は3つを続けて確認する。</p>
+<ol type="1">
+<li><strong>最適化なし</strong>で <code>tests/deep_sum.c</code>（100万回の末尾再帰）が<strong>落ちる</strong>こと</li>
+<li><strong>最適化あり</strong>で同じテストが<strong>通る</strong>こと</li>
+<li><code>fixed17</code> が壊れていないこと</li>
+</ol>
+<p>「落ちていたものが通るようになる」ので、効果が命令数より分かりやすい。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>相互末尾再帰</strong>: <code>is_even</code> / <code>is_odd</code> のような相互再帰は、
+自分自身ではないので今回の判定では変換されない。
+別の関数への末尾呼び出しを変換するには何が必要か考える
+（フレームの解放、引数の渡し方、<code>ra</code> の扱い）</li>
+<li><strong>末尾位置の拡張</strong>: <code>if (c) return f(x); else return f(y);</code> の両方が
+末尾呼び出しであることは、いまの判定でも扱えている。
+では <code>return c ? f(x) : g(y);</code> は？三項演算子は Core にあるので実際に試せる。
+<code>is_self_tail_call</code> を <code>Cond</code> の両腕に再帰させる拡張を設計する</li>
+<li><strong>fact を末尾再帰に書き換える</strong>: <code>fact(n)</code> を累積引数つきの
+<code>fact_acc(n, acc)</code> に書き換え、深い階乗が動くことを確かめる</li>
+<li><strong>フレームサイズの計測</strong>: 最適化あり／なしで <code>sp</code> がどこまで下がるかを
+<code>gdb-multiarch</code> で観察する</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 再帰とループは同じもの。</strong>
+「末尾再帰はループに変換できる」という事実は、
+逆に「ループは末尾再帰で書ける」ことも意味する。
+実際、コマ5 で作った <code>while</code> の生成コードと、この回で作った末尾呼び出しの生成コードは
+どちらも「変数を更新して先頭へ <code>j</code>」という同じ形をしている。
+言語の見た目が違っても、機械語のレベルでは同じものになる。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/B2_regalloc/"><span class="label">前へ</span>レジスタ割り当て入門 — スタックマシンを卒業する</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/O1_measure/"><span class="label">次へ</span>最適化の測り方 — 静的と動的は別物</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/B3_tailcall.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

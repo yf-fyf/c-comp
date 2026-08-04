@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コンパイル到達目標コード集 — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/" aria-current="page">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../docs/">仕様・参考文書</a></nav>
+    <h1 class="page-title">コンパイル到達目標コード集</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#目次コマ-書けるようになるもの" id="toc-目次コマ-書けるようになるもの">目次（コマ → 書けるようになるもの）</a></li>
+      <li><a href="#凡例" id="toc-凡例">凡例</a></li>
+      <li><a href="#コマ0準備回-環境構築-rv64-手書きアセンブリ" id="toc-コマ0準備回-環境構築-rv64-手書きアセンブリ">コマ0（準備回）: 環境構築 + RV64 手書きアセンブリ</a></li>
+      <li><a href="#コマ1phase-0-ast-理解-インタープリター" id="toc-コマ1phase-0-ast-理解-インタープリター">コマ1（Phase 0）: AST 理解 + インタープリター</a></li>
+      <li><a href="#コマ2phase-1-コード生成①算術式" id="toc-コマ2phase-1-コード生成①算術式">コマ2（Phase 1）: コード生成①：算術式</a></li>
+      <li><a href="#コマ3phase-1-コード生成②変数代入シンボルテーブル" id="toc-コマ3phase-1-コード生成②変数代入シンボルテーブル">コマ3（Phase 1）: コード生成②：変数・代入・シンボルテーブル</a></li>
+      <li><a href="#コマ4phase-1-制御構文①if-else-三項演算子" id="toc-コマ4phase-1-制御構文①if-else-三項演算子">コマ4（Phase 1）: 制御構文①：if / else + 三項演算子</a></li>
+      <li><a href="#コマ5phase-1-制御構文②while-for-前置---" id="toc-コマ5phase-1-制御構文②while-for-前置---">コマ5（Phase 1）: 制御構文②：while / for + 前置 <code>++</code>/<code>--</code></a></li>
+      <li><a href="#コマ6phase-1-関数呼び出し再帰" id="toc-コマ6phase-1-関数呼び出し再帰">コマ6（Phase 1）: 関数呼び出し・再帰</a></li>
+      <li><a href="#コマ7phase-1-lvalue-rvalue-ポインタ" id="toc-コマ7phase-1-lvalue-rvalue-ポインタ">コマ7（Phase 1）: lvalue / rvalue + ポインタ</a></li>
+      <li><a href="#コマ8phase-1-型検査の導入" id="toc-コマ8phase-1-型検査の導入">コマ8（Phase 1）: 型検査の導入</a></li>
+      <li><a href="#コマ9phase-1-ポインタ演算とスケーリング" id="toc-コマ9phase-1-ポインタ演算とスケーリング">コマ9（Phase 1）: ポインタ演算とスケーリング</a></li>
+      <li><a href="#コマ10phase-1-文字列リテラルと-.data-セクション" id="toc-コマ10phase-1-文字列リテラルと-.data-セクション">コマ10（Phase 1）: 文字列リテラルと <code>.data</code> セクション</a></li>
+      <li><a href="#コマ11phase-1-式の走査と-libc-活用" id="toc-コマ11phase-1-式の走査と-libc-活用">コマ11（Phase 1）: 式の走査と libc 活用</a></li>
+      <li><a href="#コマ12phase-2-構造体とヒープstruct-.---sizeof-malloc-連結リスト" id="toc-コマ12phase-2-構造体とヒープstruct-.---sizeof-malloc-連結リスト">コマ12（Phase 2）: 構造体とヒープ（struct / <code>.</code> / <code>-&gt;</code> / <code>sizeof</code> / <code>malloc</code> / 連結リスト）</a></li>
+      <li><a href="#コマ13phase-2-グローバル変数スコープ管理" id="toc-コマ13phase-2-グローバル変数スコープ管理">コマ13（Phase 2）: グローバル変数・スコープ管理</a></li>
+      <li><a href="#コマ14phase-2-複数ファイル前処理の概念" id="toc-コマ14phase-2-複数ファイル前処理の概念">コマ14（Phase 2）: 複数ファイル・前処理の概念</a></li>
+      <li><a href="#コマ15phase-2-python-版総合演習mycc.py-統合-標準トラック達成" id="toc-コマ15phase-2-python-版総合演習mycc.py-統合-標準トラック達成">コマ15（Phase 2）: Python 版総合演習・<code>mycc.py</code> 統合 ← <strong>標準トラック達成</strong></a></li>
+      <li><a href="#付録-機能とコマの対応" id="toc-付録-機能とコマの対応">付録: 機能とコマの対応</a></li>
+      </ul>
+    </nav>
+    
+<p>各コマ終了時点で「コンパイルできる最も複雑なプログラム」を示す（コマ1〜15）。</p>
+<p>前提とする言語仕様: <a href="../../docs/language_spec/"><code>language_spec.md</code></a>（第 2 版、2026 年改訂）。
+ここに載せるコードは、すべてその版で受理される範囲に収めてある。</p>
+<h2 id="目次コマ-書けるようになるもの">目次（コマ → 書けるようになるもの）</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 19%" />
+<col style="width: 65%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>コマ</th>
+<th>テーマ</th>
+<th>この回で書けるようになるもの</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#s1">0</a></td>
+<td>環境構築 + RV64 手書きアセンブリ</td>
+<td>手書きアセンブリ（コンパイラはまだ無い）</td>
+</tr>
+<tr class="even">
+<td><a href="#s2">1</a></td>
+<td>AST 理解 + インタープリター</td>
+<td>算術式の評価（<code>eval_ast()</code>）</td>
+</tr>
+<tr class="odd">
+<td><a href="#s3">2</a></td>
+<td>コード生成①：算術式</td>
+<td>算術式 → アセンブリ</td>
+</tr>
+<tr class="even">
+<td><a href="#s4">3</a></td>
+<td>コード生成②：変数・代入</td>
+<td>変数宣言・代入・複数文</td>
+</tr>
+<tr class="odd">
+<td><a href="#s5">4</a></td>
+<td>制御構文①：if / else + 三項演算子</td>
+<td><code>if</code> / <code>else</code>、<code>? :</code></td>
+</tr>
+<tr class="even">
+<td><a href="#s6">5</a></td>
+<td>制御構文②：while / for + 前置 <code>++</code>/<code>--</code></td>
+<td>ループ、前置 <code>++</code> / <code>--</code></td>
+</tr>
+<tr class="odd">
+<td><a href="#s7">6</a></td>
+<td>関数呼び出し・再帰</td>
+<td>関数定義・呼出し・再帰</td>
+</tr>
+<tr class="even">
+<td><a href="#s8">7</a></td>
+<td>lvalue / rvalue + ポインタ</td>
+<td><code>&amp;</code> / <code>*</code>、ポインタ経由の代入</td>
+</tr>
+<tr class="odd">
+<td><a href="#s9">8</a></td>
+<td>型検査の導入</td>
+<td><code>char</code> と <code>int</code> の使い分け、型別のロード / ストア</td>
+</tr>
+<tr class="even">
+<td><a href="#s10">9</a></td>
+<td>ポインタ演算とスケーリング</td>
+<td><code>a[i]</code>、<code>*(p + 2)</code>、<code>malloc</code> した領域</td>
+</tr>
+<tr class="odd">
+<td><a href="#s11">10</a></td>
+<td>文字列リテラルと <code>.data</code> セクション</td>
+<td>文字列、<code>printf</code></td>
+</tr>
+<tr class="even">
+<td><a href="#s12">11</a></td>
+<td>式の走査と libc 活用</td>
+<td>式の中の文字列リテラル、<code>lib.h</code> の残りの関数</td>
+</tr>
+<tr class="odd">
+<td><a href="#s13">12</a></td>
+<td>構造体とヒープ</td>
+<td>struct 定義・メンバアクセス・連結リスト</td>
+</tr>
+<tr class="even">
+<td><a href="#s14">13</a></td>
+<td>グローバル変数・スコープ管理</td>
+<td>グローバル変数</td>
+</tr>
+<tr class="odd">
+<td><a href="#s15">14</a></td>
+<td>複数ファイル・前処理の概念</td>
+<td><code>#include</code> / <code>#define</code>、複数ファイル</td>
+</tr>
+<tr class="even">
+<td><a href="#s16">15</a></td>
+<td>Python 版総合演習・<code>mycc.py</code> 統合</td>
+<td>標準トラック完成（<a href="#fixed17">fixed17 テスト一覧</a>）</td>
+</tr>
+<tr class="odd">
+<td>—</td>
+<td><a href="#appendix">付録: 機能とコマの対応</a></td>
+<td>機能名から回を引きたいとき</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>機能名から回を引きたいときは
+<a href="../../docs/language_spec/#feature-map"><code>language_spec.md</code> の対応表</a>が唯一の出典である。</p>
+<h2 id="凡例">凡例</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>フロントエンド</td>
+<td><code>mycc.py</code>（Python 版）</td>
+</tr>
+<tr class="even">
+<td>期待する結果</td>
+<td><code>qemu-riscv64 ./out; echo $?</code> の終了コード（標準出力がある場合は別途記載）</td>
+</tr>
+<tr class="odd">
+<td>検証コマンド</td>
+<td><code>python3 mycc.py input.c \| riscv64-linux-gnu-gcc -x assembler -static - -o out</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr />
+<p><a id="s1"></a></p>
+<h2 id="コマ0準備回-環境構築-rv64-手書きアセンブリ">コマ0（準備回）: 環境構築 + RV64 手書きアセンブリ</h2>
+<p>コンパイラはまだ存在しない。手書きアセンブリを qemu で動かすことが目標。</p>
+<div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># hello.s — 学習者が手で書く</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.global</span> main</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">main:</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    addi    a0<span class="op">,</span> zero<span class="op">,</span> <span class="dv">42</span>    <span class="co"># 戻り値 = 42</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">ret</span></span></code></pre></div>
+<div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-static</span> hello.s <span class="at">-o</span> hello</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./hello<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span>   <span class="co"># → 42</span></span></code></pre></div>
+<hr />
+<p><a id="s2"></a></p>
+<h2 id="コマ1phase-0-ast-理解-インタープリター">コマ1（Phase 0）: AST 理解 + インタープリター</h2>
+<p>コンパイラはまだ存在しない。教員提供の Lexer/Parser が返す AST を Python で評価する。</p>
+<div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 学習者が書くインタープリター(除算はゼロ方向切り捨て。教員提供の c_div を使う。</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Python の // は床除算で丸め方向が異なるため使わない)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> eval_ast(node):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> node.kind <span class="op">==</span> <span class="st">&#39;Num&#39;</span>:  <span class="cf">return</span> node.val</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> node.kind <span class="op">==</span> <span class="st">&#39;Add&#39;</span>:  <span class="cf">return</span> eval_ast(node.lhs) <span class="op">+</span> eval_ast(node.rhs)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> node.kind <span class="op">==</span> <span class="st">&#39;Sub&#39;</span>:  <span class="cf">return</span> eval_ast(node.lhs) <span class="op">-</span> eval_ast(node.rhs)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> node.kind <span class="op">==</span> <span class="st">&#39;Mul&#39;</span>:  <span class="cf">return</span> eval_ast(node.lhs) <span class="op">*</span> eval_ast(node.rhs)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> node.kind <span class="op">==</span> <span class="st">&#39;Div&#39;</span>:  <span class="cf">return</span> c_div(eval_ast(node.lhs), eval_ast(node.rhs))</span></code></pre></div>
+<p>評価できる式の例:</p>
+<pre><code>1 + 2 * 3       → 7
+(10 - 3) * 2    → 14
+100 / 4 + 1     → 26</code></pre>
+<hr />
+<p><a id="s3"></a></p>
+<h2 id="コマ2phase-1-コード生成①算術式">コマ2（Phase 1）: コード生成①：算術式</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: 整数定数・四則演算・剰余・カッコ → RV64 アセンブリ出力</p>
+<div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">1</span> <span class="op">+</span> <span class="dv">2</span> <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>7</code></p>
+<div class="sourceCode" id="cb6" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">(</span><span class="dv">100</span> <span class="op">-</span> <span class="dv">3</span> <span class="op">*</span> <span class="dv">7</span><span class="op">)</span> <span class="op">/</span> <span class="dv">4</span> <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>20</code> （3*7=21, 100-21=79, 79/4=19, 19+1=20）</p>
+<hr />
+<p><a id="s4"></a></p>
+<h2 id="コマ3phase-1-コード生成②変数代入シンボルテーブル">コマ3（Phase 1）: コード生成②：変数・代入・シンボルテーブル</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: ローカル変数宣言・代入・複数変数の管理、関数本体（<code>Block</code> ノード）からの宣言収集とフレームサイズの計算</p>
+<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> c<span class="op">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> c<span class="op">;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>8</code></p>
+<div class="sourceCode" id="cb8" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> y<span class="op">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> x <span class="op">*</span> <span class="dv">2</span> <span class="op">+</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> y <span class="op">-</span> x<span class="op">;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x<span class="op">;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>13</code> （y=23, x=23-10=13）</p>
+<div class="sourceCode" id="cb9" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> c<span class="op">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> d<span class="op">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> e<span class="op">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> f<span class="op">;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    d <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    e <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    f <span class="op">=</span> <span class="dv">6</span><span class="op">;</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b <span class="op">+</span> c <span class="op">+</span> d <span class="op">+</span> e <span class="op">+</span> f<span class="op">;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>21</code></p>
+<blockquote>
+<p><strong>確認ポイント</strong>: 6変数（48バイト）+ ra/s0（16バイト）= 64バイト（16の倍数 ✓）。
+フレームサイズを <code>align_to(n, 16)</code> で16バイト境界に揃え、ローカル変数が0個でも正しく動くこと。</p>
+</blockquote>
+<hr />
+<p><a id="s5"></a></p>
+<h2 id="コマ4phase-1-制御構文①if-else-三項演算子">コマ4（Phase 1）: 制御構文①：if / else + 三項演算子</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: if / else if / else、比較演算子（<code>==</code> <code>!=</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code>）、三項演算子 <code>?:</code>、入れ子ブロック、複数の return</p>
+<div class="sourceCode" id="cb10" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> a <span class="op">-</span> b<span class="op">;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> b <span class="op">-</span> a<span class="op">;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>7</code></p>
+<div class="sourceCode" id="cb11" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> score<span class="op">;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    score <span class="op">=</span> <span class="dv">75</span><span class="op">;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">90</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">70</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">50</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>3</code></p>
+<div class="sourceCode" id="cb12" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">8</span><span class="op">;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">&gt;</span> b <span class="op">?</span> a <span class="op">:</span> b<span class="op">;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>8</code></p>
+<div class="sourceCode" id="cb13" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> y<span class="op">;</span>         <span class="co">// 宣言は関数本体の先頭にまとめる</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>x <span class="op">==</span> <span class="dv">3</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        y <span class="op">=</span> <span class="dv">4</span><span class="op">;</span>     <span class="co">// 入れ子ブロックでは使うだけ</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x <span class="op">+</span> y<span class="op">;</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>7</code></p>
+<blockquote>
+<p><strong>宣言の位置</strong>: 宣言を書けるのは関数本体の先頭だけで、入れ子ブロックには文しか書けない。
+入れ子ブロックは新しいスコープを作らないので、<code>if</code> の中の <code>y</code> は関数先頭で宣言した <code>y</code> そのものである。</p>
+</blockquote>
+<blockquote>
+<p><strong>式と文の違い</strong>: <code>if</code> は「実行する文」を選ぶ文であり、それ自体は値を持たない。
+三項演算子 <code>?:</code> は「値」を選ぶ式であり、式の中に書ける。
+コード生成はどちらも同じ分岐（<code>beqz</code> + ラベル）だが、<code>?:</code> は選ばれた腕の値が
+レジスタに残る点だけが異なる。</p>
+</blockquote>
+<hr />
+<p><a id="s6"></a></p>
+<h2 id="コマ5phase-1-制御構文②while-for-前置---">コマ5（Phase 1）: 制御構文②：while / for + 前置 <code>++</code>/<code>--</code></h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: while、for、break、continue、前置 <code>++</code>/<code>--</code></p>
+<div class="sourceCode" id="cb14" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> sum<span class="op">;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span>i <span class="op">&lt;=</span> <span class="dv">10</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        sum <span class="op">=</span> sum <span class="op">+</span> i<span class="op">;</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>        i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">;</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>55</code></p>
+<div class="sourceCode" id="cb15" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> fib_a<span class="op">;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> fib_b<span class="op">;</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> tmp<span class="op">;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    fib_a <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    fib_b <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">10</span><span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>        tmp   <span class="op">=</span> fib_b<span class="op">;</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>        fib_b <span class="op">=</span> fib_a <span class="op">+</span> fib_b<span class="op">;</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>        fib_a <span class="op">=</span> tmp<span class="op">;</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fib_a<span class="op">;</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>55</code>（フィボナッチ数列の第10項）</p>
+<blockquote>
+<p><strong>前置 <code>++</code></strong>: <code>++i</code> は <code>i</code> の値を 1 増やし、増やした後の値を式の値とする。
+for の更新式の慣用形として使う。実装は「左辺値のアドレスを 1 回だけ求め、
+ロード → +1 → ストア」であり、代入のコード生成の応用で書ける。</p>
+</blockquote>
+<hr />
+<p><a id="s7"></a></p>
+<h2 id="コマ6phase-1-関数呼び出し再帰">コマ6（Phase 1）: 関数呼び出し・再帰</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: ユーザー定義関数の宣言・定義・呼び出し、引数（<code>a0</code>〜<code>a7</code>）、再帰・相互再帰</p>
+<div class="sourceCode" id="cb16" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> fib<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">&lt;=</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> n<span class="op">;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">)</span> <span class="op">+</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">2</span><span class="op">);</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fib<span class="op">(</span><span class="dv">10</span><span class="op">);</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>55</code></p>
+<div class="sourceCode" id="cb17" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> add<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> mul<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> result<span class="op">;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> b<span class="op">;</span> i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> add<span class="op">(</span>result<span class="op">,</span> a<span class="op">);</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result<span class="op">;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mul<span class="op">(</span><span class="dv">6</span><span class="op">,</span> <span class="dv">7</span><span class="op">);</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>42</code></p>
+<hr />
+<p><a id="s8"></a></p>
+<h2 id="コマ7phase-1-lvalue-rvalue-ポインタ">コマ7（Phase 1）: lvalue / rvalue + ポインタ</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: <code>codegen</code> / <code>codegen_lval</code> の2関数設計、アドレス取得（<code>&amp;</code>）、間接参照（<code>*</code>）</p>
+<div class="sourceCode" id="cb18" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> <span class="op">&amp;</span>x<span class="op">;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>42</code></p>
+<div class="sourceCode" id="cb19" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> <span class="op">&amp;</span>a<span class="op">;</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>p <span class="op">=</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a<span class="op">;</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>20</code>（<code>*p = 20</code> が <code>a</code> に書き込まれる）</p>
+<hr />
+<p><a id="s9"></a></p>
+<h2 id="コマ8phase-1-型検査の導入">コマ8（Phase 1）: 型検査の導入</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: <code>ty_str</code> 文字列による型の管理、型サイズ（<code>int</code> 4 / <code>char</code> 1 / <code>T *</code> 8）、型別のロード / ストア、<code>char</code> の昇格と縮小、文字リテラル <code>'a'</code></p>
+<blockquote>
+<p><strong>実装ポイント</strong>: このコマから型サイズの管理をコード生成器に導入する。
+スキャフォールドでは <code>Type</code> クラスは使わず、<code>ty_str</code> 文字列と
+<code>size_of_ty_str()</code> / <code>elem_ty_str()</code> ヘルパーで型を扱う。
+後半の C 移植では <code>struct Type</code> に対応させる。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Cコード</th>
+<th><code>ty_str</code></th>
+<th>サイズ</th>
+<th>ロード / ストア</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>int a;</code></td>
+<td><code>int</code></td>
+<td>4</td>
+<td><code>lw</code> / <code>sw</code></td>
+</tr>
+<tr class="even">
+<td><code>char c;</code></td>
+<td><code>char</code></td>
+<td>1</td>
+<td><code>lb</code> / <code>sb</code></td>
+</tr>
+<tr class="odd">
+<td><code>int *p;</code></td>
+<td><code>int*</code></td>
+<td>8</td>
+<td><code>ld</code> / <code>sd</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>char</code> は式の中では int に昇格し、<code>char</code> 変数への代入では下位 8 ビットに縮む。</p>
+</blockquote>
+<div class="sourceCode" id="cb20" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span> c<span class="op">;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span> d<span class="op">;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> n<span class="op">;</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> <span class="ch">&#39;A&#39;</span><span class="op">;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    d <span class="op">=</span> c <span class="op">+</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> d<span class="op">;</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">!=</span> <span class="dv">67</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> <span class="dv">321</span><span class="op">;</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>c <span class="op">!=</span> <span class="dv">65</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n<span class="op">;</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>67</code>（<code>'A' + 2</code> は int で 67。<code>c = 321</code> は下位 8 ビットの 65 に縮む）</p>
+<div class="sourceCode" id="cb21" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span> c<span class="op">;</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> n<span class="op">;</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> <span class="dv">9</span><span class="op">;</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> <span class="op">&amp;</span>n<span class="op">;</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>p <span class="op">=</span> <span class="dv">30</span><span class="op">;</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n <span class="op">+</span> c<span class="op">;</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>39</code>（<code>char</code> は <code>lb</code> / <code>sb</code>、<code>int</code> は <code>lw</code> / <code>sw</code>、ポインタは <code>ld</code> / <code>sd</code>）</p>
+<hr />
+<p><a id="s10"></a></p>
+<h2 id="コマ9phase-1-ポインタ演算とスケーリング">コマ9（Phase 1）: ポインタ演算とスケーリング</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: ポインタ演算（<code>p + n</code>）、添字 <code>p[i]</code>、<code>sizeof(型名)</code>、多段ポインタ <code>int **</code>、<code>malloc</code> による連続領域の確保、型対応の前置 <code>++</code></p>
+<blockquote>
+<p><strong>実装ポイント</strong>: コマ8 で入れた型サイズを、ポインタを進めるときの<strong>尺度</strong>に使う。
+連続した int の並びは、配列ではなく <code>malloc(sizeof(int) * N)</code> で確保した
+領域として作る。<code>p[i]</code> は <code>*(p + i)</code> の略記であり、どちらも同じコードになる。
+<code>sizeof(型名)</code> は翻訳時に値が決まる定数で、<code>li</code> 1 命令に落ちる。</p>
+</blockquote>
+<div class="sourceCode" id="cb22" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> sum<span class="op">;</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">5</span><span class="op">);</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">2</span><span class="op">]</span> <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">3</span><span class="op">]</span> <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">4</span><span class="op">]</span> <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">5</span><span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>        sum <span class="op">=</span> sum <span class="op">+</span> a<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">;</span></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>15</code></p>
+<div class="sourceCode" id="cb23" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">4</span><span class="op">);</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">2</span><span class="op">]</span> <span class="op">=</span> <span class="dv">30</span><span class="op">;</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">3</span><span class="op">]</span> <span class="op">=</span> <span class="dv">40</span><span class="op">;</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> a<span class="op">;</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">*(</span>p <span class="op">+</span> <span class="dv">2</span><span class="op">)</span> <span class="op">+</span> <span class="op">*(</span>p <span class="op">+</span> <span class="dv">3</span><span class="op">);</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>70</code>（<code>p + 2</code> は <code>2 * sizeof(int)</code> バイト進む）</p>
+<hr />
+<p><a id="s11"></a></p>
+<h2 id="コマ10phase-1-文字列リテラルと-.data-セクション">コマ10（Phase 1）: 文字列リテラルと <code>.data</code> セクション</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: 文字列リテラル、<code>.data</code> セクションへの出力とラベル参照、<code>printf</code>、<code>#include "lib.h"</code></p>
+<div class="sourceCode" id="cb24" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">&quot;Hello, World!</span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">);</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">&quot;</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">);</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する標準出力:</p>
+<pre><code>Hello, World!
+42</code></pre>
+<hr />
+<p><a id="s12"></a></p>
+<h2 id="コマ11phase-1-式の走査と-libc-活用">コマ11（Phase 1）: 式の走査と libc 活用</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: 式のどこに書かれた文字列リテラルも <code>.data</code> に出す走査、不透明ポインタ <code>struct FILE *</code>、<code>fprintf</code> / <code>fdopen</code> / <code>fopen</code> / <code>fread</code> / <code>fclose</code>、<code>exit</code></p>
+<blockquote>
+<p><strong>実装ポイント</strong>: 新しい仕組みはほとんど無い。コマ10 で文に対して書いた走査を、
+式の種類の数だけ書き足して網羅する回である。ここまでで
+「小さいが動く Python 版コンパイラ」が一度完成する。</p>
+</blockquote>
+<div class="sourceCode" id="cb26" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span><span class="st">&quot;abc&quot;</span><span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">!=</span> <span class="ch">&#39;b&#39;</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(*(</span><span class="st">&quot;abc&quot;</span> <span class="op">+</span> <span class="dv">2</span><span class="op">)</span> <span class="op">!=</span> <span class="ch">&#39;c&#39;</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>42</code>（添字・ポインタ加算の奥にある文字列リテラルも <code>.data</code> に出る）</p>
+<div class="sourceCode" id="cb27" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_strlen<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>s<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> n<span class="op">;</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span>s<span class="op">[</span>n<span class="op">]</span> <span class="op">!=</span> <span class="ch">&#39;</span><span class="sc">\0</span><span class="ch">&#39;</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>        n <span class="op">=</span> n <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n<span class="op">;</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> my_strlen<span class="op">(</span><span class="st">&quot;abc&quot;</span><span class="op">);</span></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>3</code>（<code>strlen</code> 相当は <code>lib.h</code> に無いので自作する）</p>
+<hr />
+<p><a id="s13"></a></p>
+<h2 id="コマ12phase-2-構造体とヒープstruct-.---sizeof-malloc-連結リスト">コマ12（Phase 2）: 構造体とヒープ（struct / <code>.</code> / <code>-&gt;</code> / <code>sizeof</code> / <code>malloc</code> / 連結リスト）</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: <code>struct</code> 定義（タグ必須）、メンバアクセス（<code>.</code> / <code>-&gt;</code>）、構造体のレイアウトとパディング、<code>sizeof(struct タグ)</code>、構造体の <code>malloc</code>、<code>void *</code> の暗黙変換、自己参照構造体と連結リスト、<code>NULL</code></p>
+<div class="sourceCode" id="cb28" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Point <span class="op">{</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> y<span class="op">;</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> distance_sq<span class="op">(</span><span class="kw">struct</span> Point <span class="op">*</span>p<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> p<span class="op">-&gt;</span>x <span class="op">*</span> p<span class="op">-&gt;</span>x <span class="op">+</span> p<span class="op">-&gt;</span>y <span class="op">*</span> p<span class="op">-&gt;</span>y<span class="op">;</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Point p<span class="op">;</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>    p<span class="op">.</span>x <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>    p<span class="op">.</span>y <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> distance_sq<span class="op">(&amp;</span>p<span class="op">);</span></span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>25</code>（3² + 4² = 25）</p>
+<div class="sourceCode" id="cb29" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">{</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> val<span class="op">;</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Node <span class="op">*</span>next<span class="op">;</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> list_sum<span class="op">(</span><span class="kw">struct</span> Node <span class="op">*</span>head<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> sum<span class="op">;</span></span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span>head <span class="op">!=</span> NULL<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>        sum <span class="op">=</span> sum <span class="op">+</span> head<span class="op">-&gt;</span>val<span class="op">;</span></span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>        head <span class="op">=</span> head<span class="op">-&gt;</span>next<span class="op">;</span></span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">;</span></span>
+<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb29-17"><a href="#cb29-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-18"><a href="#cb29-18" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">*</span>new_node<span class="op">(</span><span class="dt">int</span> v<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb29-19"><a href="#cb29-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Node <span class="op">*</span>n<span class="op">;</span></span>
+<span id="cb29-20"><a href="#cb29-20" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="kw">struct</span> Node<span class="op">));</span>   <span class="co">// struct のサイズを sizeof で求める</span></span>
+<span id="cb29-21"><a href="#cb29-21" aria-hidden="true" tabindex="-1"></a>    n<span class="op">-&gt;</span>val <span class="op">=</span> v<span class="op">;</span></span>
+<span id="cb29-22"><a href="#cb29-22" aria-hidden="true" tabindex="-1"></a>    n<span class="op">-&gt;</span>next <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb29-23"><a href="#cb29-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n<span class="op">;</span></span>
+<span id="cb29-24"><a href="#cb29-24" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb29-25"><a href="#cb29-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-26"><a href="#cb29-26" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb29-27"><a href="#cb29-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Node <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb29-28"><a href="#cb29-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Node <span class="op">*</span>b<span class="op">;</span></span>
+<span id="cb29-29"><a href="#cb29-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Node <span class="op">*</span>c<span class="op">;</span></span>
+<span id="cb29-30"><a href="#cb29-30" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> new_node<span class="op">(</span><span class="dv">10</span><span class="op">);</span></span>
+<span id="cb29-31"><a href="#cb29-31" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> new_node<span class="op">(</span><span class="dv">20</span><span class="op">);</span></span>
+<span id="cb29-32"><a href="#cb29-32" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> new_node<span class="op">(</span><span class="dv">30</span><span class="op">);</span></span>
+<span id="cb29-33"><a href="#cb29-33" aria-hidden="true" tabindex="-1"></a>    a<span class="op">-&gt;</span>next <span class="op">=</span> b<span class="op">;</span></span>
+<span id="cb29-34"><a href="#cb29-34" aria-hidden="true" tabindex="-1"></a>    b<span class="op">-&gt;</span>next <span class="op">=</span> c<span class="op">;</span></span>
+<span id="cb29-35"><a href="#cb29-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> list_sum<span class="op">(</span>a<span class="op">);</span></span>
+<span id="cb29-36"><a href="#cb29-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>60</code></p>
+<hr />
+<p><a id="s14"></a></p>
+<h2 id="コマ13phase-2-グローバル変数スコープ管理">コマ13（Phase 2）: グローバル変数・スコープ管理</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: グローバル変数（<code>.bss</code> セクション。0 初期化が保証される）</p>
+<div class="sourceCode" id="cb30" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> call_count<span class="op">;</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> total<span class="op">;</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> add_and_count<span class="op">(</span><span class="dt">int</span> x<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> total <span class="op">+</span> x<span class="op">;</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>    call_count <span class="op">=</span> call_count <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> total<span class="op">;</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>    add_and_count<span class="op">(</span><span class="dv">10</span><span class="op">);</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>    add_and_count<span class="op">(</span><span class="dv">20</span><span class="op">);</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>    add_and_count<span class="op">(</span><span class="dv">30</span><span class="op">);</span></span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">&quot;</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> total<span class="op">);</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> call_count<span class="op">;</span></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<blockquote>
+<p><strong>0 初期化の保証</strong>: グローバル変数は明示的に代入しなくても 0 で始まる
+（ポインタなら null）。<code>.bss</code> セクションに <code>.zero</code> で配置することで、
+OS がプログラム開始時に 0 埋めしてくれる仕組みをそのまま使っている。
+期待する標準出力: <code>60</code>
+期待する終了コード: <code>3</code></p>
+</blockquote>
+<hr />
+<p><a id="s15"></a></p>
+<h2 id="コマ14phase-2-複数ファイル前処理の概念">コマ14（Phase 2）: 複数ファイル・前処理の概念</h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>新機能</strong>: <code>#include "file.h"</code>、オブジェクト形式 <code>#define</code></p>
+<div class="sourceCode" id="cb31" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">// math_util.h</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_abs<span class="op">(</span><span class="dt">int</span> x<span class="op">);</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_max<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">);</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_pow<span class="op">(</span><span class="dt">int</span> base<span class="op">,</span> <span class="dt">int</span> exp<span class="op">);</span></span></code></pre></div>
+<div class="sourceCode" id="cb32" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co">// math_util.c</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_abs<span class="op">(</span><span class="dt">int</span> x<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>x <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span> <span class="cf">return</span> <span class="op">-</span>x<span class="op">;</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x<span class="op">;</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_max<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="cf">return</span> a<span class="op">;</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> b<span class="op">;</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_pow<span class="op">(</span><span class="dt">int</span> base<span class="op">,</span> <span class="dt">int</span> exp<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> result<span class="op">;</span></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> exp<span class="op">;</span> i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> result <span class="op">*</span> base<span class="op">;</span></span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result<span class="op">;</span></span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb33" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co">// main.c</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;math_util.h&quot;</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#define BASE </span><span class="dv">2</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#define EXP  </span><span class="dv">6</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> my_abs<span class="op">(-</span><span class="dv">7</span><span class="op">);</span></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> my_pow<span class="op">(</span>BASE<span class="op">,</span> EXP<span class="op">);</span></span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> my_max<span class="op">(</span>a<span class="op">,</span> b<span class="op">);</span></span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>64</code>（max(7, 64) = 64）</p>
+<hr />
+<p><a id="s16"></a></p>
+<h2 id="コマ15phase-2-python-版総合演習mycc.py-統合-標準トラック達成">コマ15（Phase 2）: Python 版総合演習・<code>mycc.py</code> 統合 ← <strong>標準トラック達成</strong></h2>
+<p><strong>フロントエンド</strong>: <code>mycc.py</code>
+<strong>確認</strong>: コマ15 時点で <code>python3 scaffold/test_runner.py</code>（<code>final/mycc.py</code> + <code>final/tests/</code>）を実行し、<code>fixed17</code> 全17問の通過を標準トラック完成の目安とする。</p>
+<p><a id="fixed17"></a></p>
+<h3 id="fixed17-テスト一覧全17問">fixed17 テスト一覧（全17問）</h3>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 9%" />
+<col style="width: 32%" />
+<col style="width: 29%" />
+<col style="width: 29%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>ファイル</th>
+<th>出題意図</th>
+<th>使用機能</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>f01_arith.c</td>
+<td>四則演算の優先順位</td>
+<td>加減乗除・カッコ</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>f02_vars.c</td>
+<td>複数ローカル変数の宣言・代入・演算</td>
+<td>ローカル変数・代入</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>f03_if.c</td>
+<td>if/else if/else チェーン + 関数呼び出し</td>
+<td>if/else if/else・比較演算子・関数定義</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>f04_while.c</td>
+<td>while ループで累積和</td>
+<td>while・変数更新</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>f05_for.c</td>
+<td>for ループで階乗計算</td>
+<td>for・複数変数同時更新</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>f06_break.c</td>
+<td>break によるループ脱出</td>
+<td>break・for・if</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>f07_continue.c</td>
+<td>continue によるスキップ</td>
+<td>continue・for・if</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>f08_func.c</td>
+<td>多引数関数の合成呼び出し</td>
+<td>関数定義・引数・戻り値</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td>f09_recur.c</td>
+<td>再帰呼び出し（フィボナッチ）</td>
+<td>再帰・スタックフレーム</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>f10_ptr.c</td>
+<td>ポインタ渡し swap</td>
+<td>&amp;・*・間接代入・void 関数</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td>f11_ptr_arith.c</td>
+<td>malloc 領域の添字・ポインタ走査</td>
+<td>malloc・sizeof・添字・ポインタ引数</td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td>f12_struct.c</td>
+<td>構造体 + ドット・アロー両方</td>
+<td>struct 定義・. / -&gt; 演算子</td>
+</tr>
+<tr class="odd">
+<td>13</td>
+<td>f13_global.c</td>
+<td>グローバル変数</td>
+<td>.bss セクション・0 初期化・スコープ</td>
+</tr>
+<tr class="even">
+<td>14</td>
+<td>f14_string.c</td>
+<td>printf 文字列出力</td>
+<td>文字列リテラル・可変長引数関数呼出</td>
+</tr>
+<tr class="odd">
+<td>15</td>
+<td>f15_define.c</td>
+<td>#define マクロ + for ループ</td>
+<td>#define・for</td>
+</tr>
+<tr class="even">
+<td>16</td>
+<td>f16_ternary.c</td>
+<td>三項演算子（値を持つ分岐）</td>
+<td><code>?:</code>・入れ子・関数引数</td>
+</tr>
+<tr class="odd">
+<td>17</td>
+<td>f17_incr.c</td>
+<td>前置インクリメント</td>
+<td>前置 <code>++</code>（int とポインタ）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p>標準判定用テストは <code>final/tests/</code> に配置されている。<code>python3 scaffold/test_runner.py</code> で一括実行できる。</p>
+</blockquote>
+<p><code>fixed17</code> は総合判定であって、仕様の全機能を 1 対 1 で覆う集合ではない。
+機能ごとの代表テストは各コマの <code>sessions/NN_xxx/tests/</code> にあり、
+その対応は <a href="../../docs/language_spec/#feature-map"><code>language_spec.md</code> の対応表</a>にまとめてある。</p>
+<p>固定テストセットの代表例（malloc + ポインタ + 関数の複合）:</p>
+<div class="sourceCode" id="cb34" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co">// f11: ポインタ演算 — malloc した領域を sizeof と添字・ポインタ走査で使う</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> sum<span class="op">(</span><span class="dt">int</span> <span class="op">*</span>a<span class="op">,</span> <span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> s<span class="op">;</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>    s <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>        s <span class="op">=</span> s <span class="op">+</span> <span class="op">*(</span>a <span class="op">+</span> i<span class="op">);</span></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> s<span class="op">;</span></span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">5</span><span class="op">);</span></span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">2</span><span class="op">]</span> <span class="op">=</span> <span class="dv">30</span><span class="op">;</span></span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">3</span><span class="op">]</span> <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>    a<span class="op">[</span><span class="dv">4</span><span class="op">]</span> <span class="op">=</span> <span class="dv">7</span><span class="op">;</span></span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">(</span>a<span class="op">,</span> <span class="dv">5</span><span class="op">);</span></span>
+<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>期待する終了コード: <code>72</code></p>
+<hr />
+<p><a id="appendix"></a></p>
+<h2 id="付録-機能とコマの対応">付録: 機能とコマの対応</h2>
+<p>どの機能をどのコマで導入し、どのテストで検証するかは
+<a href="../../docs/language_spec/#feature-map"><code>language_spec.md</code> の対応表</a>にまとめてある。
+仕様の全機能を行に持つ表なので、この文書のコマ別の節と併せて使う
+（この文書は「各コマの終わりに何が動くか」を実例で示し、対応表は
+「仕様のどの項目がどこで埋まるか」を網羅する）。</p>
+<p>コマ15 のあとは選択制の発展課題（<code>../advanced/README.md</code>）に進む。
+C 移植・セルフホスト（P1）の進め方は <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/P1_selfhost/README.md"><code>../advanced/P1_selfhost/README.md</code></a> にある。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../docs/rv64_reference/"><span class="label">前へ</span>RV64 リファレンス</a><a class="index" href="../../docs/"><span class="label">一覧</span>仕様・参考文書</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/docs/code_example.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

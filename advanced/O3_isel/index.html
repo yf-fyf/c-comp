@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>命令選択 — 複数の命令を1つに畳む — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">命令選択 — 複数の命令を1つに畳む</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#いまのコンパイラは何を出しているか" id="toc-いまのコンパイラは何を出しているか">いまのコンパイラは何を出しているか</a></li>
+      <li><a href="#命令選択とは" id="toc-命令選択とは">命令選択とは</a></li>
+      <li><a href="#畳んでよいか-消えるレジスタに注意" id="toc-畳んでよいか-消えるレジスタに注意">畳んでよいか — 消えるレジスタに注意</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#測ってみると" id="toc-測ってみると">測ってみると</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>「アドレスを計算してから読む」という2命令を、RV64 が持つ
+<code>offset(base)</code> 形式のロード1命令に畳み込む。
+<a href="../../advanced/#fixed17"><code>fixed17</code></a> を通したまま、静的・動的の両方で命令数を減らす。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>O1（測定基盤。<code>golden.py</code> が <code>measure.py</code> と <code>O1_measure/bench/</code> を使う）</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、<code>optcc.py</code></td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>isel.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が <code>fixed17</code> 全通と静的・動的の命令数削減を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>最適化発展シリーズの第3回。O2・O4・O5 とは独立している。索引の一覧表では2コマぶんとしているが、O4・O6 と違って資料に明示の区切りは置いていない</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>optcc.py --passes isel</code> が、<code>isel.py</code> をパスとして差し込む。</p>
+<h2 id="いまのコンパイラは何を出しているか">いまのコンパイラは何を出しているか</h2>
+<p>変数 <code>s</code> を読むたびに、コンパイラは2命令を出している。</p>
+<div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span>      <span class="co"># s のアドレスを計算して</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  lw   a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span>        <span class="co"># そのアドレスから読む</span></span></code></pre></div>
+<p>コマ3 以来の「<code>codegen_lval</code> でアドレスを作り、<code>ld</code>/<code>lw</code> で読む」という
+2段構えの設計から、まっすぐ出てきた形である。素直だが、無駄がある。</p>
+<p>RV64 のロード命令は、もともと <strong><code>offset(base)</code></strong> という形を持っている。</p>
+<div class="sourceCode" id="cb2" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>  lw   a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># 1命令で同じこと</span></span></code></pre></div>
+<p><code>addi</code> が要らない。<strong>変数を読むたびに1命令減る</strong>ので、効きが大きい。</p>
+<h2 id="命令選択とは">命令選択とは</h2>
+<p>いま行ったのは、「この計算にはこの命令が使える」という対応づけである。
+これを<strong>命令選択</strong>（instruction selection）という。</p>
+<pre data-lang="text"><code>「s0 から -24 の位置にある 4バイトを読む」という仕事
+    → 素朴な割り当て: addi + lw    (2命令)
+    → うまい割り当て: lw            (1命令)</code></pre>
+<p>同じ仕事に対して機械語の命令の選び方が複数あり、その中から良いものを選ぶ。
+CPU が持つアドレッシングモードや複合命令を活かすほど命令数が減る。</p>
+<p>この回で扱う3つの置き換えは次のとおり。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 21%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>前</th>
+<th>後</th>
+<th>効くところ</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>addi rD, rS, N</code> + <code>load rD, 0(rD)</code></td>
+<td><code>load rD, N(rS)</code></td>
+<td><strong>変数を読むたび</strong></td>
+</tr>
+<tr class="even">
+<td><code>addi rD, rS, N</code> + <code>store rV, 0(rD)</code></td>
+<td><code>store rV, N(rS)</code></td>
+<td>変数へ書くとき</td>
+</tr>
+<tr class="odd">
+<td><code>li rC, 2ᵏ</code> + <code>mul rD, rX, rC</code></td>
+<td><code>slli rD, rX, k</code></td>
+<td><strong>ポインタ添字 <code>p[i]</code> の要素サイズ倍</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>3番目は、コマ9（ポインタ演算）で作った、<code>p[i]</code> のアドレス計算で
+添字に要素サイズを掛ける処理である。
+<code>int</code> なら4倍なので、掛け算ではなく2ビット左シフトで済む。
+掛け算は加算やシフトより数倍遅い命令なので、これも意味がある。</p>
+<h2 id="畳んでよいか-消えるレジスタに注意">畳んでよいか — 消えるレジスタに注意</h2>
+<p>1番目の置き換えは<strong>必ず安全</strong>である。畳む前も後も、<code>rD</code> には読み出した値が入る。</p>
+<p>しかし2番目・3番目は違う。</p>
+<div class="sourceCode" id="cb4" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  addi a1<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">16</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  sw   a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span>        <span class="co"># → sw a0, -16(s0) に畳むと、a1 に何も入らなくなる</span></span></code></pre></div>
+<p><code>a1</code> を後で誰かが読むなら、畳んではいけない。実際、<strong>畳んではいけない例</strong>がすぐ見つかる。</p>
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span>       <span class="co"># スタックを確保して</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  sd   a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>        <span class="co"># そこへ積む</span></span></code></pre></div>
+<p>この形は <code>addi rD, rS, N</code> + <code>store rV, 0(rD)</code> にぴったり当てはまる。
+しかし畳んで <code>sd a0, -8(sp)</code> にすると、<strong><code>sp</code> が動かなくなる</strong>。
+積んだつもりの値は、次の push で上書きされて消える。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p>パターンが一致することと、置き換えてよいことは<strong>別</strong>である。
+「その後でそのレジスタが使われるか」を確かめてから畳む。</p>
+</div>
+<p>そこで <code>is_dead_after(lines, pos, reg)</code> を作る。
+<code>pos</code> の後ろを1行ずつ見て、</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 70%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>見つけたもの</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>reg</code> を<strong>読む</strong>命令</td>
+<td>まだ使われている → 畳めない</td>
+</tr>
+<tr class="even">
+<td><code>reg</code> に<strong>書く</strong>命令</td>
+<td>読まれる前に上書きされた → 畳んでよい</td>
+</tr>
+<tr class="odd">
+<td>ラベル・分岐・<code>call</code></td>
+<td>ここで基本ブロックが終わる → <strong>判断できない</strong>（安全側で畳まない）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>3行目が保守的なのがポイントである。ラベルの先は別の経路から来るかもしれないので、
+この単純な前向き走査では分からない。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>ここが O2・O5 につながる。</strong>
+「ブロックを越えて、このレジスタが後で使われるか」を正しく知るには、
+フローグラフの上で<strong>生存変数解析</strong>を行う必要がある。
+それが O2（フローグラフ）と O5（生存解析）の主題である。</p>
+<p>ただし、<strong>正確にすれば畳める場所が増える、とは限らない</strong>。
+実際に数えてみると、<code>is_dead_after</code> が「ブロック境界なので判断できない」と答えた回数は
+bench と <code>fixed17</code> の全22本を通して <strong>0回</strong>である。
+正確な生存解析を持ち込んでも、この3つの畳み込みが増える箇所は<strong>1つも無い</strong>。
+いまのコード生成が出す形では、たまたま
+「同じブロックの中で完結する」ものしか無いからである。</p>
+<p>解析を正確にすることと、最適化が効くことは別 ——
+この数え上げは O6 の
+<a href="../../advanced/O6_copyprop/#isel-precision">「正確な解析は畳み込みを増やすか」</a>で行う。</p>
+</div>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>fold_load</code></td>
+<td>安全な畳み込み。まずこれだけで効果が出る</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>is_dead_after</code></td>
+<td>「この後で使われないか」の判定</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>fold_store</code> / <code>fold_mul_to_shift</code></td>
+<td>Step 2 を使って安全に畳む</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>run</code></td>
+<td>変化がなくなるまで繰り返す（B1 と同じ）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>reads_reg</code> / <code>writes_reg</code>（命令がどのレジスタを読み書きするか）と
+正規表現はスケルトンで用意してある。</p>
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../optcc.py <span class="at">--passes</span> isel ../O1_measure/bench/matmul.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> slli</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../optcc.py <span class="at">--passes</span> <span class="st">&#39;&#39;</span> ../O1_measure/bench/matmul.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&quot;addi a0, s0&quot;</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 各置き換えの単体テスト(未実装は SKIP)</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># fixed17 + ベンチマーク + 静的/動的の削減</span></span></code></pre></div>
+<p><code>check.py</code> には「<strong>push の並びを畳まないこと</strong>」を確かめる項目がある。
+安全判定が働いていないと、ここで落ちる。</p>
+<h2 id="測ってみると">測ってみると</h2>
+<p>教員の実装では次のようになる。
+「前」は O1 の<a href="../../advanced/O1_measure/#baseline">全構成の基準表</a>の <code>素</code> 列、
+「後」は <code>+isel</code> 列である。この回はその差分を作る。</p>
+<pre data-lang="text"><code>ベンチマーク    静的:前   後   削減    動的:前      後   削減
+bubble           340   301   11%     24023   20566   14%
+fib_rec           77    73    5%     73993   69061    6%
+loop_sum          70    65    7%      7840    7038   10%
+matmul           453   411    9%     27958   24606   11%
+strops           243   225    7%     77108   69066   10%
+合計            1183  1075    9%    210922  190337    9%</code></pre>
+<p>合計だけを見ると静的9%減・動的9%減で同程度に見えるが、ベンチマークごとに見ると
+ループが主体の bubble・loop_sum・matmul・strops はどれも動的削減が静的削減を
+上回る（bubble は静的11%に対し動的14%）。<strong>ループの中にある命令を消せている</strong>ので、
+ループが支配的なベンチマークほど動的の効きが大きい。再帰呼び出しが主体で
+ループが小さい fib_rec だけは静的5%・動的6%とどちらも小さいままである。
+O1 で作った物差しが、ここで意味を持つ。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>B1 と組み合わせる</strong>: <code>optcc.py --passes isel</code> と B1 のピープホールを
+両方かけるとどうなるか。順番を変えると結果は変わるか</li>
+<li><strong><code>addi</code> の畳み込み</strong>: <code>li rC, N</code> + <code>add rD, rX, rC</code> → <code>addi rD, rX, N</code>
+（N が12ビットに収まるとき）を追加する</li>
+<li><strong>除算のシフト化</strong>: <code>li rC, 2ᵏ</code> + <code>div rD, rX, rC</code> は <code>srai</code> にできるか。
+<strong>負数のときに答えが変わる</strong>ので注意（S2 で見た「0方向への切り捨て」）</li>
+<li><strong>非隣接の畳み込み</strong>: 代入 <code>x = 式;</code> では、アドレス計算と store の間に
+式の計算が入るので隣り合っていない。これを畳むには何が必要か</li>
+<li><strong>どの置き換えがいちばん効いたか</strong>: 3つを1つずつ無効にして測り、寄与を比べる</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 本物の命令選択は木の上で行う。</strong>
+教科書（タイガーブック9章）の命令選択は、中間表現の<strong>木</strong>に対して
+「この形の部分木は、この1命令で実現できる」というタイルを敷き詰める
+（maximal munch や動的計画法）。
+今回は生成済みのアセンブリに対するパターン置換で同じ効果を出しているが、
+木の上で行えば「アドレス計算そのものを最初から作らない」ことができ、
+<code>is_dead_after</code> のような後追いの安全確認も要らなくなる。
+中間表現を導入する動機の1つが、ここにある。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/O2_cfg/"><span class="label">前へ</span>基本ブロックとフローグラフ — 最適化の地図を作る</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/O4_regalloc/"><span class="label">次へ</span>レジスタ割り当て — 変数をメモリから追い出す</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/O3_isel.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自前 printf — 数を文字に変える — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">自前 printf — 数を文字に変える</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#可変長引数は定義できない-どう設計するか" id="toc-可変長引数は定義できない-どう設計するか">可変長引数は定義できない — どう設計するか</a></li>
+      <li><a href="#数を文字に変えるということ" id="toc-数を文字に変えるということ">数を文字に変えるということ</a></li>
+      <li><a href="#書式の解釈" id="toc-書式の解釈">書式の解釈</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      <li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>libc の <code>printf</code> を使わずに、自分で <code>print_str</code> / <code>print_int</code> / <code>printf1</code> を書く。
+<strong>自作コンパイラでコンパイルした自前の出力ライブラリ</strong>で、libc なしのプログラムを動かす。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>R1（<code>sys_write</code> が使える状態）とコマ15。<code>check.py</code> が完成した <code>final/mycc.py</code> で <code>myprintf.c</code> と <code>tests/*.c</code> をコンパイルするので、コマ15 が無いと1件も実行できない</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、<code>syscall.s</code>（R1 のもの。配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>myprintf.c</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になる（このトピックに <code>golden.py</code> は無い）</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>ランタイム発展シリーズの第2回。書くのはすべて Core プロファイルの C で、自分のコンパイラでコンパイルする</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>コマ10 で「<code>printf</code> 自体は実装しない」と言った、その中身を作る。</p>
+<h2 id="可変長引数は定義できない-どう設計するか">可変長引数は定義できない — どう設計するか</h2>
+<p>本物の <code>printf</code> は可変長引数関数である。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> printf<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span></span></code></pre></div>
+<p>しかし Core プロファイルでは、<code>...</code> は<strong>外部関数の宣言だけ</strong>に許され、
+<strong>自分で定義することはできない</strong>（<code>language_spec.md</code> の「関数」節）。
+可変長引数の実装には、スタック上の引数を型情報なしに読み出す仕組み（<code>va_arg</code> 相当）が必要で、
+コンパイラ側の対応も要るからである。</p>
+<p>そこで、引数が固定の関数を組み合わせる設計にする。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>関数</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>print_char(int c)</code></td>
+<td>1文字書く</td>
+</tr>
+<tr class="even">
+<td><code>print_str(char *s)</code></td>
+<td>NUL 終端文字列を書く</td>
+</tr>
+<tr class="odd">
+<td><code>print_int(int n)</code></td>
+<td>整数を10進で書く</td>
+</tr>
+<tr class="even">
+<td><code>printf1(char *fmt, int iarg, char *sarg)</code></td>
+<td>書式つき（引数1個ぶん）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>printf1</code> は「整数の引数」と「文字列の引数」を両方受け取り、
+書式指定子に応じてどちらかを使う。使わない方には 0 を渡す。</p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>printf1<span class="op">(</span><span class="st">&quot;n=</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>printf1<span class="op">(</span><span class="st">&quot;s=</span><span class="sc">%s\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="st">&quot;hello&quot;</span><span class="op">);</span></span></code></pre></div>
+<p>不格好に見えるが、<strong>言語の制約の中で目的を達する</strong>のは実装の常である。</p>
+<h2 id="数を文字に変えるということ">数を文字に変えるということ</h2>
+<p><code>print_int</code> がこの回の中心である。
+整数 <code>1234</code> を画面に出すには、<strong>文字コードの列</strong> <code>'1' '2' '3' '4'</code> を作る必要がある。</p>
+<p><code>n % 10</code> で取れるのは<strong>最後に表示したい桁</strong>（一の位）である。
+配列が使えないこの言語では、桁をバッファに詰めて後から並べ直す方式は取れない。
+そこで、<strong>上位の桁を先に、再帰で出す</strong>方式にする。</p>
+<pre data-lang="text"><code>print_int(1234):
+  1234 &gt;= 10 なので、まず上位の桁を再帰で出す
+    print_int(123):
+      123 &gt;= 10 なので、まず上位の桁を再帰で出す
+        print_int(12):
+          12 &gt;= 10 なので、まず上位の桁を再帰で出す
+            print_int(1):
+              1 &lt; 10 なので、そのまま &#39;1&#39; を出す
+          最後に 12 % 10 = 2 → &#39;2&#39; を出す
+      最後に 123 % 10 = 3 → &#39;3&#39; を出す
+  最後に 1234 % 10 = 4 → &#39;4&#39; を出す
+
+出力順: &#39;1&#39; &#39;2&#39; &#39;3&#39; &#39;4&#39;</code></pre>
+<p>「まず上位を再帰で出してから、自分の一の位を出す」という順序が、
+そのまま<strong>上の桁から下の桁への出力順</strong>になる。</p>
+<p>数字を文字にするのは <code>'0' + 桁</code> である（<code>'0'</code> は 48）。
+コマ10 で文字が小さな整数であることを見たが、ここではその逆向きの変換をしている。</p>
+<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> print_int<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        print_char<span class="op">(</span><span class="dv">45</span><span class="op">);</span>      <span class="co">// &#39;-&#39;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        n <span class="op">=</span> <span class="op">-</span>n<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">&gt;=</span> <span class="dv">10</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        print_int<span class="op">(</span>n <span class="op">/</span> <span class="dv">10</span><span class="op">);</span>   <span class="co">// 上位の桁を先に出す</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    print_char<span class="op">(</span><span class="dv">48</span> <span class="op">+</span> n <span class="op">%</span> <span class="dv">10</span><span class="op">);</span> <span class="co">// 自分の一の位</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><code>n == 0</code> は <code>n &gt;= 10</code> が成り立たないのでそのまま <code>print_char(48 + 0)</code> に落ちる。
+「末尾から詰める」方式で必要だった <strong><code>n == 0</code> の特別扱いが不要</strong>になっている
+（<code>while (n &gt; 0)</code> のループが1度も回らない、という事故が原理的に起きない）。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p><strong>負数を忘れない。</strong> 先頭で <code>'-'</code>（45）を出してから <code>n = -n</code> する。</p>
+<p><strong><code>INT_MIN</code> は UB。</strong> <code>n = -2147483648</code> のとき、<code>-n</code> は <code>int</code> の表現範囲を超え、
+<code>language_spec.md</code> が明記する<strong>符号付きオーバーフロー = 未定義動作</strong>に該当する
+（発展課題5 で扱う）。</p>
+</div>
+<h2 id="書式の解釈">書式の解釈</h2>
+<p><code>printf1</code> は <code>fmt</code> を1文字ずつ見て、<code>'%'</code>（37）が来たら次の1文字で分岐する。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>指定子</th>
+<th>文字コード</th>
+<th>動作</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>%d</code></td>
+<td>100</td>
+<td><code>print_int(iarg)</code></td>
+</tr>
+<tr class="even">
+<td><code>%s</code></td>
+<td>115</td>
+<td><code>print_str(sarg)</code></td>
+</tr>
+<tr class="odd">
+<td><code>%c</code></td>
+<td>99</td>
+<td><code>print_char(iarg)</code></td>
+</tr>
+<tr class="even">
+<td><code>%%</code></td>
+<td>37</td>
+<td><code>'%'</code> を1文字出す</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Core プロファイルには文字リテラルがあるので <code>fmt[i] == '%'</code> とも書けるが、
+参照実装では数値で書いてある（どちらでもよい）。</p>
+<p>これが、コマ10 で <code>printf("x=%d\n", 42)</code> を呼んだときに
+libc の中で起きていたことである。<strong>書式文字列は、実行時に解釈されている</strong>。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>my_strlen</code> / <code>print_char</code> / <code>print_str</code></td>
+<td>文字列の基本</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>print_int</code></td>
+<td>10進変換（この回の山場）</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>printf1</code></td>
+<td>書式の走査と分岐</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>sys_write</code> と <code>_start</code> は R1 の <code>syscall.s</code>（配布済み）から来る。</p>
+<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 手で動かす場合</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../../final/mycc.py myprintf.c <span class="op">&gt;</span> impl.s</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../../final/mycc.py tests/fmt.c <span class="op">&gt;</span> main.s</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-nostdlib</span> <span class="at">-static</span> main.s impl.s syscall.s <span class="at">-o</span> prog</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./prog</span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py</span></code></pre></div>
+<p><code>tests/*.c</code> を自作コンパイラでコンパイルし、<code>myprintf.c</code> と <code>syscall.s</code> と
+リンクして実行し、標準出力と終了コードを確認する。<strong>libc は一切使わない。</strong></p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>fmt.c</code></td>
+<td><code>printf1</code> の書式指定（<code>%d</code> <code>%s</code> <code>%c</code> <code>%%</code> と書式なし）が一通り通る</td>
+</tr>
+<tr class="even">
+<td><code>numbers.c</code></td>
+<td><code>print_int</code> が境界値（<code>0</code>、1桁の正数、負数、桁の大きい数）を正しく出せる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>この回の編集対象は C なので、未実装は <code>NotImplementedError</code> ではなく
+<code>myprintf.c</code> の <code>TODO(...)</code> コメントで表してある。<code>check.py</code> は TODO が残っている間、
+テストを回さず <code>[SKIP] 未実装: …</code> と報告する。SKIP は未達なので、完了条件は満たしていない。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong><code>%x</code>（16進）を足す</strong>: 10 以上の桁を <code>'a'</code>〜<code>'f'</code> にする分岐が必要になる</li>
+<li><strong>桁揃え</strong>: <code>%5d</code> のように幅を指定できるようにする（先に桁数を数えて空白を出す）</li>
+<li><strong>引数を増やす</strong>: <code>printf2(fmt, i1, i2)</code> を作る。
+なぜ本物の <code>printf</code> が可変長引数でなければ困るのかを実感する</li>
+<li><strong>再帰方式のコスト</strong>: いまは1文字ごとに <code>sys_write</code> を呼んでいる（システムコールは遅い）。
+<code>print_int</code> が呼ぶ <code>sys_write</code> の回数は桁数（と符号の有無）で決まる。
+<code>print_int(1234)</code> と <code>print_int(-1234)</code> でそれぞれ何回 <code>sys_write</code> が呼ばれるか数え、
+桁数 <code>d</code> を使った式で表す（<code>-nostdlib</code> では配列も <code>malloc</code> も使えないため、
+出力をため込んでまとめて書く方式は取れない — この制約下でのコスト見積もりとして考える）</li>
+<li><strong><code>print_int</code> の限界</strong>: <code>-2147483648</code>（int の最小値）を渡すとどうなるか。
+<code>n = -n</code> が正しく動かない理由を考える</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: libc も C で書かれている。</strong>
+いま書いた <code>print_int</code> は、glibc の <code>printf</code> の中にある10進変換とほとんど同じことをしている。
+違いは、バッファリング、ロケール、浮動小数点、スレッド安全性…といった
+「実用のための膨大な付加物」である。
+核心の「数を文字に変える」部分は、いま自分で書いたものと変わらない。</p>
+</div>
+<h2 id="次回予告">次回予告</h2>
+<p>出力ができるようになった。R3 では<strong>メモリの割り当て</strong>を自分で行う。
+コマ12 で「実装しない」とした <code>malloc</code> の中身を作る。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/R1_nolibc/"><span class="label">前へ</span>libc なしで動かす — システムコールを直接呼ぶ</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/R3_malloc/"><span class="label">次へ</span>自前 malloc — ヒープを自分で管理する</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/R2_printf.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

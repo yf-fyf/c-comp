@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>libc なしで動かす — システムコールを直接呼ぶ — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">libc なしで動かす — システムコールを直接呼ぶ</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#いま何が起きているか" id="toc-いま何が起きているか">いま何が起きているか</a></li>
+      <li><a href="#システムコール-os-への頼み方" id="toc-システムコール-os-への頼み方">システムコール — OS への頼み方</a></li>
+      <li><a href="#step-1-hello.s-自分で-_start-を書く" id="toc-step-1-hello.s-自分で-_start-を書く">Step 1: hello.s — 自分で <code>_start</code> を書く</a></li>
+      <li><a href="#step-2-自作コンパイラの出力を-libc-なしで動かす" id="toc-step-2-自作コンパイラの出力を-libc-なしで動かす">Step 2: 自作コンパイラの出力を libc なしで動かす</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      <li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>printf</code> も <code>exit</code> も使わずに、システムコールを直接発行して
+「文字を表示して終了コードを返す」プログラムを動かす。
+さらに、自作コンパイラが出力した C プログラムを <strong>libc なしで</strong>実行する。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>着手はコマ10（<code>printf</code>）まで。完了条件の <code>check.py</code> は Step 2 で完成した <code>final/mycc.py</code> の出力をリンクする（無い間はそこが SKIP になる）ので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、<code>syscall.s</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>hello.s</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になる（このトピックに <code>golden.py</code> は無い）</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>ランタイム発展シリーズの第1回。続く R2・R3 の土台になる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>コマ0（演習環境構築）の資料で「アセンブルとリンクは gcc に、実行は qemu に任せる」と言った、
+その<strong>任せていた部分</strong>を1つ開ける。</p>
+<h2 id="いま何が起きているか">いま何が起きているか</h2>
+<p><code>printf("hi\n")</code> を呼ぶと、最終的に何が起きているのか。</p>
+<pre data-lang="text"><code>printf(&quot;hi\n&quot;)            ← あなたのプログラム
+  → libc の printf        ← 書式を解釈し、バッファに詰める
+    → libc の write       ← システムコールの薄い包み紙
+      → ecall 命令        ← ここで初めて OS に頼む
+        → Linux カーネル  ← 実際に画面へ出す</code></pre>
+<p>いままで <code>riscv64-linux-gnu-gcc -static</code> でリンクすると、
+libc（C 標準ライブラリ）が自動的にくっついていた。
+libc は <code>printf</code> だけでなく、<strong>プログラムの起点</strong> <code>_start</code> も提供している。</p>
+<pre data-lang="text"><code>_start (libc)  →  環境変数などの準備  →  main を呼ぶ  →  main の戻り値で exit</code></pre>
+<p><code>main</code> が「プログラムの入口」に見えていたのは、libc がそう見せていたからである。</p>
+<h2 id="システムコール-os-への頼み方">システムコール — OS への頼み方</h2>
+<p>画面に文字を出す、ファイルを読む、プログラムを終える。
+これらは自分のプログラムだけでは実現できず、OS に頼む必要がある。
+その頼み方が<strong>システムコール</strong>である。</p>
+<p>RV64 Linux では、次の約束になっている。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>決めごと</th>
+<th>場所</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>どのシステムコールか（番号）</td>
+<td><code>a7</code></td>
+</tr>
+<tr class="even">
+<td>第1引数、第2引数、第3引数…</td>
+<td><code>a0</code>, <code>a1</code>, <code>a2</code>, …</td>
+</tr>
+<tr class="odd">
+<td>発行する命令</td>
+<td><code>ecall</code></td>
+</tr>
+<tr class="even">
+<td>戻り値</td>
+<td><code>a0</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>引数の渡し方が<strong>関数呼び出しとほぼ同じ</strong>なのがポイントである
+（違うのは、番号を <code>a7</code> に入れて <code>call</code> ではなく <code>ecall</code> を使うこと）。</p>
+<p>この回で使うのは2つだけである。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>番号</th>
+<th>名前</th>
+<th>引数</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>64</td>
+<td><code>write</code></td>
+<td>fd, buf, count</td>
+<td>fd へ buf から count バイト書く</td>
+</tr>
+<tr class="even">
+<td>93</td>
+<td><code>exit</code></td>
+<td>code</td>
+<td>プログラムを終了する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>fd</code>（ファイル記述子）は、1 が標準出力である。</p>
+<h2 id="step-1-hello.s-自分で-_start-を書く">Step 1: hello.s — 自分で <code>_start</code> を書く</h2>
+<p>libc を外すと <code>_start</code> がなくなるので、自分で用意する。</p>
+<div class="sourceCode" id="cb3" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.data</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">msg:</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.ascii</span> <span class="st">&quot;Hello, no libc!</span><span class="sc">\n</span><span class="st">&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.set</span> msglen<span class="op">,</span> <span class="dv">16</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.text</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.globl</span> _start</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="fu">_start:</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># write(1, msg, msglen) をここに書く</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># exit(42) をここに書く</span></span></code></pre></div>
+<p><code>.ascii</code> は、コマ10 の <code>.byte</code> 列と同じことを文字列で書ける指示である
+（NUL 終端は付かない。<code>write</code> はバイト数を渡すので終端が要らない）。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p><code>_start</code> の最後は <code>ret</code> <strong>ではない</strong>。
+<code>ret</code> は「呼び出し元へ戻る」命令だが、<code>_start</code> には呼び出し元がない。
+必ず <code>exit</code> システムコールで終わること。忘れると、
+<code>_start</code> の直後にあるゴミを命令として実行して異常終了する。</p>
+</div>
+<p>ビルドと実行は次の通り。<code>-nostdlib</code> が「libc を付けない」指示である。</p>
+<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-nostdlib</span> <span class="at">-static</span> hello.s <span class="at">-o</span> hello</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./hello<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="step-2-自作コンパイラの出力を-libc-なしで動かす">Step 2: 自作コンパイラの出力を libc なしで動かす</h2>
+<p>次に、<strong>自分のコンパイラが出力した C プログラム</strong>を libc なしで動かす。
+必要なのは2つの橋渡しである。</p>
+<ol type="1">
+<li>C から呼べる <code>sys_write</code> / <code>sys_exit</code>（<code>ecall</code> は mycc が生成できないため）</li>
+<li><code>main</code> を呼ぶ <code>_start</code></li>
+</ol>
+<p>これらをまとめた <code>syscall.s</code> を配布する（完成品）。中身は次の形である。</p>
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.globl</span> sys_write</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sys_write:</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    li   a7<span class="op">,</span> <span class="dv">64</span>        <span class="co"># 引数 a0,a1,a2 はそのまま使える</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    ecall</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">ret</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.globl</span> _start</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">_start:</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">call</span> main</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    li   a7<span class="op">,</span> <span class="dv">93</span>        <span class="co"># exit(main の戻り値)</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    ecall</span></code></pre></div>
+<p><code>sys_write</code> が短いことに注目してほしい。
+C の呼び出し規約（<code>a0</code>, <code>a1</code>, <code>a2</code>）と システムコールの規約（<code>a0</code>, <code>a1</code>, <code>a2</code>）が
+同じなので、<strong>番号を入れて <code>ecall</code> するだけ</strong>でよい。
+libc の <code>write</code> も、実体はこれとほとんど同じである。</p>
+<p>C 側では、外部関数として宣言して普通に呼ぶ。</p>
+<div class="sourceCode" id="cb6" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> sys_write<span class="op">(</span><span class="dt">int</span> fd<span class="op">,</span> <span class="dt">char</span> <span class="op">*</span>buf<span class="op">,</span> <span class="dt">int</span> len<span class="op">);</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    sys_write<span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="st">&quot;hi from C</span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">10</span><span class="op">);</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">7</span><span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../../final/mycc.py tests/print_loop.c <span class="op">&gt;</span> prog.s</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-nostdlib</span> <span class="at">-static</span> prog.s syscall.s <span class="at">-o</span> prog</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./prog<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<p><strong>自作コンパイラの出力が、libc なしで OS と直接やり取りして動いた。</strong>
+このプログラムに含まれる命令は、すべて自分のコンパイラか、
+自分が書いたアセンブリから来ている。</p>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py</span></code></pre></div>
+<p>Step 1（<code>hello.s</code> の表示と終了コード）と Step 2（<code>tests/*.c</code> の実行）を続けて確認する。</p>
+<p>この回の編集対象はアセンブリなので、未実装は <code>NotImplementedError</code> ではなく
+<code>hello.s</code> の <code>TODO(...)</code> コメントで表してある。<code>check.py</code> は TODO が残っている間、
+その Step を <code>[SKIP] 未実装: …</code> と報告する（実装前に一度回しても、
+原因の分からないシグナル終了にはならない）。SKIP は未達なので、完了条件は満たしていない。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>文字列の長さを数える</strong>: <code>sys_write</code> に渡す長さを固定値ではなく、
+NUL 終端を数えて求める <code>my_strlen</code> を Core C で書く（R2 の下準備）</li>
+<li><strong>標準エラー出力</strong>: fd を 2 にして書き、<code>qemu ... 2&gt;/dev/null</code> で消えることを確かめる</li>
+<li><strong>他のシステムコール</strong>: <code>read</code>（番号 63）で標準入力から1文字読むプログラムを書く</li>
+<li><strong>libc のサイズ</strong>: <code>-static</code> あり／なしで実行ファイルのサイズを比べる（<code>ls -l</code>）。
+libc がどれだけ大きいか確かめる</li>
+<li><strong><code>_start</code> の引数</strong>: 本物の <code>_start</code> は、スタックから <code>argc</code> / <code>argv</code> を取り出して
+<code>main(argc, argv)</code> に渡している。<code>sp</code> の指す先を <code>gdb-multiarch</code> で覗いてみる</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: なぜ <code>ecall</code> が必要なのか。</strong>
+ユーザーのプログラムは、画面や ファイルに直接触れない（触れたら他のプログラムを
+壊せてしまう）。<code>ecall</code> は「特権レベルを上げてカーネルに制御を渡す」専用の命令で、
+これが唯一の入口になっている。
+x86-64 では <code>syscall</code> 命令、番号は <code>rax</code> に入れるなど、名前と場所は違うが仕組みは同じである。</p>
+</div>
+<h2 id="次回予告">次回予告</h2>
+<p><code>write</code> が使えるようになった。R2 では、この上に<strong>自前の <code>printf</code></strong> を作る。
+整数を10進の文字列に変換する処理を、Core プロファイルの C で書く。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/O7_layout/"><span class="label">前へ</span>ブロック整列とループ回転 — 命令を減らさずに速くする</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/R2_printf/"><span class="label">次へ</span>自前 printf — 数を文字に変える</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/R1_nolibc.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

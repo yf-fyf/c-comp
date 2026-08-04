@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>進め方ガイド — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/" aria-current="page">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../docs/">仕様・参考文書</a></nav>
+    <h1 class="page-title">進め方ガイド</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#読む順序" id="toc-読む順序">読む順序</a></li>
+      <li><a href="#到達目標" id="toc-到達目標">到達目標</a></li>
+      <li><a href="#環境を用意する" id="toc-環境を用意する">環境を用意する</a></li>
+      <li><a href="#各回の進め方" id="toc-各回の進め方">各回の進め方</a></li>
+      <li><a href="#フェーズ構成" id="toc-フェーズ構成">フェーズ構成</a></li>
+      <li><a href="#全体の流れ" id="toc-全体の流れ">全体の流れ</a></li>
+      <li><a href="#コマ15-のあと" id="toc-コマ15-のあと">コマ15 のあと</a></li>
+      <li><a href="#参考資料" id="toc-参考資料">参考資料</a></li>
+      </ul>
+    </nav>
+    
+<blockquote>
+<p>対象: C 言語既習・コンパイラ理論未習の学習者
+ターゲット: RISC-V RV64IM（C拡張なし）
+標準トラックは実装するコマ1〜15 の15コマが本体（準備回のコマ0 と発表会のコマ16 は別枠として扱う）</p>
+</blockquote>
+<p>この教材では「コマ」を1回分の作業単位（資料を読む + 実装 70〜90 分程度）として使う。
+週1回のペースでも、集中して一気に進めてもよい。</p>
+<p>作るコンパイラが対象とする言語は <a href="../../docs/language_spec/"><code>language_spec.md</code></a>（第 2 版、2026 年改訂）で
+凍結してある。「この機能は書けるのか」で迷ったら、その文書が最終的な答えになる。</p>
+<h2 id="読む順序">読む順序</h2>
+<p><strong>この文書がスタート地点である。</strong> 上から順に進めればよい。</p>
+<ol type="1">
+<li><strong>この文書</strong>（進め方ガイド）— 科目全体の構成と進め方を掴む。環境構築の手順はここには無い</li>
+<li><a href="https://yf-fyf.github.io/c-comp/sessions/00_setup/">コマ0（演習環境構築）</a> — 環境を作る。番号のある通常回には含めない準備回で、<strong>初回授業の開始時点で終わっているのが目標</strong></li>
+<li><a href="https://yf-fyf.github.io/c-comp/sessions/01_interpreter/">コマ1の資料</a> — 以降は資料サイトを回ごとに読み進める</li>
+<li><a href="../../docs/conventions/"><code>conventions.md</code></a> — 実装の約束ごと。コマ2 に入る前に一度目を通す</li>
+<li><a href="../../docs/language_spec/"><code>language_spec.md</code></a> — 対象言語の仕様。通読せず、迷ったときに引く</li>
+</ol>
+<p>途中で詰まったら <a href="../../docs/testing/"><code>testing.md</code>（テストとデバッグ）</a>、
+何をどこで調べるか自体が分からなくなったら
+<a href="../../docs/"><code>README.md</code>（逆引き索引）</a> を見る。</p>
+<hr />
+<h2 id="到達目標">到達目標</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 60%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>トラック</th>
+<th>目標</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>標準</strong></td>
+<td>Python で C サブセットコンパイラを完成させる</td>
+</tr>
+<tr class="even">
+<td><strong>発展</strong>（任意）</td>
+<td>標準トラック（コマ1〜15）を終え、発表会を経たあと、選択制の発展課題（<a href="../../advanced/"><code>../advanced/</code></a>）に挑戦する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>標準トラックの完成は、<code>final/tests</code>（fixed17）の全通を目安とする。
+発展課題は任意であり、完了条件は各トピックの <code>README.md</code> に個別に書いてある。</p>
+<hr />
+<h2 id="環境を用意する">環境を用意する</h2>
+<p>環境構築は <strong>コマ0（演習環境構築）</strong> で扱う。手順の実体はそちらにあるので、
+まず <a href="https://yf-fyf.github.io/c-comp/sessions/00_setup/">コマ0の資料</a>
+（配布物では <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/sessions/00_setup/README.md"><code>../sessions/00_setup/README.md</code></a>）を読んで環境を整えること。</p>
+<p>コマ0 で扱うのは次の3つである。</p>
+<ul>
+<li>Windows の場合の WSL 上への Ubuntu 導入</li>
+<li>Docker 環境（<strong>推奨</strong>）またはネイティブ実行の用意</li>
+<li>手書き RV64 アセンブリを qemu で動かして、環境が正しいことを確かめる</li>
+</ul>
+<p><strong>Python のバージョン基準（Python 3.10 以降）を含む環境の要件は、コマ0 の資料が
+教材全体を通じての唯一の出典である</strong>（他の文書ではコマ0 を参照すること）。
+この文書では要件を重ねて書かない。</p>
+<p>イメージ名の変更やよくあるエラーは <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/docker/rv64/README.md"><code>../docker/rv64/README.md</code></a> を参照。</p>
+<hr />
+<h2 id="各回の進め方">各回の進め方</h2>
+<ol type="1">
+<li><a href="https://yf-fyf.github.io/c-comp/sessions/">サイトの資料</a> の該当する回を読む（<strong>その回で最初にやること</strong>）</li>
+<li><code>sessions/NN_xxx/README.md</code> の作業指示を見る</li>
+<li><code>sessions/NN_xxx/mycc.py</code> を編集する</li>
+<li>テストを走らせる</li>
+</ol>
+<div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/02_arithmetic_codegen</span></code></pre></div>
+<p><strong>コマ3 以降は前の回の <code>mycc.py</code> を継承する。</strong> 各回の <code>Codegen&lt;NN&gt;</code> は
+<code>Codegen&lt;NN-1&gt;</code> を継承して差分だけを書く形になっているので、<strong>順番に進め、
+その回のテストを通してから次へ行く</strong>こと。前の回に未実装が残っていると、
+先の回では原因の分かりにくい失敗になる。</p>
+<p>コマ15 の総合演習で、それまでの成果を <code>final/mycc.py</code> に統合する。
+以降は引数なしの <code>python3 scaffold/test_runner.py</code> が最終成果物のテストになる。</p>
+<p>詰まったときは <a href="../../docs/testing/#症状から当たりをつける"><code>testing.md</code> の症状表</a> を見る。
+各回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../ocaml/</code></a> にあるので、
+自分の方針を考えたあとの確認に使える。</p>
+<hr />
+<h2 id="フェーズ構成">フェーズ構成</h2>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コマ0（準備）</strong> — 演習環境構築。初回授業の開始時点で終わっているのが目標。番号のある通常回には含めない。</p>
+</div>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>フェーズ</th>
+<th>コマ</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Phase 0</td>
+<td>1</td>
+<td>AST 理解</td>
+</tr>
+<tr class="even">
+<td>Phase 1</td>
+<td>2〜11</td>
+<td>Python 版ミニコンパイラを完成させる</td>
+</tr>
+<tr class="odd">
+<td>Phase 2</td>
+<td>12〜15</td>
+<td>Python 版標準機能を完成させる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コマ16（発表会）</strong> — <a href="https://yf-fyf.github.io/c-comp/sessions/16_demo_review/">発表・振り返り</a>。自身の取り組みを発表する回。番号のある通常回には含めない。</p>
+</div>
+<p>Phase 1 の終わり（コマ11）で「小さいが動く Python 版コンパイラ」が一度完成する。
+ここで到達感を作ってから、Phase 2 で構造体などの重い機能に進む構成である。</p>
+<hr />
+<h2 id="全体の流れ">全体の流れ</h2>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コマ0（準備）</strong> — 演習環境構築。初回授業の開始時点で終わっているのが目標。番号のある通常回には含めない。</p>
+</div>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 34%" />
+<col style="width: 39%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>コマ</th>
+<th>テーマ</th>
+<th>到達目標</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>AST の仕組み + インタープリターを書く</td>
+<td>提供 Lexer/Parser で <code>1+2*3</code> の AST を表示できる。<code>eval_ast()</code> が動く。AST を走査して意味を取り出す感覚を掴む</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>コード生成①：算術式 → RV64 アセンブリ出力</td>
+<td><code>codegen()</code> が動く。<code>echo $?</code> で計算結果を確認できる</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>コード生成②：変数・代入・シンボルテーブル</td>
+<td><code>int a; a = 3; return a;</code> をコンパイルして実行できる</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>制御構文①：if/else + 三項演算子</td>
+<td><code>if(a&gt;b) return a; else return b;</code> と <code>return a &gt; b ? a : b;</code>（文の if と式の <code>?:</code> の違い）が動く</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>制御構文②：while / for + 前置 <code>++</code>/<code>--</code></td>
+<td>フィボナッチ（ループ版）が <code>for (i = 0; i &lt; n; ++i)</code> の形で動く</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>関数呼び出し・再帰</td>
+<td>再帰フィボナッチが動く</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>lvalue / rvalue の概念 + <code>&amp;</code> / <code>*</code></td>
+<td><code>codegen()</code> と <code>codegen_lval()</code> を別関数として設計・実装できる</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>型検査の導入</td>
+<td>変数の型を覚え、<code>char</code> / <code>int</code> / ポインタで読み書き命令を選べる</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td>ポインタ演算とスケーリング</td>
+<td><code>malloc(sizeof(int) * 5)</code> で確保した領域への <code>a[i]</code> と <code>*(p + 2)</code> のポインタ演算が動く</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>文字列リテラルと <code>.data</code> セクション</td>
+<td><code>printf("hello\n")</code> が動く</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td>式の走査と libc 活用 + 総合確認</td>
+<td>どこに書いた文字列リテラルも <code>.data</code> に出る。ミニコンパイラの完成を確認する</td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td>構造体とヒープ（struct / <code>.</code> / <code>-&gt;</code> / <code>sizeof</code> / <code>malloc</code> / 連結リスト）</td>
+<td><code>struct Point</code> のメンバアクセスと、連結リストの構築・走査が動く</td>
+</tr>
+<tr class="odd">
+<td>13</td>
+<td>グローバル変数・スコープ管理</td>
+<td>グローバル変数とローカル変数を混在したプログラムが動く</td>
+</tr>
+<tr class="even">
+<td>14</td>
+<td>複数ファイル・前処理の概念（<code>#include</code> / <code>#define</code>）</td>
+<td><code>#include</code> / <code>#define</code> を含む複数 <code>.c</code> ファイルをまとめてコンパイルできる</td>
+</tr>
+<tr class="odd">
+<td>15</td>
+<td>Python 版総合演習・<code>mycc.py</code> 統合</td>
+<td>標準トラック完成（<code>final/mycc.py</code> に統合し、<code>final/tests</code>（fixed17）全通を目安とする）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コマ16（発表会）</strong> — <a href="https://yf-fyf.github.io/c-comp/sessions/16_demo_review/">発表・振り返り</a>。自身の取り組みを発表する回。番号のある通常回には含めない。</p>
+</div>
+<p>上の表はコマ単位の要約である。
+「言語仕様のどの機能をどのコマで導入し、どのテストで検証するか」は
+<a href="../../docs/language_spec/#feature-map"><code>language_spec.md</code> の対応表</a>が唯一の出典なので、
+機能から回を引きたいときはそちらを見る。</p>
+<p>各コマ終了時点でコンパイルできる具体的なプログラムは <a href="../../docs/code_example/"><code>code_example.md</code></a> にある。</p>
+<hr />
+<h2 id="コマ15-のあと">コマ15 のあと</h2>
+<p>コマ15 で Python 版が完成したら、標準トラックはそこで終わる。
+完成した自分の <code>final/mycc.py</code> を説明できる形に整え、そのうえで次に何をやるかを決める。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コマ16（発表会）</strong> — <a href="https://yf-fyf.github.io/c-comp/sessions/16_demo_review/">発表・振り返り</a>。自身の取り組みを発表する回。番号のある通常回には含めない。</p>
+</div>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 57%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>行き先</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="../../advanced/"><code>../advanced/</code></a></td>
+<td>選択制の発展課題 26 トピック。一部はコマ15 を待たずに始められる（F0 はコマ1、B 系列・S1 はコマ6 から）。C 移植・セルフホスト（P1）は複数回に渡る最難関トピック</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>どのトピックを選ぶかは
+<a href="../../advanced/#どこから始めるか"><code>../advanced/README.md</code> の「どこから始めるか」</a>を見て決める。
+発展課題に進まず、Python 版の補修・仕上げやテストの追加に時間を使うのも同じだけ正当な選択である。</p>
+<hr />
+<h2 id="参考資料">参考資料</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 37%" />
+<col style="width: 22%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>リソース</th>
+<th>目的</th>
+<th>タイミング</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://www.sigbus.info/compilerbook">Rui Ueyama「低レイヤを知りたい人のためのCコンパイラ作成入門」</a></td>
+<td>コンパイラ実装の主参考書（x86-64 → RV64 置換して読む）</td>
+<td>発展課題（P1）挑戦時</td>
+</tr>
+<tr class="even">
+<td><a href="https://riscv.org/technical/specifications/">RISC-V 仕様書 Volume I (User-Level ISA)</a></td>
+<td>命令セット参照</td>
+<td>コマ2 以降</td>
+</tr>
+<tr class="odd">
+<td><a href="http://scheme2006.cs.uchicago.edu/11-ghuloum.pdf">Abdulaziz Ghuloum, “An Incremental Approach to Compiler Construction”</a></td>
+<td>この教材の構成の元になった論文</td>
+<td>興味があれば最初に</td>
+</tr>
+<tr class="even">
+<td><a href="https://web.archive.org/web/20150608075952/https://www.fos.kuis.kyoto-u.ac.jp/~umatani/le3b/siryo.pdf">京都大学「計算機科学実験及び演習3 ソフトウェア」2015年度配布資料</a>（archive.org 保存版）</td>
+<td>この教材の言語仕様（Core プロファイル）を設計する際に参考にした資料。対象言語 Small C の構文・型を比較した</td>
+<td>興味があれば</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../docs/"><span class="label">前へ</span>学習者向けドキュメント — 索引</a><a class="index" href="../../docs/"><span class="label">一覧</span>仕様・参考文書</a><a class="next" href="../../docs/conventions/"><span class="label">次へ</span>実装の約束ごと</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/docs/getting_started.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

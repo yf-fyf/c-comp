@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>構造体の値渡し・値返し — 呼び出し規約を自分で決める — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">構造体の値渡し・値返し — 呼び出し規約を自分で決める</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#l5-が追加する仕様" id="toc-l5-が追加する仕様">L5 が追加する仕様</a></li>
+      <li><a href="#呼び出し規約-この回の中心" id="toc-呼び出し規約-この回の中心">呼び出し規約 —— この回の中心</a></li>
+      <li><a href="#いまのコンパイラに食わせるとどうなるか" id="toc-いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</a></li>
+      <li><a href="#値渡し-単一コピーの実装" id="toc-値渡し-単一コピーの実装">値渡し —— 単一コピーの実装</a></li>
+      <li><a href="#値返し-隠しポインタの実装" id="toc-値返し-隠しポインタの実装">値返し —— 隠しポインタの実装</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>int sum(struct Point p)</code> のように構造体を<strong>値で受け取り</strong>、
+<code>struct Point make(int x, int y)</code> のように構造体を<strong>値で返せる</strong>ようにする。</p>
+<p>S3 の <code>q = p;</code> は「レジスタに載らないものを、<strong>同じ関数の中で</strong>運ぶ」話だった。
+この回はそれを<strong>関数の境界をまたいで</strong>運ぶ。境界をまたいだ瞬間、
+言語仕様のどこにも書かれていない取り決めが必要になる ——
+<strong>どちらがコピーするのか。戻り値の置き場を誰が用意するのか。</strong>
+これが<strong>呼び出し規約</strong>であり、この回で自分で決めるものである。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ12（構造体）まで、および <a href="../../advanced/S3_struct/">S3</a>（構造体の代入）。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>（<code>lexer.py</code>・<code>parser.py</code> を含む）、ラッパー <code>langcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>byval.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が値渡し・値返しのテストの通過と <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>仕様との関係</td>
+<td><strong>仕様の外側</strong>。<code>language_spec.md</code> は <code>param ::= scalar_type IDENT</code>・<code>ret_type ::= scalar_type \| 'void'</code> と定めて struct 値の実引数・戻り値を構文レベルで禁じている。追加する構文と意味論は下記の「L5 が追加する仕様」節が定義する</td>
+</tr>
+<tr class="even">
+<td>備考</td>
+<td>言語機能発展シリーズ。L 系列で<strong>最も重い</strong>回で、L3（可変長引数の定義側）と並ぶ。コード生成が呼び出し規約そのものに踏み込む</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="adm adm-warning">
+<div class="adm-title">
+注意
+</div>
+<p><strong>この回は L 系列で最も重い。</strong>
+字句は 1 文字も変わらないが、構文（<code>param</code>・<code>ret_type</code> の拡張）・
+型の伝播（呼び出し式の型が <code>int</code> でなくなる）・コード生成（呼び出し側の一時領域、
+呼ばれ側のフレーム複製、戻り値の隠しポインタ）の 3 段すべてに手が入る。
+L3 の可変長引数の定義側と同じ重量級だと思ってよい。
+S3 を終えてから来ること —— コピーの部品はそこで書いたものを土台にする。</p>
+</div>
+<h3 id="なぜ-l-系なのか">なぜ L 系なのか</h3>
+<p><code>language_spec.md</code> は struct 値の実引数・戻り値を、意味論ではなく<strong>構文で</strong>禁じている。</p>
+<pre class="ebnf" data-lang="ebnf"><code>param       ::= scalar_type IDENT              /* struct 値は書けない */
+ret_type    ::= scalar_type | &#39;void&#39;           /* struct 値は書けない */</code></pre>
+<p><code>scalar_type</code> の <code>'struct' IDENT stars</code> は <code>stars</code> を必須にしているので、
+<code>struct Point *p</code> は書けても <code>struct Point p</code> は仮引数に書けない。
+仕様はこれを「この構成により次の制約が構文レベルで決まる」と明記している ——
+つまり<strong>意図的な設計</strong>であって、実装の取りこぼしではない。</p>
+<p>だからこの回は「仕様と実装のずれを埋める」（S 系）ではなく、
+「仕様が対象外と決めた機能に、意味を自分で決めて足す」（L 系）にあたる
+（<a href="../../advanced/">発展課題の索引</a>の「S と L の判定基準」節）。
+しかも<strong>足す意味の中身が呼び出し規約</strong>なので、L 系の中でも特殊である ——
+ふつう L 系で決めるのは構文と意味論だが、この回は
+「生成コードがどう協調するか」という、言語の外側の約束まで決めることになる。</p>
+<h3 id="s3-との関係">S3 との関係</h3>
+<p>S3 は <code>q = p;</code> を実装した。あの回のコピーの本体
+（<code>ld</code>/<code>sd</code>・<code>lw</code>/<code>sw</code>・<code>lb</code>/<code>sb</code> でバイト単位に写す部分）は、この回でも<strong>そのまま使う</strong>。
+違うのは、コピーの両端が</p>
+<ul>
+<li>S3: 同じ関数の中の 2 つの左辺値</li>
+<li>L5: <strong>呼び出し側のフレーム</strong>と<strong>呼ばれ側のフレーム</strong></li>
+</ul>
+<p>という点だけである。S3 の資料の「発展課題 1・2」に設計だけ置いてあったのが、この回である。</p>
+<h2 id="l5-が追加する仕様">L5 が追加する仕様</h2>
+<h3 id="構文">構文</h3>
+<p><code>language_spec.md</code> の EBNF を 2 か所だけ広げる。</p>
+<pre class="ebnf" data-lang="ebnf"><code>param       ::= obj_type IDENT                          /* L5: scalar_type → obj_type */
+ret_type    ::= scalar_type | &#39;void&#39; | &#39;struct&#39; IDENT   /* L5: 最後の1本を追加 */</code></pre>
+<p><code>obj_type</code> は「変数宣言に書ける型」で、すでに <code>struct Point</code>（<code>*</code> なし）を含んでいる。
+つまり <code>param</code> は <code>var_decl</code> と同じ型の書き方になる ——
+<strong>仮引数は局所変数と同じものが書ける</strong>、という自然な形にそろう。
+<code>ret_type</code> のほうは <code>obj_type</code> にしてしまうと <code>void</code> 単独が書けなくなるので、
+<code>'struct' IDENT</code> の 1 本だけを足す。</p>
+<p><code>void</code> 単独の仮引数が書けないこと、struct 値の<strong>フィールド</strong>が書けないこと
+（<code>field_decl ::= scalar_type IDENT ';'</code>）は<strong>変えない</strong>。この回で広げるのは
+関数の境界だけである。</p>
+<h3 id="意味論">意味論</h3>
+<ol type="1">
+<li><strong>仮引数は自分専用の複製である。</strong> 呼ばれ側が <code>p.x = 100;</code> と書いても、
+呼び出し元の構造体は変わらない。仮引数は入口を過ぎれば
+他の局所変数と<strong>まったく同じ扱い</strong>になる。</li>
+<li><strong>戻り値も複製である。</strong> 呼ばれ側の局所変数を <code>return</code> したあとで
+その局所変数がどうなろうと（実際には関数が終わって消える）、
+受け取った側の値は変わらない。</li>
+<li>呼び出し式 <code>f(...)</code> の<strong>型は <code>f</code> の戻り値型</strong>である。
+したがって <code>make(1, 2).x</code> と書ける（コマ12 までは呼び出し式の型は常に <code>int</code> だった）。</li>
+<li><strong>評価順序は従来どおり</strong>、実引数を左から右へ 1 回ずつである。
+struct 値の実引数も 1 回しか評価されない。</li>
+</ol>
+<p>L5 を実装しても <code>language_spec.md</code> は変わらない —— 変わるのは
+<strong>あなたのコンパイラが受理する言語</strong>のほうである。</p>
+<h2 id="呼び出し規約-この回の中心">呼び出し規約 —— この回の中心</h2>
+<p>決めることは 2 つしかない。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 57%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>決めること</th>
+<th>選択肢</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>struct 値の実引数を、<strong>誰が</strong>コピーするか</td>
+<td>呼び出し側 / 呼ばれ側 / 両方 / どちらもしない</td>
+</tr>
+<tr class="even">
+<td>struct 値の戻り値を、<strong>どこへ</strong>置くか</td>
+<td>レジスタに詰める / 呼び出し側が用意した領域へ</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="実引数-アドレスを渡し呼ばれ側だけがコピーする">実引数 —— アドレスを渡し、呼ばれ側だけがコピーする</h3>
+<p>この教材では<strong>呼び出し側はコピーしない</strong>。渡す式の<strong>アドレス</strong>を、
+引数スロット 1 個にそのまま載せて渡す（<code>&amp;p</code> と同じ機構の流用）。
+呼ばれ側が入口で、そのアドレスの中身を自分のフレームへ写す。</p>
+<pre data-lang="text"><code>呼び出し側:  sum(a)  →  a0 = &amp;a          (コピー 0 回)
+呼ばれ側:    入口で &amp;a の中身を自分のフレームへ写す  (コピー 1 回)</code></pre>
+<p>コピーは<strong>全体で 1 回</strong>である。「呼び出し側がコピーして、その複製のアドレスを渡す」
+という素朴な案だと、呼ばれ側から見て「仮引数は自分専用の領域か？」が
+呼び出し側の実装に依存してしまう。呼ばれ側だけがコピーすると、
+<strong>呼ばれ側の中だけを見て意味論が保証できる</strong>。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>アドレスを取ってよいのか。</strong>
+この言語で struct 値になれる式は、変数・<code>*p</code>・<code>x.f</code> / <code>p-&gt;f</code>・関数呼び出しの結果の
+4 つだけである（struct の演算子は存在しない）。前の 3 つはもともと左辺値でアドレスを持ち、
+4 つ目もこの回の設計では「呼び出し側フレーム内の一時領域」にあるのでアドレスを持つ。
+だから「アドレスを取る」で困る場面が無い。ISO C の一時オブジェクトのような
+やっかいな話が出てこないのは、この言語が小さいおかげである。</p>
+</div>
+<h3 id="戻り値-隠しポインタを末尾の追加引数で渡す">戻り値 —— 隠しポインタを<strong>末尾</strong>の追加引数で渡す</h3>
+<p>戻り値はレジスタ 1 本には載らない。そこで<strong>呼び出し側が受け取る領域を自分のフレームに用意し、
+そのアドレスを追加の引数として渡す</strong>。呼ばれ側は <code>return 式;</code> で
+a0 に値を積む代わりに、そのポインタの指す先へ写す。</p>
+<pre data-lang="text"><code>呼び出し側:  q = make(5, 6)
+               a0 = 5, a1 = 6, a2 = &amp;(自分のフレーム内の一時領域)
+               call make
+               → 一時領域に戻り値が入っている
+呼ばれ側:    return p;  →  a2 で渡されたポインタの先へ p を写す</code></pre>
+<p>この隠しポインタ（<strong>sret</strong> と呼ばれる）を、実 ABI は a0 = <strong>先頭</strong>に置く。
+この教材では<strong>末尾</strong>に置く。理由は単純で、
+「仮引数 i ↔︎ 引数レジスタ a<em>i</em>」という既存の対応表を 1 文字も変えずに済むからである。</p>
+<p>一時領域は<strong>呼び出し 1 か所につき 1 個</strong>、呼び出し側のフレームの中に確保する
+（ラッパーが <code>.sret0</code>・<code>.sret1</code>… という名前で用意してある）。
+グローバルな共有バッファを 1 個だけ置く実装は、再帰すると
+内側の <code>return</code> が外側の領域を踏み潰して壊れる。<code>tests/recurse.c</code> がそこを直接突く。</p>
+<h3 id="実-abi-との非互換-隠さずに書いておく">実 ABI との非互換 —— 隠さずに書いておく</h3>
+<p>gcc が RV64 で使う本物の呼び出し規約とは、次の 2 点で<strong>非互換</strong>である。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>実 RV64 ABI</th>
+<th>この教材</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>struct 値の実引数</td>
+<td>16 バイト以下なら<strong>レジスタ 2 本に詰めて</strong>渡す。それを超えるとコピーを作ってアドレスを渡す</td>
+<td>常に<strong>アドレスを 1 本</strong>で渡し、呼ばれ側がコピーする</td>
+</tr>
+<tr class="even">
+<td>struct 値の戻り値の隠しポインタ</td>
+<td><strong>a0（先頭）</strong></td>
+<td><strong>末尾の追加引数</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>これは手抜きではなく、<strong>境界を跨がないから許される単純化</strong>である。
+<code>lib.h</code> が宣言する標準ライブラリ関数のうち、struct 値を引数または戻り値に取るものは
+<strong>1 つも無い</strong>（<code>struct FILE *</code> はすべてポインタである）。
+つまり struct 値の受け渡しは <strong>mycc がコンパイルした関数どうし</strong>でしか起こらず、
+その両側は常に同じコンパイラが同じ規約で吐く。規約が外の世界と食い違っても、
+食い違いが観測される場所が存在しない。</p>
+<p>逆に言えば、<code>lib.h</code> に <code>struct 値を返す C の関数</code>が 1 つでも入った瞬間、
+この単純化は破綻する。「ABI は実装の詳細ではなく<strong>契約</strong>である」というのは、そういう意味である。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>なぜ実 ABI は 16 バイト以下をレジスタに詰めるのか。</strong>
+<code>struct { int x; int y; }</code> のような小さな構造体は非常に多く、
+これをいちいちメモリ経由にすると呼び出しのたびに store と load が挟まる。
+2 本のレジスタで渡せれば、メモリに触らずに済む。
+速さのために規約が複雑になっている典型例で、
+「規約を決める」という仕事が性能設計そのものであることが分かる。
+この教材は速さを捨てて単純さを取っている。</p>
+</div>
+<h3 id="引数の上限が-8-個-7-個になる">引数の上限が 8 個 → 7 個になる</h3>
+<p>引数レジスタは a0〜a7 の 8 本しかない（この教材は引数をスタック経由で渡さない）。
+struct 値を返す関数は隠しポインタで 1 本使うので、<strong>ユーザが書ける引数は 7 個まで</strong>になる。
+8 個目を書くと、ラッパーがこう止める。</p>
+<pre data-lang="text"><code>RuntimeError: 引数が多すぎます(9 個 &gt; 8 個): &#39;f&#39; — struct 値を返す関数は
+隠しポインタで 1 個使うので、ユーザ引数は 7 個まで</code></pre>
+<p><code>tests/args7.c</code> がちょうど上限の 7 個を使っている。
+struct 値を返さない関数は従来どおり 8 個まで書ける。</p>
+<h2 id="いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</h2>
+<p><code>tests/byval.c</code> と <code>tests/retval.c</code> を標準トラックのコンパイラに渡すと、
+どちらも構文解析で止まる。</p>
+<pre data-lang="text"><code>構文解析エラー: [line 4] struct 値はここでは使えません（ポインタにする）
+構文解析エラー: [line 4] struct 値の戻り値は使えません（ポインタにする）</code></pre>
+<p>前者は <code>parse_scalar_type</code> が、後者は <code>parse_program</code> の戻り値型の判定が出している。
+どちらも「うっかり」ではなく、仕様どおりに<strong>明示的に</strong>弾いている。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 52%" />
+<col style="width: 24%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>段階</th>
+<th>追加すること</th>
+<th>担当</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>字句</td>
+<td>なし</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td>構文</td>
+<td><code>param</code> を <code>obj_type</code> に、<code>ret_type</code> に <code>'struct' IDENT</code> を足す</td>
+<td><code>langcc.py</code></td>
+</tr>
+<tr class="odd">
+<td>型</td>
+<td>呼び出し式の型を戻り値型にする（従来は常に <code>int</code>）</td>
+<td><code>langcc.py</code></td>
+</tr>
+<tr class="even">
+<td>フレーム</td>
+<td>隠しポインタの置き場と、戻り値の一時領域を確保する</td>
+<td><code>langcc.py</code></td>
+</tr>
+<tr class="odd">
+<td>コード生成</td>
+<td>値渡し・値返しの 5 つの部品</td>
+<td>Step 1〜5</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="値渡し-単一コピーの実装">値渡し —— 単一コピーの実装</h2>
+<h3 id="呼び出し側step-2">呼び出し側（Step 2）</h3>
+<p>やることは分岐 1 つである。実引数の<strong>型</strong>を見て、どちらを呼ぶかを決める。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 19%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>実引数の型</th>
+<th>生成</th>
+<th>a0 に載るもの</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>struct Point</code>（struct 値）</td>
+<td><code>cg.codegen_lval(arg)</code></td>
+<td>その構造体の<strong>アドレス</strong></td>
+</tr>
+<tr class="even">
+<td>それ以外（<code>int</code>・<code>char</code>・ポインタ）</td>
+<td><code>cg.codegen(arg)</code></td>
+<td>従来どおり<strong>値</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>struct Point *ptr</code> は<strong>ポインタ</strong>なので下の段に落ちる
+（<code>cg.struct_size('struct Point*')</code> は <code>None</code> を返す）。
+「値そのものがアドレス」と「値がレジスタに載らないのでアドレスで代用する」は
+生成コードが似ていても意味がまったく違う。ここを取り違えないこと。</p>
+<h3 id="呼ばれ側step-3">呼ばれ側（Step 3）</h3>
+<p>土台の <code>gen_func</code> は、関数の入口で仮引数レジスタをフレームへ書き出している。</p>
+<div class="sourceCode" id="cb7" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>        <span class="co">;; 仮引数 p のスロット</span></span></code></pre></div>
+<p>struct 値の仮引数では、このスロットに入っているのは
+<strong>呼び出し側の構造体のアドレス</strong>である。そこで、それを読んでから
+<strong>同じスロットへ</strong>中身を写し直す。</p>
+<div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>  ld a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>        <span class="co">;; 呼び出し側が渡したアドレス</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  addi a1<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span>      <span class="co">;; 自分のフレーム内のスロット</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span>          <span class="co">;; ← copy_struct(8 バイト)</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  sd a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span></span></code></pre></div>
+<p>写し終えるとスロットは本物の構造体になっている。
+同じ場所を上書きしているのに壊れないのは、<strong>アドレスを先にレジスタへ読んである</strong>からである。
+スロットの大きさも足りる —— <code>alloc_local</code> はスロットを 8 バイト境界に切り上げるので、
+5 バイトの構造体でもポインタを置く 8 バイトは必ずある。</p>
+<div class="adm adm-warning">
+<div class="adm-title">
+注意
+</div>
+<p><strong>隠しポインタの退避は、コピーより先に。</strong>
+<code>copy_struct</code> は a0・a1・a2 を作業に使う。
+struct 値を返す関数では隠しポインタも a レジスタに載ってやってくるので、
+先にコピーを始めるとそれを踏み潰すことがある。
+<code>gen_param_prologue</code> の<strong>先頭</strong>で <code>sd a{n}, {off}(s0)</code> すること。
+<code>check.py</code> の Step 3 はこの順序を直接見ている（順序を逆にしても
+ソースによっては動いてしまうので、単体テストで捕まえないと気づきにくい）。</p>
+</div>
+<p>これで <code>tests/byval.c</code> の意味論 —— 呼ばれ側が <code>p.x = 100;</code> と書いても
+呼び出し元の <code>a.x</code> は 3 のまま —— が成立する。
+コピーはプロローグの 1 回だけで、以降 <code>p</code> はただの局所変数である。</p>
+<h2 id="値返し-隠しポインタの実装">値返し —— 隠しポインタの実装</h2>
+<h3 id="呼び出し側step-4">呼び出し側（Step 4）</h3>
+<p>ユーザ引数を左から順に積み、<strong>最後に</strong>戻り先のアドレスを積んでから呼ぶ。
+<code>q = make(5, 6);</code> の生成コードはこうなる。</p>
+<div class="sourceCode" id="cb9" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">5</span>              <span class="co">;; 第1引数</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  ...push...</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">6</span>              <span class="co">;; 第2引数</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  ...push...</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span>      <span class="co">;; .sret0 = 戻り先。隠しポインタは【末尾】に積む</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  ...push...</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  ld a0<span class="op">,</span> <span class="dv">16</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>         <span class="co">;; 積んだものを a0, a1, a2 へ配る</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="dv">8</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          <span class="co">;; ← a2 が隠しポインタ</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">call</span> make</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span>      <span class="co">;; この式の値は .sret0 のアドレス。もう一度載せ直す</span></span></code></pre></div>
+<p>引数の配置（<code>ld a0, …</code> から <code>call</code> まで）はラッパーの <code>cg.emit_call()</code> がやる。
+Step 4 が決めるのは「<strong>何を、どの順で積むか</strong>」だけである。</p>
+<p>最後の <code>addi</code> が要る理由に注意したい。呼び出しから戻ると a0 は壊れている。
+一方この式の「値」は構造体、すなわち<strong>その一時領域のアドレス</strong>なので、
+もう一度 a0 に載せ直す必要がある。これがあるおかげで</p>
+<div class="sourceCode" id="cb10" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>sum<span class="op">(</span>make<span class="op">(</span><span class="dv">3</span><span class="op">,</span> <span class="dv">4</span><span class="op">))</span>          <span class="co">// 戻り値をそのまま実引数に</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>make<span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">).</span>x             <span class="co">// 戻り値のメンバを直接読む</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> make<span class="op">(</span><span class="dv">5</span><span class="op">,</span> <span class="dv">6</span><span class="op">);</span>          <span class="co">// 戻り値を代入</span></span></code></pre></div>
+<p>がどれも「構造体の式はアドレスが a0 に載る」という 1 つの規則で扱える。</p>
+<h3 id="呼ばれ側step-5">呼ばれ側（Step 5）</h3>
+<p><code>return 式;</code> は、a0 に値を積む代わりに次の 4 つをこの順でやる。</p>
+<ol type="1">
+<li>返す式を <code>codegen</code> する（構造体の式なので a0 にはアドレスが載る）</li>
+<li>Step 3 で <code>.sretp</code> へ退避しておいた隠しポインタを a1 に読む</li>
+<li><code>copy_struct</code> で a0 → a1 へ写す</li>
+<li><code>mv a0, a1</code> —— 戻り値としても、その領域のアドレスを残しておく</li>
+</ol>
+<p>隠しポインタを読むのが 1 の<strong>後</strong>である点が肝心である。
+<code>return step(r);</code>（<code>tests/recurse.c</code>）のように返す式自体が関数呼び出しだと、
+先に a1 へ読んでおいても呼び出しで壊れてしまう。
+「レジスタは呼び出しをまたいで生き残らない、フレームの中は生き残る」という、
+コマ7 以来ずっと使ってきた原則がここでも効く。</p>
+<p><code>make</code> の生成コードを実際に見ると、末尾はこうなっている。</p>
+<div class="sourceCode" id="cb11" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">48</span>      <span class="co">;; 返す局所変数 p のアドレス</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="op">-</span><span class="dv">40</span><span class="op">(</span>s0<span class="op">)</span>        <span class="co">;; .sretp から隠しポインタを読む</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span>          <span class="co">;; copy_struct</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  sd a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  mv a0<span class="op">,</span> a1</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  j .L1</span></code></pre></div>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 45%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>copy_struct</code></td>
+<td>a0 の指す <code>size</code> バイトを a1 の指す先へ写す（S3 の再掲）</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>gen_arg</code></td>
+<td>呼び出し側: struct 値の実引数はアドレスを渡す</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>gen_param_prologue</code></td>
+<td>呼ばれ側: 入口でフレーム内へ複製する</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>gen_sret_call</code></td>
+<td>呼び出し側: 戻り先を確保して隠しポインタを末尾に渡す</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>gen_struct_return</code></td>
+<td>呼ばれ側: <code>return</code> で隠しポインタの先へ写す</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Step 1〜3 まで書けば値渡しが、Step 4〜5 まで書けば値返しが動く。</strong>
+<code>tests/byval.c</code> は Step 3 の時点で通る。区切りがはっきりしているので、
+一度に全部を相手にせず、まず値渡しを通してから値返しへ進むとよい。</p>
+<p><code>copy_struct</code> は S3 で書いたものと同じロジックだが、
+呼び出し規約が「a0 = 元、a1 = 先、a2 だけ壊す」に切り出してある。
+この 1 つを、値渡し・値返し・（ラッパーが持っている）struct 代入の 3 か所から使う。</p>
+<div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/byval.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A8</span> <span class="st">&quot;^sum:&quot;</span>    <span class="co"># 呼ばれ側の複製が見える</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/retval.c <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;ld a1, -40&quot;</span>  <span class="co"># 隠しポインタを読む行</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 値渡し・値返しのテスト + fixed17</span></span></code></pre></div>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>byval.c</code></td>
+<td>呼ばれ側が仮引数を書き換えても呼び出し元が変わらない。<code>*q</code> も値渡しできる</td>
+</tr>
+<tr class="even">
+<td><code>retval.c</code></td>
+<td>戻り値を代入で受け取る。<code>make(1, 2).x</code> でメンバを直接読む。同じ変数へ2回返す</td>
+</tr>
+<tr class="odd">
+<td><code>inout.c</code></td>
+<td>値で受け取り値で返す。12 バイト（8+4）のコピー</td>
+</tr>
+<tr class="even">
+<td><code>recurse.c</code></td>
+<td>再帰。隠しポインタが呼び出しごとに別の領域を指す（共有バッファ実装だと壊れる）</td>
+</tr>
+<tr class="odd">
+<td><code>nested.c</code></td>
+<td>戻り値をそのまま実引数に渡す。<code>add(...).x</code></td>
+</tr>
+<tr class="even">
+<td><code>args7.c</code></td>
+<td>引数上限 7 個（隠しポインタを足してちょうど 8 本）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>check.py</code> は他の回と違い、<strong>出た命令列を小さな RV64 シミュレータで実際に走らせる</strong>。
+値渡し・値返しの正しさは「コピーが本当に起きたか」「元が無傷か」という
+メモリの性質であって、命令の並びを見比べるだけでは確かめきれないからである。
+シミュレータ上で仮引数の複製を書き換えて、呼び出し元のバイト列が変わらないことを
+直接見ている —— これが「値渡し」の定義そのものである。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>実 ABI に寄せる（隠しポインタを a0 へ）</strong>: sret を末尾ではなく先頭に移す。
+「仮引数 i ↔︎ 引数レジスタ a<em>i</em>」の対応表がどこで 1 つずれるかを数える。
+ずれるのは呼ばれ側のプロローグと呼び出し側の引数配置の 2 か所だけのはずである</li>
+<li><strong>16 バイト以下をレジスタで渡す</strong>: 実 ABI に完全に寄せる。
+「構造体の式はアドレスが a0 に載る」という、この回で 1 本にそろえた規則が
+どこで崩れるかを確かめる。崩れる場所の多さが、実 ABI の複雑さの正体である</li>
+<li><strong>struct 値の入れ子フィールド</strong>: <code>field_decl ::= scalar_type IDENT ';'</code> を
+<code>obj_type</code> へ広げると <code>struct Line { struct Point a; struct Point b; };</code> が書ける。
+<code>copy_struct</code> はそのままで足りるか（足りる。なぜか説明する）</li>
+<li><strong>コピーの省略</strong>: <code>return p;</code> の <code>p</code> が局所変数なら、
+最初から隠しポインタの先を <code>p</code> の置き場にしてしまえばコピーが 0 回になる
+（実コンパイラの NRVO）。どの条件でこれが安全か</li>
+<li><strong>L3 と並べる</strong>（L3 完了者向け）: 可変長引数も struct 値も、
+「引数レジスタ 8 本」という同じ資源を取り合っている。
+両方を実装した関数（<code>struct Point f(int n, ...)</code>）が書けるか考える</li>
+<li><strong>Q1 と組み合わせる</strong>（Q1 完了者向け）: <code>sum(ptr)</code> のように
+<code>struct Point*</code> を <code>struct Point</code> の仮引数へ渡すと、いまは黙って通ってしまう。
+どこで弾けばよいか</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 規約は言語の外にある。</strong>
+この回で決めた 2 つの取り決めは、<code>language_spec.md</code> のどこにも書けない。
+「a0 に何を載せるか」は言語の意味ではなく、<strong>同じ言語の 2 つの翻訳結果が
+どう協調するか</strong>の取り決めだからである。だから規約は言語ごとではなく
+<strong>プラットフォームごと</strong>に決まる（RV64 の ABI、x86-64 の System V ABI…）。
+そして一度公開された規約は、言語仕様よりも変えにくい ——
+仕様は再コンパイルすれば直るが、規約を変えると
+すでに配布されたバイナリが全部壊れるからである。
+「struct を値で渡す」というたった 1 行の C の機能の裏側に、
+これだけの取り決めが積み上がっている。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/L4_sizeof_expr/"><span class="label">前へ</span>sizeof 単項式 — 答えは合っているのに、間違っている</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/Q1_typecheck/"><span class="label">次へ</span>型検査パス — 実行する前に間違いを見つける</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/L5_struct_byval.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

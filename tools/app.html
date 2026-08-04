@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>統合版（試験運用） — 実践・Cコンパイラ演習</title>
+    <!-- OCaml コア（js_of_ocaml 出力）。globalThis.myccCore を定義する -->
+    <script src="./core/api.bc.js"></script>
+    <script type="module" crossorigin src="./assets/app-nwsPGu70.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/style-Xjkg2d6E.js">
+    <link rel="stylesheet" crossorigin href="./assets/style-D5P7cNK6.css">
+  </head>
+  <body>
+    <header id="topbar">
+      <h1>C コンパイラ演習ツール</h1>
+      <nav id="app-nav"></nav>
+      <nav id="mode-tabs">
+        <button type="button" data-mode="build" class="active">作る</button>
+        <button type="button" data-mode="run">動かす</button>
+      </nav>
+      <span id="font-buttons">
+        文字:
+        <button data-size="m" class="active">標準</button>
+        <button data-size="l">大</button>
+        <button data-size="xl">特大</button>
+      </span>
+    </header>
+
+    <!-- 作るモード: C を書いて AST とアセンブリを見る。ソースは1箇所だけ -->
+    <section id="mode-build" class="mode">
+      <div class="mode-bar">
+        <label class="example-label">
+          教材のテスト（C）:
+          <select id="build-example-select" class="example-select"></select>
+        </label>
+      </div>
+      <main id="layout">
+        <section id="left">
+          <div id="editor"></div>
+          <div id="status" aria-live="polite"></div>
+        </section>
+        <section id="right">
+          <nav id="tabs">
+            <button type="button" data-tab="ast" class="active">AST</button>
+            <button type="button" data-tab="asm">アセンブリ</button>
+          </nav>
+
+          <!-- AST: 入力に追随して自動更新する（モードの性格の違いは各ペインに常掲する） -->
+          <div id="pane-ast" class="pane active">
+            <nav id="ast-tabs">
+              <button type="button" data-ast-tab="tree" class="active">AST 木</button>
+              <button type="button" data-ast-tab="tokens">トークン</button>
+              <button type="button" data-ast-tab="sexp">S 式</button>
+              <!-- A3: 命令との対応。常時並置はせず、この操作で開いたときだけ下に出す -->
+              <button
+                type="button"
+                id="btn-ast-asm"
+                aria-pressed="false"
+                title="選んだノードが出した命令を下に並べる"
+              >
+                命令と対応
+              </button>
+              <span class="pane-note">入力に追随して自動更新されます</span>
+              <label id="opt-line-label"><input type="checkbox" id="opt-show-line" /> 行番号</label>
+            </nav>
+            <div id="ast-pane-tree" class="ast-pane active">
+              <svg id="tree-svg" role="tree" aria-label="抽象構文木"></svg>
+              <p class="hint">hoverで対応箇所を確認、クリックで固定。ノード左上の + / − で部分木を開閉。⇄ は比較演算子の正規化（&gt; / &gt;= は lt / le に入れ替え）</p>
+            </div>
+            <div id="ast-pane-tokens" class="ast-pane">
+              <table id="token-table">
+                <thead><tr><th>行</th><th>種別</th><th>字句</th></tr></thead>
+                <tbody id="token-body"></tbody>
+              </table>
+            </div>
+            <div id="ast-pane-sexp" class="ast-pane"><pre id="sexp-pre"></pre></div>
+
+            <!-- A3: AST ノード ↔ 命令のクロスハイライト。［命令と対応］で開く -->
+            <div id="ast-asm-strip" hidden>
+              <div class="strip-head">
+                <span>対応する命令（式単位）</span>
+                <span id="ast-asm-status" class="pane-note" aria-live="polite"></span>
+                <button id="btn-ast-asm-refresh" type="button" title="いまのソースでコンパイルし直す">
+                  更新
+                </button>
+                <button id="btn-ast-asm-close" type="button">閉じる</button>
+              </div>
+              <div id="ast-asm-lines"></div>
+            </div>
+          </div>
+
+          <!-- アセンブリ: 明示操作でしか更新しない（T38 B6） -->
+          <div id="pane-asm" class="pane">
+            <div id="compile-bar">
+              <button id="btn-compile" type="button" title="このソースをコンパイルする (Ctrl+Enter)">
+                コンパイル
+              </button>
+              <span class="key-hint">Ctrl+Enter</span>
+              <label id="opt-comments-label">
+                <input type="checkbox" id="opt-comments" checked /> 注記コメント
+              </label>
+              <label id="opt-auto-label">
+                <input type="checkbox" id="opt-auto" /> 自動コンパイル
+              </label>
+            </div>
+            <p class="pane-note asm-note">
+              ［コンパイル］を押すまで更新されません（AST とは違い、明示操作で進みます）
+            </p>
+            <pre id="asm-output"></pre>
+            <div id="asm-foot">
+              <button id="btn-send-run" type="button" title="この出力を動かすモードへ渡す">
+                実行へ送る →
+              </button>
+              <div id="asm-status" aria-live="polite"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <!-- 動かすモード: アセンブリは作るモードとは独立したバッファ -->
+    <section id="mode-run" class="mode" hidden>
+      <div class="mode-bar">
+        <label id="run-example-label" class="example-label">
+          アセンブリのサンプル:
+          <select id="run-example-select" class="example-select"></select>
+        </label>
+        <span class="pane-note">
+          この画面はすべて明示操作で進みます（すすむ／もどる／実行／読み込む）
+        </span>
+      </div>
+
+      <div id="toolbar">
+        <button id="btn-reset" title="最初から">⟲ 最初へ</button>
+        <button id="btn-back" title="1命令もどる">◀ もどる</button>
+        <button id="btn-step" title="1命令すすむ">▶ すすむ</button>
+        <button id="btn-run" title="停止するまで実行">▶▶ 実行</button>
+        <button id="btn-stop" title="実行を止める" hidden>■ 停止</button>
+        <span class="spacer"></span>
+        <span id="counters">
+          実行した命令 <b id="step-count">0</b>
+          <span id="exit-box" hidden>／ 終了コード <b id="exit-code">-</b></span>
+        </span>
+      </div>
+
+      <main id="sim-layout">
+        <section id="asm-pane">
+          <div class="pane-head">
+            <span>アセンブリ</span>
+            <span class="pane-note">行番号をクリックするとブレークポイント</span>
+            <button id="btn-edit">貼り替える</button>
+          </div>
+          <div id="asm-view"></div>
+          <div id="asm-editor" hidden>
+            <textarea
+              id="asm-input"
+              spellcheck="false"
+              placeholder="python3 mycc.py test.c の出力を貼り付ける（ファイルをドロップしてもよい）"
+            ></textarea>
+            <div class="editor-actions">
+              <button id="btn-load">読み込む</button>
+              <button id="btn-cancel">やめる</button>
+            </div>
+          </div>
+          <div id="asm-error" hidden></div>
+        </section>
+
+        <section id="state-pane">
+          <div id="warnings" hidden>
+            <h3>気づいたこと</h3>
+            <ul id="warning-list"></ul>
+            <p class="pane-note">
+              症状の意味は
+              <a href="../docs/testing/#症状から当たりをつける" target="_blank" rel="noreferrer">デバッグ手順</a>
+              にある
+            </p>
+          </div>
+
+          <div class="state-block">
+            <h3>レジスタ</h3>
+            <table id="reg-table"><tbody id="reg-body"></tbody></table>
+          </div>
+
+          <div class="state-block">
+            <h3>スタック <span class="pane-note">上が高いアドレス</span></h3>
+            <table id="stack-table"><tbody id="stack-body"></tbody></table>
+          </div>
+
+          <div class="state-block" id="data-block">
+            <h3>データ領域</h3>
+            <table id="data-table"><tbody id="data-body"></tbody></table>
+          </div>
+
+          <div class="state-block">
+            <h3>標準出力</h3>
+            <pre id="stdout-pre"></pre>
+          </div>
+        </section>
+      </main>
+    </section>
+
+  </body>
+</html>

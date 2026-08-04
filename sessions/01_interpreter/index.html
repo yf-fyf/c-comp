@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ1: AST + インタープリター — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ1: AST + インタープリター</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#スキャフォールドの動作確認-ast-を見てみる" id="toc-スキャフォールドの動作確認-ast-を見てみる">スキャフォールドの動作確認 — AST を見てみる</a></li>
+      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+      <li><a href="#node-の構造" id="toc-node-の構造">Node の構造</a></li>
+      <li><a href="#実装方針" id="toc-実装方針">実装方針</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>提供 Lexer/Parser が返す AST を走査し、<code>eval_ast()</code> で式を評価する。</p>
+<p>この回では RV64 アセンブリは出力しない。
+Cプログラム全体を実行するのではなく、<code>main</code> 関数の中にある <code>return 式;</code> の「式」だけを評価する。</p>
+<p>目的は、AST を「木」として読み、再帰的に処理する感覚を掴むことである。</p>
+</section>
+<h2 id="スキャフォールドの動作確認-ast-を見てみる">スキャフォールドの動作確認 — AST を見てみる</h2>
+<p>実装に入る前に、教員提供の Lexer/Parser が AST を正しく構築できることを確認する。
+この回で初めて提供 Lexer/Parser を使うため、まずここで動作を確かめる。
+Lexer は <code>//</code> 行コメントを読み飛ばし、<code>if</code> <code>while</code> <code>return</code> などキーワード12語と
+それ以外の識別子を区別する。この字句解析はすでに提供されており、自分で書く対象ではない。</p>
+<div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/01_interpreter/tests/add_mul.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">1</span> <span class="op">+</span> <span class="dv">2</span> <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>実行すると、次のようなS式が表示される。</p>
+<div class="sourceCode" id="cb3" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        (add (num <span class="dv">1</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>          (mul (num <span class="dv">2</span>) (num <span class="dv">3</span>)))))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/01_add_mul_ast.svg" alt="add_mul.c の AST" />
+<figcaption aria-hidden="true"><code>add_mul.c</code> の AST</figcaption>
+</figure>
+<p>この出力は、<code>1 + 2 * 3</code> が次の構造として解析されたことを表している。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>S式の部分</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>(program ...)</code></td>
+<td>プログラム全体</td>
+</tr>
+<tr class="even">
+<td><code>(funcdef "main" ...)</code></td>
+<td><code>main</code> 関数の定義</td>
+</tr>
+<tr class="odd">
+<td><code>(block ...)</code></td>
+<td>関数本体の <code>{ ... }</code></td>
+</tr>
+<tr class="even">
+<td><code>(return ...)</code></td>
+<td><code>return</code> 文</td>
+</tr>
+<tr class="odd">
+<td><code>(add A B)</code></td>
+<td><code>A + B</code></td>
+</tr>
+<tr class="even">
+<td><code>(mul A B)</code></td>
+<td><code>A * B</code></td>
+</tr>
+<tr class="odd">
+<td><code>(num 1)</code></td>
+<td>整数リテラル <code>1</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>つまり、<code>1 + 2 * 3</code> は次のような木として表されている。</p>
+<div class="sourceCode" id="cb4" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(add</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (num <span class="dv">1</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  (mul (num <span class="dv">2</span>) (num <span class="dv">3</span>)))</span></code></pre></div>
+<p><code>2 * 3</code> が <code>add</code> の右側の子になっている。
+掛け算が先にまとめられている（演算子の優先順位が正しく反映されている）ことを確認する。
+演算子の優先順位は Parser がすでに処理しているため、<code>eval_ast()</code> は渡された木をそのまま評価すればよい。</p>
+<p>S 式ではなく木の形で見たいときは、<a href="../../tools/app.html?mode=build">AST ビジュアライザ</a> に同じソースを貼るとブラウザ上に構文木が表示され、ノードとソース範囲の対応も確認できる。</p>
+<h3 id="木の形は規則で決まっている">木の形は規則で決まっている</h3>
+<p>上の木の形は偶然ではない。Parser は次の規則で木を組み立てる。</p>
+<ul>
+<li><strong>優先順位の低い演算子ほど、根に近い側に置かれる。</strong>
+<code>1 + 2 * 3</code> の根が <code>add</code> で <code>mul</code> がその子になるのは、<code>+</code> が <code>*</code> より優先順位が低いからである。</li>
+<li><strong>同じ優先順位の演算子が並んだときは、左から順にまとめる（左結合）。</strong>
+<code>10 - 3 - 2</code> は <code>(sub (sub (num 10) (num 3)) (num 2))</code> となり、<code>(10 - 3) - 2</code> を表す。</li>
+<li><strong>カッコは、この規則に優先して木の形を直接指定する。</strong>
+<code>(1 + 2) * 3</code> では逆に <code>add</code> が <code>mul</code> の子になる。</li>
+</ul>
+<p>この3つの規則で、どの式についても届く木の形が決まる。演算子ごとの優先順位は、
+後述の言語仕様の節で<strong>優先順位表</strong>として示す。疑わしいときは <code>parse_viewer.py</code> に
+式を入れて、規則どおりの木になることを確かめられる。</p>
+<h2 id="この回で扱う範囲">この回で扱う範囲</h2>
+<p>対象にするプログラムは、次の形に限定する。</p>
+<div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> 式<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>扱う式は以下の通り。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>種類</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>整数リテラル</td>
+<td><code>42</code></td>
+</tr>
+<tr class="even">
+<td>単項マイナス</td>
+<td><code>-3</code></td>
+</tr>
+<tr class="odd">
+<td>足し算</td>
+<td><code>1 + 2</code></td>
+</tr>
+<tr class="even">
+<td>引き算</td>
+<td><code>10 - 3</code></td>
+</tr>
+<tr class="odd">
+<td>掛け算</td>
+<td><code>2 * 3</code></td>
+</tr>
+<tr class="even">
+<td>割り算</td>
+<td><code>10 / 2</code></td>
+</tr>
+<tr class="odd">
+<td>剰余</td>
+<td><code>10 % 3</code></td>
+</tr>
+<tr class="even">
+<td>カッコ</td>
+<td><code>(1 + 2) * 3</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>変数、代入、if、while、関数呼び出しはまだ扱わない。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<p>この回は、この文法で書かれたプログラムを機械語に<strong>生成</strong>するのではなく、その場で<strong>解釈</strong>する。
+扱える文法の範囲はコマ2と同一である。</p>
+<p>式の文法は「単項式を演算子でつないだ列」（<code>binary_expr</code>）として1つの規則で与え、
+どの演算子が先にまとまるかは直後の優先順位表と上の「木の形は規則で決まっている」の
+規則で定める。<code>bin_op</code> の行の並びは優先順位の高い順である。</p>
+<pre class="ebnf" data-lang="ebnf"><code>program       ::= func_def        /* ユーザー定義関数はコマ6 */
+
+func_def    ::= &#39;int&#39; &#39;main&#39; &#39;(&#39; &#39;)&#39; func_body   /* 一般の関数定義はコマ6 */
+func_body   ::= &#39;{&#39; { stmt } &#39;}&#39;
+
+stmt        ::= &#39;return&#39; expr &#39;;&#39;
+
+expr        ::= binary_expr      /* 代入はコマ3、条件はコマ4 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 優先順位・結合は下の表。関係・等値はコマ4、論理はコマ13 */
+              | &#39;+&#39; | &#39;-&#39;
+unary_expr  ::= primary_expr
+              | &#39;-&#39;  unary_expr
+primary_expr ::= INT_LITERAL
+               | &#39;(&#39; expr &#39;)&#39;</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>字句トークン（<code>INT_LITERAL</code> など）の定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="node-の構造">Node の構造</h2>
+<p><code>parse_viewer.py</code> のS式は表示用の形式である。
+<code>mycc.py</code> に渡される実体は、<code>scaffold/ast_def.py</code> で定義されている <code>Node</code> オブジェクトである。</p>
+<p><code>Node</code> は、AST の1つの節点を表す入れ物である。
+たとえば、数値、足し算、掛け算は、それぞれ別の種類の <code>Node</code> として表される。</p>
+<p>主に見るフィールドは次の通り。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>フィールド</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>node.kind</code></td>
+<td>ノードの種類</td>
+</tr>
+<tr class="even">
+<td><code>node.val</code></td>
+<td>整数リテラルの値</td>
+</tr>
+<tr class="odd">
+<td><code>node.lhs</code></td>
+<td>二項演算の左側の子ノード</td>
+</tr>
+<tr class="even">
+<td><code>node.rhs</code></td>
+<td>二項演算の右側の子ノード</td>
+</tr>
+<tr class="odd">
+<td><code>node.operand</code></td>
+<td>単項演算の対象ノード</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ノードの種類は、<code>ast_def.py</code> で定義されている定数で判定する。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 77%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>S式</th>
+<th><code>Node</code> での表現</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>(num 42)</code></td>
+<td><code>node.kind == ND_NUM</code>, <code>node.val == 42</code></td>
+</tr>
+<tr class="even">
+<td><code>(neg A)</code></td>
+<td><code>node.kind == ND_NEG</code>, <code>node.operand == A</code></td>
+</tr>
+<tr class="odd">
+<td><code>(add A B)</code></td>
+<td><code>node.kind == ND_ADD</code>, <code>node.lhs == A</code>, <code>node.rhs == B</code></td>
+</tr>
+<tr class="even">
+<td><code>(sub A B)</code></td>
+<td><code>node.kind == ND_SUB</code>, <code>node.lhs == A</code>, <code>node.rhs == B</code></td>
+</tr>
+<tr class="odd">
+<td><code>(mul A B)</code></td>
+<td><code>node.kind == ND_MUL</code>, <code>node.lhs == A</code>, <code>node.rhs == B</code></td>
+</tr>
+<tr class="even">
+<td><code>(div A B)</code></td>
+<td><code>node.kind == ND_DIV</code>, <code>node.lhs == A</code>, <code>node.rhs == B</code></td>
+</tr>
+<tr class="odd">
+<td><code>(mod A B)</code></td>
+<td><code>node.kind == ND_MOD</code>, <code>node.lhs == A</code>, <code>node.rhs == B</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>たとえば、次のS式を考える。</p>
+<div class="sourceCode" id="cb7" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(add (num <span class="dv">1</span>) (mul (num <span class="dv">2</span>) (num <span class="dv">3</span>)))</span></code></pre></div>
+<p>これは <code>Node</code> では次のような関係になっている。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>場所</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>一番上のノード</td>
+<td><code>kind == ND_ADD</code></td>
+</tr>
+<tr class="even">
+<td><code>ND_ADD</code> の <code>lhs</code></td>
+<td><code>ND_NUM</code>, <code>val == 1</code></td>
+</tr>
+<tr class="odd">
+<td><code>ND_ADD</code> の <code>rhs</code></td>
+<td><code>ND_MUL</code></td>
+</tr>
+<tr class="even">
+<td><code>ND_MUL</code> の <code>lhs</code></td>
+<td><code>ND_NUM</code>, <code>val == 2</code></td>
+</tr>
+<tr class="odd">
+<td><code>ND_MUL</code> の <code>rhs</code></td>
+<td><code>ND_NUM</code>, <code>val == 3</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="実装方針">実装方針</h2>
+<p><code>eval_ast(node)</code> は、<code>node.kind</code> を見て処理を分ける。
+<code>node.kind</code> は文字列（<code>'Num'</code>, <code>'Add'</code>, …）であり、<code>ast_def.py</code> で定数 <code>ND_NUM</code>, <code>ND_ADD</code> 等も定義されている。
+スケルトンでは <code>eval_ast</code> が TODO になっているため、以下の各ケースを実装する。</p>
+<p>方針は次の通り。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>ノード種別</th>
+<th>評価方法</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>'Num'</code> (<code>ND_NUM</code>)</td>
+<td><code>node.val</code> を返す</td>
+</tr>
+<tr class="even">
+<td><code>'Neg'</code> (<code>ND_NEG</code>)</td>
+<td><code>node.operand</code> を評価し、符号を反転する</td>
+</tr>
+<tr class="odd">
+<td><code>'Add'</code> (<code>ND_ADD</code>)</td>
+<td><code>node.lhs</code> と <code>node.rhs</code> を評価し、足す</td>
+</tr>
+<tr class="even">
+<td><code>'Sub'</code> (<code>ND_SUB</code>)</td>
+<td><code>node.lhs</code> と <code>node.rhs</code> を評価し、引く</td>
+</tr>
+<tr class="odd">
+<td><code>'Mul'</code> (<code>ND_MUL</code>)</td>
+<td><code>node.lhs</code> と <code>node.rhs</code> を評価し、掛ける</td>
+</tr>
+<tr class="even">
+<td><code>'Div'</code> (<code>ND_DIV</code>)</td>
+<td><code>node.lhs</code> と <code>node.rhs</code> を評価し、割る</td>
+</tr>
+<tr class="odd">
+<td><code>'Mod'</code> (<code>ND_MOD</code>)</td>
+<td><code>node.lhs</code> と <code>node.rhs</code> を評価し、剰余を求める</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>重要なのは、子ノードもまた <code>Node</code> であるという点である。
+そのため、子ノードの値を求めるときも同じ <code>eval_ast()</code> を使える。</p>
+<p>このように、自分自身を使って木をたどる関数を再帰関数という。</p>
+<figure>
+<img src="../../figures/01_eval_tree.svg" alt="eval_ast が 1 + 2 * 3 の AST を評価する流れ" />
+<figcaption aria-hidden="true"><code>eval_ast</code> が <code>1 + 2 * 3</code> の AST を評価する流れ</figcaption>
+</figure>
+<p>葉の値が親に返り、根まで上がると式全体の値になる。
+①〜⑤は値が確定する順番である。</p>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>mycc.py</code></li>
+</ul>
+<p><code>eval_ast(node)</code> を実装する。</p>
+<h2 id="tests">tests/</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>add_mul.c</code></td>
+<td><code>1 + 2 * 3</code></td>
+<td>7</td>
+</tr>
+<tr class="even">
+<td><code>div_mod.c</code></td>
+<td><code>100 / 4 + 17 % 5</code></td>
+<td>27</td>
+</tr>
+<tr class="odd">
+<td><code>paren.c</code></td>
+<td><code>(10 - 3) * 2</code></td>
+<td>14</td>
+</tr>
+<tr class="even">
+<td><code>neg.c</code></td>
+<td><code>-3 + 10</code></td>
+<td>7</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/01_interpreter/check.py</span></code></pre></div>
+<p><code>tests/*.c</code> の <code>main</code> 関数内の <code>return</code> 式を評価し、対応する <code>.ans</code> と比較する。</p>
+<p>個別に実行する場合は、次のようにする。</p>
+<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/01_interpreter/mycc.py sessions/01_interpreter/tests/add_mul.c</span></code></pre></div>
+<p>成功すると、次のように表示される。</p>
+<pre data-lang="text"><code>評価結果: 7</code></pre>
+<h2 id="注意">注意</h2>
+<p>この回のテストでは、割り算・剰余の右辺は 0 にならない。</p>
+<p>また、この回では負数を含む割り算・剰余は扱わない。
+Python の <code>//</code> や <code>%</code> は、負数を含む場合に C の整数除算・剰余と挙動が異なるためである。</p>
+<h2 id="ここまでで着手できる発展課題">ここまでで着手できる発展課題</h2>
+<p>AST とインタープリターまで作ったので、字句解析・構文解析とは何かを CYK 法で体験する
+<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/F0_cyk/README.md">F0</a>（コンパイラ本編と独立、前提はこのコマまで）に着手できる。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/00_setup/"><span class="label">前へ</span>コマ0: 演習環境構築</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/02_arithmetic_codegen/"><span class="label">次へ</span>コマ2: 算術式コード生成</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/01_interpreter.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

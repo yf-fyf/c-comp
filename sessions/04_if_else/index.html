@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ4: if/else + 比較演算 — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ4: if/else + 比較演算</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+      <li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
+      <li><a href="#比較演算" id="toc-比較演算">比較演算</a></li>
+      <li><a href="#比較演算のコード生成" id="toc-比較演算のコード生成">比較演算のコード生成</a></li>
+      <li><a href="#条件分岐の考え方" id="toc-条件分岐の考え方">条件分岐の考え方</a></li>
+      <li><a href="#ラベル生成" id="toc-ラベル生成">ラベル生成</a></li>
+      <li><a href="#if-の生成パターン" id="toc-if-の生成パターン">if の生成パターン</a></li>
+      <li><a href="#ifelse-の生成パターン" id="toc-ifelse-の生成パターン">if/else の生成パターン</a></li>
+      <li><a href="#else-if-の扱い" id="toc-else-if-の扱い">else if の扱い</a></li>
+      <li><a href="#return-と共通エピローグ" id="toc-return-と共通エピローグ">return と共通エピローグ</a></li>
+      <li><a href="#三項演算子-値を持つ分岐式と文の違い" id="toc-三項演算子-値を持つ分岐式と文の違い">三項演算子: 値を持つ分岐（式と文の違い）</a></li>
+      <li><a href="#gen_stmt-に追加する処理" id="toc-gen_stmt-に追加する処理">gen_stmt に追加する処理</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>条件分岐と比較演算、そして三項演算子を実装する。</p>
+<p>コマ3までは、関数内の文は常に先頭から順に実行された。
+この回では、条件によって実行する文を変える <code>if</code> / <code>else</code> を扱う。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> a <span class="op">-</span> b<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> b <span class="op">-</span> a<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>目標は、条件式の結果に応じて、then側かelse側のどちらかの文だけを実行できるようにすることである。</p>
+</section>
+<h2 id="この回で扱う範囲">この回で扱う範囲</h2>
+<p>対象にするプログラムは、<code>main</code> 関数内に以下の要素を含むものに限定する。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>種類</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>比較演算</td>
+<td><code>a &gt; b</code>, <code>x == 42</code>, <code>y &lt;= 10</code></td>
+</tr>
+<tr class="even">
+<td>if 文</td>
+<td><code>if (cond) { ... }</code></td>
+</tr>
+<tr class="odd">
+<td>if/else 文</td>
+<td><code>if (cond) { ... } else { ... }</code></td>
+</tr>
+<tr class="even">
+<td>else if</td>
+<td><code>if (cond1) { ... } else if (cond2) { ... }</code></td>
+</tr>
+<tr class="odd">
+<td>入れ子の if</td>
+<td><code>if (cond1) { if (cond2) { ... } }</code></td>
+</tr>
+<tr class="even">
+<td>ブロック</td>
+<td><code>{ ... }</code></td>
+</tr>
+<tr class="odd">
+<td>return 文</td>
+<td><code>return 式;</code></td>
+</tr>
+<tr class="even">
+<td>三項演算子</td>
+<td><code>a &gt; b ? a : b</code></td>
+</tr>
+<tr class="odd">
+<td>変数宣言・代入・算術式</td>
+<td>コマ3までに扱ったもの</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>while、for、関数呼び出し、ポインタはまだ扱わない。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<pre class="ebnf" data-lang="ebnf"><code>scalar_type ::= &#39;int&#39;            /* ポインタはコマ7、char はコマ8 */
+obj_type    ::= scalar_type
+
+program       ::= func_def        /* ユーザー定義関数はコマ6 */
+var_decl      ::= obj_type IDENT &#39;;&#39;
+
+func_def    ::= &#39;int&#39; &#39;main&#39; &#39;(&#39; &#39;)&#39; func_body   /* 一般の関数定義はコマ6 */
+func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | &#39;return&#39; expr &#39;;&#39;
+expr_stmt   ::= expr &#39;;&#39;         /* 空文 ; はコマ5 */
+block       ::= &#39;{&#39; { stmt } &#39;}&#39;
+if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
+              | &#39;+&#39; | &#39;-&#39;
+              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
+              | &#39;==&#39; | &#39;!=&#39;
+unary_expr  ::= primary_expr
+              | &#39;-&#39;  unary_expr
+primary_expr ::= INT_LITERAL
+               | IDENT
+               | &#39;(&#39; expr &#39;)&#39;</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>==</code> <code>!=</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>表の読み方はコマ1の「木の形は規則で決まっている」と
+<a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
+<p><code>else</code> は最も内側の未対応 <code>if</code> へ結合する。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="ast-を確認する">AST を確認する</h2>
+<p>まず、if/else を含むプログラムがどのような AST になるか確認する。</p>
+<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/04_if_else/tests/target.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> a <span class="op">-</span> b<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> b <span class="op">-</span> a<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>実行すると、次のようなS式が表示される。</p>
+<div class="sourceCode" id="cb5" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span> (decl <span class="st">&quot;a&quot;</span> <span class="bu">:type</span> int) (decl <span class="st">&quot;b&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;a&quot;</span>) (num <span class="dv">10</span>)))</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;b&quot;</span>) (num <span class="dv">3</span>)))</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">if</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">cond</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>          (lt (var <span class="st">&quot;b&quot;</span>) (var <span class="st">&quot;a&quot;</span>)))</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        (then</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">return</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;a&quot;</span>) (var <span class="st">&quot;b&quot;</span>)))))</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        (else</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">return</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;b&quot;</span>) (var <span class="st">&quot;a&quot;</span>)))))))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/04_if_else_ast.svg" alt="if/else を含むプログラムの AST" />
+<figcaption aria-hidden="true">if/else を含むプログラムの AST</figcaption>
+</figure>
+<p>注目すべき点は2つある。</p>
+<p>1つ目。元のCコードの条件式は <code>a &gt; b</code> だが、ASTでは <code>(lt (var "b") (var "a"))</code> として表されている。
+Parser は <code>&gt;</code> を <code>&lt;</code> に、<code>&gt;=</code> を <code>&lt;=</code> に、それぞれ左右を入れ替えて変換する。
+そのため、AST上では <code>ND_GT</code> や <code>ND_GE</code> は決して現れない。</p>
+<p>2つ目。<code>if</code> ノードは次の3つのフィールドを持つ。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 66%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>フィールド</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>cond</code></td>
+<td>条件式ノード</td>
+</tr>
+<tr class="even">
+<td><code>then</code></td>
+<td>条件が真のときに実行する文ノード</td>
+</tr>
+<tr class="odd">
+<td><code>else_</code></td>
+<td>条件が偽のときに実行する文ノード。<code>else</code> がない場合は <code>None</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="比較演算">比較演算</h2>
+<p>この回では、比較演算も式として扱う。
+比較演算の結果は、真なら <code>1</code>、偽なら <code>0</code> とする。</p>
+<p>Parser が返す比較演算ノードは次の通り。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Cの式</th>
+<th>AST</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>a == b</code></td>
+<td><code>ND_EQ</code></td>
+<td>等しいなら <code>1</code></td>
+</tr>
+<tr class="even">
+<td><code>a != b</code></td>
+<td><code>ND_NE</code></td>
+<td>等しくなければ <code>1</code></td>
+</tr>
+<tr class="odd">
+<td><code>a &lt; b</code></td>
+<td><code>ND_LT</code></td>
+<td>左辺が右辺より小さければ <code>1</code></td>
+</tr>
+<tr class="even">
+<td><code>a &lt;= b</code></td>
+<td><code>ND_LE</code></td>
+<td>左辺が右辺以下なら <code>1</code></td>
+</tr>
+<tr class="odd">
+<td><code>a &gt; b</code></td>
+<td><code>ND_LT</code> に正規化</td>
+<td><code>b &lt; a</code> として表される</td>
+</tr>
+<tr class="even">
+<td><code>a &gt;= b</code></td>
+<td><code>ND_LE</code> に正規化</td>
+<td><code>b &lt;= a</code> として表される</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>ND_GT</code> や <code>ND_GE</code> は登場しないため、これらに対応するコードは不要である。</p>
+<h2 id="比較演算のコード生成">比較演算のコード生成</h2>
+<p>二項演算の共通パターンにより、比較命令を出す直前には次の状態になっている。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>レジスタ</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>a1</code></td>
+<td>左辺の値</td>
+</tr>
+<tr class="even">
+<td><code>a0</code></td>
+<td>右辺の値</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>比較演算は次のように生成する。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 50%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ノード</th>
+<th>生成する命令</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ND_EQ</code></td>
+<td><code>sub a0, a1, a0</code> / <code>seqz a0, a0</code></td>
+<td>差が0なら <code>a0 = 1</code>、それ以外は <code>0</code></td>
+</tr>
+<tr class="even">
+<td><code>ND_NE</code></td>
+<td><code>sub a0, a1, a0</code> / <code>snez a0, a0</code></td>
+<td>差が0でなければ <code>a0 = 1</code>、差が0なら <code>0</code></td>
+</tr>
+<tr class="odd">
+<td><code>ND_LT</code></td>
+<td><code>slt a0, a1, a0</code></td>
+<td><code>lhs &lt; rhs</code> なら <code>a0 = 1</code>、それ以外は <code>0</code></td>
+</tr>
+<tr class="even">
+<td><code>ND_LE</code></td>
+<td><code>slt a0, a0, a1</code> / <code>xori a0, a0, 1</code></td>
+<td><code>!(rhs &lt; lhs)</code> として計算する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>seqz</code> (set if equal to zero)、<code>snez</code> (set if not equal to zero)、<code>slt</code> (set if less than)、<code>xori</code> (xor immediate) はRV64の命令である。</p>
+<p>たとえば、<code>a &lt; b</code> のASTは <code>(lt (var "a") (var "b"))</code> であり、次のように生成される。</p>
+<div class="sourceCode" id="cb6" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># a1 = a, a0 = b の状態</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  slt a0<span class="op">,</span> a1<span class="op">,</span> a0</span></code></pre></div>
+<p><code>a1 &lt; a0</code> が成り立てば <code>a0 = 1</code>、成り立たなければ <code>a0 = 0</code> となる。</p>
+<h2 id="条件分岐の考え方">条件分岐の考え方</h2>
+<p>Cでは、<code>if</code> の条件式の値が <code>0</code> なら偽、<code>0</code> 以外なら真として扱う。</p>
+<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    文</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>このコードは、次のような流れに変換できる。</p>
+<pre data-lang="text"><code>cond を計算する
+もし cond の結果が 0 なら Lend に飛ぶ
+文を実行する
+Lend:</code></pre>
+<p>RV64では、<code>beqz a0, label</code> を使う。</p>
+<div class="sourceCode" id="cb9" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>beqz a0<span class="op">,</span> .L1</span></code></pre></div>
+<p>これは、<code>a0</code> が <code>0</code> なら <code>.L1</code> にジャンプする、という意味である。
+<code>cond</code> の計算結果は <code>a0</code> に入っているため、<code>beqz a0, Lend</code> で「偽なら飛ばす」という動作になる。</p>
+<h2 id="ラベル生成">ラベル生成</h2>
+<p>分岐の飛び先には、一意なアセンブリラベルが必要になる。</p>
+<p><code>new_label()</code> は、呼ばれるたびに異なる名前のラベルを返すメソッドである。</p>
+<div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> new_label(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>._label_counter <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;.L</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_label_counter<span class="sc">}</span><span class="ss">&quot;</span></span></code></pre></div>
+<p>インスタンス変数 <code>self._label_counter</code> は <code>__init__</code> で <code>0</code> 初期化される。</p>
+<p><code>.L</code> で始まるラベルはローカルラベルと呼ばれ、アセンブラが自動的に一意性を保証する。</p>
+<h2 id="if-の生成パターン">if の生成パターン</h2>
+<div class="sourceCode" id="cb11" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    文</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>これは、次のような命令の並びとして生成する。</p>
+<pre data-lang="text"><code># cond を codegen
+beqz a0, Lend
+# 文
+Lend:</code></pre>
+<p>条件が偽なら <code>beqz</code> で <code>Lend</code> に飛び、文は実行されない。</p>
+<h2 id="ifelse-の生成パターン">if/else の生成パターン</h2>
+<div class="sourceCode" id="cb13" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    then文</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    else文</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>この場合は、then 側の実行後に else 側を飛ばす必要がある。</p>
+<pre data-lang="text"><code># cond を codegen
+beqz a0, Lelse
+# then
+j Lend
+Lelse:
+# else
+Lend:</code></pre>
+<p>こうしないと、then 側の実行後に else 側にも突入してしまう。</p>
+<figure>
+<img src="../../figures/04_if_cfg.svg" alt="if と if/else の制御フロー" />
+<figcaption aria-hidden="true">if と if/else の制御フロー</figcaption>
+</figure>
+<p>偽のときは <code>beqz</code> でラベルへ飛ぶ。
+if/else では、then 側の最後に <code>j Lend</code> を置いて else 側を飛び越す。</p>
+<h2 id="else-if-の扱い">else if の扱い</h2>
+<p><code>else if</code> という専用ノードはない。
+Parser は、<code>else</code> の中にさらに <code>if</code> が入っているものとして扱う。</p>
+<p>たとえば、次のコードを考える。</p>
+<div class="sourceCode" id="cb15" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">90</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">70</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>ASTでは、<code>else</code> の中にもう一つの <code>if</code> が入る。</p>
+<div class="sourceCode" id="cb16" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">if</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">cond</span> ...)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  (then ...)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  (else</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">cond</span> ...)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>      (then ...)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>      (else ...))))</span></code></pre></div>
+<p><code>else_</code> が指すノードの <code>kind</code> が <code>ND_IF</code> であるかどうかにかかわらず、<code>gen_stmt(stmt.else_)</code> を再帰的に呼べば、<code>else if</code> も自然に処理できる。
+<code>else_</code> が <code>None</code> になるまで、再帰が続く。</p>
+<h2 id="return-と共通エピローグ">return と共通エピローグ</h2>
+<p>コマ3までは、<code>return</code> 文が関数の末尾にしか現れなかったため、<code>return</code> の後に直接エピローグを置けばよかった。</p>
+<p>しかし、コマ4からは <code>if</code> の中などに <code>return</code> が現れる。</p>
+<div class="sourceCode" id="cb17" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a<span class="op">;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> b<span class="op">;</span></span></code></pre></div>
+<p>この場合、<code>if</code> の中の <code>return</code> で関数をその場で終了しなければならない。
+そのため、<code>return</code> 文では、戻り値を <code>a0</code> に入れた後、関数末尾のエピローグラベルヘジャンプする。</p>
+<pre data-lang="text"><code>return式を codegen する
+j Lreturn</code></pre>
+<p><code>gen_func()</code> では、関数ごとに <code>_ret_label</code> を作り、エピローグの直前に置く。</p>
+<div class="sourceCode" id="cb19" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">.Lreturn:</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  ld s0<span class="op">,</span> ...</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  ld ra<span class="op">,</span> ...</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> ...</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ret</span></span></code></pre></div>
+<p>共通エピローグラベルを使うことで、関数内のどこに <code>return</code> があっても正しく関数を抜けられるようになる。</p>
+<figure>
+<img src="../../figures/04_ret_label.svg" alt="複数の return が共通エピローグに合流する" />
+<figcaption aria-hidden="true">複数の <code>return</code> が共通エピローグに合流する</figcaption>
+</figure>
+<h2 id="三項演算子-値を持つ分岐式と文の違い">三項演算子: 値を持つ分岐（式と文の違い）</h2>
+<p>if/else と同じ回で、三項演算子 <code>?:</code> も実装する。</p>
+<div class="sourceCode" id="cb20" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">8</span><span class="op">;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">&gt;</span> b <span class="op">?</span> a <span class="op">:</span> b<span class="op">;</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>ここで「式と文の違い」がはっきり見える。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 57%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>if / else</th>
+<th><code>?:</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>種類</td>
+<td>文</td>
+<td>式</td>
+</tr>
+<tr class="even">
+<td>役割</td>
+<td>実行する<strong>文</strong>を選ぶ</td>
+<td>選ばれた腕の<strong>値</strong>が式の値になる</td>
+</tr>
+<tr class="odd">
+<td>書ける場所</td>
+<td>文の位置</td>
+<td>式の中（<code>return</code> の右、代入の右辺、関数の引数など）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>コード生成はどちらも同じ分岐で書ける。違いは、<code>?:</code> では選ばれた腕の
+評価結果が <code>a0</code> に残ることだけである。</p>
+<div class="sourceCode" id="cb21" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_Cond(<span class="va">self</span>, node):</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    label_else <span class="op">=</span> <span class="va">self</span>.new_label()</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    label_end <span class="op">=</span> <span class="va">self</span>.new_label()</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.cond)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;  beqz a0, </span><span class="sc">{</span>label_else<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.then)      <span class="co"># 値が a0 に残る</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;  j </span><span class="sc">{</span>label_end<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;</span><span class="sc">{</span>label_else<span class="sc">}</span><span class="ss">:&#39;</span>)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.else_)     <span class="co"># 値が a0 に残る</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;</span><span class="sc">{</span>label_end<span class="sc">}</span><span class="ss">:&#39;</span>)</span></code></pre></div>
+<p><code>gen_stmt_If</code> とほぼ同じ形だが、<code>gen_stmt</code> ではなく <code>codegen</code>
+（式のコード生成）の一員である点に注意する。AST 上は
+<code>(ternary cond then else)</code> というノードになる。</p>
+<h2 id="gen_stmt-に追加する処理">gen_stmt に追加する処理</h2>
+<p>コマ3 で実装した <code>gen_stmt()</code> に、さらに文の種類を追加する。</p>
+<div class="table-scroll">
+<table style="width:100%;">
+<colgroup>
+<col style="width: 36%" />
+<col style="width: 47%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><code>node.kind</code></th>
+<th>呼ばれる handler</th>
+<th>処理</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>'Block'</code></td>
+<td><code>gen_stmt_Block</code></td>
+<td><code>stmts</code> を先頭から順に <code>self.gen_stmt()</code> する</td>
+</tr>
+<tr class="even">
+<td><code>'If'</code></td>
+<td><code>gen_stmt_If</code></td>
+<td>条件式を <code>self.codegen()</code> し、ラベルを生成して分岐。<code>else_</code> があれば <code>self.gen_stmt()</code> で処理する</td>
+</tr>
+<tr class="odd">
+<td><code>'Break'</code></td>
+<td><code>gen_stmt_Break</code></td>
+<td>コマ5 で対応。コマ4 では未対応でよい</td>
+</tr>
+<tr class="even">
+<td><code>'Continue'</code></td>
+<td><code>gen_stmt_Continue</code></td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>mycc.py</code></li>
+</ul>
+<p><code>importlib</code> でコマ3 の <code>Codegen03</code> を継承した <code>Codegen04</code> に、以下の機能を追加する。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>実装対象</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>new_label()</code></td>
+<td>一意なアセンブリラベルを返す</td>
+</tr>
+<tr class="even">
+<td><code>gen_stmt_If(node)</code></td>
+<td>条件分岐 (<code>beqz</code> / <code>j</code>) を生成。<code>else_</code> も処理する</td>
+</tr>
+<tr class="odd">
+<td><code>gen_stmt_Block(node)</code></td>
+<td><code>stmts</code> を順に <code>gen_stmt</code> する</td>
+</tr>
+<tr class="even">
+<td><code>codegen_Eq(node)</code> / <code>codegen_Ne(node)</code> / <code>codegen_Lt(node)</code> / <code>codegen_Le(node)</code></td>
+<td>比較演算。handler を追加する</td>
+</tr>
+<tr class="odd">
+<td><code>codegen_Cond(node)</code></td>
+<td>三項演算子。分岐して選ばれた腕の値を <code>a0</code> に残す</td>
+</tr>
+<tr class="even">
+<td>（dispatcher 対応）</td>
+<td><code>codegen</code> に <code>'Eq'</code> <code>'Ne'</code> <code>'Lt'</code> <code>'Le'</code> <code>'Cond'</code> の case を追加する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="tests">tests/</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 25%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>target.c</code></td>
+<td><code>if (a &gt; b)</code> の else 分岐</td>
+<td>7</td>
+</tr>
+<tr class="even">
+<td><code>if_only.c</code></td>
+<td>if のみ（else なし）</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td><code>compare.c</code></td>
+<td><code>==</code>, <code>&gt;=</code>, <code>&lt;</code> の組み合わせ</td>
+<td>42</td>
+</tr>
+<tr class="even">
+<td><code>nested.c</code></td>
+<td>入れ子 if</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td><code>if_true.c</code></td>
+<td>if の条件が真になる場合</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="even">
+<td><code>if_false.c</code></td>
+<td>if の条件が偽になる場合</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="odd">
+<td><code>if_elseif.c</code></td>
+<td>else if の連なり</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="even">
+<td><code>nested_if.c</code></td>
+<td>if の入れ子</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="odd">
+<td><code>ternary.c</code></td>
+<td>三項演算子 <code>a &gt; b ? a : b</code></td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td><code>nested_block.c</code></td>
+<td>関数先頭で宣言した変数を <code>if</code> の中で使う</td>
+<td>7</td>
+</tr>
+<tr class="odd">
+<td><code>nested_use.c</code></td>
+<td>二重の入れ子ブロックの中での変数の使用</td>
+<td>7</td>
+</tr>
+<tr class="even">
+<td><code>early_return.c</code></td>
+<td>複数の return 文（共通エピローグへのジャンプ）</td>
+<td>10</td>
+</tr>
+<tr class="odd">
+<td><code>rel_value.c</code></td>
+<td>比較・等値演算子の結果が int の <code>0</code> / <code>1</code> であること</td>
+<td>41</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb22" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/04_if_else</span></code></pre></div>
+<p><code>tests/target.c</code> がコンパイルでき、終了コード <code>7</code> になれば基本形は成功。</p>
+<p>個別に動かす場合は、次のようにする。</p>
+<div class="sourceCode" id="cb23" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/04_if_else/mycc.py sessions/04_if_else/tests/target.c <span class="dt">\</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="注意">注意</h2>
+<p>Parser は <code>&gt;</code> と <code>&gt;=</code> を正規化するため、<code>ND_GT</code> や <code>ND_GE</code> は AST上に現れない。
+これらのノードに対応するコードは不要である。</p>
+<p><code>ND_IF</code> の <code>cond</code> は、比較演算に限らず、任意の式を取れる。
+Cでは、<code>0</code> が偽、<code>0</code> 以外が真である。</p>
+<p>この言語で宣言を書けるのはファイルスコープと関数本体の先頭だけで、
+<code>if</code> やブロックの中には文しか書けない（<code>language_spec.md</code> の「宣言」節）。
+入れ子ブロックは新しいスコープも作らないので、<code>nested_block.c</code> の <code>if</code> の中の <code>y</code> は
+関数先頭で宣言した <code>y</code> そのものである。
+宣言の収集はコマ3 の <code>collect_decls()</code> が関数本体の先頭を見るだけで済み、
+<code>if</code> や <code>while</code> の中まで降りる必要はない。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong><code>&amp;&amp;</code> と <code>||</code> の注意</strong>: このスキャフォールドの <code>&amp;&amp;</code> / <code>||</code> は、
+本物の C と違い<strong>両辺を必ず評価する</strong>（短絡評価をしない）。
+そのため、<code>if (p != 0 &amp;&amp; p-&gt;val &gt; 0)</code> のように
+「左辺が偽なら右辺を評価しないこと」に頼った書き方はできない
+（<code>p</code> が <code>NULL</code> でも <code>p-&gt;val</code> を読んでしまう）。
+条件は2つの <code>if</code> に分けて書くこと。
+<code>&amp;&amp;</code> / <code>||</code> / <code>!</code> のコード生成を実装するのはコマ13 で、この回では扱わない。
+短絡評価の実装は発展課題 S1 で扱う。</p>
+</div>
+<p>生成したアセンブリの分岐が期待どおりに飛ぶか確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/03_variables/"><span class="label">前へ</span>コマ3: 変数・代入・シンボルテーブル</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/05_loops/"><span class="label">次へ</span>コマ5: while / for / break / continue</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/04_if_else.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

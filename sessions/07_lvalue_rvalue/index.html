@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ7: lvalue / rvalue + ポインタ — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ7: lvalue / rvalue + ポインタ</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+      <li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
+      <li><a href="#lvalue-になれる式が増える" id="toc-lvalue-になれる式が増える">lvalue になれる式が増える</a></li>
+      <li><a href="#codegen_lval-に-deref-を足す" id="toc-codegen_lval-に-deref-を足す"><code>codegen_lval()</code> に <code>'Deref'</code> を足す</a></li>
+      <li><a href="#のコード生成" id="toc-のコード生成"><code>&amp;</code> のコード生成</a></li>
+      <li><a href="#のコード生成-1" id="toc-のコード生成-1"><code>*</code> のコード生成</a></li>
+      <li><a href="#代入は書き換えなくてよい" id="toc-代入は書き換えなくてよい">代入は書き換えなくてよい</a></li>
+      <li><a href="#関数引数としてのポインタ" id="toc-関数引数としてのポインタ">関数引数としてのポインタ</a></li>
+      <li><a href="#戻り値のない関数-void" id="toc-戻り値のない関数-void">戻り値のない関数: <code>void</code></a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>codegen_lval()</code> を <code>*p</code> へ拡張し、<code>&amp;</code> と <code>*</code> を実装する。</p>
+<p><code>codegen()</code> と <code>codegen_lval()</code> の分離そのものはコマ3 で済んでいる。</p>
+<pre data-lang="text"><code>codegen(node)      -&gt; rvalue を計算し、値を a0 に置く
+codegen_lval(node) -&gt; lvalue のアドレスを計算し、アドレスを a0 に置く</code></pre>
+<p>ただしコマ3 の <code>codegen_lval()</code> が扱えるのは変数 <code>'Var'</code> だけで、
+それ以外を渡すと <code>lvalue でない式です</code> で止まる。
+この回で扱う <code>*p = 20;</code> は、変数ではない式を代入先に置く最初の例である。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>見方</th>
+<th>意味</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>rvalue</td>
+<td>式を評価して得られる値</td>
+<td><code>a</code>, <code>*p</code>, <code>1 + 2</code></td>
+</tr>
+<tr class="even">
+<td>lvalue</td>
+<td>書き込み先として使える場所</td>
+<td><code>a</code>, <code>*p</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>この回で新しくなるのは、この表の <code>*p</code> の列である。
+<code>codegen_lval()</code> に <code>'Deref'</code> を足し、<code>codegen()</code> に <code>'Addr'</code> と <code>'Deref'</code> を足す。</p>
+</section>
+<h2 id="この回で扱う範囲">この回で扱う範囲</h2>
+<p>対象にする機能は、単純なポインタの読み書きに限定する。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>種類</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>アドレス取得</td>
+<td><code>&amp;a</code></td>
+</tr>
+<tr class="even">
+<td>間接参照</td>
+<td><code>*p</code></td>
+</tr>
+<tr class="odd">
+<td>ポインタ経由の書き込み</td>
+<td><code>*p = 20;</code></td>
+</tr>
+<tr class="even">
+<td>ポインタ引数</td>
+<td><code>swap(&amp;x, &amp;y);</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>この回では、ポインタも整数もすべて8バイト値として扱う。
+型サイズはコマ8、ポインタ演算はコマ9で扱う。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<pre class="ebnf" data-lang="ebnf"><code>stars       ::= &#39;*&#39;              /* 多段ポインタ int ** はコマ9 */
+
+scalar_type ::= &#39;int&#39;  [ stars ] /* char はコマ8、struct はコマ11、void * はコマ12 */
+obj_type    ::= scalar_type
+ret_type    ::= scalar_type
+              | &#39;void&#39;
+
+program       ::= external_decl { external_decl }
+external_decl ::= func_proto
+                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
+var_decl      ::= obj_type IDENT &#39;;&#39;
+
+param       ::= scalar_type IDENT
+param_list  ::= param { &#39;,&#39; param }
+func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; &#39;;&#39;   /* &#39;...&#39; はコマ10 */
+func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
+func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | &#39;break&#39; &#39;;&#39;
+              | &#39;continue&#39; &#39;;&#39;
+              | &#39;return&#39; [ expr ] &#39;;&#39;
+expr_stmt   ::= [ expr ] &#39;;&#39;
+block       ::= &#39;{&#39; { stmt } &#39;}&#39;
+if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
+while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
+for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
+              | &#39;+&#39; | &#39;-&#39;
+              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
+              | &#39;==&#39; | &#39;!=&#39;
+unary_expr  ::= primary_expr     /* 添字 [ ] と sizeof はコマ9、. -&gt; はコマ12 */
+              | &#39;-&#39;  unary_expr
+              | &#39;*&#39;  unary_expr
+              | &#39;&amp;&#39;  unary_expr
+              | &#39;++&#39; unary_expr
+              | &#39;--&#39; unary_expr
+primary_expr ::= INT_LITERAL
+               | IDENT &#39;(&#39; [ arg_list ] &#39;)&#39;
+               | IDENT
+               | &#39;(&#39; expr &#39;)&#39;
+arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>==</code> <code>!=</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>表の読み方はコマ1の「木の形は規則で決まっている」と
+<a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
+<p>代入の左辺の文法カテゴリが <code>unary_expr</code> であるため、<code>*p = 20;</code> は構文としてそのまま書ける。
+どの <code>unary_expr</code> が実際に代入先になれるか（lvalue 制約）は構文ではなく意味解析の話である。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="ast-を確認する">AST を確認する</h2>
+<p>まず、<code>&amp;</code> と <code>*</code> を含むプログラムがどのような AST になるか確認する。</p>
+<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/07_lvalue_rvalue/tests/deref_write.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> <span class="op">&amp;</span>a<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>p <span class="op">=</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>実行すると、次のようなS式が表示される。</p>
+<div class="sourceCode" id="cb5" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span> (decl <span class="st">&quot;a&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      (decl <span class="st">&quot;p&quot;</span> <span class="bu">:type</span> (ptr int))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;a&quot;</span>) (num <span class="dv">10</span>)))</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;p&quot;</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>          (addr (var <span class="st">&quot;a&quot;</span>))))</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        (assign</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>          (deref (var <span class="st">&quot;p&quot;</span>))</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>          (num <span class="dv">20</span>)))</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (var <span class="st">&quot;a&quot;</span>)))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/07_deref_write_ast.svg" alt="deref_write.c の AST" />
+<figcaption aria-hidden="true"><code>deref_write.c</code> の AST</figcaption>
+</figure>
+<p>注目するノードは次の2つである。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>S式</th>
+<th><code>Node</code> での表現</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>(addr X)</code></td>
+<td><code>ND_ADDR</code>, <code>node.operand == X</code></td>
+<td><code>&amp;X</code></td>
+</tr>
+<tr class="even">
+<td><code>(deref X)</code></td>
+<td><code>ND_DEREF</code>, <code>node.operand == X</code></td>
+<td><code>*X</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>p = &amp;a;</code> は、右辺に <code>(addr (var "a"))</code> を持つ代入である。
+<code>*p = 20;</code> は、左辺に <code>(deref (var "p"))</code> を持つ代入である。</p>
+<h2 id="lvalue-になれる式が増える">lvalue になれる式が増える</h2>
+<p>変数 <code>a</code> の2つの使い方（<code>a = 10</code> の左辺はアドレス、<code>return a;</code> は値）は
+コマ3 の「rvalue と lvalue」節で扱った。この回で増えるのは、
+<strong>変数以外にも lvalue になれる式がある</strong>という点である。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 31%" />
+<col style="width: 51%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Cコード</th>
+<th>lvalue になる式</th>
+<th>書き込み先アドレスの求め方</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>a = 10;</code></td>
+<td><code>a</code>（<code>'Var'</code>）</td>
+<td><code>s0</code> からのオフセットを足す（コマ3）</td>
+</tr>
+<tr class="even">
+<td><code>*p = 20;</code></td>
+<td><code>*p</code>（<code>'Deref'</code>）</td>
+<td><code>p</code> を rvalue として評価した値がそのままアドレス</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>*p</code> のアドレスは、スタック上の位置を計算して作るのではなく、
+<code>p</code> に入っている値をそのまま使う。ここが <code>'Var'</code> との違いである。</p>
+<figure>
+<img src="../../figures/07_ptr_memory.svg" alt="p = &amp;a; 実行後のメモリと、rvalue / lvalue の関係" />
+<figcaption aria-hidden="true"><code>p = &amp;a;</code> 実行後のメモリと、rvalue / lvalue の関係</figcaption>
+</figure>
+<p><code>p</code> のスロットには <code>a</code> のアドレスが値として入っている。
+<code>*p</code> を lvalue として使うときは、この値（矢印の先）がそのまま書き込み先アドレスになる。</p>
+<h2 id="codegen_lval-に-deref-を足す"><code>codegen_lval()</code> に <code>'Deref'</code> を足す</h2>
+<p><code>codegen_lval(node)</code> は、代入先として使える式のアドレスを <code>a0</code> に入れる。</p>
+<p>コマ3 で書いた <code>'Var'</code> の分岐は、継承でそのまま引き継がれる（再掲）。</p>
+<div class="sourceCode" id="cb6" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_lval_Var(<span class="va">self</span>, node):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    offset <span class="op">=</span> <span class="va">self</span>.lookup_var(node.name, node.line)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&quot;  addi a0, s0, </span><span class="sc">{</span>offset<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>この回で足すのは <code>'Deref'</code> の分岐である。
+<code>*p</code> の場合は、<code>p</code> の値そのものが書き込み先アドレスなので、
+<code>node.operand</code> を rvalue として評価するだけでよい。</p>
+<div class="sourceCode" id="cb7" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_lval_Deref(<span class="va">self</span>, node):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.operand)</span></code></pre></div>
+<p><code>*p = 20;</code> では、まず <code>p</code> を rvalue として評価する。
+その結果、<code>a0</code> には <code>p</code> が指している先のアドレスが入る。
+このアドレスがそのまま左辺の lvalue になる。</p>
+<h2 id="のコード生成"><code>&amp;</code> のコード生成</h2>
+<p><code>&amp;a</code> は「<code>a</code> のアドレスを値として得る」式である。
+したがって、<code>&amp;</code> の中身を lvalue として評価すればよい。</p>
+<div class="sourceCode" id="cb8" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_Addr(<span class="va">self</span>, node):</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen_lval(node.operand)</span></code></pre></div>
+<p><code>p = &amp;a;</code> の流れは次のようになる。</p>
+<pre data-lang="text"><code>1. 左辺 p のアドレスを codegen_lval(var p) で求める
+2. 右辺 &amp;a を codegen(addr(var a)) で求める
+3. a のアドレスを p のスロットに sd する</code></pre>
+<h2 id="のコード生成-1"><code>*</code> のコード生成</h2>
+<p><code>*p</code> は、rvalue として読む場合と lvalue として使う場合で処理が違う。</p>
+<div class="table-scroll">
+<table style="width:100%;">
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 28%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Cコード</th>
+<th>意味</th>
+<th>処理</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>return *p;</code></td>
+<td><code>p</code> の指す先の値を読む</td>
+<td><code>codegen(p)</code> の後に <code>ld a0, 0(a0)</code></td>
+</tr>
+<tr class="even">
+<td><code>*p = 20;</code></td>
+<td><code>p</code> の指す先に書き込む</td>
+<td><code>codegen_lval(deref p)</code> でアドレスだけ作る</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>rvalue としての <code>*p</code> は次のように生成する。</p>
+<div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_Deref(<span class="va">self</span>, node):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.operand)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="st">&quot;  ld a0, 0(a0)&quot;</span>)</span></code></pre></div>
+<h2 id="代入は書き換えなくてよい">代入は書き換えなくてよい</h2>
+<p>代入 <code>lhs = rhs</code> では、左辺は lvalue、右辺は rvalue として扱う。
+コマ3 の <code>codegen_Assign()</code> は、すでにこの形で書かれている。</p>
+<pre data-lang="text"><code>1. self.codegen_lval(node.lhs) で書き込み先アドレスを求める
+2. アドレスをスタックへ退避する
+3. self.codegen(node.rhs) で書き込む値を求める
+4. 退避したアドレスを a1 に戻す
+5. sd a0, 0(a1) で書き込む</code></pre>
+<p>左辺に <code>codegen()</code> ではなく <code>codegen_lval()</code> を使ってあるので、
+<code>codegen_lval()</code> に <code>'Deref'</code> が足されただけで <code>*p = 20;</code> が動く。
+<code>codegen_Assign()</code> 自体には手を入れない。
+コマ3 の時点でこの形にしておく理由が、ここで効いてくる。</p>
+<h2 id="関数引数としてのポインタ">関数引数としてのポインタ</h2>
+<p>コマ6で関数呼び出しを実装しているため、ポインタを引数として渡す仕組み自体は新しくない。
+<code>&amp;x</code> を評価した結果はアドレス値なので、その値を通常の引数と同じように <code>a0</code> や <code>a1</code> に渡せばよい。</p>
+<div class="sourceCode" id="cb12" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> swap<span class="op">(</span><span class="dt">int</span> <span class="op">*</span>a<span class="op">,</span> <span class="dt">int</span> <span class="op">*</span>b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> tmp<span class="op">;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    tmp <span class="op">=</span> <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>a <span class="op">=</span> <span class="op">*</span>b<span class="op">;</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>b <span class="op">=</span> tmp<span class="op">;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> y<span class="op">;</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> <span class="dv">7</span><span class="op">;</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    swap<span class="op">(&amp;</span>x<span class="op">,</span> <span class="op">&amp;</span>y<span class="op">);</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x <span class="op">+</span> y <span class="op">*</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><code>swap(&amp;x, &amp;y)</code> では、<code>&amp;x</code> と <code>&amp;y</code> がそれぞれアドレス値として評価され、関数に渡される。
+関数側では <code>*a</code> と <code>*b</code> により、呼び出し元の <code>x</code> と <code>y</code> を読み書きできる。</p>
+<h2 id="戻り値のない関数-void">戻り値のない関数: <code>void</code></h2>
+<p>上の <code>swap</code> は値を返す必要がないのに <code>return 0;</code> と書いている。
+呼び出し元を書き換えるのが目的で、返す値がないからである。
+こういう関数の戻り値型には <code>void</code> を書く。</p>
+<div class="sourceCode" id="cb13" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> swap<span class="op">(</span><span class="dt">int</span> <span class="op">*</span>a<span class="op">,</span> <span class="dt">int</span> <span class="op">*</span>b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> t<span class="op">;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    t <span class="op">=</span> <span class="op">*</span>a<span class="op">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>a <span class="op">=</span> <span class="op">*</span>b<span class="op">;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>b <span class="op">=</span> t<span class="op">;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>戻り値型に <code>void</code> が書けるのは関数だけで、<code>void</code> の変数・仮引数・フィールドは書けない
+（<code>void *</code> というポインタは別で、これはコマ12 で扱う）。
+<code>void</code> 関数の中では次の 2 つが使える。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>書き方</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>return;</code></td>
+<td>そこで関数を抜ける（値は返さない）</td>
+</tr>
+<tr class="even">
+<td>本体の末尾に到達</td>
+<td>そのまま関数を抜ける</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>コード生成に新しい要素はない。<code>Return</code> ノードの <code>operand</code> が <code>None</code> のときは
+戻り値の計算を飛ばして共通エピローグ（コマ4 の <code>_ret_label</code>）へジャンプするだけである。
+<code>a0</code> に何を置くかは決めなくてよい。<code>void</code> 関数の戻り値は使えないので、
+呼び出し側が <code>a0</code> を読むことはない。</p>
+<p>ポインタが使えるようになって初めて、値を返さない関数に意味が出る
+（コマ6 までは、返り値以外に呼び出し元へ結果を伝える手段がなかった）。
+そのためこの回で扱う。</p>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>mycc.py</code></li>
+</ul>
+<p><code>importlib</code> でコマ6 の <code>Codegen06</code> を継承した <code>Codegen07</code> に、以下の3つを実装する。
+<code>codegen_lval()</code> と <code>codegen()</code> のディスパッチはスケルトンにあらかじめ書かれている。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>実装対象</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>codegen_lval_Deref(node)</code></td>
+<td><code>self.codegen(node.operand)</code> でアドレスを得る</td>
+</tr>
+<tr class="even">
+<td><code>codegen_Addr(node)</code></td>
+<td><code>self.codegen_lval(node.operand)</code> でアドレスを値として返す</td>
+</tr>
+<tr class="odd">
+<td><code>codegen_Deref(node)</code></td>
+<td><code>self.codegen(node.operand)</code> の後 <code>self.emit("  ld a0, 0(a0)")</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>codegen_lval_Var(node)</code> と <code>codegen_Assign(node)</code> はコマ3 で実装済みで、
+継承でそのまま働く。この回で書き直すものは無い。</p>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>スケルトンの <code>Codegen07</code> が <code>Codegen06</code> を <code>importlib</code> で継承していることを確認する</li>
+<li><code>codegen_lval_Deref(node)</code> を実装する</li>
+<li><code>codegen_Addr(node)</code> を実装する</li>
+<li>rvalue としての <code>codegen_Deref(node)</code> を実装する</li>
+<li>コマ3 の <code>codegen_Assign()</code> が左辺に <code>self.codegen_lval()</code> を使っていることを確認する（<code>*p = 20;</code> はこれで動く）</li>
+<li><code>swap.c</code> まで通ることを確認する</li>
+<li><code>void_func.c</code> を通す（<code>Return</code> の <code>operand</code> が <code>None</code> のとき、値を計算せずエピローグへ飛ぶ）</li>
+</ol>
+<h2 id="tests">tests/</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 25%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>deref_read.c</code></td>
+<td><code>p = &amp;x; return *p;</code></td>
+<td><code>42</code></td>
+</tr>
+<tr class="even">
+<td><code>deref_write.c</code></td>
+<td><code>*p = 20; return a;</code></td>
+<td><code>20</code></td>
+</tr>
+<tr class="odd">
+<td><code>ptr_ops.c</code></td>
+<td>ポインタ先の値を読み書きする</td>
+<td><code>55</code></td>
+</tr>
+<tr class="even">
+<td><code>swap.c</code></td>
+<td>ポインタ引数で値を入れ替える</td>
+<td><code>37</code></td>
+</tr>
+<tr class="odd">
+<td><code>void_func.c</code></td>
+<td>戻り値のない関数（<code>return;</code> と末尾到達の両方）</td>
+<td><code>15</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb14" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/07_lvalue_rvalue</span></code></pre></div>
+<p><code>tests/deref_read.c</code> がコンパイルでき、終了コード <code>42</code> になれば基本形は成功。</p>
+<p>個別に動かす場合は、次のようにする。</p>
+<div class="sourceCode" id="cb15" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/07_lvalue_rvalue/mycc.py sessions/07_lvalue_rvalue/tests/deref_read.c <span class="dt">\</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="注意">注意</h2>
+<p>この回では、ポインタも整数もすべて8バイト値として扱う。
+読み書きは常に <code>ld</code> / <code>sd</code> でよい。
+型サイズに応じたロード・ストアはコマ8、ポインタ演算はコマ9 で扱う。</p>
+<p><code>codegen_lval()</code> を呼んでよいのは、書き込み先になれるノードだけである。
+この回では変数 <code>a</code> と間接参照 <code>*p</code> の2つで、<code>&amp;(a + 1)</code> のような式にアドレスはない。</p>
+<p><code>void</code> 関数は戻り値を持たないので、<code>a0</code> に何を残すかを決める必要はない。
+呼び出し側が <code>void</code> 関数の値を使うことはない。</p>
+<p><code>codegen()</code> と <code>codegen_lval()</code> のどちらが呼ばれているかを1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に生成アセンブリを貼り付ける。</p>
+<p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/06_functions_recursion/"><span class="label">前へ</span>コマ6: 関数呼び出し・再帰</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/08_types/"><span class="label">次へ</span>コマ8: 型検査の導入</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/07_lvalue_rvalue.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

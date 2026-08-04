@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複合代入 — 左辺を1回しか評価しない — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">複合代入 — 左辺を1回しか評価しない</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#l2-が追加する仕様" id="toc-l2-が追加する仕様">L2 が追加する仕様</a></li>
+      <li><a href="#x-x-3-に書き換えればいいではない" id="toc-x-x-3-に書き換えればいいではない"><code>x = x + 3</code> に書き換えればいい、ではない</a></li>
+      <li><a href="#段すべてに手を入れる" id="toc-段すべてに手を入れる">3段すべてに手を入れる</a></li>
+      <li><a href="#コード生成-アドレスは1回値は往復" id="toc-コード生成-アドレスは1回値は往復">コード生成 — アドレスは1回、値は往復</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>x += 3;</code> <code>p -= 1;</code> <code>x %= 5;</code> のような複合代入
+（<code>+=</code> <code>-=</code> <code>*=</code> <code>/=</code> <code>%=</code>）を、字句・構文・コード生成の3段すべてで実装する。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ13（グローバル変数）まで。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>（<code>lexer.py</code>・<code>parser.py</code> を含む）、ラッパー <code>langcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>compound.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が複合代入のテストの通過と <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>仕様との関係</td>
+<td><strong>仕様の外側</strong>。<code>language_spec.md</code> は演算子節の「除外」に複合代入を挙げている。追加する構文と意味論は下記の「L2 が追加する仕様」節が定義する</td>
+</tr>
+<tr class="even">
+<td>備考</td>
+<td>言語機能発展シリーズ。複合代入は <code>language_spec.md</code> の外側にある機能で、追加する構文と意味論は資料の「L2 が追加する仕様」節が定義する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>複合代入は <code>language_spec.md</code> の<strong>外側</strong>にある機能である
+（仕様の「除外機能の一覧」に載っている）。
+この回は言語そのものを 1 つ広げる回で、追加する構文と意味論は<strong>この資料が定義する</strong>（次節）。
+コマ5 で作った前置 <code>++</code>/<code>--</code> の<strong>一般化</strong>にあたる。
+仕様も「前置 <code>++</code>/<code>--</code> の左辺は 1 回だけ評価される」と書いており、
+複合代入はその規則を 5 つの二項演算へ広げたものになる。
+F2 の発展課題2「複合代入を追加する」を構文で止めた人は、その続きになる。</p>
+<h2 id="l2-が追加する仕様">L2 が追加する仕様</h2>
+<p><code>language_spec.md</code> は複合代入を持たない。L2 はそこへ次の 5 つの演算子を足す。
+以下がこの回で実装すべき<strong>言語仕様の追加分</strong>であり、<code>check.py</code> / <code>golden.py</code> の
+判定はこの定義に従う。</p>
+<h3 id="構文">構文</h3>
+<p><code>language_spec.md</code> の EBNF の <code>assign_expr</code> を次で置き換える。</p>
+<pre class="ebnf" data-lang="ebnf"><code>assign_expr ::= unary_expr assign_op assign_expr   /* 右結合 */
+              | cond_expr
+assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;/=&#39; | &#39;%=&#39;</code></pre>
+<p>優先順位・結合の向きは <code>=</code> と同じ（最も低い段、右結合）。
+左辺は <code>unary_expr</code> 由来の lvalue でなければならない。
+字句では <code>+=</code> <code>-=</code> <code>*=</code> <code>/=</code> <code>%=</code> を 2 文字の 1 トークンとして読む。</p>
+<h3 id="意味論">意味論</h3>
+<p><code>e1 op= e2</code>（<code>op</code> は <code>+ - * / %</code> のいずれか）について、次を定める。</p>
+<ol type="1">
+<li><strong>左辺は 1 回だけ評価される。</strong> <code>e1</code> の lvalue（アドレス）を求める評価は
+ちょうど 1 回起こる。<code>e1</code> が副作用を持つ式（<code>*bump()</code>、<code>a[f()]</code> など）でも、
+その副作用は 1 回しか起こらない。
+したがって <code>e1 op= e2</code> は <code>e1 = e1 op e2</code> への<strong>書き換えでは実装できない</strong>。</li>
+<li><strong>評価順序</strong>は「<code>e1</code> の lvalue 決定 → <code>e2</code> の評価 → <code>e1</code> の現在値の読み出し →
+<code>op</code> の適用 → <code>e1</code> への格納」とする。</li>
+<li><strong>式の値と型</strong>は代入と同じで、格納後の左辺の値・左辺の型である
+（<code>y += x += 3</code> のように連ねて書ける）。</li>
+<li><strong>型の規則</strong>は対応する二項演算と代入の規則をそのまま使う。
+<ul>
+<li><code>int op= int</code>、<code>char op= int</code> は <code>=</code> と同じ縮小規則（下位 8 ビット）に従う。</li>
+<li><code>p += n</code> / <code>p -= n</code>（<code>p</code> はポインタ、<code>n</code> は int）は「ポインタ ± int」であり、
+<code>n</code> は指し先型のサイズで<strong>尺度化される</strong>。<code>*=</code> <code>/=</code> <code>%=</code> にポインタは使えない。</li>
+<li><code>%=</code> の両辺は int／char に限る。</li>
+</ul></li>
+<li><strong>未定義動作</strong>は <code>language_spec.md</code> の該当規則をそのまま引き継ぐ
+（<code>/=</code> <code>%=</code> の 0 除算、符号付きオーバーフローなど）。</li>
+<li>複合代入は <code>&amp;&amp;</code> <code>||</code> には無い（<code>&amp;&amp;=</code> のような演算子は追加しない）。</li>
+</ol>
+<p>標準トラックのコンパイラはこの 5 つのトークンを知らないままである。
+L2 を実装しても <code>language_spec.md</code> は変わらない — 変わるのは<strong>あなたのコンパイラが
+受理する言語</strong>のほうである。</p>
+<h2 id="x-x-3-に書き換えればいいではない"><code>x = x + 3</code> に書き換えればいい、ではない</h2>
+<p>複合代入を実装する一番簡単そうな方法は、構文解析の時点で
+<strong><code>x += 3</code> を <code>x = x + 3</code> に展開してしまう</strong>ことである（脱糖、desugaring）。
+実際 <code>x</code> がただの変数なら、これで正しい答えになる。</p>
+<p>しかし左辺が副作用を持つとき、この方法は壊れる。</p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">*</span>bump<span class="op">()</span> <span class="op">+=</span> <span class="dv">10</span><span class="op">;</span>          <span class="co">// bump() は呼ばれるたびにカウンタを増やす</span></span></code></pre></div>
+<p>これを <code>*bump() = *bump() + 10;</code> に展開すると、<strong><code>bump()</code> が2回呼ばれる</strong>。
+前節で定めたとおりである。</p>
+<blockquote>
+<p><strong>左辺は 1 回だけ評価される。</strong><code>e1</code> が副作用を持つ式でも、その副作用は 1 回しか起こらない。</p>
+</blockquote>
+<p>つまり脱糖版は<strong>この回の仕様に違反する</strong>。
+「見た目が同じ式に書き換えられる」ことと「意味が同じ」ことは違う。
+そのため、この回では <code>CompoundAssign</code> という<strong>専用のノード</strong>を作り、
+コード生成で左辺のアドレスを1回だけ求める。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>なぜ C にはこの規則があるのか。</strong>
+<code>a[f()] += 1</code> や <code>*p++ += 1</code> のように、左辺そのものが副作用を持つ式は
+実際のコードによく出てくる。もし「左辺を2回評価してよい」規則だったら、
+複合代入は「短く書ける記法」ではなく「意味の違う別物」になってしまう。
+複合代入が単なる略記であり続けるために、
+<strong>左辺の評価は1回</strong>という規則が必要なのである。</p>
+</div>
+<h2 id="段すべてに手を入れる">3段すべてに手を入れる</h2>
+<p>いまのコンパイラに <code>x += 3;</code> を含むソース（<code>tests/basic.c</code>）を食わせると、
+<strong>字句解析の時点で</strong>話が終わっている。</p>
+<pre data-lang="text"><code>構文解析エラー: [line 6] 式が期待されましたが &#39;=&#39; がありました</code></pre>
+<p><code>+</code> と <code>=</code> が別々のトークンとして読まれ、<code>x + (=) 3</code> を読もうとして失敗している。
+<code>+=</code> というトークンがそもそも存在しないからである。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>段階</th>
+<th>追加すること</th>
+<th>担当</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>字句</td>
+<td><code>+= -= *= /= %=</code> を2文字トークンとして読む</td>
+<td>Step 1</td>
+</tr>
+<tr class="even">
+<td>構文</td>
+<td>代入の段で読み、<code>CompoundAssign</code> の木にする</td>
+<td><code>langcc.py</code></td>
+</tr>
+<tr class="odd">
+<td>コード生成</td>
+<td>アドレス1回・ロード・演算・ストア</td>
+<td>Step 2・3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="字句-2文字演算子を足す">字句 — 2文字演算子を足す</h3>
+<p>スキャフォールド の <code>lexer.py</code> は、1文字ずつ切り出す前に
+<strong>2文字演算子の表 <code>TWO_CHAR_PUNCTS</code> を先に試す</strong>という順序になっている。
+表に <code>'+='</code> を足すだけで <code>+=</code> が1つのトークンになる。</p>
+<div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>TWO_CHAR_PUNCTS <span class="op">=</span> [<span class="st">&#39;==&#39;</span>, <span class="st">&#39;!=&#39;</span>, <span class="st">&#39;&lt;=&#39;</span>, <span class="st">&#39;&gt;=&#39;</span>, <span class="st">&#39;&amp;&amp;&#39;</span>, <span class="st">&#39;||&#39;</span>, <span class="st">&#39;-&gt;&#39;</span>, <span class="st">&#39;++&#39;</span>, <span class="st">&#39;--&#39;</span>]</span></code></pre></div>
+<p><code>++</code> と <code>+=</code> が取り違えられないのは、2文字まるごとを比較しているからである。
+順序を気にする必要があるのは「片方がもう片方の先頭になっている」場合
+（<code>&lt;</code> と <code>&lt;=</code> のような1文字と2文字の関係）だけで、
+2文字どうしにその関係はない。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>標準トラックのテストでは、この5つのトークンは「無い」ままである。</strong>
+<code>workbook/final/tests</code>（<a href="../../advanced/#fixed17"><code>fixed17</code></a>）も、OCaml 版パーサとの S 式一致テストも、
+複合代入を含まないソースだけで書かれている。
+この回の <code>tests/*.c</code> は標準トラックの字句を通らないので、
+web の golden テストでは <strong>skip として数えられる</strong>。これは失敗ではなく、
+複合代入が <code>language_spec.md</code> の外側にあるという線引きがそのまま出ている状態である。</p>
+</div>
+<h3 id="構文-代入と同じ段右結合">構文 — 代入と同じ段、右結合</h3>
+<p>複合代入は代入と同じ優先順位・同じ結合の向きで読む
+（「L2 が追加する仕様」で置き換えた <code>assign_expr</code> は右結合）。</p>
+<pre data-lang="text"><code>assign_expr ::= unary_expr assign_op assign_expr
+              | cond_expr
+assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;/=&#39; | &#39;%=&#39;</code></pre>
+<p><code>_parse_assign</code> は「まず <code>cond_expr</code> として読み、直後が代入演算子かを見る」形なので、
+<code>'='</code> の判定を5つの演算子にも広げるだけでよい（F2 の発展課題2 と同じ手である）。
+右辺で自分自身を呼ぶので、<code>a += b += c</code> は <code>a += (b += c)</code> と読まれる。</p>
+<pre data-lang="text"><code>kind=&#39;CompoundAssign&#39;、sval=&#39;+=&#39;、lhs=Var(a)、rhs=CompoundAssign(&#39;+=&#39;, Var(b), Var(c))</code></pre>
+<p>この部分はラッパーが用意する。演算子を <code>sval</code> に入れて<strong>種類を1ノードで持つ</strong>のは、
+<code>Add</code> / <code>Sub</code> / … と5種類のノードを作るより、コード生成で表を引くほうが素直だからである。</p>
+<h2 id="コード生成-アドレスは1回値は往復">コード生成 — アドレスは1回、値は往復</h2>
+<p><code>x += 3</code> がやることを分解すると、次の4つになる。</p>
+<pre data-lang="text"><code>1. 左辺のアドレスを求める      ← ここを1回だけにするのが主題
+2. そのアドレスから値を読む
+3. 右辺と演算する
+4. 同じアドレスへ書き戻す</code></pre>
+<p>アドレスは 1 で求めたものを 4 で使い回す。
+その間に右辺の評価が挟まる（右辺も <code>a0</code> を使う）ので、
+アドレスと途中の値はスタックへ退避する。</p>
+<div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; x += 3   (x は int、s0-8 にある)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 左辺のアドレス          ← codegen_lval は1回だけ</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">8</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          <span class="co">;; アドレスを退避</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  lw a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span>          <span class="co">;; いまの値</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          <span class="co">;; いまの値も退避</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">3</span>              <span class="co">;; 右辺</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          <span class="co">;; a1 = いまの値</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  add a0<span class="op">,</span> a1<span class="op">,</span> a0        <span class="co">;; 演算(演算子ごとに命令が変わる)</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          <span class="co">;; a1 = 左辺のアドレス</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  sw a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span>          <span class="co">;; 書き戻す</span></span></code></pre></div>
+<p>コマ5 の <code>codegen_PreInc</code> と見比べてほしい。
+<code>addi a0, a0, 1</code> が「右辺を評価して演算する」に置き換わっただけで、
+<strong>骨格は同じ</strong>である。<code>++e</code> を <code>e += 1</code> の特別な場合とみなせるのは、
+<strong>L2 がそう定義した</strong>からであり、コードの上でもそのとおりになっている。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>演算子</th>
+<th>命令</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>+=</code></td>
+<td><code>add</code></td>
+</tr>
+<tr class="even">
+<td><code>-=</code></td>
+<td><code>sub</code></td>
+</tr>
+<tr class="odd">
+<td><code>*=</code></td>
+<td><code>mul</code></td>
+</tr>
+<tr class="even">
+<td><code>/=</code></td>
+<td><code>div</code></td>
+</tr>
+<tr class="odd">
+<td><code>%=</code></td>
+<td><code>rem</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>書き戻したあと <code>a0</code> には結果が残るので、<code>y += x += 3</code> のように
+<strong>式としての値</strong>も自然に手に入る。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong><code>x /= 0</code> はどうなるか。</strong>
+0 による除算・剰余は仕様の「未定義動作」に挙がっている。
+コンパイル時に止める義務はなく、実行時に何が起きても仕様違反ではない
+（RV64 の <code>div</code> は例外を出さず、決められた値を返す）。
+検査を足したければ Q1（型検査パス）の側の仕事になる。</p>
+</div>
+<h3 id="ポインタへの-は要素サイズぶん進む">ポインタへの <code>+=</code> は要素サイズぶん進む</h3>
+<p><code>p += 2</code> は「2バイト進める」ではなく「2要素ぶん進める」である。
+コマ9 の <code>p + 2</code> と同じスケーリングを、複合代入でも行う必要がある。</p>
+<div class="sourceCode" id="cb9" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; p += 2   (p は int*)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  li a1<span class="op">,</span> <span class="dv">4</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">mul</span> a0<span class="op">,</span> a0<span class="op">,</span> a1        <span class="co">;; 右辺 2 → 8 バイト</span></span></code></pre></div>
+<p>スケーリングは<strong>右辺を評価した直後</strong>に入れる。
+このとき「いまの値」はスタックの上にいるので、<code>a1</code> を作業に使ってよい。</p>
+<p>なお、ポインタに使えるのは <code>+=</code> と <code>-=</code> だけである
+（<code>p *= 2</code> は仕様の「ポインタ演算はポインタ ± int のみ」に反する）。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>extend_puncts</code></td>
+<td>2文字演算子の表に5つを足す</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>gen_compound_assign</code></td>
+<td>アドレス1回 → ロード → 演算 → ストア</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>scale_rhs_for_ptr</code></td>
+<td>ポインタなら右辺を要素サイズ倍する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Step 2 の間はポインタを忘れて <code>int</code> だけ動かし、Step 3 で足すとよい。</p>
+<div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/basic.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A8</span> <span class="st">&quot;addi a0, s0&quot;</span>   <span class="co"># 往復の形を見る</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/once.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&quot;call bump&quot;</span>       <span class="co"># 2 のはず(実行時に2回呼ぶ)</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/ptr.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-B1</span> <span class="st">&quot;mul a0, a0, a1&quot;</span>  <span class="co"># スケーリング</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 複合代入のテスト + fixed17</span></span></code></pre></div>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>basic.c</code></td>
+<td>5つの演算子と、<code>y += x += 3</code>（右結合・式の値）</td>
+</tr>
+<tr class="even">
+<td><code>once.c</code></td>
+<td><code>*bump() += 10</code> で <code>bump()</code> が1回しか呼ばれない</td>
+</tr>
+<tr class="odd">
+<td><code>ptr.c</code></td>
+<td><code>int*</code> の <code>+= -=</code> が要素単位で進む / <code>char*</code> は1バイト</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>once.c</code> が本質である。脱糖で実装すると、答えは合っているのに
+カウンタが2になって落ちる。<strong>答えが合うことと、意味が正しいことは別</strong>だと
+テストで示している。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong><code>++e</code> を作り直す</strong>: コマ5 の <code>PreInc</code> を消し、パーサで
+<code>++e</code> を <code>e += 1</code> の <code>CompoundAssign</code> に変換する。
+<code>language_spec.md</code> 自体はこの同値性を定めていない
+（複合代入は L2 が追加した機能である）。L2 が定めた意味論のもとで
+<code>++e</code> と <code>e += 1</code> を同値なものとして実装できるか
+（ポインタのスケーリングが両方で効くことを確かめる）</li>
+<li><strong>スケーリングの確認</strong>: <code>p += 2</code> の生成コードを <code>p = p + 2</code> と見比べる。
+同じ命令列になっているか。違うなら、どちらが仕様に沿っているか</li>
+<li><strong><code>&amp;&amp;=</code> が無いのはなぜか</strong>（S1 完了者向け）: C には <code>+=</code> はあるのに
+<code>&amp;&amp;=</code> はない。短絡評価の <code>&amp;&amp;</code> に代入を混ぜると何が困るのかを、
+S1 で作ったジャンプの形から考える</li>
+<li><strong>型検査と組み合わせる</strong>（Q1 完了者向け）: <code>p *= 2</code> や
+構造体への <code>+=</code> をコンパイル時に弾く。どの情報があれば判定できるか</li>
+<li><strong>後置 <code>++</code></strong>: Core プロファイルは後置 <code>++</code> を除外している。
+<code>x++</code> を「増やす前の値を式の値にする」形で実装しようとすると、
+前置と比べて何が増えるか</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 略記のための規則。</strong>
+<code>x += 3</code> は <code>x = x + 3</code> の略記である——教科書はそう説明するし、
+たいていの場合それで困らない。
+しかし言語仕様は、その「たいてい」を許さない。
+<code>a[i++] += 1</code> のような式でも略記でありつづけるために、
+「左辺は1回だけ評価する」という規則をわざわざ書き足している。
+仕様書の細かい一文は、ほとんどが<strong>こういう例外を潰すため</strong>にある。
+コンパイラを書くと、その一文がコードのどの行に対応するのかが見えるようになる。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/L1_ptrdiff/"><span class="label">前へ</span>ポインタ同士の引き算 — 差は「要素いくつ分か」</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/L3_variadic/"><span class="label">次へ</span>可変長引数の定義 — printf の側に立つ</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/L2_compound_assign.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

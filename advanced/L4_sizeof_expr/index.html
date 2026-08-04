@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sizeof 単項式 — 答えは合っているのに、間違っている — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">sizeof 単項式 — 答えは合っているのに、間違っている</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#l4-が追加する仕様" id="toc-l4-が追加する仕様">L4 が追加する仕様</a></li>
+      <li><a href="#中心にある規則-評価しない" id="toc-中心にある規則-評価しない">中心にある規則: 評価しない</a></li>
+      <li><a href="#いまのコンパイラに食わせるとどうなるか" id="toc-いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</a></li>
+      <li><a href="#型を辿る-評価しない型付け" id="toc-型を辿る-評価しない型付け">型を辿る —— 評価しない型付け</a></li>
+      <li><a href="#コード生成-1-命令" id="toc-コード生成-1-命令">コード生成 —— 1 命令</a></li>
+      <li><a href="#不完全型を弾く" id="toc-不完全型を弾く">不完全型を弾く</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>sizeof x</code> <code>sizeof *p</code> <code>sizeof (a + 1)</code> のような<strong>式形式の <code>sizeof</code></strong> を実装する。
+コマ9 で作った <code>sizeof(型名)</code> 形式はそのまま残し、1トークンの先読みで見分ける。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ12（構造体）まで。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>（<code>lexer.py</code>・<code>parser.py</code> を含む）、ラッパー <code>langcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>sizeofexpr.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が sizeof 式のテストの通過と <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>仕様との関係</td>
+<td><strong>仕様の外側</strong>。<code>language_spec.md</code> は <code>sizeof</code> を「型名形式のみ」と定め、除外機能の一覧に <code>sizeof</code> 式を挙げている。追加する構文と意味論は下記の「L4 が追加する仕様」節が定義する</td>
+</tr>
+<tr class="even">
+<td>備考</td>
+<td>言語機能発展シリーズ。L 系列で最も軽い入口で、字句の変更は無く、コード生成も1命令で終わる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>sizeof</code> 式は <code>language_spec.md</code> の<strong>外側</strong>にある機能である
+（仕様の「除外機能の一覧」に載っており、代替表は <code>sizeof(型名)</code> で書けと指示している）。
+コマ9 の <code>sizeof(型名)</code> を<strong>一般化</strong>する回で、追加する構文と意味論は<strong>この資料が定義する</strong>（次節）。</p>
+<p>L 系列の中ではいちばん軽い。字句は 1 文字も変えない（<code>sizeof</code> はコマ9 の時点で
+すでにキーワードとして読めている）。構文は分岐が 1 つ増えるだけで、
+コード生成にいたっては <code>li a0, N</code> の 1 命令で終わる。
+それでも、この回でしか出会えない考え方が 1 つある——<strong>評価しない</strong>という意味論である。</p>
+<h2 id="l4-が追加する仕様">L4 が追加する仕様</h2>
+<p><code>language_spec.md</code> の <code>sizeof</code> は型名形式だけである。L4 はそこへ式形式を足す。
+以下がこの回で実装すべき<strong>言語仕様の追加分</strong>であり、<code>check.py</code> / <code>golden.py</code> の
+判定はこの定義に従う。</p>
+<h3 id="構文">構文</h3>
+<p><code>language_spec.md</code> の EBNF の <code>unary_expr</code> に、次の 1 行を足す。</p>
+<pre class="ebnf" data-lang="ebnf"><code>unary_expr ::= …
+             | &#39;sizeof&#39; &#39;(&#39; type_name &#39;)&#39;     /* 既存 */
+             | &#39;sizeof&#39; unary_expr            /* L4 が追加 */</code></pre>
+<p>オペランドは <code>unary_expr</code> である（<code>cast_expr</code> の無いこの言語では ISO C の
+<code>sizeof unary-expression</code> と同じ位置になる）。したがって <code>sizeof</code> は<strong>単項演算子</strong>で、
+<code>sizeof x + 1</code> は <code>(sizeof x) + 1</code> と読まれる。</p>
+<p>2 つの形式は <code>'sizeof'</code> の<strong>次の 1 トークンだけ</strong>で見分けられる。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th><code>sizeof</code> の次</th>
+<th>読み方</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>'('</code> + 型キーワード（<code>int</code> <code>char</code> <code>void</code> <code>struct</code>）</td>
+<td>型名形式</td>
+</tr>
+<tr class="even">
+<td>それ以外</td>
+<td>式形式</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>language_spec.md</code> が「<code>type_name</code> は型キーワードで始まるため構文衝突はない」と
+書いているのはこのことである。仕様は衝突が無いことを<strong>式形式を禁じる根拠</strong>に使ったが、
+同じ事実は<strong>両方を共存させる根拠</strong>にもなる。1 トークンの先読みで足りる。</p>
+<h3 id="意味論">意味論</h3>
+<p><code>sizeof e</code> について、次を定める。</p>
+<ol type="1">
+<li><strong>結果は <code>e</code> の静的な型のサイズ</strong>（バイト数）である。実行時の値には一切依存しない。</li>
+<li><strong><code>e</code> は評価されない。</strong> <code>e</code> に含まれる関数呼出し・代入・<code>++</code>/<code>--</code> などの副作用は
+<strong>1 つも起こらない</strong>。<code>e</code> は型を決めるためだけに使われる。</li>
+<li><strong>結果の型は <code>int</code></strong>（<code>language_spec.md</code> の例外 E1 をそのまま引き継ぐ。
+本仕様に <code>size_t</code> は無い）。</li>
+<li><strong>不完全型・<code>void</code> への <code>sizeof</code> はコンパイルエラー</strong>とする。
+本体の見えていない <code>struct</code>（前方宣言のみ）と <code>void</code> がこれにあたる
+（<code>language_spec.md</code> の「未定義動作/エラー」の項目 8 と <code>sizeof(void)</code> の禁止に対応）。
+ポインタは指し先が不完全でもサイズ 8 で決まるので、これは通す。</li>
+<li>型名形式 <code>sizeof(型名)</code> の意味は<strong>変わらない</strong>。</li>
+</ol>
+<p>L4 を実装しても <code>language_spec.md</code> は変わらない —— 変わるのは<strong>あなたのコンパイラが
+受理する言語</strong>のほうである。</p>
+<h2 id="中心にある規則-評価しない">中心にある規則: 評価しない</h2>
+<p><code>sizeof</code> は「大きさを測る」演算子だから、まず値を作ってから測るのだと思いたくなる。
+しかし C の <code>sizeof</code> は逆である。<strong>型だけを見て、値は作らない。</strong></p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> calls<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> bump<span class="op">()</span> <span class="op">{</span> calls <span class="op">=</span> calls <span class="op">+</span> <span class="dv">1</span><span class="op">;</span> <span class="cf">return</span> <span class="dv">7</span><span class="op">;</span> <span class="op">}</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>calls <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="kw">sizeof</span> bump<span class="op">();</span>      <span class="co">// n は 4。calls は 0 のまま</span></span></code></pre></div>
+<p>もしオペランドをコード生成してしまうと、どうなるか。</p>
+<pre data-lang="text"><code>  call bump          ← 呼ばれてしまう(calls が 1 になる)
+  li a0, 4           ← 答えは 4 で「合っている」</code></pre>
+<p><code>n</code> は 4 になる。テストの戻り値だけを見ていると<strong>通ってしまう</strong>。
+それでも仕様違反である。前節で定めたとおり <code>e</code> の副作用は 1 つも起こってはならない。</p>
+<blockquote>
+<p><strong><code>e</code> は評価されない。</strong> <code>e</code> に含まれる副作用は 1 つも起こらない。</p>
+</blockquote>
+<p>L2 の「複合代入の左辺は 1 回だけ評価される」と同じ形の罠である。
+<strong>答えが数値として合うことと、意味論として正しいことは別</strong>であり、
+この回のテスト <code>tests/noeval.c</code> は <code>calls</code> を表示して後者を確かめる。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>なぜ C にはこの規則があるのか。</strong>
+<code>sizeof</code> はコンパイル時定数である。<code>malloc(sizeof(struct Node))</code> は実行時に
+<code>struct Node</code> を 1 つ作ってから測っているわけではない——測る対象が無くても測れる。
+さらに <code>sizeof *p</code> は、<code>p</code> が <code>NULL</code> でも安全でなければならない
+（<code>p</code> が指す先の型は <code>p</code> の宣言だけで決まる）。
+「評価しない」は例外規定ではなく、<code>sizeof</code> が型の演算子であることの言い換えである。</p>
+</div>
+<h2 id="いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</h2>
+<p><code>tests/expr.c</code> を標準トラックのコンパイラに渡すと、構文解析で止まる。</p>
+<pre data-lang="text"><code>構文解析エラー: [line 19] sizeof は sizeof(型名) 形式のみ使えます</code></pre>
+<p>スキャフォールドの <code>_parse_sizeof</code> が、<code>'('</code> + 型キーワードでなければ
+明示的にエラーにしている。この回はここに「そうでなければ式形式」を足す。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>段階</th>
+<th>追加すること</th>
+<th>担当</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>字句</td>
+<td>なし（<code>sizeof</code> はすでにキーワード）</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td>構文</td>
+<td>1 トークン先読みで <code>SizeofExpr</code> を作る</td>
+<td><code>langcc.py</code></td>
+</tr>
+<tr class="odd">
+<td>意味</td>
+<td>オペランドの静的な型を求める</td>
+<td>Step 1</td>
+</tr>
+<tr class="even">
+<td>コード生成</td>
+<td>型のバイト数を 1 命令で置く</td>
+<td>Step 2</td>
+</tr>
+<tr class="odd">
+<td>エラー</td>
+<td>不完全型・<code>void</code> を弾く</td>
+<td>Step 3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="構文-1-トークンの先読み">構文 —— 1 トークンの先読み</h3>
+<p>ラッパーが用意する部分は次のとおりである。</p>
+<div class="sourceCode" id="cb5" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _parse_sizeof(<span class="va">self</span>):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    line <span class="op">=</span> <span class="va">self</span>.cur.line</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.pos <span class="op">+=</span> <span class="dv">1</span>                       <span class="co"># &#39;sizeof&#39;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">self</span>.cur.sval <span class="op">==</span> <span class="st">&#39;(&#39;</span> <span class="kw">and</span> <span class="va">self</span>._peek_is_type():</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        ...                             <span class="co"># 従来どおり SizeofType(ty_str=…)</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Node(<span class="st">&#39;SizeofExpr&#39;</span>, operand<span class="op">=</span><span class="va">self</span>._parse_unary(), line<span class="op">=</span>line)</span></code></pre></div>
+<p><code>_peek_is_type()</code> は <code>'('</code> の<strong>次</strong>のトークンが型キーワードかを見る。
+<code>sizeof (a)</code> は <code>a</code> が識別子なので式形式、<code>sizeof (int)</code> は型形式になる。
+オペランドを <code>_parse_unary()</code> で読むので、<code>sizeof x + 1</code> は
+<code>(sizeof x) + 1</code> と読まれる（<code>+</code> は <code>_parse_unary</code> の外側の段にある）。</p>
+<pre data-lang="text"><code>sizeof c + 1     → Add(SizeofExpr(Var c), Num 1)     = 1 + 1 = 2
+sizeof (c + 1)   → SizeofExpr(Add(Var c, Num 1))     = 4</code></pre>
+<p><code>char</code> を使うとこの差が見える（<code>int</code> どうしだと両方 4 になって区別がつかない）。
+<code>tests/prec.c</code> はこの形で優先順位を確かめている。</p>
+<h2 id="型を辿る-評価しない型付け">型を辿る —— 評価しない型付け</h2>
+<p><code>sizeof</code> に必要なのはオペランドの<strong>静的な型</strong>である。
+土台の <code>mycc.py</code> はすでに <code>_type_of_expr</code> という同じ規則を持っている。
+違うのは、こちらは型を知るためだけに木を辿り、<strong>命令を 1 行も出さない</strong>という点だけである。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 61%" />
+<col style="width: 38%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ノード</th>
+<th>型</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Var</code> / <code>Deref</code> / <code>Index</code> / <code>Member</code></td>
+<td><code>cg.lval_type(node)</code> に任せる（左辺値の型）</td>
+</tr>
+<tr class="even">
+<td><code>Str</code></td>
+<td><code>char*</code></td>
+</tr>
+<tr class="odd">
+<td><code>Addr</code>（<code>&amp;e</code>）</td>
+<td><code>e</code> の型 + <code>*</code></td>
+</tr>
+<tr class="even">
+<td><code>Assign</code></td>
+<td>左辺の型</td>
+</tr>
+<tr class="odd">
+<td><code>PreInc</code> / <code>PreDec</code></td>
+<td>左辺の型</td>
+</tr>
+<tr class="even">
+<td><code>Cond</code>（<code>a ? b : c</code>）</td>
+<td><code>b</code> 側の型</td>
+</tr>
+<tr class="odd">
+<td><code>Add</code></td>
+<td>どちらかがポインタならそのポインタ型、でなければ <code>int</code></td>
+</tr>
+<tr class="even">
+<td><code>Sub</code></td>
+<td>左辺がポインタならそのポインタ型、でなければ <code>int</code></td>
+</tr>
+<tr class="odd">
+<td>その他（<code>Num</code> <code>Neg</code> <code>Not</code> <code>Mul</code> <code>Div</code> <code>Mod</code> 比較 <code>&amp;&amp;</code> <code>||</code> <code>Call</code> <code>SizeofType</code> <code>SizeofExpr</code>）</td>
+<td><code>int</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>Add</code> でポインタを左右どちらでも見るのは、<code>p + 1</code> と <code>1 + p</code> の両方が
+ポインタ型になるからである（コマ9 のスケーリングと同じ非対称性）。
+<code>Sub</code> は左だけ見ればよい —— ポインタ同士の引き算は仕様の外にある（発展課題 L1 の題材）。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>なぜ <code>Call</code> は無条件に <code>int</code> でよいのか。</strong>
+<code>language_spec.md</code> の関数はすべて <code>int</code> を返すか <code>void</code> である。
+<code>void</code> 関数の呼出しを <code>sizeof</code> に渡す（<code>sizeof f()</code>）のは本来エラーだが、
+土台のコード生成器は式の型として <code>int</code> を返す。ここでは仕様の外の細部を
+追わず、<code>_type_of_expr</code> と同じ規則にそろえておく。
+戻り値型まで見て弾きたい人は発展課題 4 へ。</p>
+</div>
+<h2 id="コード生成-1-命令">コード生成 —— 1 命令</h2>
+<p>型が決まれば、あとは大きさを置くだけである。</p>
+<div class="sourceCode" id="cb7" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>cg.emit(<span class="ss">f&#39;  li a0, </span><span class="sc">{</span>cg<span class="sc">.</span>type_size(ty)<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; sizeof *p   (p は int*)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">4</span></span></code></pre></div>
+<p><code>codegen</code> はどこにも現れない。<strong>この「無い」ことがこの回の実装である。</strong>
+コード生成の関数が 1 行しかないのに、その 1 行に到達するまでに
+型を辿る仕事が要る——<code>sizeof</code> が「実行時ではなく翻訳時の演算子」であることが、
+生成コードの形にそのまま出ている。</p>
+<p>コマ9 の <code>codegen_SizeofType</code> と比べてほしい。出力は同じ <code>li a0, N</code> で、
+違いは <code>N</code> の求め方だけである。型名形式は文字列から直接、式形式は木を辿って求める。</p>
+<h2 id="不完全型を弾く">不完全型を弾く</h2>
+<p>大きさが決まらない型が 2 つある。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 80%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>型</th>
+<th>なぜ決まらないか</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>void</code></td>
+<td>大きさを持たない。仕様も <code>sizeof(void)</code> を禁じている</td>
+</tr>
+<tr class="even">
+<td>本体の無い <code>struct</code>（前方宣言のみ）</td>
+<td>メンバが見えていない。<code>lib.h</code> の <code>struct FILE</code> がこれ</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>土台の <code>size_of_ty_str</code> は知らない型に既定値を返してしまうので、
+放っておくと<strong>黙って嘘の数</strong>が出る。コンパイルエラーで止めるほうが正しい。</p>
+<pre data-lang="text"><code>[line 12] 不完全型に sizeof は使えません: &#39;struct FILE&#39;(構造体の本体が見えていない)</code></pre>
+<p>ポインタは通す。<code>struct FILE *fp</code> の <code>sizeof fp</code> は 8 で確定する——
+指し先が不完全でも、アドレスの大きさは型に関係なく決まっているからである。
+この線引きは C の規則そのままである。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>static_type_of</code></td>
+<td>オペランドの静的な型を、命令を出さずに求める</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>gen_sizeof_expr</code></td>
+<td>型のバイト数を <code>li a0, N</code> で置く</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>reject_incomplete</code></td>
+<td><code>void</code>・不完全型をコンパイルエラーにする</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>langcc.py</code> はこの 3 つを次の順に呼ぶ。</p>
+<div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>ty <span class="op">=</span> static_type_of(cg, node.operand)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>reject_incomplete(cg, ty, node.line)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>gen_sizeof_expr(cg, ty)</span></code></pre></div>
+<p>Step 1 は場合分けが多いが、1 つずつ <code>check.py</code> を回しながら足していけばよい。
+Step 2 は 1 行、Step 3 は 3 行で終わる。</p>
+<div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/noeval.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&quot;call bump&quot;</span>   <span class="co"># 1 のはず(sizeof の外の1回だけ)</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/prec.c <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;li a0, 1&quot;</span>         <span class="co"># sizeof c が 1 で出ている</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># sizeof 式のテスト + fixed17</span></span></code></pre></div>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>expr.c</code></td>
+<td>変数・<code>*p</code>・<code>p[i]</code>・<code>.</code>・<code>-&gt;</code>・<code>&amp;x</code>・文字列リテラル・括弧つきの式が型名形式と一致する</td>
+</tr>
+<tr class="even">
+<td><code>noeval.c</code></td>
+<td><code>sizeof bump()</code> で <code>bump()</code> が呼ばれない。<code>sizeof (calls = 99)</code> でも <code>calls</code> が動かない。<code>sizeof *p</code> が <code>p == 0</code> でも落ちない</td>
+</tr>
+<tr class="odd">
+<td><code>prec.c</code></td>
+<td><code>sizeof c + 1</code> が <code>2</code>（<code>(sizeof c) + 1</code>）になる</td>
+</tr>
+<tr class="even">
+<td><code>typename.c</code></td>
+<td>従来の <code>sizeof(型名)</code> 形式が壊れていない</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>noeval.c</code> が本質である。<code>check.py</code> の Step 2 も同じことを単体で確かめており、
+偽のコード生成器で <code>codegen</code> の呼出し回数が <strong>0 回</strong>であることを直接見ている。
+<code>golden.py</code> の最後で <code>fixed17</code> を回すのは、型名形式を壊していないことの確認である。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong><code>sizeof</code> の結果を <code>unsigned</code> にしたくなったら</strong>: C の <code>sizeof</code> の型は <code>size_t</code>
+（符号なし）である。本仕様は例外 E1 で <code>int</code> と定めた。もし <code>size_t</code> を入れるなら、
+<code>a - b &lt; 0</code> のような比較がどう変わるかを考える</li>
+<li><strong>配列があったら</strong>: この言語に配列は無いが、もし <code>int a[10];</code> を足したら
+<code>sizeof a</code> は 40 で <code>sizeof &amp;a[0]</code> は 8 になる。「配列はポインタである」という
+よくある説明が、なぜ <code>sizeof</code> の前で崩れるのかを説明する</li>
+<li><strong><code>sizeof</code> の中の宣言</strong>: <code>sizeof (struct Point){1, 2}</code> のような複合リテラルは
+ISO C にはあるが本仕様には無い。<code>_peek_is_type()</code> の先読み 1 トークンで
+足りなくなるのはどんな構文か</li>
+<li><strong>型検査と組み合わせる</strong>（Q1 完了者向け）: <code>sizeof f()</code> で <code>f</code> が <code>void</code> を
+返すときにエラーにする。どの情報を Step 1 まで運べばよいか</li>
+<li><strong>L2 と並べる</strong>（L2 完了者向け）: 「左辺は 1 回だけ評価される」と
+「オペランドは評価されない」を、コード生成のどこで守っているかで比べる。
+片方は <code>codegen_lval</code> の<strong>呼び方</strong>で、もう片方は <code>codegen</code> を<strong>呼ばないこと</strong>で守っている</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 書いていないコードが仕様を守る。</strong>
+バグは普通「書いたコードの間違い」として現れる。
+しかしこの回のバグは、<code>cg.codegen(node.operand)</code> という
+<strong>もっともらしい 1 行を足してしまう</strong>ことで生まれる。
+足しても答えの数値は変わらないので、値だけを見るテストでは捕まらない。
+仕様の一文（「オペランドは評価されない」）を読んでいなければ、
+そもそもバグだと気づけない。
+コンパイラを書いていると、こういう「書かないことが実装である」場面に何度か出会う。
+短絡評価（S1）の「右辺を飛ばす」も、末尾呼出し（B3）の「フレームを積まない」も同じ形をしている。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/L3_variadic/"><span class="label">前へ</span>可変長引数の定義 — printf の側に立つ</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/L5_struct_byval/"><span class="label">次へ</span>構造体の値渡し・値返し — 呼び出し規約を自分で決める</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/L4_sizeof_expr.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

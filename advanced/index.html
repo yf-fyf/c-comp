@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>発展課題 — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../sessions/">通常回</a><a href="../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../guides/">補助ガイド</a><a href="../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../">ホーム</a> / 発展課題</nav>
+    <h1 class="page-title">発展課題</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#全トピック一覧" id="toc-全トピック一覧">全トピック一覧</a></li>
+      <li><a href="#どこから始めるか" id="toc-どこから始めるか">どこから始めるか</a></li>
+      <li><a href="#共通のルール" id="toc-共通のルール">共通のルール</a></li>
+      <li><a href="#共有ツール" id="toc-共有ツール">共有ツール</a></li>
+      <li><a href="#ラッパーの名前" id="toc-ラッパーの名前">ラッパーの名前</a></li>
+      <li><a href="#f-フロントエンド" id="toc-f-フロントエンド">F: フロントエンド</a></li>
+      <li><a href="#b-最適化入門" id="toc-b-最適化入門">B: 最適化入門</a></li>
+      <li><a href="#o-最適化" id="toc-o-最適化">O: 最適化</a></li>
+      <li><a href="#r-ランタイム" id="toc-r-ランタイム">R: ランタイム</a></li>
+      <li><a href="#s-と-l-の判定基準-仕様の内側か外側か" id="toc-s-と-l-の判定基準-仕様の内側か外側か">S と L の判定基準 — 仕様の内側か、外側か</a></li>
+      <li><a href="#s-意味論" id="toc-s-意味論">S: 意味論</a></li>
+      <li><a href="#l-言語機能" id="toc-l-言語機能">L: 言語機能</a></li>
+      <li><a href="#q-品質" id="toc-q-品質">Q: 品質</a></li>
+      <li><a href="#p-移植セルフホスト" id="toc-p-移植セルフホスト">P: 移植・セルフホスト</a></li>
+      </ul>
+    </nav>
+    
+<p>通常回（コマ1〜15）を終えた人向けの発展課題を置く。ここが発展教材の入口である。</p>
+<p>いずれも<strong>選択制</strong>で、1トピック = 1ディレクトリになっている。
+<code>advanced/&lt;回ID&gt;_&lt;内容&gt;/</code> の形で、<code>README.md</code>・スケルトン・<code>check.py</code>（および多くは <code>golden.py</code>）が
+そのディレクトリの中に閉じている（P1 のみ例外: 自動採点なしの方針資料）。資料は
+<a href="https://yf-fyf.github.io/c-comp/advanced/">サイトの発展課題</a> にある。</p>
+<p>回 ID の頭文字がカテゴリを表す。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 41%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>頭文字</th>
+<th>カテゴリ</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>F</strong></td>
+<td>フロントエンド</td>
+<td>字句解析・構文解析を自分で作り、スキャフォールドを置き換える</td>
+</tr>
+<tr class="even">
+<td><strong>B</strong></td>
+<td>最適化入門</td>
+<td>測定基盤なしで始められる軽量な最適化（着手はコマ6 から）</td>
+</tr>
+<tr class="odd">
+<td><strong>O</strong></td>
+<td>最適化</td>
+<td>測定 → 解析 → 変換を積み上げる本格版（前提はコマ15）</td>
+</tr>
+<tr class="even">
+<td><strong>R</strong></td>
+<td>ランタイム</td>
+<td>libc なしで動かす、<code>printf</code> / <code>malloc</code> の自作</td>
+</tr>
+<tr class="odd">
+<td><strong>S</strong></td>
+<td>意味論（仕様の内側）</td>
+<td>仕様が意味を決めている構文について、仕様と実際の振る舞いのずれを埋める</td>
+</tr>
+<tr class="even">
+<td><strong>L</strong></td>
+<td>言語機能（仕様の外側）</td>
+<td>仕様が対象外と決めた機能に、意味を自分で決めて足す</td>
+</tr>
+<tr class="odd">
+<td><strong>Q</strong></td>
+<td>品質</td>
+<td>型検査でエラーを出す</td>
+</tr>
+<tr class="even">
+<td><strong>P</strong></td>
+<td>移植・セルフホスト</td>
+<td>Python 版を C へ移植し、自分自身をコンパイルする（最難・長期）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr />
+<h2 id="全トピック一覧">全トピック一覧</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 8%" />
+<col style="width: 29%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 25%" />
+<col style="width: 12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>回</th>
+<th>ディレクトリ</th>
+<th>内容</th>
+<th>コマ</th>
+<th>必須の前提</th>
+<th>資料</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>F0</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/F0_cyk/README.md"><code>F0_cyk/</code></a></td>
+<td>字句解析と構文解析とは何か（CYK 法で数式を解く）</td>
+<td>1</td>
+<td>コマ1</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/F0_cyk/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>F1</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/F1_lexer/README.md"><code>F1_lexer/</code></a></td>
+<td>字句解析: <code>scaffold/lexer.py</code> 読解 + Core lexer 自作</td>
+<td>1</td>
+<td>F0</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/F1_lexer/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>F2</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/F2_parser_expr/README.md"><code>F2_parser_expr/</code></a></td>
+<td>再帰下降①: 式のパーサ（EBNF の階層 = 関数の階層）</td>
+<td>1</td>
+<td>F1</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/F2_parser_expr/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>F3</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/F3_parser_stmt/README.md"><code>F3_parser_stmt/</code></a></td>
+<td>再帰下降②: 文・制御構文（dangling else）</td>
+<td>1</td>
+<td>F2</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/F3_parser_stmt/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>F4</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/F4_parser_decl/README.md"><code>F4_parser_decl/</code></a></td>
+<td>再帰下降③: 宣言・型・<code>struct</code>・関数（ブラックボックスの完全置き換え）</td>
+<td>1</td>
+<td>F3</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/F4_parser_decl/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>B1</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/B1_fold_peephole/README.md"><code>B1_fold_peephole/</code></a></td>
+<td>最適化入門: 定数畳み込み + ピープホール</td>
+<td>1</td>
+<td>コマ6（着手）+ コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/B1_fold_peephole/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>B2</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/B2_regalloc/README.md"><code>B2_regalloc/</code></a></td>
+<td>式の途中結果を t レジスタへ（スタックマシンを卒業する）</td>
+<td>1</td>
+<td>コマ6（着手）+ コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/B2_regalloc/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>B3</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/B3_tailcall/README.md"><code>B3_tailcall/</code></a></td>
+<td>末尾呼び出し最適化（再帰をループに変える）</td>
+<td>1</td>
+<td>コマ6（着手）+ コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/B3_tailcall/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>O1</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O1_measure/README.md"><code>O1_measure/</code></a></td>
+<td>最適化の測り方（静的/動的命令数、ベンチマーク集）</td>
+<td>1</td>
+<td>コマ15</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/O1_measure/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>O2</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O2_cfg/README.md"><code>O2_cfg/</code></a></td>
+<td>基本ブロックとフローグラフ</td>
+<td>1</td>
+<td>コマ15, O1</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/O2_cfg/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>O3</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O3_isel/README.md"><code>O3_isel/</code></a></td>
+<td>命令選択（複数命令を1命令に畳む）</td>
+<td>2</td>
+<td>O1</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/O3_isel/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>O4</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O4_regalloc/README.md"><code>O4_regalloc/</code></a></td>
+<td>局所変数を callee-saved レジスタへ</td>
+<td>2</td>
+<td>コマ15, O1</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/O4_regalloc/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>O5</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O5_liveness/README.md"><code>O5_liveness/</code></a></td>
+<td>生存変数解析</td>
+<td>1</td>
+<td>O1, O2, O4</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/O5_liveness/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>O6</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O6_copyprop/README.md"><code>O6_copyprop/</code></a></td>
+<td>コピー伝播と死コード除去</td>
+<td>2</td>
+<td>O1, O2, O4, O5</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/O6_copyprop/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>O7</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O7_layout/README.md"><code>O7_layout/</code></a></td>
+<td>ブロック整列とループ回転</td>
+<td>1</td>
+<td>O1, O2</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/O7_layout/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>R1</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/R1_nolibc/README.md"><code>R1_nolibc/</code></a></td>
+<td>libc なしで動かす（システムコール直接発行）</td>
+<td>1</td>
+<td>コマ10（着手）+ コマ15（<code>check.py</code> の Step 2）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/R1_nolibc/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>R2</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/R2_printf/README.md"><code>R2_printf/</code></a></td>
+<td>自前 printf（整数→10進文字列の変換）</td>
+<td>1</td>
+<td>R1 + コマ15（<code>check.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/R2_printf/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>R3</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/R3_malloc/README.md"><code>R3_malloc/</code></a></td>
+<td>自前 malloc（バンプ割り当て → フリーリスト）</td>
+<td>1</td>
+<td>コマ12 + コマ15（<code>check.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/R3_malloc/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>S1</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/S1_shortcircuit/README.md"><code>S1_shortcircuit/</code></a></td>
+<td>短絡評価（<code>&amp;&amp;</code> / <code>\|\|</code> の意味論を、仕様がCとわざと違えている点からCへ寄せる）</td>
+<td>1</td>
+<td>コマ12 + コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/S1_shortcircuit/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>S2</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/S2_int32/README.md"><code>S2_int32/</code></a></td>
+<td><code>int</code> の演算が32bitで折り返さない</td>
+<td>1</td>
+<td>コマ12 + コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/S2_int32/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>S3</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/S3_struct/README.md"><code>S3_struct/</code></a></td>
+<td>構造体の代入（ポインタ・フィールド持ち構造体、ポインタ経由の代入。値渡しは L5）</td>
+<td>1</td>
+<td>コマ12 + コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/S3_struct/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>L1</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L1_ptrdiff/README.md"><code>L1_ptrdiff/</code></a></td>
+<td>ポインタ同士の引き算が要素数にならない</td>
+<td>1</td>
+<td>コマ12 + コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/L1_ptrdiff/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>L2</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L2_compound_assign/README.md"><code>L2_compound_assign/</code></a></td>
+<td>複合代入（<code>x += 3</code>、<code>p -= 1</code>。左辺は1回だけ評価）</td>
+<td>1</td>
+<td>コマ13 + コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/L2_compound_assign/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>L3</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L3_variadic/README.md"><code>L3_variadic/</code></a></td>
+<td>可変長引数の「定義」（<code>int sum(int n, ...)</code>）</td>
+<td>1</td>
+<td>コマ10 + コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/L3_variadic/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>L4</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L4_sizeof_expr/README.md"><code>L4_sizeof_expr/</code></a></td>
+<td><code>sizeof</code> 単項式（<code>sizeof x</code>。オペランドは評価しない）</td>
+<td>1</td>
+<td>コマ12 + コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/L4_sizeof_expr/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>L5</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L5_struct_byval/README.md"><code>L5_struct_byval/</code></a></td>
+<td>構造体の値渡し・値返し（呼び出し規約を自分で決める。L 系列で最も重い）</td>
+<td>1</td>
+<td>コマ12 + S3 + コマ15（<code>golden.py</code>）</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/L5_struct_byval/">サイト</a></td>
+</tr>
+<tr class="odd">
+<td>Q1</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/Q1_typecheck/README.md"><code>Q1_typecheck/</code></a></td>
+<td>型検査パス（実行前に誤りをまとめて報告する）</td>
+<td>1</td>
+<td>コマ12</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/Q1_typecheck/">サイト</a></td>
+</tr>
+<tr class="even">
+<td>P1</td>
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/P1_selfhost/README.md"><code>P1_selfhost/</code></a></td>
+<td>C 移植・セルフホスト（方針のみ。複数回に渡る自主課題、自動採点なし）</td>
+<td>-</td>
+<td>コマ15</td>
+<td><a href="https://yf-fyf.github.io/c-comp/advanced/P1_selfhost/">サイト</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="どこから始めるか">どこから始めるか</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 58%" />
+<col style="width: 41%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>やりたいこと</th>
+<th>おすすめ</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>コンパイラの入口（字句・構文解析）を理解したい</td>
+<td><strong>F0</strong>（コンパイラ本編と独立。前提はコマ1 まで）</td>
+</tr>
+<tr class="even">
+<td>コマ15 を待たずに最適化を試したい</td>
+<td><strong>B1</strong>（測定基盤なしで着手できる。<code>golden.py</code> まで通すにはコマ15 が要る）</td>
+</tr>
+<tr class="odd">
+<td>生成したコードを本気で速くしたい</td>
+<td><strong>O1</strong>（まず測る物差しを作る）</td>
+</tr>
+<tr class="even">
+<td>仕様がCとわざと違えている点をCへ寄せたい</td>
+<td><strong>S1</strong>（<code>&amp;&amp;</code> が短絡していないことの確認から）</td>
+</tr>
+<tr class="odd">
+<td>OS もライブラリも無い世界を見たい</td>
+<td><strong>R1</strong></td>
+</tr>
+<tr class="even">
+<td>仕様の外側の機能を自分で足してみたい</td>
+<td><strong>L4</strong>（L 系列で最も軽い。字句の変更なし、コード生成は1命令）</td>
+</tr>
+<tr class="odd">
+<td>言語仕様に書かれない取り決め（呼び出し規約）を自分で決めたい</td>
+<td><strong>L5</strong>（L 系列で最も重い。軽い入口ではないので、S3 を終えてから）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="共通のルール">共通のルール</h2>
+<ul>
+<li><code>mycc.py</code> と <code>scaffold/</code> は書き換えない。機能はラッパー、独立したパス、またはパッチとして差し込む</li>
+<li><strong><code>fixed17</code> が通り続けること</strong>を、意味を壊していないことの基準にする</li>
+<li>完了条件は各トピックの <code>README.md</code> とサイトの資料に書いてある</li>
+</ul>
+<p><a id="fixed17"></a></p>
+<h3 id="fixed17-とは"><code>fixed17</code> とは</h3>
+<p><code>workbook/final/tests/</code> に置いてある<strong>17本のテスト</strong>のこと。
+コマ1〜15 で作った機能を通しで確認する参考テストで、標準トラック完成の目安として
+コマ15（<a href="../sessions/15_integrate_mycc/">通常回15</a>）で導入する。
+内訳は <a href="../docs/testing/"><code>docs/testing.md</code></a> と
+<a href="../docs/code_example/"><code>docs/code_example.md</code></a> の一覧にある。</p>
+<p>発展課題では、これを<strong>安全網</strong>として使う。
+どのトピックも既存の機能を壊さずに何かを足す／直すので、
+「<code>fixed17</code> が全通したままか」が「意味を壊していないか」の判定になる。</p>
+<div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># workbook/ から。--compiler にそのトピックのラッパーを渡す</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> advanced/L1_ptrdiff/langcc.py <span class="at">--tests</span> final/tests</span></code></pre></div>
+<h3 id="check.py-と-golden.py"><code>check.py</code> と <code>golden.py</code></h3>
+<p>各トピックのテストは、目的の違う2本に分かれている。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 27%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>役割</th>
+<th>対象</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>check.py</code></td>
+<td><strong>そのトピックで書いたコードの合否判定</strong>。Step ごとに関数を直接呼び、期待値と比べる。未実装の Step は <code>SKIP</code> になり、全 Step が <code>PASS</code> になることがそのトピックの到達点</td>
+<td>自分が書いたファイルだけ</td>
+</tr>
+<tr class="even">
+<td><code>golden.py</code></td>
+<td><strong>既存資産に対する回帰と効果の測定</strong>。すでに手元にある資産（<code>fixed17</code>、講義の全テスト入力、<code>scaffold</code> の Lexer / Parser、<code>O1_measure/bench/</code>）に対して通しで走らせ、壊していないことを確かめる。O 系列ではあわせて命令数の削減も測る</td>
+<td>教材全体</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>先に <code>check.py</code> を全 <code>PASS</code> にしてから <code>golden.py</code> を回す、という順で使う。</p>
+<p><code>golden.py</code> が無いトピックもある。F0（コンパイラ本編と独立）、
+R1・R2・R3（<code>mycc.py</code> の出力を変えないので回帰の対象が無い）、
+P1（自動採点なし）の5本がそれで、<code>check.py</code> だけで完結する。</p>
+<h2 id="共有ツール">共有ツール</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 20%" />
+<col style="width: 46%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>用途</th>
+<th>使うトピック</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>optcc.py</code></td>
+<td>最適化パスを合成して走らせるコンパイララッパー</td>
+<td>O 系列</td>
+</tr>
+<tr class="even">
+<td><code>count_insns.py</code></td>
+<td>生成アセンブリの命令数を数える</td>
+<td>B 系列</td>
+</tr>
+<tr class="odd">
+<td><code>basecc.py</code></td>
+<td>土台の <code>final/mycc.py</code> が動くか確かめる健全性チェック</td>
+<td>B, O, S, L 系列</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="ラッパーの名前">ラッパーの名前</h2>
+<p><code>mycc.py</code> を書き換えないトピックでは、<strong>ラッパー</strong>が <code>mycc.py</code> を読み込んで
+必要な差し替えを施す。名前はファミリごとに決まっている。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファミリ</th>
+<th>ラッパー</th>
+<th>置き場所</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>B</td>
+<td><code>foldcc.py</code>（B1） / <code>regcc.py</code>（B2） / <code>tccc.py</code>（B3）</td>
+<td>各トピックのディレクトリ</td>
+</tr>
+<tr class="even">
+<td>O</td>
+<td><code>optcc.py</code></td>
+<td><code>advanced/</code>（O 系列で共有。<code>--passes</code> でパスを選ぶ）</td>
+</tr>
+<tr class="odd">
+<td>S</td>
+<td><code>semcc.py</code></td>
+<td>各トピックのディレクトリ</td>
+</tr>
+<tr class="even">
+<td>L</td>
+<td><code>langcc.py</code></td>
+<td>各トピックのディレクトリ</td>
+</tr>
+<tr class="odd">
+<td>Q</td>
+<td><code>checkcc.py</code></td>
+<td><code>Q1_typecheck/</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>F・R・P はラッパーを使わない（F は <code>scaffold/</code> の部品を自作で置き換え、
+R は生成物のリンク方法を変え、P は移植そのものが課題であるため）。</p>
+<h3 id="環境変数の名前">環境変数の名前</h3>
+<p>土台のコンパイラと差し込むファイルの置き場所は、環境変数で差し替えられる。
+名前は例外なく次の規則に従う。</p>
+<blockquote>
+<p><strong>接頭辞 = ラッパーのファイル名から <code>.py</code> を取って大文字にしたもの。</strong>
+<code>langcc.py</code> なら <code>LANGCC_</code>、<code>optcc.py</code> なら <code>OPTCC_</code>。</p>
+</blockquote>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 17%" />
+<col style="width: 58%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>接尾辞</th>
+<th>意味</th>
+<th>持っているラッパー</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>_COMPILER</code></td>
+<td>土台にする <code>mycc.py</code></td>
+<td>全部</td>
+</tr>
+<tr class="even">
+<td><code>_PASSES</code></td>
+<td>差し込むファイル（<code>fold.py</code> など）のあるディレクトリ</td>
+<td>B1, B2, B3, S, L, Q</td>
+</tr>
+<tr class="odd">
+<td><code>_PASSES</code></td>
+<td>適用するパス名の並び（<code>optcc.py</code> だけ意味が違う）</td>
+<td>O</td>
+</tr>
+<tr class="even">
+<td><code>_REGALLOC</code></td>
+<td><code>1</code> なら <code>--regalloc</code> と同じ</td>
+<td>O</td>
+</tr>
+<tr class="odd">
+<td><code>_ANSWERS</code></td>
+<td>実装を別ディレクトリから読む（教員用）</td>
+<td>O</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ラッパーを持たない R 系列だけは例外で、回 ID を接頭辞にする
+（<code>R1_COMPILER</code> / <code>R2_COMPILER</code> / <code>R3_COMPILER</code>）。</p>
+<blockquote>
+<p><strong>注意: 2026-08-01 に、この規則へそろえる形でいくつかの名前を改名した。</strong>
+環境変数名（<code>optcc.py</code>・<code>foldcc.py</code>・L3 のラッパー）とファイル名（L3 の <code>varcc.py</code>）が対象である。
+あわせて、ファミリを移した2本（<code>S3_ptrdiff/</code> → <code>L1_ptrdiff/</code>、<code>L1_struct/</code> → <code>S3_struct/</code>）の
+ラッパーも <code>semcc.py</code> と <code>langcc.py</code> が入れ替わり、環境変数の接頭辞も入れ替わった。
+旧名は<strong>エラーにならず黙って無視される</strong>ので、以前の名前を書いた手元のスクリプトやメモが
+あれば読み替えること。</p>
+</blockquote>
+<p><code>workbook/advanced/</code> から実行する。</p>
+<div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../final/mycc.py foo.c <span class="kw">|</span> <span class="ex">python3</span> count_insns.py</span></code></pre></div>
+<hr />
+<h2 id="f-フロントエンド">F: フロントエンド</h2>
+<p>スキャフォールドでブラックボックスとして使ってきた Lexer / Parser を、自分の手で理解し、作り、置き換える。</p>
+<ul>
+<li><strong>F0</strong> は独立した導入回。コンパイラ本編とは無関係で、前提はコマ1 まで</li>
+<li><strong>F1 以降</strong>は積み上げ式（F1 → F2 → F3 → F4）。最終目標は、自作の Lexer / Parser で <code>final/tests</code>（fixed17）を通すこと</li>
+<li>F1 は golden test で <code>scaffold/lexer.py</code> と完全一致することを確認する</li>
+</ul>
+<h2 id="b-最適化入門">B: 最適化入門</h2>
+<p>生成したコードを「速くする」トピックのうち、<strong>測定基盤を必要としない</strong>もの。
+着手はコマ6（関数呼び出し）までで足りるので、コマ15 を待たずに始められる。
+ただし完了条件のうち <code>golden.py</code> は <code>fixed17</code>（＝コマ15 の完成した <code>final/mycc.py</code>）を土台にするので、
+<strong>やり切るにはコマ15 が要る</strong>。コマ15 前は <code>check.py</code> を全 PASS にするところまで進める。</p>
+<p>各回は独立している（好きな順に取り組んでよい）。
+効果は <code>count_insns.py</code> による<strong>静的命令数</strong>で確認する。
+「実行された命令が何回減ったか」は静的命令数では分からない。
+それを測る物差しは O1 が作る。</p>
+<h3 id="o-系列との関係">O 系列との関係</h3>
+<p><strong>B は O の前哨である。</strong> 題材が一部重なるので、対応を先に示しておく。</p>
+<div class="table-scroll">
+<table style="width:100%;">
+<colgroup>
+<col style="width: 37%" />
+<col style="width: 40%" />
+<col style="width: 22%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>B の題材</th>
+<th>O での対応</th>
+<th>関係</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>B1 の <code>remove_jump_to_next</code></td>
+<td><strong>O7 の Step 3</strong></td>
+<td>同名・同一の最適化。片方の実装を持ち込んでよい</td>
+</tr>
+<tr class="even">
+<td>B1 の <code>fuse_push_const_pop</code></td>
+<td>O3（命令選択）</td>
+<td>動機は同じ（push/pop の無駄）だが手口が違う</td>
+</tr>
+<tr class="odd">
+<td>B1 の定数畳み込み</td>
+<td>対応なし</td>
+<td>O 系列は AST を触らない</td>
+</tr>
+<tr class="even">
+<td>B2（式の途中結果 → <code>t0</code>〜<code>t6</code>）</td>
+<td><strong>O4</strong>（局所変数 → <code>s1</code>〜<code>s11</code>）</td>
+<td>別の無駄を消すので効果はほとんど重ならない</td>
+</tr>
+<tr class="odd">
+<td>B3（末尾呼び出し）</td>
+<td>対応なし</td>
+<td>B3 だけの題材</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>どちらを先にやるか。</strong> コマ15 がまだなら B から。
+終わっているなら、O1（測る物差し）→ O3・O4 と進んだほうが、
+「減った」の意味がはっきりする。</p>
+<h2 id="o-最適化">O: 最適化</h2>
+<p>生成したコードを速くする技法を、<strong>測定 → 解析 → 変換</strong>の順に積み上げる。
+全部で10コマだが、各回は独立して取り組める。O1 と O2 を先に済ませておけば、
+O3・O4・O7 はどれから始めてもよい。</p>
+<h3 id="依存関係">依存関係</h3>
+<pre data-lang="text"><code>O1(測定)             ─→ O2(フローグラフ), O3(命令選択), O4(レジスタ割り当て)
+O2(フローグラフ)     ─→ O5(生存解析), O7(ブロック整列)
+O4(レジスタ割り当て) ─→ O5(生存解析)
+O5(生存解析)         ─→ O6(コピー伝播 / 死コード除去)</code></pre>
+<p>各行は「左が、右の<strong>直接の</strong>前提である」ことを表す（矢印の向きは「前提 → そのトピック」）。
+O3・O6・O7 はここから先が無いので、左側には現れない。</p>
+<p>図にあるのは直接の前提だけで、上の一覧表の「必須の前提」は間接的なものも含めて書いてある。
+たとえば O6 の <code>O1, O2, O4</code> は O5 を経由した間接の前提であり、O7 の <code>O1</code> は O2 を経由する。</p>
+<h3 id="つの差し込み方">2つの差し込み方</h3>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 50%" />
+<col style="width: 22%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>種別</th>
+<th>何をするか</th>
+<th>回</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>パス</strong></td>
+<td>出来上がったアセンブリを行単位で書き換える</td>
+<td>O3, O6, O7</td>
+</tr>
+<tr class="even">
+<td><strong>コード生成パッチ</strong></td>
+<td>アセンブリになる前のコード生成器を差し替える</td>
+<td>O4</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>O4 だけコード生成器を触るのは、「どの変数の <code>&amp;</code> が取られているか」が
+<strong>AST を見ないと分からない</strong>ためである。</p>
+<p>1ファイルだけ試すときは <code>workbook/advanced/</code> から実行する。</p>
+<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> optcc.py <span class="at">--passes</span> isel file.c</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> optcc.py <span class="at">--regalloc</span> <span class="at">--passes</span> isel,copyprop,dce,layout file.c</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> optcc.py <span class="at">--passes</span> <span class="st">&#39;&#39;</span> file.c        <span class="co"># 最適化なし(基準値)</span></span></code></pre></div>
+<p><code>final/tests</code>（fixed17）全体に通したいときは <code>workbook/</code> から
+<code>scaffold/test_runner.py --compiler advanced/optcc.py --tests final/tests</code> を使う
+（<a href="../docs/testing/"><code>../docs/testing.md</code></a> 参照）。同じ <code>optcc.py</code> だが、
+cwd が違うのでパスの書き方が変わる。</p>
+<p><code>--passes</code> の順番を変えると効果が変わる（O6 で扱う phase ordering）。</p>
+<h3 id="命令数の基準は-o1-に1つだけ置いてある">命令数の基準は O1 に1つだけ置いてある</h3>
+<p>O 系列の資料はどれも「前 → 後」の表を出すが、その<strong>基準（素 / +isel / +regalloc /
++copyprop,dce / +layout の5構成）は O1 の資料の「全構成の基準表」に一括で載せてある</strong>。
+各回の表はそこからの差分である。数字が食い違って見えたら、まず基準表と突き合わせる。</p>
+<h3 id="全部かけるとどうなるか">全部かけるとどうなるか</h3>
+<p>基準表の両端、つまり最適化なしと
+<code>--regalloc --passes isel,copyprop,dce,layout</code> の比較。</p>
+<pre data-lang="text"><code>ベンチマーク   静的:前   後    削減    動的:前      後      削減
+bubble           340   233   31.5%    24023   15952   33.6%
+fib_rec           77    70    9.1%    73993   68073    8.0%
+loop_sum          70    43   38.6%     7840    4030   48.6%
+matmul           453   308   32.0%    27958   18563   33.6%
+strops           243   173   28.8%    77108   50135   35.0%
+合計            1183   827   30.1%   210922  156753   25.7%</code></pre>
+<p><code>loop_sum</code> は実行される命令が<strong>半分以下</strong>になる。
+<code>fib_rec</code> の伸びが小さいのは、ループが無く、
+局所変数をレジスタに置いても得をしない形だからである（O4 コマ2 で扱う）。</p>
+<h2 id="r-ランタイム">R: ランタイム</h2>
+<p>gcc とライブラリに任せていた部分を、自分の手で開ける。</p>
+<p>R2 は R1 の <code>syscall.s</code> を土台にする。R3 は独立している（libc を使ってよい）。</p>
+<h2 id="s-と-l-の判定基準-仕様の内側か外側か">S と L の判定基準 — 仕様の内側か、外側か</h2>
+<p>S と L は難易度でも題材でも分かれていない。分かれ目は
+<strong>その回で作る振る舞いの「正解」がどこに書いてあるか</strong>である。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 66%" />
+<col style="width: 11%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><code>language_spec.md</code> はその構文・機能に意味を与えているか</th>
+<th>ファミリ</th>
+<th>その回でやること</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>与えている（<strong>仕様の内側</strong>）</td>
+<td><strong>S</strong></td>
+<td>仕様が定めた姿と実際の振る舞いのずれを埋める。正解は仕様の該当行に書いてある</td>
+</tr>
+<tr class="even">
+<td>「対象外」「除外」「不可」として与えていない（<strong>仕様の外側</strong>）</td>
+<td><strong>L</strong></td>
+<td>意味を自分で決めて足す。正解はこれから決めるもので、資料の「追加する仕様」節が定義する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>判定は「仕様の該当行を引用できるか、引用したその行が何を言っているか」で行う。
+<strong>その形について仕様が答えを持っているなら S、「扱わない」としか言っていないなら L</strong> である。</p>
+<p>S のずれは向きが2通りある。実装を仕様へ合わせる回（S2・S3）と、
+仕様の側を ISO C へ寄せる回（S1。仕様が例外 E3 として差分を自ら明記している）である。
+どちらも仕様の該当行から出発する点で共通で、L のように意味を新しく決めることはしない。</p>
+<p>この判定結果は、各トピックの位置づけ表の <strong><code>仕様との関係</code></strong> 欄に書いてある。</p>
+<h3 id="本の-id-を振り直した食い違いは解消済み">2本の ID を振り直した（食い違いは解消済み）</h3>
+<p>以前は、判定基準と ID が食い違う回が2本あった。<strong>2026-08-01 に実際に移した。</strong></p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 39%" />
+<col style="width: 39%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>旧ID・旧ディレクトリ</th>
+<th>新ID・新ディレクトリ</th>
+<th>判定の理由</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>S3_ptrdiff/</code>（ポインタ差）</td>
+<td><strong><code>L1_ptrdiff/</code></strong></td>
+<td>仕様はポインタ同士の減算を「ない」と明示的に除外している。「要素いくつ分か」を返すという意味は、この回で自分で決めて足すものである</td>
+</tr>
+<tr class="even">
+<td><code>L1_struct/</code>（構造体の代入）</td>
+<td><strong><code>S3_struct/</code></strong></td>
+<td>仕様は「struct 値の代入・実引数・戻り値は不可」と定めているのに、実装は <code>q = p;</code> を黙って受理して誤った答えを返す。仕様と実装のずれが題材である</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>2本は番号を入れ替えた形になっている。</strong><code>S3</code> も <code>L1</code> も番号としては残っているが、
+指す中身が入れ替わっているので、以前のメモやブックマークをそのまま読むと取り違える。</p>
+<p>これで S1〜S3・L1〜L3 の6本すべてが、判定基準どおりの位置にある。</p>
+<h2 id="s-意味論">S: 意味論</h2>
+<p>仕様が意味を決めている構文について、いまの実装との<strong>ずれ</strong>を自分で見つけて直す。
+どれも「テストが通ってしまうので気づきにくい」性質を持つ。</p>
+<p>各回は独立している。いずれも <code>mycc.py</code> を書き換えず、
+ラッパーで生成を差し替える方式で、<strong>fixed17 が通り続けること</strong>が安全網になる。</p>
+<h2 id="l-言語機能">L: 言語機能</h2>
+<p>Core プロファイルで「扱わない」と決めた機能を、<strong>意味を自分で決めて</strong>あとから足す。
+どれも <code>mycc.py</code> と <code>scaffold/</code> を書き換えず、ラッパーで差し込む。</p>
+<p>各回は独立している。<strong>fixed17 が通り続けること</strong>が、
+既存の機能を壊していないことの保証になる。</p>
+<h2 id="q-品質">Q: 品質</h2>
+<p>「正しく動く」を作り込む。コンパイラ本体には手を入れず、独立したパスとして追加する。
+「正しいプログラムを1つも拒まない」ことを、教材のテスト入力全体で確認する。</p>
+<hr />
+<h2 id="p-移植セルフホスト">P: 移植・セルフホスト</h2>
+<p>Python 版コンパイラを C へ移植し、最終的に自分自身をコンパイルする（セルフホスト）
+長期プロジェクト。他のトピックと違い1回では終わらず、自動採点もない。
+大まかな進め方だけを <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/P1_selfhost/README.md"><code>P1_selfhost/README.md</code></a> に示してある。</p>
+
+    <h2>このセクションのページ</h2><ul class="cards"><li><a href="../advanced/F0_cyk/"><span class="card-title">字句解析と構文解析 — CYK 法で数式を解く</span></a></li><li><a href="../advanced/F1_lexer/"><span class="card-title">字句解析器を作る — ブラックボックスを開ける（前編）</span></a></li><li><a href="../advanced/F2_parser_expr/"><span class="card-title">再帰下降パーサ① — 式を解析する</span></a></li><li><a href="../advanced/F3_parser_stmt/"><span class="card-title">再帰下降パーサ② — 文を解析する</span></a></li><li><a href="../advanced/F4_parser_decl/"><span class="card-title">再帰下降パーサ③ — 宣言・型・プログラム全体（最終回）</span></a></li><li><a href="../advanced/B1_fold_peephole/"><span class="card-title">最適化入門 — 定数畳み込みとピープホール</span></a></li><li><a href="../advanced/B2_regalloc/"><span class="card-title">レジスタ割り当て入門 — スタックマシンを卒業する</span></a></li><li><a href="../advanced/B3_tailcall/"><span class="card-title">末尾呼び出し最適化 — 再帰をループに変える</span></a></li><li><a href="../advanced/O1_measure/"><span class="card-title">最適化の測り方 — 静的と動的は別物</span></a></li><li><a href="../advanced/O2_cfg/"><span class="card-title">基本ブロックとフローグラフ — 最適化の地図を作る</span></a></li><li><a href="../advanced/O3_isel/"><span class="card-title">命令選択 — 複数の命令を1つに畳む</span></a></li><li><a href="../advanced/O4_regalloc/"><span class="card-title">レジスタ割り当て — 変数をメモリから追い出す</span></a></li><li><a href="../advanced/O5_liveness/"><span class="card-title">生存変数解析 — 「この値はまだ使われるか」を解く</span></a></li><li><a href="../advanced/O6_copyprop/"><span class="card-title">コピー伝播と死コード除去 — 順番が結果を決める</span></a></li><li><a href="../advanced/O7_layout/"><span class="card-title">ブロック整列とループ回転 — 命令を減らさずに速くする</span></a></li><li><a href="../advanced/R1_nolibc/"><span class="card-title">libc なしで動かす — システムコールを直接呼ぶ</span></a></li><li><a href="../advanced/R2_printf/"><span class="card-title">自前 printf — 数を文字に変える</span></a></li><li><a href="../advanced/R3_malloc/"><span class="card-title">自前 malloc — ヒープを自分で管理する</span></a></li><li><a href="../advanced/S1_shortcircuit/"><span class="card-title">短絡評価 — &amp;&amp; と || の本当の意味</span></a></li><li><a href="../advanced/S2_int32/"><span class="card-title">int は32ビット — 桁あふれを正しく折り返す</span></a></li><li><a href="../advanced/S3_struct/"><span class="card-title">構造体の代入 — レジスタに載らないものを運ぶ</span></a></li><li><a href="../advanced/L1_ptrdiff/"><span class="card-title">ポインタ同士の引き算 — 差は「要素いくつ分か」</span></a></li><li><a href="../advanced/L2_compound_assign/"><span class="card-title">複合代入 — 左辺を1回しか評価しない</span></a></li><li><a href="../advanced/L3_variadic/"><span class="card-title">可変長引数の定義 — printf の側に立つ</span></a></li><li><a href="../advanced/L4_sizeof_expr/"><span class="card-title">sizeof 単項式 — 答えは合っているのに、間違っている</span></a></li><li><a href="../advanced/L5_struct_byval/"><span class="card-title">構造体の値渡し・値返し — 呼び出し規約を自分で決める</span></a></li><li><a href="../advanced/Q1_typecheck/"><span class="card-title">型検査パス — 実行する前に間違いを見つける</span></a></li><li><a href="../advanced/P1_selfhost/"><span class="card-title">C 移植・セルフホスト — Python 版を C で書き直す</span></a></li></ul>
+    <nav class="pager" aria-label="前後のページ"><a class="next" href="../advanced/F0_cyk/"><span class="label">次へ</span>字句解析と構文解析 — CYK 法で数式を解く</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/README.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../LICENSE">code: MIT</a>) ·
+     <a href="../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

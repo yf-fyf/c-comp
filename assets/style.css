@@ -1,0 +1,490 @@
+/* 実践・C コンパイラ演習 — サイト共通スタイル
+ *
+ * 配色は PDF 時代の latex/session-template.tex から移した。
+ * 図（materials/figures/*.svg）も latex/figure-preamble.tex で同じ値を使っているので、
+ * 本文と図の見た目が揃う。ここの値を変えるときは図のプリアンブルも合わせること。
+ *
+ * 和文フォントは同梱しない。CJK のウェブフォントは数 MB になるので、
+ * OS 標準の Noto Sans CJK / ヒラギノ / 游ゴシックへ順に落とす。
+ */
+
+:root {
+  --accent-dark: #583B66;
+  --accent-light: #EEE6F2;
+  --accent-lighter: #F7F3F9;
+  --emph: #E64B17;
+  --text: #262626;
+  --gray-text: #737373;
+  --gray-bg: #F2F2F2;
+  --code-frame: #D6D6D6;
+  --pre-bg: #FDFAFF;
+  --link: #0065CC;
+  --warning-bg: #FFF4EF;
+
+  --sans: "Noto Sans CJK JP", "Noto Sans JP", "Hiragino Sans",
+          "Yu Gothic Medium", "Meiryo", system-ui, sans-serif;
+  --mono: "Inconsolata", "SFMono-Regular", "Consolas", "DejaVu Sans Mono",
+          monospace;
+
+  --content-max: 54rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: #fff;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.85;
+  text-spacing-trim: trim-start;
+}
+
+a { color: var(--link); }
+a:hover { text-decoration: none; }
+
+.skiplink {
+  position: absolute;
+  left: -9999px;
+}
+.skiplink:focus {
+  left: 0.5rem; top: 0.5rem;
+  z-index: 20;
+  background: #fff;
+  padding: 0.5rem 0.9rem;
+  border: 2px solid var(--accent-dark);
+}
+
+/* ── ヘッダ ── */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 0.7rem 1.2rem;
+  background: var(--accent-dark);
+  color: #fff;
+}
+.topbar .brand {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+/* 折り返さず横に流す。項目が増えても畳まないので、
+   端末幅によらずヘッダの高さが一定になる（開閉ボタンも JS も要らない）。 */
+.topnav {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 1.1rem;
+  font-size: 0.9rem;
+  scrollbar-width: none;
+}
+.topnav::-webkit-scrollbar { display: none; }
+.topnav a {
+  color: #E8DDEE;
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 0.15rem 0;
+  border-bottom: 2px solid transparent;
+}
+.topnav a:hover { color: #fff; }
+.topnav a[aria-current="page"] { color: #fff; border-bottom-color: #C9A9D8; }
+/* 群の区切り（教材｜引くもの｜道具）。nav.yaml の group が変わる位置に入る */
+.topnav .sep { border-left: 1px solid #7d5f8d; margin: 0.2rem 0; }
+
+/* ── レイアウト ── */
+
+/* 本文1カラム。サイドバーは置かない（セクション内の移動は前後ナビと入口ページ） */
+.layout {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 1.3rem;
+}
+
+.content {
+  min-width: 0;
+  padding: 1.6rem 0 5rem;
+}
+
+/* ── 本文 ── */
+
+.breadcrumb {
+  font-size: 0.85rem;
+  color: var(--gray-text);
+  margin-bottom: 0.6rem;
+}
+.breadcrumb a { color: var(--gray-text); }
+
+.page-title {
+  margin: 0 0 1.6rem;
+  padding: 0.3rem 0 0.3rem 0.9rem;
+  border-left: 5px solid var(--accent-dark);
+  font-size: 1.85rem;
+  line-height: 1.4;
+}
+
+.content h2 {
+  margin: 2.6rem 0 0.9rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--accent-light);
+  font-size: 1.4rem;
+  line-height: 1.5;
+}
+.content h3 {
+  margin: 2rem 0 0.7rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--accent-light);
+  font-size: 1.15rem;
+}
+.content h4 { margin: 1.6rem 0 0.5rem; font-size: 1rem; }
+
+/* 見出しがリンクのとき（トップのセクション見出し）下線は出さず、色も本文と揃える */
+.content h2 a, .content h3 a { color: inherit; text-decoration: none; }
+.content h2 a:hover, .content h3 a:hover { text-decoration: underline; }
+
+.content p, .content ul, .content ol { margin: 0.9rem 0; }
+.content li { margin: 0.3rem 0; }
+
+blockquote {
+  margin: 1.2rem 0;
+  padding: 0.2rem 1rem;
+  border-left: 4px solid var(--accent-light);
+  color: var(--gray-text);
+}
+
+hr { border: 0; border-top: 1px solid var(--accent-light); margin: 2.5rem 0; }
+
+/* ── ページ内目次 ── */
+
+/* 箱にすると本文の前を占領する（コマ6 は15項目）。罫線だけにして横に流す。 */
+.toc {
+  margin: 0 0 2.2rem;
+  padding: 0.2rem 0 0.2rem 1rem;
+  border-left: 3px solid var(--accent-light);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.toc-head {
+  margin: 0 0 0.4rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--gray-text);
+}
+.toc ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+  columns: 2;
+  column-gap: 2rem;
+}
+.toc li { break-inside: avoid; }
+.toc ul ul { padding-left: 1.1rem; columns: 1; }
+/* 目次は補助情報。本文リンクの青とは役割が違うのでグレーに落とす */
+.toc a { color: var(--gray-text); text-decoration: none; }
+.toc a:hover { color: var(--text); text-decoration: underline; }
+
+/* ── コード ── */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  background: var(--gray-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 0.2em;
+  word-break: break-word;
+}
+
+pre {
+  margin: 1.2rem 0;
+  padding: 0.9rem 1rem;
+  background: var(--pre-bg);
+  border: 1px solid var(--code-frame);
+  border-radius: 0.35rem;
+  overflow-x: auto;
+  line-height: 1.65;
+}
+pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.88rem;
+  white-space: pre;
+}
+
+/* 言語ラベル。boxes.lua が原稿の綴りを data-lang に残す */
+div.sourceCode { position: relative; }
+div.sourceCode[data-lang]::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.05rem 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--gray-text);
+  background: var(--gray-bg);
+  border-radius: 0 0.35rem 0 0.35rem;
+}
+
+/* ── 表 ── */
+
+table {
+  width: 100%;
+  margin: 1.4rem 0;
+  border-collapse: collapse;
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+th, td {
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--code-frame);
+  text-align: left;
+  vertical-align: top;
+}
+thead th {
+  background: var(--accent-lighter);
+  border-bottom: 2px solid var(--accent-dark);
+  white-space: nowrap;
+}
+tbody tr:hover { background: var(--accent-lighter); }
+
+/* 横に広い表はページごと横スクロールさせず、表だけを流す（boxes.lua が包む）。
+   容器で包むだけでは table の width:100% が効いて潰れるので、最低幅を与える。 */
+.table-scroll { overflow-x: auto; margin: 1.4rem 0; }
+.table-scroll table { margin: 0; width: auto; min-width: 100%; }
+.table-scroll td { min-width: 7rem; }
+.table-scroll td:last-child { min-width: 16rem; }
+
+/* ── 図 ── */
+
+figure {
+  margin: 1.8rem 0;
+  text-align: center;
+}
+figure img, .content img {
+  max-width: 100%;
+  height: auto;
+  /* AST 図は縦に長い。画面いっぱいに伸びると本文が押し流されるので抑える。
+     SVG なのでブラウザの拡大や単体で開いたときは元の解像度で読める。 */
+  max-height: 75vh;
+}
+figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.87rem;
+  color: var(--gray-text);
+  line-height: 1.6;
+}
+
+/* ── 図の拡大表示（lightbox.js が出す） ── */
+
+/* zoomable は lightbox.js が付ける。JS が動かない環境では素の図のまま */
+.content figure img.zoomable { cursor: zoom-in; }
+
+/* [open] で絞る。付けないとブラウザ標準の dialog:not([open]){display:none}
+   より作者スタイルの display:grid が常に勝ち、閉じている間もこの
+   100vw×100vhのボックスが文書の流れに残ってしまう
+   （position:fixed の × ボタンだけがページ最下部で見える不具合の原因）。 */
+.lightbox[open] {
+  width: 100vw; height: 100vh;
+  max-width: 100vw; max-height: 100vh;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  /* 原寸表示のはみ出しはここでスクロールさせる（パンは自前で持たない） */
+  overflow: auto;
+  display: grid;
+  place-items: center;
+}
+.lightbox::backdrop { background: rgba(38, 38, 38, 0.85); }
+/* fit 表示。表示領域に対して縦横比を保ったまま拡大も縮小もする（contain）。
+   拡大側も効かせるため max-width だけでは足りず、実寸は lightbox.js が
+   width/height をインラインで与える（白地の余白が画像にぴったり沿うように、
+   画面いっぱいではなく「収まる寸法」を計算して入れている）。JS が寸法を
+   入れる前・入れられない場合の保険として object-fit: contain を置く。 */
+.lightbox img {
+  box-sizing: border-box;
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  /* 既定は「これ以上拡大しても意味が無い」小さい画像。クリック＝閉じる */
+  cursor: zoom-out;
+  /* TikZ 図は透明背景で書き出されるので、暗い backdrop がそのまま透けて
+     見づらくなる。原稿ページと同じ白地に揃える(AST 図は元から白背景で
+     不要だが、余白として害はない) */
+  background: #fff;
+  padding: 0.6rem;
+  border-radius: 0.35rem;
+}
+/* 原寸が表示領域を超える画像だけ、クリックで原寸表示に切り替わる */
+.lightbox img.oversized { cursor: zoom-in; }
+.lightbox img.actual {
+  width: auto; height: auto;
+  max-width: none; max-height: none;
+  object-fit: none;
+  cursor: zoom-out;
+}
+/* 44px はタッチの最小目標寸法。スクロールしても隠れないよう fixed で置く */
+.lightbox-close {
+  position: fixed;
+  top: 0.5rem; right: 0.5rem;
+  min-width: 44px; min-height: 44px;
+  background: #fff;
+  color: var(--accent-dark);
+  border: 2px solid var(--accent-dark);
+  border-radius: 0.35rem;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ── 注意書きのボックス（boxes.lua が出す） ── */
+
+/* 上を 0 にするのは、タイトル帯を箱の上端に密着させるため。
+   boxes.lua は .adm を作るとき必ず .adm-title を先頭に差し込むので、
+   ここに余白を入れると帯の上にコンテナの背景が覗いてしまう。 */
+.adm {
+  margin: 1.5rem 0;
+  padding: 0 1.1rem 0.6rem;
+  border: 1px solid var(--accent-light);
+  border-radius: 0.35rem;
+  background: var(--accent-lighter);
+}
+.adm > .adm-title {
+  margin: 0 -1.1rem 0.6rem;
+  padding: 0.35rem 1.1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: var(--accent-light);
+  border-radius: 0.3rem 0.3rem 0 0;
+}
+.adm > :last-child { margin-bottom: 0; }
+
+.adm-important { background: var(--accent-light); border-color: var(--accent-dark); }
+.adm-important > .adm-title { background: var(--accent-dark); color: #fff; }
+
+.adm-warning { background: var(--warning-bg); border-color: var(--emph); }
+.adm-warning > .adm-title { background: var(--emph); color: #fff; }
+
+.adm-exercise { background: var(--gray-bg); border-color: var(--accent-dark); }
+.adm-exercise > .adm-title { background: var(--accent-dark); color: #fff; }
+
+/* 「今日のゴール」。上を 0 にする理由は .adm と同じ（帯を上端に密着させる） */
+.goal {
+  margin: 0 0 2rem;
+  padding: 0 1.3rem 0.9rem;
+  border: 2px solid var(--accent-dark);
+  border-radius: 0.4rem;
+  background: #fff;
+}
+.goal > h2 {
+  margin: 0 -1.3rem 0.8rem;
+  padding: 0.5rem 1.3rem;
+  border: 0;
+  border-radius: 0.25rem 0.25rem 0 0;
+  background: var(--accent-dark);
+  color: #fff;
+  font-size: 1.1rem;
+}
+.goal > :last-child { margin-bottom: 0; }
+
+/* ── 前後ナビ ── */
+
+.pager {
+  display: flex;
+  gap: 1rem;
+  margin-top: 3.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--accent-light);
+  font-size: 0.92rem;
+}
+.pager a {
+  flex: 1 1 0;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--accent-light);
+  border-radius: 0.35rem;
+  text-decoration: none;
+  line-height: 1.5;
+}
+.pager a:hover { background: var(--accent-lighter); }
+.pager .index { flex: 0 1 auto; text-align: center; }
+.pager .next { text-align: right; }
+.pager .label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--gray-text);
+}
+
+.source {
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  color: var(--gray-text);
+}
+
+/* ── トップページ ── */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+.cards li { margin: 0; }
+.cards a {
+  display: block;
+  height: 100%;
+  padding: 0.9rem 1.1rem;
+  background: var(--accent-lighter);
+  border: 1px solid var(--accent-light);
+  border-radius: 0.4rem;
+  text-decoration: none;
+  color: var(--text);
+  line-height: 1.6;
+}
+/* ホバーしていないときも面でタイルと分かるようにする。薄い→濃いの一方向で沈む */
+.cards a:hover { background: var(--accent-light); border-color: var(--accent-dark); }
+/* 本文の青リンクは使わないが、アクセント紫でリンクだと分かる手がかりは残す */
+.cards .card-title { display: block; font-weight: 700; color: var(--accent-dark); }
+.cards .card-desc { display: block; font-size: 0.87rem; color: var(--gray-text); }
+
+/* ── フッタ ── */
+
+.sitefoot {
+  border-top: 1px solid var(--accent-light);
+  padding: 1.2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--gray-text);
+}
+.sitefoot p { margin: 0.2rem 0; }
+.sitefoot .release { font-size: 0.8rem; }
+
+/* ── 画面が狭いとき ── */
+
+@media (max-width: 48rem) {
+  .layout { padding: 0 1rem; }
+  .toc ul { columns: 1; }
+  .page-title { font-size: 1.5rem; }
+  .pager { flex-direction: column; }
+  .pager .index, .pager .next { text-align: left; }
+}
+
+/* ── 印刷 ── */
+
+@media print {
+  .topbar, .pager, .sitefoot, .skiplink, .toc, .source, .lightbox { display: none; }
+  .layout { max-width: none; padding: 0; }
+  .content { padding: 0; }
+  .table-scroll { overflow-x: visible; }
+  body { font-size: 10.5pt; line-height: 1.7; }
+  pre, .adm, .goal, figure, table { break-inside: avoid; }
+  a { color: var(--text); text-decoration: none; }
+}

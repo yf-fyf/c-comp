@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>補助ツール — 実践・Cコンパイラ演習</title>
-    <script type="module" crossorigin src="./assets/index-Cvn-1pVK.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/style-wwbA0nvi.js">
-    <link rel="stylesheet" crossorigin href="./assets/style-CANjKHsX.css">
+    <script type="module" crossorigin src="./assets/index-CNv35kpd.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/style-Xjkg2d6E.js">
+    <link rel="stylesheet" crossorigin href="./assets/style-D5P7cNK6.css">
   </head>
   <body class="landing">
     <header id="topbar">
@@ -21,18 +21,25 @@
       </span>
     </header>
     <main id="cards">
-      <a class="card" href="./ast.html">
-        <h2>AST ビジュアライザ</h2>
-        <p>C のソースを入れて、資料と同じ構文木・S 式・トークン列を見る。</p>
-        <p class="card-meta">コマ1・2 と、各回の「AST を確認する」で使う</p>
+      <a class="card" href="./app.html?mode=build">
+        <h2>作る</h2>
+        <p>
+          C のソースを入れて、資料と同じ構文木・S 式・トークン列を見る。
+          同じソースを RV64 アセンブリに変換することもできる。
+          演習の OCaml 参照実装がそのままブラウザで動くので、ツールチェーンの用意は要らない。
+        </p>
+        <p class="card-meta">
+          コマ1 と、各回の「AST を確認する」で使う。
+          出るアセンブリは参照実装の出力なので、自分のコンパイラの出力と見比べるのに使える
+        </p>
       </a>
-      <a class="card" href="./sim.html">
-        <h2>RV64 シミュレータ</h2>
+      <a class="card" href="./app.html?mode=run">
+        <h2>動かす</h2>
         <p>
           自分のコンパイラが出したアセンブリを貼って、1命令ずつ実行する。
           レジスタ・スタック・標準出力を並べて確かめられる。
         </p>
-        <p class="card-meta">コマ3 以降。うまく動かないときの切り分けに使う</p>
+        <p class="card-meta">コマ2 以降。うまく動かないときの切り分けに使う</p>
       </a>
     </main>
     <footer id="landing-foot">

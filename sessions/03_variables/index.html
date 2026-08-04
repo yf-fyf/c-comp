@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ3: 変数・代入・シンボルテーブル — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ3: 変数・代入・シンボルテーブル</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+      <li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
+      <li><a href="#式と文" id="toc-式と文">式と文</a></li>
+      <li><a href="#codegen-と-gen_stmt" id="toc-codegen-と-gen_stmt">codegen と gen_stmt</a></li>
+      <li><a href="#変数はどこに置くか" id="toc-変数はどこに置くか">変数はどこに置くか</a></li>
+      <li><a href="#スタックフレーム" id="toc-スタックフレーム">スタックフレーム</a></li>
+      <li><a href="#宣言収集-関数本体は-block-ノード" id="toc-宣言収集-関数本体は-block-ノード">宣言収集 — 関数本体は Block ノード</a></li>
+      <li><a href="#alloc_local-の役割" id="toc-alloc_local-の役割">alloc_local の役割</a></li>
+      <li><a href="#rvalue-と-lvalue" id="toc-rvalue-と-lvalue">rvalue と lvalue</a></li>
+      <li><a href="#変数参照の生成" id="toc-変数参照の生成">変数参照の生成</a></li>
+      <li><a href="#代入の生成" id="toc-代入の生成">代入の生成</a></li>
+      <li><a href="#gen_stmt-の役割" id="toc-gen_stmt-の役割">gen_stmt の役割</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>ローカル変数の宣言・参照・代入を実装する。</p>
+<p>コマ2までは、<code>return 1 + 2 * 3;</code> のように、式の中に数値しか登場しなかった。
+この回からは、次のようなプログラムを扱う。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> c<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> c<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>目標は、変数 <code>a</code>, <code>b</code>, <code>c</code> をスタック上に確保し、代入・参照できるようにすることである。</p>
+</section>
+<h2 id="この回で扱う範囲">この回で扱う範囲</h2>
+<p>対象にするプログラムは、次の形に限定する。</p>
+<div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> 変数名<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    文<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>扱う機能は以下の通り。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>種類</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ローカル変数宣言</td>
+<td><code>int a;</code></td>
+</tr>
+<tr class="even">
+<td>変数への代入</td>
+<td><code>a = 3;</code></td>
+</tr>
+<tr class="odd">
+<td>変数参照</td>
+<td><code>return a;</code></td>
+</tr>
+<tr class="even">
+<td>変数を含む算術式</td>
+<td><code>c = a + b * 2;</code></td>
+</tr>
+<tr class="odd">
+<td>複数文</td>
+<td><code>a = 3; b = 5; return a + b;</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>この回では、すべての変数を 8 バイト整数として扱う。
+<code>int</code> は本来 4 バイトだが、前半では実装を単純にするため、スタック上では各変数に 8 バイトを割り当てる。</p>
+<p>if、while、関数呼び出し、ポインタはまだ扱わない。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<pre class="ebnf" data-lang="ebnf"><code>scalar_type ::= &#39;int&#39;            /* ポインタはコマ7、char はコマ8 */
+obj_type    ::= scalar_type
+
+program       ::= func_def        /* ユーザー定義関数はコマ6 */
+var_decl      ::= obj_type IDENT &#39;;&#39;
+
+func_def    ::= &#39;int&#39; &#39;main&#39; &#39;(&#39; &#39;)&#39; func_body   /* 一般の関数定義はコマ6 */
+func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
+
+stmt        ::= expr_stmt
+              | &#39;return&#39; expr &#39;;&#39;
+expr_stmt   ::= expr &#39;;&#39;         /* 空文 ; はコマ5 */
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
+              | binary_expr      /* 条件 ? : はコマ4 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 関係・等値はコマ4、論理はコマ13 */
+              | &#39;+&#39; | &#39;-&#39;
+unary_expr  ::= primary_expr
+              | &#39;-&#39;  unary_expr
+primary_expr ::= INT_LITERAL
+               | IDENT
+               | &#39;(&#39; expr &#39;)&#39;</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>表の読み方はコマ1の「木の形は規則で決まっている」と
+<a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
+<p>字句トークン（<code>INT_LITERAL</code>・<code>IDENT</code> など）の定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="ast-を確認する">AST を確認する</h2>
+<p>まず、変数を含むプログラムがどのような AST になるか確認する。</p>
+<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/03_variables/tests/target.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> c<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> c<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>実行すると、次のようなS式が表示される。</p>
+<div class="sourceCode" id="cb6" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span> (decl <span class="st">&quot;a&quot;</span> <span class="bu">:type</span> int) (decl <span class="st">&quot;b&quot;</span> <span class="bu">:type</span> int) (decl <span class="st">&quot;c&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;a&quot;</span>) (num <span class="dv">3</span>)))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;b&quot;</span>) (num <span class="dv">5</span>)))</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;c&quot;</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>          (add (var <span class="st">&quot;a&quot;</span>) (var <span class="st">&quot;b&quot;</span>))))</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (var <span class="st">&quot;c&quot;</span>)))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/03_variables_ast.svg" alt="変数を含むプログラムの AST" />
+<figcaption aria-hidden="true">変数を含むプログラムの AST</figcaption>
+</figure>
+<p>新しく登場するノードは次の通り。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>S式</th>
+<th><code>Node</code> での表現</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>(decl "a" :type int)</code></td>
+<td><code>ND_DECL</code></td>
+<td>ローカル変数 <code>a</code> の宣言</td>
+</tr>
+<tr class="even">
+<td><code>(var "a")</code></td>
+<td><code>ND_VAR</code></td>
+<td>変数 <code>a</code> の参照</td>
+</tr>
+<tr class="odd">
+<td><code>(assign A B)</code></td>
+<td><code>ND_ASSIGN</code></td>
+<td><code>A = B</code></td>
+</tr>
+<tr class="even">
+<td><code>(exprstmt X)</code></td>
+<td><code>ND_EXPRSTMT</code></td>
+<td><code>X;</code> という式文</td>
+</tr>
+<tr class="odd">
+<td><code>(block ...)</code></td>
+<td><code>ND_BLOCK</code></td>
+<td><code>{ ... }</code> の中の文列</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>return c;</code> の <code>c</code> も <code>(var "c")</code> として表される。
+<code>a = 3;</code> の左側の <code>a</code> も、右辺で値を読む <code>a</code> も、AST上は同じ <code>ND_VAR</code> である。</p>
+<h2 id="式と文">式と文</h2>
+<p>ここからは、「式」と「文」を区別する必要がある。</p>
+<p>式とは、評価すると結果の値が得られるものである。
+得られた値は、別の計算に使い回せる。</p>
+<p>例:</p>
+<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="op">+</span> <span class="dv">2</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>a</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">+</span> b <span class="op">*</span> <span class="dv">3</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> <span class="dv">10</span></span></code></pre></div>
+<p>たとえば、<code>1 + 2</code> は評価すると <code>3</code> になる。
+その結果は、さらに別の式の一部として使える。</p>
+<div class="sourceCode" id="cb8" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">(</span><span class="dv">1</span> <span class="op">+</span> <span class="dv">2</span><span class="op">)</span> <span class="op">*</span> <span class="dv">4</span></span></code></pre></div>
+<p>この式では、まず <code>1 + 2</code> の結果 <code>3</code> が得られ、その値を使って <code>3 * 4</code> を計算する。</p>
+<p>変数参照 <code>a</code> も式である。
+評価すると、変数 <code>a</code> に保存されている値が得られる。</p>
+<p>代入 <code>a = 10</code> も式である。
+代入は <code>a</code> に <code>10</code> を書き込む処理を行い、さらに式全体の結果として <code>10</code> という値を持つ。
+そのため、Cでは代入式の結果をさらに使うことができる。</p>
+<div class="sourceCode" id="cb9" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="op">(</span>a <span class="op">=</span> <span class="dv">10</span><span class="op">);</span></span></code></pre></div>
+<p>この場合、<code>a = 10</code> の結果は <code>10</code> なので、<code>b</code> にも <code>10</code> が代入される。</p>
+<p>一方、文とは、プログラムの中で実行される処理の単位である。
+文そのものは、次の計算に使い回せる結果の値を返さない。</p>
+<p>例:</p>
+<div class="sourceCode" id="cb10" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> a<span class="op">;</span></span></code></pre></div>
+<p><code>a = 10</code> は式だが、<code>;</code> を付けた <code>a = 10;</code> は文である。
+このように、式に <code>;</code> を付けて文にしたものを「式文」という。</p>
+<p>式文は、式を評価して副作用を起こすために使う。
+ここでいう副作用とは、変数への書き込みなど、値を返す以外にプログラムの状態を変える処理のことである。</p>
+<div class="sourceCode" id="cb11" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span></code></pre></div>
+<p>この文では、代入式 <code>a = 10</code> の結果の値 <code>10</code> は、それ以上使われない。
+重要なのは、変数 <code>a</code> に <code>10</code> が書き込まれるという副作用である。</p>
+<p>この回で出てくる文は次の通り。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Cコード</th>
+<th>AST</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>int a;</code></td>
+<td><code>ND_DECL</code></td>
+<td>変数宣言文</td>
+</tr>
+<tr class="even">
+<td><code>a = 10;</code></td>
+<td><code>ND_EXPRSTMT</code></td>
+<td>式文</td>
+</tr>
+<tr class="odd">
+<td><code>return a;</code></td>
+<td><code>ND_RETURN</code></td>
+<td>return文</td>
+</tr>
+<tr class="even">
+<td><code>{ ... }</code></td>
+<td><code>ND_BLOCK</code></td>
+<td>複数の文をまとめるブロック</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>一方、次のようなものは式である。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Cコード</th>
+<th>AST</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>42</code></td>
+<td><code>ND_NUM</code></td>
+<td>数値</td>
+</tr>
+<tr class="even">
+<td><code>a</code></td>
+<td><code>ND_VAR</code></td>
+<td>変数参照</td>
+</tr>
+<tr class="odd">
+<td><code>a = 10</code></td>
+<td><code>ND_ASSIGN</code></td>
+<td>代入式</td>
+</tr>
+<tr class="even">
+<td><code>a + b</code></td>
+<td><code>ND_ADD</code></td>
+<td>足し算</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="codegen-と-gen_stmt">codegen と gen_stmt</h2>
+<p>式と文を区別すると、コード生成のメソッドも分けやすくなる。</p>
+<p><code>self.codegen(node)</code> は、式を処理するメソッドである。
+式には結果の値があるため、<code>self.codegen(node)</code> が終わった時点で、その値が <code>a0</code> に入っている、という約束にする。</p>
+<p><code>self.gen_stmt(node)</code> は、文を処理するメソッドである。
+文は「処理の単位」であり、次に使い回す値を返す必要はない。
+そのため、<code>self.gen_stmt(node)</code> には「結果を <code>a0</code> に残す」という約束は置かない。
+ただし、<code>return</code> 文だけは例外で、関数の戻り値を <code>a0</code> に入れる必要がある。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 27%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>メソッド</th>
+<th>入力</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>self.codegen(node)</code></td>
+<td>式ノード</td>
+<td>式を評価し、結果を <code>a0</code> に置く</td>
+</tr>
+<tr class="even">
+<td><code>self.gen_stmt(node)</code></td>
+<td>文ノード</td>
+<td>文を実行する命令列を出力する</td>
+</tr>
+<tr class="odd">
+<td><code>self.codegen_lval(node)</code></td>
+<td>代入先になる式</td>
+<td>書き込み先のアドレスを <code>a0</code> に置く</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>これらのメソッドはすべて <code>Codegen03</code> クラスのインスタンスメソッドである。
+それぞれ <code>match node.kind</code> で処理を分けた後、対応する handler method（例: <code>gen_stmt_Return</code>）を呼ぶ。
+スケルトンではディスパッチ部分はあらかじめ書かれている。</p>
+<p>たとえば、<code>a = 10;</code> はAST上では次のように表される。</p>
+<div class="sourceCode" id="cb12" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>(exprstmt</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  (assign (var <span class="st">&quot;a&quot;</span>) (num <span class="dv">10</span>)))</span></code></pre></div>
+<p>外側の <code>exprstmt</code> は文なので <code>gen_stmt()</code> が処理する。
+内側の <code>assign</code> は式なので <code>codegen()</code> が処理する。</p>
+<p><code>return a;</code> はAST上では次のように表される。</p>
+<div class="sourceCode" id="cb13" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">return</span> (var <span class="st">&quot;a&quot;</span>))</span></code></pre></div>
+<p>外側の <code>return</code> は文なので <code>gen_stmt()</code> が処理する。
+内側の <code>(var "a")</code> は式なので <code>codegen()</code> が処理する。</p>
+<h2 id="変数はどこに置くか">変数はどこに置くか</h2>
+<p>コンパイル後のプログラムでは、Python の辞書のような場所に変数を置けるわけではない。
+実行時には、変数の値をメモリ上に保存する必要がある。</p>
+<p>この回では、ローカル変数をスタック上に置く。</p>
+<p><code>Codegen03</code> には、次のインスタンス変数が用意されている。</p>
+<div class="sourceCode" id="cb14" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Codegen03(prev.Codegen02):</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._locals: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">int</span>] <span class="op">=</span> {}</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._stack_offset: <span class="bu">int</span> <span class="op">=</span> <span class="dv">0</span></span></code></pre></div>
+<p><code>self._locals</code> は、変数名からスタック上の位置への対応表である（関数ごとにリセットされる）。</p>
+<p>例:</p>
+<div class="sourceCode" id="cb15" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;a&quot;</span>: <span class="op">-</span><span class="dv">24</span>,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;b&quot;</span>: <span class="op">-</span><span class="dv">32</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;c&quot;</span>: <span class="op">-</span><span class="dv">40</span>,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>この例では、変数 <code>a</code> は <code>s0 - 24</code>、変数 <code>b</code> は <code>s0 - 32</code>、変数 <code>c</code> は <code>s0 - 40</code> に置かれる。</p>
+<h2 id="スタックフレーム">スタックフレーム</h2>
+<p><code>gen_func()</code> は、関数ごとに <code>_reset_func_state()</code> を呼んで必要なフレームサイズを計算する。</p>
+<div class="sourceCode" id="cb16" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-(</span>frame_size <span class="op">+</span> <span class="dv">16</span><span class="op">)</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>sd ra<span class="op">,</span> frame_size <span class="op">+</span> <span class="dv">8</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>sd s0<span class="op">,</span> frame_size<span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>addi s0<span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> frame_size <span class="op">+</span> <span class="dv">16</span></span></code></pre></div>
+<p>この後、<code>s0</code> は関数に入る前の <code>sp</code> と同じ位置を指す。
+ローカル変数は <code>s0</code> から負の方向に置く。</p>
+<figure>
+<img src="../../figures/03_stack_frame.svg" alt="3変数 a, b, c を宣言したときのスタックフレーム" />
+<figcaption aria-hidden="true">3変数 <code>a</code>, <code>b</code>, <code>c</code> を宣言したときのスタックフレーム</figcaption>
+</figure>
+<p><code>ra</code> と保存した <code>s0</code> の下にローカル変数が順に並ぶ。
+1個目の変数 <code>a</code> は <code>s0 - 24</code>、2個目の <code>b</code> は <code>s0 - 32</code>、3個目の <code>c</code> は <code>s0 - 40</code> に置かれる。</p>
+<p>コマ2 では <code>_reset_func_state()</code> が <code>0</code> を返し、フレームサイズが固定だった。
+コマ3 では <code>_reset_func_state()</code> を実装し、宣言された変数の数に応じて可変にする。</p>
+<h2 id="宣言収集-関数本体は-block-ノード">宣言収集 — 関数本体は Block ノード</h2>
+<p>フレームサイズを決めるには、関数に入る前に「この関数がローカル変数を何個使うか」を
+知っておく必要がある。そのために、コード生成の前に一度だけ AST を見て回り、
+<code>Decl</code> を見つけるたびに <code>alloc_local()</code> する。この走査を <code>collect_decls()</code> と呼ぶ。</p>
+<p><code>gen_func()</code> が受け取る <code>FuncDef</code> ノードの <code>body</code> は、文の並びではなく
+1 つの <code>Block</code> ノードである（先ほどの S 式の <code>(block (decl "a") ... (return (var "c")))</code>）。
+そこで <code>_reset_func_state()</code> は、<code>node.body</code> を<strong>そのまま</strong> <code>collect_decls()</code> に渡す。</p>
+<pre data-lang="text"><code>1. self._locals をクリアする
+2. self._stack_offset を 0 にする
+3. self.collect_decls(node.body) で宣言を収集する
+4. align_to(self._stack_offset, 16) を frame_size として返す</code></pre>
+<p><code>collect_decls()</code> は <code>match node.kind</code> で処理を分ける。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 68%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><code>node.kind</code></th>
+<th>処理</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>'Decl'</code></td>
+<td><code>collect_decls_Decl(node)</code> — <code>alloc_local</code> で変数を登録する</td>
+</tr>
+<tr class="even">
+<td><code>'Block'</code></td>
+<td><code>collect_decls_Block(node)</code> — <code>stmts</code> を 1 つずつ <code>collect_decls</code> に渡す</td>
+</tr>
+<tr class="odd">
+<td>その他</td>
+<td>何もしない</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>'Block'</code> を開くのは、関数本体そのものが <code>Block</code> だからである。
+1 段だけ開けば、関数本体の先頭に並んだ <code>Decl</code> が全部見える。</p>
+<p>そこから先へ降りる必要はない。この言語で宣言を書けるのは<strong>ファイルスコープと
+関数本体の先頭だけ</strong>で、<code>if</code> や <code>while</code> の中には文しか書けないからである
+（<code>language_spec.md</code> の「宣言」節）。
+<code>collect_decls_Block()</code> はこの 1 段の展開だけなので、スケルトンに書いてある。</p>
+<p>入れ子のブロックは新しいスコープを作らないので、関数内のローカル変数は
+すべて関数全体のフレームへ一律に確保してよい。</p>
+<h2 id="alloc_local-の役割">alloc_local の役割</h2>
+<p><code>self.alloc_local(name)</code> は、新しいローカル変数にスタック上の位置を割り当てるメソッドである。
+スケルトンにあらかじめ書かれているが、割り当て方を知らないとオフセットの意味が読めないので、
+方針をここに示す。</p>
+<p>方針は次の通り。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>処理</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>self._stack_offset</code> を 8 増やす</td>
+<td>変数1個分の領域を確保したことにする</td>
+</tr>
+<tr class="even">
+<td><code>self._locals[name]</code> にオフセットを登録する</td>
+<td>変数名から位置を引けるようにする</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>たとえば、<code>a</code>, <code>b</code>, <code>c</code> を順に割り当てると、次のようになる。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>変数</th>
+<th>オフセット</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>a</code></td>
+<td><code>-24</code></td>
+</tr>
+<tr class="even">
+<td><code>b</code></td>
+<td><code>-32</code></td>
+</tr>
+<tr class="odd">
+<td><code>c</code></td>
+<td><code>-40</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>オフセットは <code>s0</code> からの相対位置である。</p>
+<h2 id="rvalue-と-lvalue">rvalue と lvalue</h2>
+<p>変数を扱うときは、「値がほしい」のか「書き込み先のアドレスがほしい」のかを区別する必要がある。</p>
+<p>たとえば、次の文を考える。</p>
+<div class="sourceCode" id="cb18" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> b <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span></code></pre></div>
+<p>右辺の <code>b</code> は、変数 <code>b</code> に入っている値を読む必要がある。
+一方、左辺の <code>a</code> は、値を読むのではなく、代入先として <code>a</code> のアドレスが必要である。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>場所</th>
+<th>必要なもの</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>右辺の <code>b</code></td>
+<td><code>b</code> に保存されている値</td>
+</tr>
+<tr class="even">
+<td>左辺の <code>a</code></td>
+<td><code>a</code> が置かれているメモリアドレス</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>この区別のために、次の2つのメソッドを使い分ける。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>メソッド</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>self.codegen(node)</code></td>
+<td>式の値を計算し、結果を <code>a0</code> に置く</td>
+</tr>
+<tr class="even">
+<td><code>self.codegen_lval(node)</code></td>
+<td>代入先のアドレスを計算し、結果を <code>a0</code> に置く</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>この回の <code>codegen_lval()</code> は、<code>'Var'</code> だけ対応する最小形でよい。
+<code>codegen()</code> と <code>codegen_lval()</code> を分ける設計はここが出発点で、以降ずっと使う
+（<code>conventions.md</code> の「守ってほしい設計」節）。
+コマ7 で <code>*p</code> を代入先にできるよう <code>'Deref'</code> の分岐を足して拡張するが、
+<code>'Var'</code> の分岐と <code>codegen_Assign()</code> はこの回で書いたものをそのまま引き継ぐ。</p>
+<h2 id="変数参照の生成">変数参照の生成</h2>
+<p><code>'Var'</code> を値として読む場合は、次の2段階で処理する。</p>
+<pre data-lang="text"><code>1. self.codegen_lval(node) で変数のアドレスを a0 に入れる
+2. ld a0, 0(a0) で、そのアドレスから値を読み込む</code></pre>
+<p>たとえば、<code>a</code> が <code>s0 - 24</code> にあるなら、次のような命令になる。</p>
+<div class="sourceCode" id="cb20" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>ld a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span></span></code></pre></div>
+<p>1行目で <code>a</code> のアドレスを作り、2行目でそのアドレスに保存されている値を読む。</p>
+<h2 id="代入の生成">代入の生成</h2>
+<p><code>a = 3;</code> のような代入では、左辺のアドレスと右辺の値の両方が必要になる。</p>
+<p>生成パターンは次の通り。</p>
+<pre data-lang="text"><code>1. 左辺のアドレスを self.codegen_lval() で計算する
+   -&gt; a0 に左辺のアドレスが入る
+
+2. 左辺のアドレスをスタックに退避する
+
+3. 右辺を self.codegen() で計算する
+   -&gt; a0 に右辺の値が入る
+
+4. 退避していた左辺のアドレスを a1 に戻す
+
+5. sd a0, 0(a1) で、右辺の値を左辺のアドレスへ保存する</code></pre>
+<p>代入後、<code>a0</code> には右辺の値を残しておく。
+Cでは、代入式 <code>a = 3</code> 自体の値は <code>3</code> である。</p>
+<h2 id="gen_stmt-の役割">gen_stmt の役割</h2>
+<p><code>self.gen_stmt(node)</code> は、文ノードを受け取り、<code>match node.kind</code> で種類ごとに handler を呼ぶ。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 34%" />
+<col style="width: 48%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ノード種別</th>
+<th>呼ばれる handler</th>
+<th>処理</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>'Decl'</code></td>
+<td><code>gen_stmt_Decl</code></td>
+<td>変数宣言。領域確保は宣言収集で済んでいるため、ここでは何もしない</td>
+</tr>
+<tr class="even">
+<td><code>'ExprStmt'</code></td>
+<td><code>gen_stmt_ExprStmt</code></td>
+<td><code>node.operand</code> を <code>self.codegen()</code> する</td>
+</tr>
+<tr class="odd">
+<td><code>'Return'</code></td>
+<td><code>gen_stmt_Return</code></td>
+<td><code>node.operand</code> を <code>self.codegen()</code> し、戻り値を <code>a0</code> に置く</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>'Block'</code> の処理（<code>body.stmts</code> を順に <code>gen_stmt()</code>）はコマ2 の <code>_emit_func_body</code> がすでに行っている。</p>
+<p>スケルトンでは dispatcher 部分があらかじめ書かれており、handler だけが TODO になっている。</p>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>mycc.py</code></li>
+</ul>
+<p>コマ2 の <code>Codegen02</code> を <code>importlib</code> で継承した <code>Codegen03</code> を実装する。</p>
+<p>コマ2 で埋めた TODO（<code>_codegen_binary_value</code>、<code>codegen_Neg</code>、<code>codegen_Add</code> 〜 <code>codegen_Mod</code>、
+<code>gen_stmt_Return</code>、<code>_emit_func_prologue</code> / <code>_emit_func_body</code> / <code>_emit_func_epilogue</code>）は、
+<code>importlib</code> の継承でそのまま引き継がれる。この回で書き直すものは無い。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>実装対象</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>codegen_lval_Var(node)</code></td>
+<td>代入先のアドレス（<code>s0 + offset</code>）を <code>a0</code> に置く</td>
+</tr>
+<tr class="even">
+<td><code>codegen_Var(node)</code></td>
+<td>左辺値アドレスを取得後 <code>ld</code> で値を読む</td>
+</tr>
+<tr class="odd">
+<td><code>codegen_Assign(node)</code></td>
+<td>左辺のアドレスを保存 → 右辺計算 → 保存</td>
+</tr>
+<tr class="even">
+<td><code>gen_stmt_Decl(node)</code></td>
+<td>何もしない（初期化子はなく、領域確保は宣言収集で行う）</td>
+</tr>
+<tr class="odd">
+<td><code>gen_stmt_ExprStmt(node)</code></td>
+<td>式文を処理</td>
+</tr>
+<tr class="even">
+<td><code>collect_decls_Decl(node)</code></td>
+<td><code>alloc_local</code> を呼ぶ</td>
+</tr>
+<tr class="odd">
+<td><code>_reset_func_state(node)</code></td>
+<td>関数ごとに変数表を初期化し、<code>node.body</code> を <code>collect_decls</code> に渡して frame_size を計算</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>次のものはスケルトンにあらかじめ書かれている（実装対象ではない）。</p>
+<ul>
+<li><code>align_to()</code>、<code>alloc_local()</code>、<code>lookup_var()</code></li>
+<li><code>codegen()</code> / <code>gen_stmt()</code> / <code>codegen_lval()</code> のディスパッチ</li>
+<li><code>collect_decls()</code> のディスパッチと <code>collect_decls_Block()</code>（関数本体の <code>Block</code> を 1 段開くだけの処理）</li>
+</ul>
+<h2 id="tests">tests/</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 25%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>target.c</code></td>
+<td><code>a = 3; b = 5; c = a + b; return c;</code></td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td><code>reassign.c</code></td>
+<td><code>x = 10; y = x * 2 + 3; x = y - x; return x;</code></td>
+<td>13</td>
+</tr>
+<tr class="odd">
+<td><code>init.c</code></td>
+<td><code>int a; int b; int c; a = 3; b = 5; c = a * b; return c;</code></td>
+<td>15</td>
+</tr>
+<tr class="even">
+<td><code>chain_assign.c</code></td>
+<td><code>a = 5; b = a; a = b + 1; return a;</code></td>
+<td>6</td>
+</tr>
+<tr class="odd">
+<td><code>single.c</code></td>
+<td>1変数への代入と参照</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="even">
+<td><code>add_vars.c</code></td>
+<td>複数変数の加算</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="odd">
+<td><code>expr_chain.c</code></td>
+<td>変数を含む式の連鎖</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="even">
+<td><code>multi_expr.c</code></td>
+<td>複数変数と複数式</td>
+<td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="odd">
+<td><code>many_locals.c</code></td>
+<td>6変数の総和</td>
+<td>21</td>
+</tr>
+<tr class="even">
+<td><code>eight_locals.c</code></td>
+<td>8変数（アラインメント境界）</td>
+<td>36</td>
+</tr>
+<tr class="odd">
+<td><code>minimal.c</code></td>
+<td>最小関数（ローカル変数なし）</td>
+<td>42</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>代入の前にローカル変数の宣言が必要である。宣言と同時に初期値を書くことはできず、初期値は代入文で設定する。</p>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb22" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/03_variables</span></code></pre></div>
+<p><code>tests/target.c</code> がコンパイルでき、終了コード <code>8</code> になれば基本形は成功。</p>
+<p><code>eight_locals.c</code> はフレームサイズが 16 バイト境界に揃っているかを見るテストで、
+<code>minimal.c</code> はローカル変数が 0 個でも正しく動くかを見るテストである。</p>
+<p>個別に動かす場合は、次のようにする。</p>
+<div class="sourceCode" id="cb23" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/03_variables/mycc.py sessions/03_variables/tests/target.c <span class="dt">\</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="注意">注意</h2>
+<p>この回では、同じ関数内で同じ名前の変数を2回宣言するケースは扱わない。</p>
+<p>コマ3 ではローカル変数の数に応じて可変フレームを使う。
+<code>_reset_func_state()</code> で <code>collect_decls(node.body)</code> を呼び、<code>align_to(self._stack_offset, 16)</code> で 16 バイト境界に調整する。
+ここで作った <code>_reset_func_state()</code> と <code>collect_decls()</code> の形は、以降のコマでもそのまま使う。</p>
+<p>生成したアセンブリのフレームサイズやオフセットを1命令ずつ追いたいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/02_arithmetic_codegen/"><span class="label">前へ</span>コマ2: 算術式コード生成</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/04_if_else/"><span class="label">次へ</span>コマ4: if/else + 比較演算</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/03_variables.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

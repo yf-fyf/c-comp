@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ12: 構造体とヒープ（struct / . / -&gt; / sizeof / malloc / 連結リスト） — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ12: 構造体とヒープ（struct / <code>.</code> / <code>-&gt;</code> / <code>sizeof</code> / <code>malloc</code> / 連結リスト）</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+      <li><a href="#ast-を確認する-.-と--" id="toc-ast-を確認する-.-と--">AST を確認する: <code>.</code> と <code>-&gt;</code></a></li>
+      <li><a href="#ast-を確認する-sizeof-と-malloc" id="toc-ast-を確認する-sizeof-と-malloc">AST を確認する: <code>sizeof</code> と <code>malloc</code></a></li>
+      <li><a href="#構造体のメモリレイアウト" id="toc-構造体のメモリレイアウト">構造体のメモリレイアウト</a></li>
+      <li><a href="#struct-定義を読む" id="toc-struct-定義を読む">struct 定義を読む</a></li>
+      <li><a href="#size_of_ty_str-に引数が増える" id="toc-size_of_ty_str-に引数が増える">size_of_ty_str に引数が増える</a></li>
+      <li><a href="#と---のコード生成" id="toc-と---のコード生成"><code>.</code> と <code>-&gt;</code> のコード生成</a></li>
+      <li><a href="#sizeof-のコード生成-コマ9-からの差分" id="toc-sizeof-のコード生成-コマ9-からの差分"><code>sizeof</code> のコード生成 — コマ9 からの差分</a></li>
+      <li><a href="#malloc-を呼び出すと何が起きるか" id="toc-malloc-を呼び出すと何が起きるか"><code>malloc</code> を呼び出すと何が起きるか</a></li>
+      <li><a href="#null-どこも指していないポインタ" id="toc-null-どこも指していないポインタ"><code>NULL</code> — 「どこも指していない」ポインタ</a></li>
+      <li><a href="#連結リストの走査" id="toc-連結リストの走査">連結リストの走査</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>struct タグ { ... };</code> の定義、構造体変数、<code>.</code>、<code>-&gt;</code> を実装する。
+続けて <code>sizeof(struct タグ)</code> で求めたサイズを <code>malloc</code> に渡し、
+ヒープ上に確保した構造体をポインタでつないで連結リストを動かす。</p>
+<p>コマ9までに、型サイズとポインタ演算を扱えるようになった。この回では、複数のフィールドを
+まとめた構造体を導入し、その構造体をスタック上だけでなくヒープ上にも置けるようにする。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Point <span class="op">{</span> <span class="dt">int</span> x<span class="op">;</span> <span class="dt">int</span> y<span class="op">;</span> <span class="op">};</span>                 <span class="co">// スタック上に置く例</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">{</span> <span class="dt">int</span> val<span class="op">;</span> <span class="kw">struct</span> Node <span class="op">*</span>next<span class="op">;</span> <span class="op">};</span>    <span class="co">// ヒープ上に置く例</span></span></code></pre></div>
+<p><code>struct Point</code> は、<code>x</code> と <code>y</code> という2つのフィールドを持つ型である。
+<code>struct Node</code> は、自分と同じ型へのポインタ <code>next</code> を持つ。
+このような構造体を自己参照構造体と呼ぶ。</p>
+</section>
+<h2 id="この回で扱う範囲">この回で扱う範囲</h2>
+<p>対象にする機能は次の通り。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 14%" />
+<col style="width: 64%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>種類</th>
+<th>例</th>
+<th>この回で新しい点</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>struct 定義</td>
+<td><code>struct Point { int x; int y; };</code></td>
+<td>フィールドのオフセットとサイズを管理する</td>
+</tr>
+<tr class="even">
+<td>直接メンバアクセス</td>
+<td><code>p.x</code></td>
+<td>構造体変数のアドレス + オフセット</td>
+</tr>
+<tr class="odd">
+<td>ポインタ経由メンバアクセス</td>
+<td><code>p-&gt;x</code></td>
+<td>ポインタの値 + オフセット</td>
+</tr>
+<tr class="even">
+<td>構造体ポインタ引数</td>
+<td><code>int f(struct Point *p)</code></td>
+<td>構造体は値ではなくポインタで渡す</td>
+</tr>
+<tr class="odd">
+<td><code>sizeof(struct タグ)</code></td>
+<td><code>sizeof(struct Node)</code></td>
+<td>構造体のサイズを引ける（<code>sizeof(int)</code> 等はコマ9）</td>
+</tr>
+<tr class="even">
+<td><code>malloc</code> で構造体を確保</td>
+<td><code>malloc(sizeof(struct Node))</code></td>
+<td>確保先を構造体として扱う（<code>malloc</code> 呼び出し自体はコマ9）</td>
+</tr>
+<tr class="odd">
+<td><code>void *</code> の暗黙変換</td>
+<td><code>n = malloc(...);</code>（<code>n</code> は <code>struct Node *</code>）</td>
+<td><code>void *</code> と <code>T *</code> を行き来できる</td>
+</tr>
+<tr class="even">
+<td>自己参照構造体</td>
+<td><code>struct Node *next</code></td>
+<td>自分自身へのポインタを持つ構造体</td>
+</tr>
+<tr class="odd">
+<td><code>NULL</code></td>
+<td><code>n-&gt;next = NULL;</code></td>
+<td>終端を表すポインタ値</td>
+</tr>
+<tr class="even">
+<td>連結リスト</td>
+<td><code>head = head-&gt;next</code></td>
+<td>上を組み合わせたデータ構造</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>言語仕様どおり、構造体のフィールドは <code>int</code>、<code>char</code>、ポインタに限られる。
+扱わない範囲（struct 値の入れ子、構造体代入、グローバル構造体変数）は「注意」節にまとめた。
+<code>malloc</code> 自体も自作しない。<code>lib.h</code> の宣言を使い、リンク時に libc の <code>malloc</code> を呼び出す。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<p>この回で書ける <code>#include</code> は提供物の <code>lib.h</code> の取込みだけで、
+自作ヘッダと入れ子の取込み、<code>#define</code> はコマ14 で扱う。</p>
+<pre class="ebnf" data-lang="ebnf"><code>include_dir ::= &#39;#&#39; &#39;include&#39; &#39;&quot;&#39; FILENAME &#39;&quot;&#39; NEWLINE   /* #define はコマ14 */
+
+stars       ::= &#39;*&#39; { &#39;*&#39; }
+
+scalar_type ::= &#39;int&#39;  [ stars ]
+              | &#39;char&#39; [ stars ]
+              | &#39;void&#39; stars
+              | &#39;struct&#39; IDENT stars
+obj_type    ::= scalar_type
+              | &#39;struct&#39; IDENT
+ret_type    ::= scalar_type
+              | &#39;void&#39;
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= struct_decl
+                | func_proto
+                | func_def       /* グローバル変数はコマ13 */
+struct_decl   ::= &#39;struct&#39; IDENT &#39;{&#39; field_decl { field_decl } &#39;}&#39; &#39;;&#39;
+                | &#39;struct&#39; IDENT &#39;;&#39;
+field_decl    ::= scalar_type IDENT &#39;;&#39;
+var_decl      ::= obj_type IDENT &#39;;&#39;
+
+param       ::= scalar_type IDENT
+param_list  ::= param { &#39;,&#39; param }
+func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list [ &#39;,&#39; &#39;...&#39; ] ] &#39;)&#39; &#39;;&#39;
+func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
+func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | &#39;break&#39; &#39;;&#39;
+              | &#39;continue&#39; &#39;;&#39;
+              | &#39;return&#39; [ expr ] &#39;;&#39;
+expr_stmt   ::= [ expr ] &#39;;&#39;
+block       ::= &#39;{&#39; { stmt } &#39;}&#39;
+if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
+while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
+for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
+              | &#39;+&#39; | &#39;-&#39;
+              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
+              | &#39;==&#39; | &#39;!=&#39;
+unary_expr  ::= postfix_expr
+              | &#39;-&#39;  unary_expr
+              | &#39;*&#39;  unary_expr
+              | &#39;&amp;&#39;  unary_expr
+              | &#39;++&#39; unary_expr
+              | &#39;--&#39; unary_expr
+              | &#39;sizeof&#39; &#39;(&#39; type_name &#39;)&#39;
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= &#39;[&#39; expr &#39;]&#39;
+                 | &#39;.&#39;  IDENT
+                 | &#39;-&gt;&#39; IDENT
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | STRING_LITERAL
+               | IDENT &#39;(&#39; [ arg_list ] &#39;)&#39;
+               | IDENT
+               | &#39;(&#39; expr &#39;)&#39;
+arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>==</code> <code>!=</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>表の読み方はコマ1の「木の形は規則で決まっている」と
+<a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
+<p><code>obj_type</code> にだけ <code>'struct' IDENT</code>（<code>*</code> なし）があり、<code>scalar_type</code> には無い。
+この構成により、struct 値の引数・戻り値・フィールドは構文の段階で書けなくなっている。
+struct 定義はファイルスコープのみで、タグ必須、フィールドは1個以上、初期化子は存在しない。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="ast-を確認する-.-と--">AST を確認する: <code>.</code> と <code>-&gt;</code></h2>
+<p>まず、メンバアクセスがどのような AST になるか確認する。</p>
+<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/12_struct_malloc_list/tests/dot_access.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Point <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> y<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Point p<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    p<span class="op">.</span>x <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    p<span class="op">.</span>y <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> p<span class="op">.</span>x <span class="op">+</span> p<span class="op">.</span>y<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>実行すると、次のようなS式が表示される。</p>
+<div class="sourceCode" id="cb5" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      (decl <span class="st">&quot;p&quot;</span> <span class="bu">:type</span> (struct <span class="st">&quot;Point&quot;</span>))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        (assign (<span class="kw">member</span> <span class="st">&quot;.&quot;</span> <span class="st">&quot;x&quot;</span> (var <span class="st">&quot;p&quot;</span>)) (num <span class="dv">3</span>)))</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        (assign (<span class="kw">member</span> <span class="st">&quot;.&quot;</span> <span class="st">&quot;y&quot;</span> (var <span class="st">&quot;p&quot;</span>)) (num <span class="dv">4</span>)))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        (add</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">member</span> <span class="st">&quot;.&quot;</span> <span class="st">&quot;x&quot;</span> (var <span class="st">&quot;p&quot;</span>))</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">member</span> <span class="st">&quot;.&quot;</span> <span class="st">&quot;y&quot;</span> (var <span class="st">&quot;p&quot;</span>)))))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/12_dot_access_ast.svg" alt="dot_access.c の AST" />
+<figcaption aria-hidden="true"><code>dot_access.c</code> の AST</figcaption>
+</figure>
+<p><code>p.x</code> は AST 上では <code>(member "." "x" (var "p"))</code> になる。</p>
+<p>次に、構造体ポインタを使う <code>arrow_access.c</code> を見る。</p>
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/12_struct_malloc_list/tests/arrow_access.c</span></code></pre></div>
+<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> distance_sq<span class="op">(</span><span class="kw">struct</span> Point <span class="op">*</span>p<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> p<span class="op">-&gt;</span>x <span class="op">*</span> p<span class="op">-&gt;</span>x <span class="op">+</span> p<span class="op">-&gt;</span>y <span class="op">*</span> p<span class="op">-&gt;</span>y<span class="op">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>この関数の部分は次のS式になる。</p>
+<div class="sourceCode" id="cb8" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;distance_sq&quot;</span> <span class="bu">:type</span> int</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    (params</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>      (param <span class="st">&quot;p&quot;</span> <span class="bu">:type</span> (ptr (struct <span class="st">&quot;Point&quot;</span>))))</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        (add</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>          (mul (<span class="kw">member</span> <span class="st">&quot;-&gt;&quot;</span> <span class="st">&quot;x&quot;</span> (var <span class="st">&quot;p&quot;</span>)) (<span class="kw">member</span> <span class="st">&quot;-&gt;&quot;</span> <span class="st">&quot;x&quot;</span> (var <span class="st">&quot;p&quot;</span>)))</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>          (mul (<span class="kw">member</span> <span class="st">&quot;-&gt;&quot;</span> <span class="st">&quot;y&quot;</span> (var <span class="st">&quot;p&quot;</span>)) (<span class="kw">member</span> <span class="st">&quot;-&gt;&quot;</span> <span class="st">&quot;y&quot;</span> (var <span class="st">&quot;p&quot;</span>)))))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/12_arrow_access_ast.svg" alt="arrow_access.c の AST" />
+<figcaption aria-hidden="true"><code>arrow_access.c</code> の AST</figcaption>
+</figure>
+<p><code>p-&gt;x</code> は AST 上では <code>(member "-&gt;" "x" (var "p"))</code> になる。
+意味としては <code>(*p).x</code> と考えればよい。
+<code>.</code> と <code>-&gt;</code> は同じ <code>member</code> ノードで、1つ目の要素が違うだけである。</p>
+<h2 id="ast-を確認する-sizeof-と-malloc">AST を確認する: <code>sizeof</code> と <code>malloc</code></h2>
+<p><code>sizeof</code> の AST はコマ9 で見たものと同じである。</p>
+<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/12_struct_malloc_list/tests/sizeof_test.c</span></code></pre></div>
+<div class="sourceCode" id="cb10" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">+</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">char</span><span class="op">);</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb11" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        (add (sizeof-type int) (sizeof-type <span class="kw">char</span>))))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/12_sizeof_test_ast.svg" alt="sizeof_test.c の AST" />
+<figcaption aria-hidden="true"><code>sizeof_test.c</code> の AST</figcaption>
+</figure>
+<p><code>sizeof(int)</code> は <code>(sizeof-type int)</code>、<code>sizeof(char)</code> は <code>(sizeof-type char)</code> になる。
+どちらも実行時に計算する必要はなく、翻訳時に型サイズを見て定数を出せばよい。</p>
+<p>次に、<code>malloc</code> と <code>struct Node *next</code> を含む <code>list_min.c</code> を見る。</p>
+<div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/12_struct_malloc_list/tests/list_min.c</span></code></pre></div>
+<div class="sourceCode" id="cb13" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">{</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> val<span class="op">;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Node <span class="op">*</span>next<span class="op">;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Node <span class="op">*</span>n<span class="op">;</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="kw">struct</span> Node<span class="op">));</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    n<span class="op">-&gt;</span>val <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    n<span class="op">-&gt;</span>next <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n<span class="op">-&gt;</span>val<span class="op">;</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>先頭には <code>lib.h</code> の関数プロトタイプが並び（<code>#include</code> がファイル結合であることが
+そのまま見える）、その後に <code>main</code> が続く。<code>main</code> の部分は次のようになる。</p>
+<div class="sourceCode" id="cb14" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>      (decl <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> (ptr (struct <span class="st">&quot;Node&quot;</span>)))</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>          (call <span class="st">&quot;malloc&quot;</span> (args (sizeof-type (struct <span class="st">&quot;Node&quot;</span>))))))</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>        (assign (<span class="kw">member</span> <span class="st">&quot;-&gt;&quot;</span> <span class="st">&quot;val&quot;</span> (var <span class="st">&quot;n&quot;</span>)) (num <span class="dv">10</span>)))</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        (assign (<span class="kw">member</span> <span class="st">&quot;-&gt;&quot;</span> <span class="st">&quot;next&quot;</span> (var <span class="st">&quot;n&quot;</span>)) (num <span class="dv">0</span>)))</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">member</span> <span class="st">&quot;-&gt;&quot;</span> <span class="st">&quot;val&quot;</span> (var <span class="st">&quot;n&quot;</span>))))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/12_list_min_ast.svg" alt="list_min.c の AST" />
+<figcaption aria-hidden="true"><code>list_min.c</code> の AST</figcaption>
+</figure>
+<p>見どころは3つある。</p>
+<ul>
+<li><code>sizeof(struct Node)</code> は <code>(sizeof-type (struct "Node"))</code> で、<code>sizeof(int)</code> と同じノードである。</li>
+<li><code>malloc(...)</code> はただの <code>call</code> である。関数呼び出しはコマ6 で作ったものがそのまま働く。</li>
+<li><code>NULL</code> は <code>(num 0)</code> になっている。理由は後の「<code>NULL</code>」節で述べる。</li>
+</ul>
+<p><code>lib.h</code> の宣言は <code>void *malloc(int size);</code> である。<code>void *</code> は任意の <code>T *</code> へ暗黙変換されるので、
+そのまま <code>struct Node *n</code> に代入できる。逆向き（<code>T *</code> から <code>void *</code>）も同じで、
+<code>void *v;</code> のような変数や <code>int f(void *p)</code> のような仮引数も書ける
+（<code>void</code> 単独の変数は書けない。<code>*</code> を伴う形だけである）。
+この言語にキャスト <code>(type)expr</code> は無いので、ポインタの型を変える手段はこの暗黙変換だけである。
+どちらもサイズ 8 のポインタなので、変換のための命令は出ない。</p>
+<h2 id="構造体のメモリレイアウト">構造体のメモリレイアウト</h2>
+<p>構造体のサイズとフィールドのオフセットは、フィールドの並びから決める。
+この講義では、各フィールドをその型サイズに応じた自然な境界に揃え、
+構造体全体のサイズは最大フィールドの境界の倍数へ切り上げる。</p>
+<p><code>struct Point</code> は <code>int x; int y;</code> を持つ。<code>int</code> は4バイトなので、余白は入らない。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>フィールド</th>
+<th>型</th>
+<th>オフセット</th>
+<th>サイズ</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>x</code></td>
+<td><code>int</code></td>
+<td>0</td>
+<td>4</td>
+</tr>
+<tr class="even">
+<td><code>y</code></td>
+<td><code>int</code></td>
+<td>4</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>struct Point</code> 全体のサイズは8バイトである。</p>
+<figure>
+<img src="../../figures/12_struct_layout.svg" alt="Point のメモリ配置と . / -&gt; のアドレス計算" />
+<figcaption aria-hidden="true"><code>Point</code> のメモリ配置と <code>.</code> / <code>-&gt;</code> のアドレス計算</figcaption>
+</figure>
+<p>図の <code>q</code> は <code>&amp;p</code> を代入した <code>struct Point *q</code> である（<code>distance_sq(&amp;p)</code> の仮引数も同じ状態になる）。
+<code>.</code> は構造体変数のアドレスから、<code>-&gt;</code> はポインタの値から、どちらも「+ フィールドオフセット」で場所が決まる。</p>
+<p>一方 <code>struct Node</code> は <code>int val; struct Node *next;</code> を持つ。
+ポインタは8バイト境界に置くため、<code>val</code> の後に4バイトの余白（パディング）が入る。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>フィールド</th>
+<th>型</th>
+<th>オフセット</th>
+<th>サイズ</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>val</code></td>
+<td><code>int</code></td>
+<td>0</td>
+<td>4</td>
+</tr>
+<tr class="even">
+<td>（余白）</td>
+<td>—</td>
+<td>4</td>
+<td>4</td>
+</tr>
+<tr class="odd">
+<td><code>next</code></td>
+<td><code>struct Node *</code></td>
+<td>8</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>sizeof(struct Node)</code> は 16 であって、<code>4 + 8 = 12</code> ではない。
+この差はあとで <code>malloc</code> に渡すサイズに効いてくる。</p>
+<p><code>next</code> は <code>struct Node</code> そのものではなく、<code>struct Node</code> へのポインタである。
+ポインタのサイズは中身を知らなくても8バイトで確定するので、
+定義の途中でも自分自身へのポインタを持てる。自己参照構造体が書けるのはこのためである。</p>
+<p>構造体型の名前は常に <code>struct タグ名</code> の形だけである。
+そのため、構造体情報表のキーも <code>"struct Node"</code> の形で持てば、
+型文字列（<code>ty_str</code>）をそのままキーとして使える。</p>
+<h2 id="struct-定義を読む">struct 定義を読む</h2>
+<p>Parser は <code>struct Point { ... };</code> のフィールド一覧を AST には残さない。
+そのため、この回ではソース文字列を走査して構造体情報を集める。</p>
+<div class="sourceCode" id="cb15" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># スケルトンがあらかじめ source から構造体情報を収集し、</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># self._struct_defs としてコンストラクタに渡す設計</span></span></code></pre></div>
+<p><code>self._struct_defs</code> は <code>"struct Point"</code> の形の型名をキーとする辞書である。
+たとえば <code>struct Point</code> のエントリは次の形をとる。</p>
+<div class="sourceCode" id="cb16" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;size&quot;</span>: <span class="dv">8</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;align&quot;</span>: <span class="dv">4</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;fields&quot;</span>: {</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;x&quot;</span>: (<span class="dv">0</span>, <span class="st">&quot;int&quot;</span>),        <span class="co"># (オフセット, ty_str)</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;y&quot;</span>: (<span class="dv">4</span>, <span class="st">&quot;int&quot;</span>),</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>タプルの中身を直接取り出す必要はない。スケルトンは次の2つを提供している。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>提供済み</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>field_offset(struct_ty, name, struct_defs, line)</code></td>
+<td>フィールドのオフセットを返す</td>
+</tr>
+<tr class="even">
+<td><code>field_ty(struct_ty, name, struct_defs, line)</code></td>
+<td>フィールドの <code>ty_str</code> を返す</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>情報を集めるのはクラスメソッド <code>parse_struct_defs(source)</code> で、これもスケルトンにある。
+対象は <code>struct タグ { フィールド; ... };</code> の形だけでよい（タグは必須）。</p>
+<h2 id="size_of_ty_str-に引数が増える">size_of_ty_str に引数が増える</h2>
+<p>コマ8 の <code>size_of_ty_str(ty)</code> は <code>int</code> / <code>char</code> / ポインタしか知らなかった。
+<code>struct Point</code> のサイズは定義を見ないと分からないので、この回で第2引数が増える。</p>
+<div class="sourceCode" id="cb17" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>size_of_ty_str(ty_str) <span class="op">-&gt;</span> <span class="bu">int</span>                    <span class="co"># コマ8〜コマ11</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>size_of_ty_str(ty_str, struct_defs<span class="op">=</span><span class="va">None</span>) <span class="op">-&gt;</span> <span class="bu">int</span>  <span class="co"># この回以降</span></span></code></pre></div>
+<p><code>struct_defs</code> は省略でき、省略した場合の結果はコマ8 と同じである。
+そのため、コマ11 までに書いた呼び出しはそのまま動く。
+ただし <strong><code>struct</code> のサイズが要る場所では <code>self._struct_defs</code> を必ず渡す</strong>。
+渡し忘れるとエラーにならないまま結果だけがずれる。</p>
+<div class="sourceCode" id="cb18" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.size_of_ty_str(<span class="st">&quot;struct Point&quot;</span>, <span class="va">self</span>._struct_defs)   <span class="co"># 8</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.size_of_ty_str(<span class="st">&quot;struct Point&quot;</span>)                      <span class="co"># 4（渡し忘れ）</span></span></code></pre></div>
+<p><code>alloc_local</code> / <code>_scale_index</code> / <code>_load_ty</code> / <code>_store_ty</code> / <code>codegen_SizeofType</code> は、
+この引数を渡す形に直す必要がある。以降のコマ13〜コマ15 でもこの2引数の形を使う。</p>
+<h2 id="と---のコード生成"><code>.</code> と <code>-&gt;</code> のコード生成</h2>
+<p><code>'Member'</code> ノードの lvalue を作るのは <code>codegen_lval_Member(node)</code> ハンドラである
+（<code>codegen_lval()</code> のディスパッチはスケルトンに書かれているので、書くのはハンドラだけでよい）。
+<code>p-&gt;x</code> は <code>(*p).x</code> と同じ意味なので、どちらもアドレス計算は同じ形になる。</p>
+<pre data-lang="text"><code>address(p.x)  = address(p) + offset(x)      # . は p のアドレス
+address(p-&gt;x) = value(p)   + offset(x)      # -&gt; は p の値</code></pre>
+<p>違うのは2点だけである。
+ベースアドレスを <code>codegen_lval</code> で求めるか <code>codegen</code> で求めるか、
+そして対象の構造体型名を左辺値型からそのまま取るか、
+ポインタ型から <code>elem_ty_str</code> で1段はがすかである。</p>
+<div class="sourceCode" id="cb20" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_lval_Member(<span class="va">self</span>, node):</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    struct_ty <span class="op">=</span> <span class="va">self</span>._member_struct_type(node)       <span class="co"># &quot;struct Point&quot;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> node.is_arrow:</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.codegen(node.operand)                   <span class="co"># -&gt; はポインタの値</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.codegen_lval(node.operand)              <span class="co"># . は変数のアドレス</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    offset <span class="op">=</span> <span class="va">self</span>.field_offset(struct_ty, node.name, <span class="va">self</span>._struct_defs, node.line)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&quot;  addi a0, a0, </span><span class="sc">{</span>offset<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>構造体型名を求める部分はスケルトンで <code>self._member_struct_type(node)</code> に切り出してある。
+中身は「<code>.</code> なら <code>_type_of_lval(node.operand)</code>、<code>-&gt;</code> なら <code>_type_of_expr(node.operand)</code> を
+<code>elem_ty_str</code> に通す」だけで、これも実装対象である。</p>
+<h2 id="sizeof-のコード生成-コマ9-からの差分"><code>sizeof</code> のコード生成 — コマ9 からの差分</h2>
+<p><code>sizeof(型名)</code> そのものはコマ9 で導入済みである。
+AST ノードも <code>(sizeof-type ...)</code> のままで増えていないし、
+「型情報からサイズを調べ、即値を <code>a0</code> に入れる」という形もそこで決まっている。</p>
+<p>この回で新しいのは、被演算子に <code>struct タグ名</code> が来る場合だけである。</p>
+<div class="table-scroll">
+<table style="width:100%;">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 57%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>式</th>
+<th>サイズの求め方</th>
+<th>導入回</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>sizeof(int)</code>・<code>sizeof(char)</code>・<code>sizeof(int *)</code></td>
+<td>型ごとに決まった値</td>
+<td>コマ9</td>
+</tr>
+<tr class="even">
+<td><code>sizeof(struct Node)</code></td>
+<td>構造体情報表 <code>self._struct_defs</code> から引く</td>
+<td>この回</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>違いは、構造体のサイズが型名だけでは決まらないことである。
+フィールドの並びと境界合わせの余白まで見て初めてサイズが決まるので、
+この回で作った構造体情報表を参照する必要がある。
+そのため <code>size_of_ty_str()</code> に第2引数として <code>self._struct_defs</code> を渡す。</p>
+<div class="sourceCode" id="cb21" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_SizeofType(<span class="va">self</span>, node):</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&quot;  li a0, </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>size_of_ty_str(node.ty_str, <span class="va">self</span>._struct_defs)<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>たとえば <code>sizeof(struct Node)</code> は、<code>self._struct_defs["struct Node"]["size"]</code> が16なら <code>li a0, 16</code> を出す。
+コマ9 と同じく、出るのは即値1命令だけで、実行時に型を調べる処理は生成されない。</p>
+<p><code>sizeof</code> の被演算子は型名だけである。<code>sizeof 式</code>（<code>sizeof x</code> のように式を書く形）は
+言語仕様の対象外なので（<code>language_spec.md</code> の「除外」節）、スキャフォールドの AST にも
+対応するノードは無い。これはコマ9 と同じで、この回でも変わらない。</p>
+<h2 id="malloc-を呼び出すと何が起きるか"><code>malloc</code> を呼び出すと何が起きるか</h2>
+<p><code>malloc</code> は、指定されたバイト数ぶんのメモリ領域をヒープから確保し、
+その先頭アドレスを返すライブラリ関数である。</p>
+<div class="sourceCode" id="cb22" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="kw">struct</span> Node<span class="op">));</span></span></code></pre></div>
+<p>コンパイラが行うことは、通常の関数呼び出しと同じである。
+まず <code>sizeof(struct Node)</code> を <code>a0</code> に計算し、それを第1引数として <code>malloc</code> を呼び出す。
+戻り値も <code>a0</code> に返る。この回で追加の実装は要らない。</p>
+<p>返ってきた値は、構造体そのものではなく、確保されたメモリ領域の先頭アドレスである。
+そのアドレスを <code>struct Node *n</code> に代入することで、以後その領域を <code>struct Node</code> として扱える。</p>
+<div class="sourceCode" id="cb23" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>n<span class="op">-&gt;</span>val <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>n<span class="op">-&gt;</span>next <span class="op">=</span> NULL<span class="op">;</span></span></code></pre></div>
+<p>重要なのは、<code>malloc</code> はメモリを確保するだけで、中身を初期化しないことである。
+確保直後の <code>n-&gt;val</code> や <code>n-&gt;next</code> の値は未定義なので、使う前に自分で代入する必要がある。</p>
+<p>実際の <code>malloc</code> の内部では、未使用のヒープ領域を管理し、要求されたサイズに合う領域を探して返す。
+足りなければ OS から追加のメモリを取得する。ただし今回のコンパイラでは、その仕組みを実装しない。
+コンパイラが担当するのは、引数を <code>a0</code> に置き、呼び出し規約に従って libc の <code>malloc</code> を
+呼び出すところまでである。本来必要な <code>free</code> による解放も、プログラムがすぐ終了する
+小さな例だけを扱うこの回では実装範囲に含めない。</p>
+<h2 id="null-どこも指していないポインタ"><code>NULL</code> — 「どこも指していない」ポインタ</h2>
+<p><code>n-&gt;next = NULL;</code> の <code>NULL</code> は、この回で初めて使う名前である。</p>
+<p><code>NULL</code> は言語のキーワードではなく、<code>lib.h</code> の最後にある1行のマクロである。</p>
+<div class="sourceCode" id="cb24" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#define NULL </span><span class="dv">0</span></span></code></pre></div>
+<p><code>#include "lib.h"</code>（コマ10）でこの定義が取り込まれ、
+スキャフォールドの前処理が <code>NULL</code> を <code>0</code> に置き換えてから Lexer に渡す。
+<code>list_min.c</code> のS式で <code>n-&gt;next = NULL;</code> が
+<code>(assign (member "-&gt;" "next" (var "n")) (num 0))</code> になっているのは、
+Parser が見る時点ではすでに <code>0</code> になっているからである。</p>
+<p>そのため、コンパイラ側に <code>NULL</code> のための処理は要らない。
+<code>NULL</code> を書くために必要なのは <code>#include "lib.h"</code> だけである。</p>
+<p>意味の上では、<code>NULL</code> は「どのオブジェクトも指していない」ことを表すポインタ値である。
+アドレス 0 にはプログラムのデータが置かれないので、
+「有効なアドレスではない」印として 0 を使える。
+<code>p = NULL;</code> は「まだどこも指していない」、<code>p != NULL</code> は「有効なアドレスを持っている」
+という意味になる。<code>NULL</code> のポインタを間接参照してはいけない（実行時にクラッシュする）。
+連結リストでは、この規則がそのまま「終端に着いたら止まる」という走査の条件になる。</p>
+<h2 id="連結リストの走査">連結リストの走査</h2>
+<p>連結リストは、各ノードが次のノードへのポインタを持つ構造である。</p>
+<div class="sourceCode" id="cb25" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> list_sum<span class="op">(</span><span class="kw">struct</span> Node <span class="op">*</span>head<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> sum<span class="op">;</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span>head <span class="op">!=</span> NULL<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>        sum <span class="op">=</span> sum <span class="op">+</span> head<span class="op">-&gt;</span>val<span class="op">;</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>        head <span class="op">=</span> head<span class="op">-&gt;</span>next<span class="op">;</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum<span class="op">;</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><code>head != NULL</code> は、まだ終端に着いていないこと、つまり <code>head</code> が指す先を読んでよいことを調べている
+（前処理を通った後は <code>head != 0</code> になる）。
+<code>head-&gt;val</code> で現在のノードの値を読み、<code>head = head-&gt;next</code> で次のノードへ進む。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong><code>while (head != NULL &amp;&amp; head-&gt;val &gt; 0)</code> とは書けない</strong>。
+このスキャフォールドの <code>&amp;&amp;</code> は両辺を必ず評価するため、
+<code>head</code> が <code>NULL</code> のときに <code>head-&gt;val</code> を読んでクラッシュする。
+NULL の判定と中身の判定は、上の例のように分けて書くこと
+（短絡評価の実装は発展課題 S1 で扱う）。</p>
+</div>
+<figure>
+<img src="../../figures/12_linked_list.svg" alt="スタック上の head とヒープ上に確保された3ノード" />
+<figcaption aria-hidden="true">スタック上の <code>head</code> とヒープ上に確保された3ノード</figcaption>
+</figure>
+<p><code>head</code> はスタック上のローカル変数だが、各ノードは <code>malloc</code> で確保したヒープ上にある。
+<code>head = head-&gt;next</code> は、<code>head</code> の指す先を矢印1つぶん右のノードへ進める。</p>
+<h2 id="編集するファイル">編集するファイル</h2>
+<ul>
+<li><code>mycc.py</code></li>
+</ul>
+<p><code>importlib</code> でコマ11 の <code>Codegen11</code> を継承した <code>Codegen12</code> に、以下の機能を追加する。</p>
+<p>スケルトンに<strong>あらかじめ書かれている</strong>ものは次の通りで、実装対象ではない。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>提供済み</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>parse_struct_defs(source)</code> / <code>parse_field_decls(body)</code></td>
+<td>ソースから構造体定義を集める</td>
+</tr>
+<tr class="even">
+<td><code>size_of_ty_str(ty, defs=None)</code> / <code>align_of_ty_str(ty)</code> / <code>is_struct_ty_str(ty, defs)</code></td>
+<td>サイズ・境界と struct 判定</td>
+</tr>
+<tr class="odd">
+<td><code>field_offset(...)</code> / <code>field_ty(...)</code></td>
+<td>フィールドのオフセットと型</td>
+</tr>
+<tr class="even">
+<td><code>_type_of_expr()</code> / <code>_type_of_lval()</code> / <code>codegen_lval()</code> / <code>codegen()</code> / <code>collect_strings_expr()</code> のディスパッチ</td>
+<td><code>'Member'</code> と <code>'SizeofType'</code> の分岐は既に書かれている。書くのは飛び先のハンドラだけである</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>実装対象は、スケルトンの <code>raise NotImplementedError</code> が置かれている次の12個である。</p>
+<div class="table-scroll">
+<table style="width:100%;">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 52%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>実装対象</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>_member_struct_type(node)</code></td>
+<td><code>.</code> と <code>-&gt;</code> の違いを踏まえて対象の構造体型名を返す</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>alloc_local(name, ty_str)</code></td>
+<td><code>size_of_ty_str</code> に <code>self._struct_defs</code> を渡し、struct のサイズで領域を確保する</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>_scale_index(elem_ty)</code></td>
+<td>同上。struct へのポインタの添字で要素サイズを正しく求める</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>_load_ty(ty_str)</code></td>
+<td>同上。加えて struct 型はロードせずアドレスのまま扱う（<code>is_struct_ty_str</code> で判定）</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>_store_ty(ty_str)</code></td>
+<td>同上。struct のサイズを引けるようにする</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td><code>type_of_expr_Member(node)</code></td>
+<td><code>Member</code> の型は左辺値型と同じ</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td><code>type_of_lval_Member(node)</code></td>
+<td><code>_member_struct_type</code> と <code>field_ty</code> でメンバの型を求める</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td><code>codegen_lval_Member(node)</code></td>
+<td>ベースアドレス + <code>field_offset</code></td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td><code>codegen_Member(node)</code></td>
+<td>左辺値アドレスを作り、メンバ型でロードする</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td><code>collect_strings_expr_Member(node)</code></td>
+<td><code>Member</code> の operand も文字列収集の対象にする</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td><code>type_of_expr_SizeofType(node)</code></td>
+<td><code>sizeof(型名)</code> の型は <code>int</code></td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td><code>codegen_SizeofType(node)</code></td>
+<td><code>node.ty_str</code> のサイズを求め、<code>li a0, &lt;size&gt;</code> を出力する</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>2〜5 の4つは、コマ11 まで動いていたコードに <code>self._struct_defs</code> を足すだけの修正である。
+ただし直し忘れに気づけるよう、スケルトンでは4つとも <code>raise NotImplementedError</code> を置き、
+コマ11 版のコードは TODO コメントの中に残してある。</p>
+<p>11・12 の2つを書けば <code>malloc</code> と自己参照構造体と連結リストが動く。
+<code>malloc</code> 呼び出しはコマ6 の関数呼び出しが、<code>-&gt;</code> は 1〜10 で書いた構造体処理が、
+そのまま働くからである。</p>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>スケルトンの <code>importlib</code> 継承によりコマ11の Codegen クラスを引き継ぐ（あらかじめ書かれている）</li>
+<li><code>parse_struct_defs(source)</code> で構造体定義をパースし、コンストラクタで <code>self._struct_defs</code> に渡す（あらかじめ書かれている）</li>
+<li><code>alloc_local()</code> / <code>_scale_index()</code> / <code>_load_ty()</code> / <code>_store_ty()</code> の <code>size_of_ty_str</code> 呼び出しに <code>self._struct_defs</code> を渡す</li>
+<li><code>_load_ty()</code> は <code>struct</code> 型のときロードせず、アドレスのまま扱う（<code>is_struct_ty_str</code> で判定）</li>
+<li><code>_member_struct_type(node)</code> を実装する（<code>.</code> は <code>_type_of_lval</code>、<code>-&gt;</code> は <code>_type_of_expr</code> + <code>elem_ty_str</code>）</li>
+<li><code>type_of_lval_Member(node)</code> と <code>type_of_expr_Member(node)</code> を実装する（フィールドの型は <code>field_ty</code> で引く）</li>
+<li><code>codegen_lval_Member(node)</code> を実装する（ベースアドレスに <code>field_offset</code> を足す）</li>
+<li><code>codegen_Member(node)</code> を実装する（<code>codegen_lval_Member</code> のアドレスを <code>_load_ty</code> でロードする）</li>
+<li><code>collect_strings_expr_Member(node)</code> を実装する（<code>Member</code> の operand を走査する）</li>
+<li><code>dot_access.c</code> を通し、続けて <code>arrow_access.c</code> を通す</li>
+<li><code>type_of_expr_SizeofType(node)</code> を実装する（<code>'int'</code> を返すだけでよい）</li>
+<li><code>codegen_SizeofType(node)</code> を実装する（<code>self.size_of_ty_str(node.ty_str, self._struct_defs)</code> の値を <code>li a0, &lt;size&gt;</code> で出す。<code>self._struct_defs</code> を渡し忘れると <code>struct</code> のサイズが 4 になる）</li>
+<li><code>sizeof_test.c</code> を通す（<code>sizeof(int) + sizeof(char)</code>）</li>
+<li><code>malloc_struct.c</code> / <code>list_min.c</code> を通す<br>（<code>parse_struct_defs()</code> は自己参照フィールド <code>struct Node *next</code> をそのまま扱える。ポインタは中身を知らなくてもサイズ 8 で確定するからである。<code>malloc(sizeof(struct Node))</code> はコマ6 の関数呼び出しがそのまま働くので、追加の実装は要らない。）</li>
+<li><code>list_sum.c</code> まで通す</li>
+<li><code>void_ptr.c</code> を通す<br>（<code>void *</code> と任意の <code>T *</code> の相互変換。<code>void *</code> の変数・仮引数も書ける。ポインタ同士なのでサイズは常に 8 で、変換のための命令は要らない。）</li>
+</ol>
+<h2 id="tests">tests/</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>dot_access.c</code></td>
+<td><code>p.x</code>, <code>p.y</code> の読み書き</td>
+<td><code>7</code></td>
+</tr>
+<tr class="even">
+<td><code>arrow_access.c</code></td>
+<td><code>struct Point *p</code> に対する <code>p-&gt;x</code></td>
+<td><code>25</code></td>
+</tr>
+<tr class="odd">
+<td><code>sizeof_test.c</code></td>
+<td><code>sizeof(int) + sizeof(char)</code></td>
+<td><code>5</code></td>
+</tr>
+<tr class="even">
+<td><code>malloc_struct.c</code></td>
+<td><code>malloc(sizeof(struct Box))</code> と <code>-&gt;</code></td>
+<td><code>17</code></td>
+</tr>
+<tr class="odd">
+<td><code>list_min.c</code></td>
+<td><code>malloc</code> した1ノードを <code>-&gt;</code> で読む最小形</td>
+<td><code>10</code></td>
+</tr>
+<tr class="even">
+<td><code>list_sum.c</code></td>
+<td><code>struct Node</code> の連結リスト走査</td>
+<td><code>60</code></td>
+</tr>
+<tr class="odd">
+<td><code>void_ptr.c</code></td>
+<td><code>void *</code> と <code>T *</code> のキャストなしの相互変換</td>
+<td><code>47</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb26" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/12_struct_malloc_list</span></code></pre></div>
+<p><code>tests/dot_access.c</code> がコンパイルでき、終了コード <code>7</code> になれば基本形は成功。</p>
+<p>個別に動かす場合は、次のようにする。</p>
+<div class="sourceCode" id="cb27" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="va">DIR</span><span class="op">=</span>sessions/12_struct_malloc_list</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="va">$DIR</span>/mycc.py <span class="va">$DIR</span>/tests/dot_access.c <span class="dt">\</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="注意">注意</h2>
+<p>構造体代入は言語仕様にないため扱わない。
+<code>struct Point a; a = b;</code> のように構造体そのものを代入することはできず、
+フィールドを1つずつ代入するか、ポインタで渡す。
+関数の引数・戻り値も同じで、構造体を値で受け渡すことはしない（<code>struct Point *</code> を渡す）。
+構造体代入は発展課題 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/S3_struct/README.md">S3</a> で、
+引数・戻り値の値渡し・値返しは発展課題
+<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L5_struct_byval/README.md">L5</a> で実装する。</p>
+<p>フィールドに書けるのは <code>int</code>、<code>char</code>、ポインタだけである。
+struct 値を入れ子にすることはできない（<code>struct Node *next</code> のようなポインタは書ける）。</p>
+<p>構造体のサイズを手で数えてはいけない。
+<code>struct Node { int val; struct Node *next; }</code> は余白を含めて 16 バイトなので、
+<code>4 + 8 = 12</code> と数えて <code>malloc</code> に渡すと <code>next</code> の書き込みが領域外に出る。
+サイズは必ず <code>sizeof</code> で求める。</p>
+<p><code>sizeof</code> は翻訳時に値が決まる。扱うのは <code>sizeof(型名)</code> の形だけで、<code>sizeof(式)</code> は扱わない。</p>
+<p><code>malloc</code> は自作しない。<code>lib.h</code> の宣言を使い、リンク時に libc の <code>malloc</code> に解決する。
+<code>free</code> を呼ばないので、確保した領域はプログラム終了まで残る。</p>
+<p>グローバルな構造体変数はコマ13 で扱う。この回はローカル変数と引数だけである。</p>
+<h2 id="ここまでで着手できる発展課題">ここまでで着手できる発展課題</h2>
+<p>構造体と <code>malloc</code> まで学んだので、構造体の代入を仕様（不可）へ合わせる
+<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/S3_struct/README.md">S3</a>、型検査パスを足す
+<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/Q1_typecheck/README.md">Q1</a>、自前 <code>malloc</code>（バンプ割り当て →
+フリーリスト）を作る <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/R3_malloc/README.md">R3</a> に着手できる。</p>
+<p>生成したアセンブリでメンバの offset 計算や <code>malloc</code> が返すアドレスを1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/11_expr_walk_libc/"><span class="label">前へ</span>コマ11: 式の走査と libc 活用</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/13_globals_scope/"><span class="label">次へ</span>コマ13: グローバル変数・スコープ管理</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/12_struct_malloc_list.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

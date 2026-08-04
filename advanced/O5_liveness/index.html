@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>生存変数解析 — 「この値はまだ使われるか」を解く — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">生存変数解析 — 「この値はまだ使われるか」を解く</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#なぜ-o4-の後なのか" id="toc-なぜ-o4-の後なのか">なぜ O4 の後なのか</a></li>
+      <li><a href="#生きているとは" id="toc-生きているとは">生きている、とは</a></li>
+      <li><a href="#命令ごとの-def-と-use" id="toc-命令ごとの-def-と-use">命令ごとの def と use</a></li>
+      <li><a href="#ブロック単位にまとめる" id="toc-ブロック単位にまとめる">ブロック単位にまとめる</a></li>
+      <li><a href="#方程式を解く" id="toc-方程式を解く">方程式を解く</a></li>
+      <li><a href="#なぜ1回では終わらないか" id="toc-なぜ1回では終わらないか">なぜ1回では終わらないか</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#測ってみると" id="toc-測ってみると">測ってみると</a></li>
+      <li><a href="#呼び出しをまたいで生きるもの" id="toc-呼び出しをまたいで生きるもの">呼び出しをまたいで生きるもの</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>「この地点から先で、このレジスタの値がまだ読まれるか」を、
+フローグラフ全体にわたって求める。<strong>後ろ向き</strong>のデータフロー解析を1つ作る。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>O1（<code>golden.py</code> が <code>O1_measure/bench/</code> の5本を対象にする）、O2（フローグラフの上で解く）、O4（割り当て前は解析しても何も出てこない）</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>O3（命令選択）</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、<code>optcc.py</code></td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>liveness.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が <code>bench/*.c</code> で「割り当て前は空振り、割り当て後に効く」ことを確認する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>最適化発展シリーズの第5回。この回は命令数を減らさない（解析そのものが成果物で、O6 が使う）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>この回は命令数を減らさない。</strong> 解析そのものが成果物で、
+O6（コピー伝播と死コード除去）がこの解析を使う。</p>
+<h2 id="なぜ-o4-の後なのか">なぜ O4 の後なのか</h2>
+<p>O3 の <code>is_dead_after</code> は、ラベルや分岐に出会うと
+「ここで基本ブロックが終わる → 判断できない」と答えて畳み込みをあきらめていた。</p>
+<p>前向きに1行ずつ見るだけなので、ラベルの先が分からないのである。
+フローグラフの上で解けば、ブロックを越えて答えられる。</p>
+<p>ただし、<strong>O4 を通す前の出力に対しては、解いても何も出てこない</strong>。
+コマ15 のコード生成は a0/a1 の2本しか使わず、値をすぐスタックへ逃がす。
+レジスタの生存区間が数命令しかないので、
+ブロックの境界をまたいで生きているレジスタが存在しないのである。</p>
+<p>O4 で変数を s1〜s11 に置いて初めて、
+「ループの間ずっと生きている値」がレジスタの上に現れる。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p><strong>解析が何を見つけられるかは、コードの表現の仕方で決まる。</strong>
+同じ解析でも、表現が変われば結果が変わる。
+この回では、それを数字で確かめる。</p>
+</div>
+<h2 id="生きているとは">生きている、とは</h2>
+<p>あるレジスタが<strong>生きている</strong>（live）とは、
+「その地点より先で、書き換えられる前に読まれる」ことをいう。</p>
+<div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">5</span>          <span class="co"># ここで a0 は死んでいる(この後すぐ上書きされるなら)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">7</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  add a1<span class="op">,</span> a0<span class="op">,</span> a0    <span class="co"># ここでは a0 は生きている(直後に読まれる)</span></span></code></pre></div>
+<p>生きていない値は、計算する必要がない。これが死コード除去の根拠になる。</p>
+<h2 id="命令ごとの-def-と-use">命令ごとの def と use</h2>
+<p>まず、命令1つが「何を書き」「何を読む」かを決める。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 32%" />
+<col style="width: 32%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>命令</th>
+<th>def（書く）</th>
+<th>use（読む）</th>
+<th>注意</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>add rd, rs1, rs2</code></td>
+<td><code>{rd}</code></td>
+<td><code>{rs1, rs2}</code></td>
+<td>算術一般</td>
+</tr>
+<tr class="even">
+<td><code>li rd, N</code></td>
+<td><code>{rd}</code></td>
+<td><code>{}</code></td>
+<td>定数は use にならない</td>
+</tr>
+<tr class="odd">
+<td><code>lw rd, N(rs)</code></td>
+<td><code>{rd}</code></td>
+<td><code>{rs}</code></td>
+<td><strong>ベース</strong>を読む</td>
+</tr>
+<tr class="even">
+<td><code>sw rs2, N(rs1)</code></td>
+<td><strong><code>{}</code></strong></td>
+<td><code>{rs2, rs1}</code></td>
+<td><strong>ストアはレジスタに書かない</strong></td>
+</tr>
+<tr class="odd">
+<td><code>beqz rs, L</code></td>
+<td><code>{}</code></td>
+<td><code>{rs}</code></td>
+<td>飛び先ラベルは外す</td>
+</tr>
+<tr class="even">
+<td><code>call f</code></td>
+<td>caller-saved すべて</td>
+<td><code>a0</code>〜<code>a7</code></td>
+<td>呼び出し規約から決まる</td>
+</tr>
+<tr class="odd">
+<td><code>ret</code></td>
+<td><code>{}</code></td>
+<td><code>a0</code>, <code>ra</code>, <code>sp</code>, <code>s0</code> と<strong>復帰する callee-saved</strong></td>
+<td>呼び出し元へ返す義務がある</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>4つ、間違えやすいところがある。</p>
+<p><strong>ストアの def は空である。</strong> <code>sw a0, -24(s0)</code> が書き込む先はメモリであって、
+レジスタではない。ここを <code>{a0}</code> にしてしまうと、
+まだ使う値を「死んでいる」と判断して消してしまう。</p>
+<p><strong><code>call</code> はレジスタを壊す。</strong> 呼ばれた側が自由に使ってよいレジスタ
+（<code>a0</code>〜<code>a7</code>, <code>ra</code>, <code>t0</code>〜<code>t6</code>）を全部 def 扱いにする。
+「呼び出しの向こう側で何が起きるか分からない」ことを、そのまま表す。</p>
+<p><strong><code>call</code> の use は安全側に倒す。</strong> その関数が引数を何個取るかは、
+<code>call f</code> という命令からは分からない。だから <code>a0</code>〜<code>a7</code> を全部 use にする。
+実際より多く見えるが、<strong>少なく見積もるより安全</strong>である。</p>
+<p><strong><code>ret</code> は「復帰する」callee-saved を読む。</strong> 呼び出し元は <code>s0</code>〜<code>s11</code> と <code>sp</code> が
+保たれていることを期待している。つまり関数の出口では、これらが<strong>生きている</strong>。</p>
+<p>これを忘れると、エピローグの復帰が死コードとして消える。</p>
+<div class="sourceCode" id="cb2" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">.L1:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  ld s1<span class="op">,</span> <span class="op">-</span><span class="dv">40</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># s1 は「この先で読まれない」ように見える</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  ld s0<span class="op">,</span> <span class="dv">32</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>       <span class="co"># → 消される → 呼び出し元の s1 が壊れる</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ret</span></span></code></pre></div>
+<p><code>main</code> だけのプログラムでは気づきにくい。
+<code>strops</code> のように関数を呼ぶプログラムで、<strong>呼び出し元のループ変数が壊れて
+無限ループになる</strong>という形で表面化する。</p>
+<p>ただし <code>s1</code>〜<code>s11</code> を<strong>無条件に</strong>読むことにしてはいけない。
+O4 の <code>save_restore</code> は、<strong>昇格した変数の分だけ</strong> <code>sd</code> / <code>ld</code> を出す。
+一度も触っていない <code>s7</code> は保存も復帰もされないので、
+出口で生きている必要もない —— 保っているのは呼び出し元自身だからである。</p>
+<p>そこで、関数ごとに「エピローグで実際に復帰する <code>sN</code>」を集める。
+<code>ld sN, ...(s0)</code> を探すだけなので、これは完成済みで渡してある。</p>
+<div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>restored_saved(blocks)   <span class="co"># → {&#39;main&#39;: {&#39;s1&#39;, &#39;s2&#39;}, &#39;f&#39;: set(), ...}</span></span></code></pre></div>
+<p>これを <code>def_use(insn, saved)</code> の第2引数に渡し、<code>ret</code> の use に足す。
+<code>solve</code> と <code>live_after</code> はブロックの <code>func</code> を見て、
+その関数の集合を選んで渡す。</p>
+<h2 id="ブロック単位にまとめる">ブロック単位にまとめる</h2>
+<p>ブロックの中は一本道なので、先頭から順になめれば <code>def</code> と <code>use</code> が決まる。</p>
+<pre data-lang="text"><code>use  … ブロックの中で「書かれる前に」読まれるレジスタ
+def  … ブロックの中で書かれるレジスタ</code></pre>
+<p>「書かれる前に」が肝である。</p>
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  mv  a0<span class="op">,</span> s1        <span class="co"># s1 は use</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  li  a0<span class="op">,</span> <span class="dv">5</span>         <span class="co"># a0 に書いてから</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  add a1<span class="op">,</span> a0<span class="op">,</span> a0    <span class="co"># 読んでいるので、この a0 は use ではない</span></span></code></pre></div>
+<h2 id="方程式を解く">方程式を解く</h2>
+<figure>
+<img src="../../figures/O5_liveness.svg" alt="後ろ向きの反復で live_in / live_out を求める" />
+<figcaption aria-hidden="true">後ろ向きの反復で live_in / live_out を求める</figcaption>
+</figure>
+<pre data-lang="text"><code>live_out[B] = ∪ live_in[S]              (S は B の後続)
+live_in[B]  = use[B] ∪ (live_out[B] − def[B])</code></pre>
+<p>「後続で生きているものは、自分の出口でも生きている」
+「入口で生きているのは、自分が読むものと、自分が書き換えずに通す（後で使われる）もの」
+と読める。</p>
+<p><strong>後ろ向き</strong>なのは、<code>live_out</code> が後続から決まるからである。
+情報は制御の流れと逆向きに伝わる。</p>
+<h2 id="なぜ1回では終わらないか">なぜ1回では終わらないか</h2>
+<p>ループがあると、1周では解けない。</p>
+<pre data-lang="text"><code>.L3 の live_out は .L2 の live_in から来る
+.L2 の live_in は … 後方辺をたどって .L3 の結果に依存している</code></pre>
+<p>お互いに依存しているので、<strong>変化がなくなるまで繰り返す</strong>。
+これを<strong>不動点反復</strong>という。集合は増える一方なので、必ず止まる。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>def_use</code></td>
+<td>上の表（<code>saved</code> は <code>ret</code> の use に足す）</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>block_def_use</code> / <code>solve</code></td>
+<td>方程式を不動点まで解く</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>live_after</code></td>
+<td>命令単位に展開（O6 が使う）</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>live_across_calls</code></td>
+<td>呼び出しをまたいで生きるレジスタ</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>呼び出し規約の定数・<code>restored_saved</code>・可視化（<code>annotate</code>）は完成済みである。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 安全側に倒しすぎると、解析は何も言わなくなる。</strong></p>
+<p>「<code>ret</code> は <code>s1</code>〜<code>s11</code> を全部読む」としても、答えは<strong>安全</strong>ではある。
+生きているものを死んでいると言わないので、間違ったコードは生まれない。</p>
+<p>しかしこの粗い仮定を入れると、一度も定義されない <code>sN</code> は
+<code>ret</code> の use から関数の入口まで遡り、<strong>全ブロックで生きている</strong>ことになる。
+実際にこの教材の初版はそうなっていて、平均生存本数はどのベンチマークでも
+9〜10 本に張りついた。割り当ての前後の差は完全に埋もれ、
+それどころか「割り当て<strong>後</strong>のほうが少ない」という逆転まで起きた
+（復帰した数本だけがエピローグでローカルに use を満たし、消えるからである）。</p>
+<p>安全側に倒すのは正しい。だが<strong>倒した幅のぶんだけ、解析は何も言わなくなる</strong>。
+<code>call</code> の use を <code>a0</code>〜<code>a7</code> 全部にしているのも同じ性質を持っている（発展課題 1）。</p>
+</div>
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py       <span class="co"># 割り当ての前後で解析結果を比べ、図を書き出す</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># def_use と方程式の解の単体テスト(未実装は SKIP)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># bench/*.c で「割り当て前は空振り、割り当て後に効く」を確認</span></span></code></pre></div>
+<p><code>check.py</code> の Step 2 には<strong>ループを含む例</strong>が入っている。
+1回なめただけでは解けないことを、ここで確かめる。</p>
+<h2 id="測ってみると">測ってみると</h2>
+<p><strong>この回は命令数を変えないので、O1 の<a href="../../advanced/O1_measure/#baseline">全構成の基準表</a>に列を持たない。</strong>
+代わりに測るのは、ブロックの境界で生きているレジスタの平均本数である
+（<code>sp</code> / <code>s0</code> / <code>ra</code> は常に生きているので数えない）。
+「割当なし」は基準表の <code>+isel</code> 列、「割当あり」は <code>+regalloc</code> 列の出力に対応する。</p>
+<pre data-lang="text"><code>ベンチマーク   ブロック  割当なし  割当あり   値を運ぶ s レジスタ
+bubble             14      0.07      3.00   s1, s2, s3, s5
+fib_rec             6      1.50      1.50   (なし)
+loop_sum            6      0.17      1.50   s1, s2
+matmul             20      0.05      4.65   s1, s2, s3, s4, s5, s6, s7
+strops             18      1.56      3.67   s1, s2, s3, s4
+平均                        0.67      2.86</code></pre>
+<p><code>matmul</code> は割り当て前 <strong>0.05</strong>。20ブロックのうち、
+境界で値を運んでいるレジスタはほぼ皆無である。
+解析器としては正しく動いているのに、<strong>得られる情報が無い</strong>。</p>
+<p>割り当て後は 4.65 になる。<code>s1</code>〜<code>s7</code> が、3重ループの添字 <code>i</code> / <code>j</code> / <code>k</code> と
+合計 <code>t</code>、それに <code>malloc</code> で取った3本の配列ポインタ <code>a</code> / <code>b</code> / <code>c</code> を
+運んでいる。ポインタは関数の最初から最後まで生き続けるので、
+平均生存本数を大きく押し上げる。</p>
+<p><code>fib_rec</code> だけ変わらないのは、O4 が「割に合わない」と判断して
+1つも昇格しなかったからである（O4 コマ2）。</p>
+<h2 id="呼び出しをまたいで生きるもの">呼び出しをまたいで生きるもの</h2>
+<pre data-lang="text"><code>bubble       call  1回  callee-saved が要るもの: (なし)
+fib_rec      call  3回  callee-saved が要るもの: (なし)
+loop_sum     呼び出しなし
+matmul       call  3回  callee-saved が要るもの: s1, s2
+strops       call  2回  callee-saved が要るもの: s1, s3</code></pre>
+<p><code>strops</code> の <code>s1</code> と <code>s3</code> は、<code>my_strlen(s)</code> や <code>count_char(s, 111)</code> を
+呼んだ後もまだ使われる。だから callee-saved に置く必要がある —— 解析がそれを裏づけている。</p>
+<p><code>matmul</code> の <code>s1</code>, <code>s2</code> は<strong>配列を確保する <code>malloc</code> の戻り値ポインタ</strong>である。</p>
+<div class="sourceCode" id="cb12" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">36</span><span class="op">);</span>   <span class="co">// a は s1 へ</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">36</span><span class="op">);</span>   <span class="co">// ← この call の時点で a は生きている</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">int</span><span class="op">)</span> <span class="op">*</span> <span class="dv">36</span><span class="op">);</span>   <span class="co">// ← ここでは a も b も生きている</span></span></code></pre></div>
+<p><code>a</code> は2回目・3回目の <code>malloc</code> をまたいで生き、そのあと3重ループの最後まで
+使われる。呼び出しをまたぐのだから、<code>a0</code>〜<code>a7</code> や <code>t0</code>〜<code>t6</code> に置くわけにはいかない。
+<strong>配列の代わりに <code>malloc</code> を使う言語仕様が、そのまま callee-saved の必要性を生んでいる。</strong></p>
+<p><code>bubble</code> は <code>malloc</code> を1回しか呼ばない。ポインタはその <code>call</code> が<strong>返す</strong>値なので、
+またいで保つべき値はまだ無い —— だから1回呼んでいても「(なし)」である。
+「呼び出しがある」ことと「呼び出しをまたいで値が生きる」ことは別だと分かる。</p>
+<p><code>fib_rec</code> が「(なし)」なのは、O4 が昇格しなかったので保つべき値が無いからである。
+<strong>O4 の判断が正しかったことを、O5 の解析が確認している。</strong></p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong><code>call</code> の use を正確にする</strong>: いまは <code>a0</code>〜<code>a7</code> を全部 use にしている。
+関数の引数個数が分かれば減らせる。何を見れば分かるか。減らすと結果はどう変わるか</li>
+<li><strong>干渉グラフ</strong>: 同じ地点で同時に生きている2つのレジスタは、同じレジスタに割り当てられない。
+この関係をグラフにする。O4 で変数が11個を超えたときに必要になる</li>
+<li><strong>到達定義解析</strong>: 生存解析と逆向き（前向き）の解析。
+「この地点の値はどの命令が書いたか」を求める。方程式はどう変わるか</li>
+<li><strong>O4 へ戻す</strong>: <code>live_across_calls</code> を使えば、O4 の退避を
+「本当に必要なレジスタだけ」に減らせる。<code>strops</code> で何命令減るか</li>
+<li><strong>解の一意性</strong>: 空集合から始めて増やしていく代わりに、
+全集合から始めて減らしていくとどうなるか。同じ答えになるか</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: データフロー解析は「同じ枠組み」の family である。</strong>
+生存変数解析・到達定義解析・利用可能式解析・定数伝播は、
+どれも「ブロックごとの局所的な情報を、方程式で全体に伝える」という同じ形をしている。
+違うのは、向き（前向き/後ろ向き）と、
+合流点での演算（和集合をとるか、積集合をとるか）だけである。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>解析</th>
+<th>向き</th>
+<th>合流</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>生存変数</td>
+<td>後ろ向き</td>
+<td>∪</td>
+</tr>
+<tr class="even">
+<td>到達定義</td>
+<td>前向き</td>
+<td>∪</td>
+</tr>
+<tr class="odd">
+<td>利用可能式</td>
+<td>前向き</td>
+<td>∩</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>1つ書ければ、残りは枠組みの当てはめで書ける。
+この回で作ったのは、その最初の1つである。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/O4_regalloc/"><span class="label">前へ</span>レジスタ割り当て — 変数をメモリから追い出す</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/O6_copyprop/"><span class="label">次へ</span>コピー伝播と死コード除去 — 順番が結果を決める</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/O5_liveness.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

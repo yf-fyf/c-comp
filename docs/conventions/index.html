@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>実装の約束ごと — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/" aria-current="page">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../docs/">仕様・参考文書</a></nav>
+    <h1 class="page-title">実装の約束ごと</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#守ってほしい設計" id="toc-守ってほしい設計">守ってほしい設計</a></li>
+      <li><a href="#命名の目安" id="toc-命名の目安">命名の目安</a></li>
+      <li><a href="#コメント" id="toc-コメント">コメント</a></li>
+      </ul>
+    </nav>
+    
+<p>Python 版コンパイラ（<code>sessions/</code> と <code>final/</code>）を書くときの規約。
+C 版へ移植するときの規約は発展課題 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/P1_selfhost/README.md"><code>P1_selfhost</code></a> にある。</p>
+<p>ここに書くのは「どう書くか」の規約であり、「何を受理するか」は
+<a href="../../docs/language_spec/"><code>language_spec.md</code></a>（第 2 版、2026 年改訂）が定める。</p>
+<p><strong>読みどき</strong>: コード生成を書き始めるコマ2 の前に一度、全体に目を通す。
+ただし最重要の <a href="#codegen-と-codegen_lval-を分ける"><code>codegen()</code> と <code>codegen_lval()</code> を分ける</a>は
+コマ3 で最小形を導入しコマ7 で拡張する内容なので、両方の回で改めてここに戻ること。</p>
+<hr />
+<h2 id="編集するファイル">編集するファイル</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>時期</th>
+<th>編集対象</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>通常回</td>
+<td><code>sessions/NN_xxx/mycc.py</code></td>
+</tr>
+<tr class="even">
+<td>コマ15 以降</td>
+<td><code>final/mycc.py</code>（各回の成果を統合したもの）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>scaffold/</code> は書き換えない。Lexer / Parser / AST 定義は提供物として扱う
+（自作したい場合は発展課題の F 系列で扱う）。</p>
+<h2 id="守ってほしい設計">守ってほしい設計</h2>
+<h3 id="codegen-と-codegen_lval-を分ける"><code>codegen()</code> と <code>codegen_lval()</code> を分ける</h3>
+<p><strong>この教材でいちばん重要な設計</strong>である。コマ3 で <code>codegen_lval()</code> を
+<code>'Var'</code>（ローカル変数）だけの最小形として導入し、コマ7 で <code>'Deref'</code>（<code>*p</code>）へ
+拡張する。以降ずっと使う。</p>
+<div class="sourceCode" id="cb1" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen(<span class="va">self</span>, node):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;rvalue（値）を a0 に残す&quot;&quot;&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_lval(<span class="va">self</span>, node):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;lvalue（アドレス）を a0 に残す&quot;&quot;&quot;</span></span></code></pre></div>
+<p>ポインタ・配列・構造体メンバへのアクセスは、すべてこの2つの組み合わせで書ける。
+1つの関数に混ぜると、<code>*p = *q;</code> のような式で破綻する。</p>
+<h3 id="出力は-emit-を通す">出力は <code>emit()</code> を通す</h3>
+<div class="sourceCode" id="cb2" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.emit(<span class="st">&quot;  add a0, a1, a0&quot;</span>)     <span class="co"># ○</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  add a0, a1, a0&quot;</span>)         <span class="co"># × 直接呼ばない</span></span></code></pre></div>
+<p>出力先を差し替えられる状態を保つ。発展課題（最適化・意味論の各回）は
+生成されたアセンブリを行単位で書き換えるので、この前提に依存している。</p>
+<h3 id="シンボルテーブルは-dict-でよい">シンボルテーブルは <code>dict</code> でよい</h3>
+<p>Python 版では素直に <code>dict</code> を使う。C 版へ移植するときに連結リストへ置き換える
+（対応表は <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/P1_selfhost/README.md"><code>../advanced/P1_selfhost/README.md</code></a>）。</p>
+<h3 id="アラインメントはヘルパーに任せる">アラインメントはヘルパーに任せる</h3>
+<p><code>align_to(n, 16)</code> を必ず使う。手で計算すると無音クラッシュの原因になる。
+詳細は <a href="../../docs/rv64_reference/"><code>rv64_reference.md</code></a> を参照。</p>
+<h2 id="命名の目安">命名の目安</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>対象</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>コード生成メソッド</td>
+<td><code>codegen</code>、<code>codegen_lval</code>、<code>gen_func</code></td>
+</tr>
+<tr class="even">
+<td>型の問い合わせ</td>
+<td><code>_type_of_expr</code>、<code>_type_of_lval</code></td>
+</tr>
+<tr class="odd">
+<td>型サイズ・要素型</td>
+<td><code>size_of_ty_str</code>、<code>elem_ty_str</code>、<code>is_ptr_ty_str</code></td>
+</tr>
+<tr class="even">
+<td>型付きのロード／ストア</td>
+<td><code>_load_ty</code>、<code>_store_ty</code></td>
+</tr>
+<tr class="odd">
+<td>ラベル生成</td>
+<td><code>new_label</code></td>
+</tr>
+<tr class="even">
+<td>一時値の退避</td>
+<td><code>_push_a0</code>、<code>_pop_into</code></td>
+</tr>
+<tr class="odd">
+<td>関数ごとの状態</td>
+<td><code>_locals</code>、<code>_stack_offset</code>、<code>_reset_func_state</code></td>
+</tr>
+<tr class="even">
+<td>グローバルな状態</td>
+<td><code>_globals</code>、<code>_struct_defs</code>、<code>_strings</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>先頭の <code>_</code> は「その回の実装の内部状態」を表す目印として使っている。</p>
+<p><code>size_of_ty_str</code> はコマ8 で <code>size_of_ty_str(ty_str)</code> として入り、
+コマ12 で <code>struct</code> のサイズを引くために <code>size_of_ty_str(ty_str, struct_defs=None)</code>
+へ引数が1つ増える（詳細はコマ12 の原稿）。名前は変えない。</p>
+<p><code>_push_a0</code> / <code>_pop_into</code> は<strong>名前を変えないこと</strong>。
+発展課題（B・O・S・L 系列）のラッパーは、この名前でコード生成クラスを探す。
+別の名前にすると、発展課題に進んだ時点で「コード生成クラスが見つからない」と拒否される。</p>
+<h2 id="コメント">コメント</h2>
+<p>複雑な処理にだけ短く書く。行数を稼ぐためのコメントは書かない。
+「なぜこうしたか」が読み取れないところに1〜2行入れるのが目安である。</p>
+<h3 id="スケルトンで前回回の実装をコメントとして残す">スケルトンで前回回の実装をコメントとして残す</h3>
+<p>前回のコマで動いていたコードを今回のコマで書き換えさせるスケルトンでは、
+前回版の実装をコメントとして <code>raise NotImplementedError(...)</code> の直前に残してよい。
+コマ12 の <code>alloc_local</code> がその例である。</p>
+<div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> alloc_local(<span class="va">self</span>, name: <span class="bu">str</span>, ty_str: <span class="bu">str</span> <span class="op">=</span> <span class="st">&#39;int&#39;</span>) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># </span><span class="al">TODO</span><span class="co">: self._struct_defs を渡して struct のサイズで領域確保する。</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">#       コマ11 版は次の形だった。size_of_ty_str に self._struct_defs を足す。</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">#           sz = self.align_to(self.size_of_ty_str(ty_str), 8)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">#           self._stack_offset += sz</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">#           self._locals[name] = (-(16 + self._stack_offset), ty_str)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">NotImplementedError</span>(<span class="st">&quot;alloc_local を実装してください&quot;</span>)</span></code></pre></div>
+<p>前回回で書いたコードを学習者自身が覚えている前提を置かず、
+「何がどう変わるか」を見える形にするための例外的な措置である。
+行数稼ぎのコメントを禁じる原則とは矛盾しない（前回版の再掲であって水増しではない）。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../docs/getting_started/"><span class="label">前へ</span>進め方ガイド</a><a class="index" href="../../docs/"><span class="label">一覧</span>仕様・参考文書</a><a class="next" href="../../docs/testing/"><span class="label">次へ</span>テストとデバッグ</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/docs/conventions.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

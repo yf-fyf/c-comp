@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>基本ブロックとフローグラフ — 最適化の地図を作る — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">基本ブロックとフローグラフ — 最適化の地図を作る</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#なぜブロックが要るのか" id="toc-なぜブロックが要るのか">なぜ「ブロック」が要るのか</a></li>
+      <li><a href="#基本ブロックとは" id="toc-基本ブロックとは">基本ブロックとは</a></li>
+      <li><a href="#リーダを見つける" id="toc-リーダを見つける">リーダを見つける</a></li>
+      <li><a href="#辺を張る" id="toc-辺を張る">辺を張る</a></li>
+      <li><a href="#後方辺-ループの正体" id="toc-後方辺-ループの正体">後方辺 — ループの正体</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#測ってみると" id="toc-測ってみると">測ってみると</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>アセンブリを<strong>基本ブロック</strong>に切り分け、制御の流れを辺で結んで<strong>フローグラフ</strong>を作る。
+Graphviz で図にして、自分のコンパイラが出したコードの形を目で確かめる。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ15（完成した <code>final/mycc.py</code>）、O1（<code>golden.py</code> が <code>O1_measure/bench/</code> の5本を対象にする）</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、<code>optcc.py</code></td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>cfg.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が <code>bench/*.c</code> のフローグラフを検証して図を書き出す</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>最適化発展シリーズの第2回。この回だけは命令数が減らない（道具を作る回である）。作ったフローグラフを O5・O6・O7 が使う</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>作ったフローグラフを、以降の回がそのまま使う。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>回</th>
+<th>何に使うか</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>O5</td>
+<td>生存変数解析（ブロックとブロックの間で情報を伝える）</td>
+</tr>
+<tr class="even">
+<td>O6</td>
+<td>コピー伝播・死コード除去</td>
+</tr>
+<tr class="odd">
+<td>O7</td>
+<td>ブロック整列とループ回転（後方辺を探す）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="なぜブロックが要るのか">なぜ「ブロック」が要るのか</h2>
+<p>O3（命令選択）の <code>is_dead_after</code> で、こういう妥協をした。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 70%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>見つけたもの</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>reg</code> を読む命令</td>
+<td>まだ使われている → 畳めない</td>
+</tr>
+<tr class="even">
+<td><code>reg</code> に書く命令</td>
+<td>読まれる前に上書きされた → 畳んでよい</td>
+</tr>
+<tr class="odd">
+<td><strong>ラベル・分岐・<code>call</code></strong></td>
+<td><strong>ここで基本ブロックが終わる → 判断できない</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>is_dead_after</code> は前向きに1行ずつ見るだけなので、ラベルに出会うと止まる。
+ラベルの先は<strong>別の経路から飛んでくるかもしれない</strong>ので、
+単純な走査では「このレジスタが後で使われるか」を答えられない。</p>
+<p>答えるには、「どこからどこへ制御が移りうるか」の地図が要る。それがフローグラフである。</p>
+<h2 id="基本ブロックとは">基本ブロックとは</h2>
+<p><strong>途中から入らず、途中から出ない</strong>命令の並びのこと。
+先頭に入ったら、必ず最後まで実行される。</p>
+<p>だからブロックの中では「上から順に1回ずつ実行される」と考えてよい。
+考えるべき経路が減るので、解析がぐっと簡単になる。</p>
+<h2 id="リーダを見つける">リーダを見つける</h2>
+<p>ブロックの先頭になる命令を<strong>リーダ</strong>という。規則は3つだけである。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>規則</th>
+<th>いまの出力での例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>（a） 最初の命令</td>
+<td>関数の先頭</td>
+</tr>
+<tr class="even">
+<td>（b） ラベルが指す命令</td>
+<td><code>.L2:</code> の次（どこかから飛んでくる）</td>
+</tr>
+<tr class="odd">
+<td>（c） 分岐・ジャンプ・<code>ret</code> の<strong>次</strong>の命令</td>
+<td><code>beqz a0, .L4</code> の次</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure>
+<img src="../../figures/O2_cfg.svg" alt="リーダを見つけて基本ブロックに切り、辺を張る" />
+<figcaption aria-hidden="true">リーダを見つけて基本ブロックに切り、辺を張る</figcaption>
+</figure>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p><strong><code>call</code> はリーダを作らない。</strong>
+呼び出しは<strong>戻ってくる</strong>ので、制御はそのまま次の命令へ続く。
+だからブロックを切る必要がない。</p>
+<p>ただし <code>call</code> はレジスタを壊す（a0–a7, ra, t0–t6）。
+これは O5 の生存解析で効いてくる別の話である。</p>
+</div>
+<h2 id="辺を張る">辺を張る</h2>
+<p>各ブロックの<strong>最後の命令</strong>だけを見れば、次に何が起きるかが決まる。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 64%" />
+<col style="width: 35%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>最後の命令</th>
+<th>後続</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ret</code></td>
+<td>なし（関数から出る）</td>
+</tr>
+<tr class="even">
+<td><code>j L</code></td>
+<td><code>L</code> のブロックだけ</td>
+</tr>
+<tr class="odd">
+<td><code>beqz rX, L</code> などの条件分岐</td>
+<td><code>L</code> のブロックと、<strong>次のブロック</strong>の2つ</td>
+</tr>
+<tr class="even">
+<td>それ以外</td>
+<td>次のブロック（次がリーダだったので切れただけ）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>条件分岐で辺が2本になるところが要点である。
+プログラムの「分かれ道」が、そのままグラフの分岐になる。</p>
+<h2 id="後方辺-ループの正体">後方辺 — ループの正体</h2>
+<p>自分より<strong>前</strong>のブロックへ戻る辺を<strong>後方辺</strong>という。これがループである。</p>
+<pre data-lang="text"><code>.L2:  条件            ← ここへ戻ってくる
+      beqz a0, .L4
+      本体
+.L3:  更新
+      j .L2           ← 後方辺
+.L4:</code></pre>
+<p>グラフの上では、<code>.L3</code> のブロックから <code>.L2</code> のブロックへ戻る辺として現れる。
+<strong>ループを「ソースコードの <code>while</code>」ではなく「グラフの後方辺」として見つけられる</strong>ことが、
+この回のいちばんの収穫である。O7 のループ回転は、ここを狙う。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>find_leaders</code></td>
+<td>上の3つの規則</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>build_blocks</code></td>
+<td>リーダの位置で切る</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>build_edges</code></td>
+<td>最後の命令を見て後続を決める</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>Block</code> クラス、前処理の <code>strip_asm</code>（命令だけ取り出してラベルの飛び先を表にする）、
+<code>to_dot</code>（Graphviz 出力）はスケルトンで用意してある。</p>
+<div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../optcc.py <span class="at">--passes</span> <span class="st">&#39;&#39;</span> ../O1_measure/bench/loop_sum.c   <span class="co"># 素の出力を見る</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py                                                <span class="co"># 図を書き出す</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># リーダ・ブロック・辺の単体テスト(未実装は SKIP)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># bench/*.c のフローグラフを検証して図にする</span></span></code></pre></div>
+<p><code>golden.py</code> は数を数えるだけでなく、<strong>構造の辻褄</strong>も確かめる。
+「<code>ret</code> に後続がある」「条件分岐の辺が1本しかない」といった間違いは、ここで落ちる。</p>
+<h2 id="測ってみると">測ってみると</h2>
+<p>教員の実装ではこうなる（最適化なしの出力に対して）。</p>
+<pre data-lang="text"><code>ベンチマーク    関数  ブロック    辺  後方辺  最大ブロック
+bubble             1      14    17      3        76
+fib_rec            2       6     5      0        34
+loop_sum           1       6     6      1        18
+matmul             1      20    24      5       106
+strops             3      18    19      3        36
+合計                      64    71     12</code></pre>
+<p><code>fib_rec</code> だけ<strong>後方辺が0</strong>である。ループを1つも使っておらず、再帰だけで書かれているからである。
+O7 のループ回転が <code>fib_rec</code> に効かないのは、この時点で予言できる。</p>
+<p><code>matmul</code> の最大ブロックは <strong>106命令</strong>もある。3重ループの本体が
+1本道だからで、この中には分岐が1つも無い。
+「ブロックの中は素直」という感覚をつかんでおくとよい。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong><code>call</code> でブロックを切ってみる</strong>: 切ると何が変わるか。ブロック数はどれだけ増えるか。
+なぜ普通は切らないのか</li>
+<li><strong>到達しないブロックを探す</strong>: 入口から辿れないブロックがあれば、それは死んだコードである。
+いまのコンパイラは出すか</li>
+<li><strong>支配関係（dominator）</strong>: 「B に行くには必ず A を通る」という関係を計算する。
+これがあると後方辺を正確に定義できる（いまは「前へ戻る辺」で近似している）</li>
+<li><strong>ループの入れ子を数える</strong>: <code>matmul</code> の3重ループは、後方辺の包含関係として見える。
+最も内側のループはどれか</li>
+<li><strong>関数ごとに切り出す</strong>: <code>blocks_of(blocks, func)</code> を使って、関数単位で図を出す</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 地図が無いと最適化は臆病になる。</strong>
+O3 の <code>is_dead_after</code> は、ラベルを見つけると「分からない」と答えて畳み込みをあきらめた。
+安全ではあるが、機会を逃している。
+フローグラフがあれば「そのラベルへ飛んでくるのはどのブロックか」が分かるので、
+もっと正確に答えられる。</p>
+<p>もっとも、<strong>正確にすれば必ず得をする、とは限らない</strong>。
+O3 の畳み込みが正確な解析でどれだけ増えるかは、O6 の
+<a href="../../advanced/O6_copyprop/#isel-precision">「正確な解析は畳み込みを増やすか」</a>で実際に数える
+（答えは <strong>0箇所</strong>である）。
+最適化の議論は、いつも「測ってみると」から始まる。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/O1_measure/"><span class="label">前へ</span>最適化の測り方 — 静的と動的は別物</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/O3_isel/"><span class="label">次へ</span>命令選択 — 複数の命令を1つに畳む</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/O2_cfg.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>最適化入門 — 定数畳み込みとピープホール — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">最適化入門 — 定数畳み込みとピープホール</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#最適化とは何か-速くするの前に壊さない" id="toc-最適化とは何か-速くするの前に壊さない">最適化とは何か — 「速くする」の前に「壊さない」</a></li>
+      <li><a href="#つのパスをどこに差し込むか" id="toc-つのパスをどこに差し込むか">2つのパスをどこに差し込むか</a></li>
+      <li><a href="#定数畳み込み-木を書き換える" id="toc-定数畳み込み-木を書き換える">① 定数畳み込み — 木を書き換える</a></li>
+      <li><a href="#ピープホール最適化-窓から覗いて置き換える" id="toc-ピープホール最適化-窓から覗いて置き換える">② ピープホール最適化 — 窓から覗いて置き換える</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>自分のコンパイラに2つの最適化パスを追加して、生成される命令数を減らす。
+そして <a href="../../advanced/#fixed17"><code>fixed17</code></a> が<strong>全通し続ける</strong>ことで、意味を変えずに速くできたことを確認する。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>着手はコマ6（関数呼び出し）まで。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <code>fixed17</code> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、ラッパー <code>foldcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>fold.py</code>、<code>peephole.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が <code>fixed17</code> 全通と命令数の削減を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>最適化入門発展シリーズの第1回。O 系列（O1〜O7）の前哨で、測定基盤を作らずに始められるよう軽装にしてある</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>この回と O 系列の関係。</strong>
+O 系列は「測る → 解析する → 変換する」を積み上げる本格版で、前提はコマ15 である。
+B 系列はそこへ入る前の軽装版なので、題材が一部重なる。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 40%" />
+<col style="width: 15%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>この回で書くもの</th>
+<th>O 系列での対応</th>
+<th>違い</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>remove_jump_to_next</code>（規則B）</td>
+<td><strong>O7 の Step 3。同名・同一の最適化である</strong></td>
+<td>O7 ではループ回転の後始末として書く</td>
+</tr>
+<tr class="even">
+<td><code>fuse_push_const_pop</code>（規則A）</td>
+<td>O3（命令選択）が別の形で同じ無駄を消す</td>
+<td>O3 は <code>offset(base)</code> への畳み込み</td>
+</tr>
+<tr class="odd">
+<td>定数畳み込み（<code>fold.py</code>）</td>
+<td>対応なし。O 系列は AST を触らない</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>どちらを先にやるか。</strong>
+コマ15 がまだなら、この回から入る（O 系列は始められない）。
+コマ15 が終わっているなら、先に O1 で物差しを作ってから戻ってくると、
+下の「16%減」が実行時間の話なのかコードサイズの話なのかが分かる
+（発展課題4 がそれである）。</p>
+</div>
+<h2 id="最適化とは何か-速くするの前に壊さない">最適化とは何か — 「速くする」の前に「壊さない」</h2>
+<p>いま自分のコンパイラは、<code>return 3 + 4;</code> に対して次のような命令を出している。</p>
+<div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">3</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">4</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  add a0<span class="op">,</span> a1<span class="op">,</span> a0</span></code></pre></div>
+<p>7命令かけて、実行時に必ず 7 になる計算をしている。
+<code>li a0, 7</code> の1命令で済むはずである。</p>
+<p>最適化とは、<strong>プログラムの観測できる振る舞いを変えずに</strong>、
+生成コードを速く（または小さく）することである。
+ここで「観測できる振る舞い」とは、この講義では次の2つを指す。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>観測できるもの</th>
+<th>確認方法</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>終了コード</td>
+<td><code>.ans</code> ファイルとの比較</td>
+</tr>
+<tr class="even">
+<td>標準出力</td>
+<td><code>.stdout</code> ファイルとの比較</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>つまり<strong>既存のテストが全通し続けること</strong>が、最適化が正しいことの証明になる。
+<code>fixed17</code> が、そのままこの回の安全網になる。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p>最適化で最も多いバグは「速くならない」ではなく「<strong>壊れる</strong>」である。
+命令を1つ消すたびに <code>fixed17</code> を回す習慣をつけること。
+テストが落ちたら、その置換は意味を変えている。</p>
+</div>
+<h2 id="つのパスをどこに差し込むか">2つのパスをどこに差し込むか</h2>
+<p>最適化は、コンパイラのどの段階でも書ける。この回では対照的な2つを作る。</p>
+<figure>
+<img src="../../figures/B1_passes.svg" alt="2つの最適化パスの差し込み位置" />
+<figcaption aria-hidden="true">2つの最適化パスの差し込み位置</figcaption>
+</figure>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>パス</th>
+<th>入力 → 出力</th>
+<th>見えるもの</th>
+<th>見えないもの</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>① 定数畳み込み</td>
+<td>AST → AST</td>
+<td>式の構造・型</td>
+<td>レジスタ・命令</td>
+</tr>
+<tr class="even">
+<td>② ピープホール</td>
+<td>アセンブリ → アセンブリ</td>
+<td>命令の並び</td>
+<td>式の構造</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>同じ「無駄を消す」でも、見えている情報が違うので、消せる無駄が違う。
+上流ほど意味が分かるので大胆な変換ができ、下流ほど実際の命令に近いので
+細かい無駄が見える。実際のコンパイラも、この両方を持っている。</p>
+<h2 id="定数畳み込み-木を書き換える">① 定数畳み込み — 木を書き換える</h2>
+<p>コンパイル時に値が決まる部分式を、計算済みの <code>ND_NUM</code> に置き換える。</p>
+<pre data-lang="text"><code>(add (num 1) (mul (num 2) (num 3)))   →   (num 7)</code></pre>
+<p>木を<strong>後行順（子が先）</strong>に処理するのがコツである。
+子を先に畳み込んでおけば、親では「両方の子が <code>ND_NUM</code> か」を見るだけで済む。</p>
+<pre data-lang="text"><code>(1 + 2) * 3  →  子を畳む → (num 3) * 3  →  親を畳む → (num 9)</code></pre>
+<p>走査（<code>fold_node</code>）と置き換えの判定（<code>fold_expr</code>）はスケルトンに完成済みで、
+実装するのは<strong>演算の意味</strong>、つまり「この演算子を定数2つに適用したらいくつか」だけである。</p>
+<h3 id="落とし穴1-c-の除算は-python-と違う">落とし穴1: C の除算は Python と違う</h3>
+<div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">-</span><span class="dv">7</span> <span class="op">//</span> <span class="dv">2</span>   <span class="co"># Python: -4（床関数：小さい方へ）</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">-</span><span class="dv">7</span> <span class="op">/</span> <span class="dv">2</span>    <span class="co"># C:      -3（0 方向へ切り捨て）</span></span></code></pre></div>
+<p>コマ1・コマ2 の資料で「負数を含む割り算・剰余は扱わない」と注意していたのは、
+この差があるからだった。畳み込みでは<strong>実行時と同じ答え</strong>を出さなければならないので、
+C の規則（0 方向へ切り捨て、剰余の符号は左辺と同じ）に合わせる必要がある。</p>
+<p><code>abs()</code> で計算してから符号を付け直すのが素直である。</p>
+<h3 id="落とし穴2-畳み込んではいけない場合">落とし穴2: 畳み込んではいけない場合</h3>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 37%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>式</th>
+<th>扱い</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>5 / 0</code></td>
+<td>畳み込まない（<code>None</code> を返す）</td>
+<td>実行時エラーを消してはいけない</td>
+</tr>
+<tr class="even">
+<td><code>a + 2 * 3</code></td>
+<td><code>2 * 3</code> だけ畳む</td>
+<td>変数の値はコンパイル時に分からない</td>
+</tr>
+<tr class="odd">
+<td><code>a ? 1 : 2</code></td>
+<td>cond が定数でも畳まない</td>
+<td>この回の対象は二項・単項のみ（発展課題へ）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>「分からないものは触らない」— 最適化の基本姿勢である。</p>
+<h3 id="落とし穴3-64bit-で丸める">落とし穴3: 64bit で丸める</h3>
+<p>実行時のレジスタは 64bit なので、桁あふれもそのとおりに再現する必要がある。
+Python の整数は無限精度なので、<code>to_i64()</code>（配布済み）で毎回丸める。</p>
+<h2 id="ピープホール最適化-窓から覗いて置き換える">② ピープホール最適化 — 窓から覗いて置き換える</h2>
+<p>生成されたアセンブリを<strong>小さな窓（peephole）</strong>で覗き、
+既知のパターンを短い命令列に置き換える。文脈を見ないので実装が単純で、
+それでいてよく効く。</p>
+<h3 id="規則a-push-li-pop-の圧縮">規則A: push / li / pop の圧縮</h3>
+<p>コマ2 以来の二項演算パターンは、右辺が<strong>定数</strong>のときに無駄が大きい。</p>
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span>        ┐</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>           │  →   mv a1<span class="op">,</span> a0</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">1</span>               │      li a0<span class="op">,</span> <span class="dv">1</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>           │</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span>         ┘</span></code></pre></div>
+<p>右辺の計算が <code>li</code> 1つだけなら、左辺を退避する必要がない。
+<code>a1</code> に移してから定数を読めば、同じ状態（<code>a1</code>=左辺、<code>a0</code>=右辺）が作れる。
+<strong>5命令が2命令</strong>になる。<code>i = i + 1</code> のようなループ内の式に何度も現れるので、効果が大きい。</p>
+<h3 id="規則bc-直後のラベルへ飛ぶジャンプの削除">規則B・C: 直後のラベルへ飛ぶジャンプの削除</h3>
+<div class="sourceCode" id="cb6" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  j .L3       ←  消してよい</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">.L3:</span></span></code></pre></div>
+<p>飛ばなくても次の命令は同じなので、この <code>j</code> は不要である。
+<code>beqz</code> も同様に、条件ごと消せる（分岐してもしなくても行き先が同じ）。
+コマ4 の if/else 生成や、コマ5 のループ生成で自然に生じる形である。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>規則B は O7 の Step 3 と同じものである。</strong>
+O7（ブロック整列とループ回転）でも <code>remove_jump_to_next</code> という同じ名前の
+関数を書く。あちらではループ回転が新しく作った「次の行へのジャンプ」を
+片付ける役として登場するので、動機は違うが<strong>中身は同じ最適化</strong>である。
+片方を書いたら、もう片方は自分の実装を持ち込んでよい。</p>
+</div>
+<h3 id="不動点まで繰り返す">不動点まで繰り返す</h3>
+<p>ある置換で別の置換が可能になることがあるので、
+<strong>何も変わらなくなるまで</strong>繰り返す。この駆動部（<code>optimize</code>）は完成済みである。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>なぜテキストを書き換えるのか。</strong>
+本物のコンパイラは、アセンブリの文字列ではなく命令の内部表現に対して
+ピープホールをかける。テキスト処理は「行の切り出し」という本質的でない仕事が増えるが、
+<strong>コンパイラ本体に一切手を入れずに追加できる</strong>という利点がある。
+まず効果を体感し、必要になったら内部表現に移すのは、実務でもよくある順序である。</p>
+</div>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>ファイル</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>fold_binary</code> / <code>fold_unary</code></td>
+<td><code>fold.py</code></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>fuse_push_const_pop</code></td>
+<td><code>peephole.py</code></td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>remove_jump_to_next</code> / <code>remove_branch_to_next</code></td>
+<td><code>peephole.py</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>走査・判定・駆動はすべて完成済みで、書くのは「規則そのもの」だけである。</p>
+<h3 id="動かし方">動かし方</h3>
+<p><code>foldcc.py</code> は、自分の <code>final/mycc.py</code> に2つのパスを差し込んで実行するラッパーである
+（完成品。編集しない）。</p>
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 最適化ありでコンパイル</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> foldcc.py ../../final/tests/f05_for.c</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># パスを個別に外して比べる</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> foldcc.py <span class="at">--no-fold</span> ../../final/tests/f05_for.c</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> foldcc.py <span class="at">--no-peephole</span> ../../final/tests/f05_for.c</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 命令数を数える</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> foldcc.py ../../final/tests/f05_for.c <span class="kw">|</span> <span class="ex">python3</span> ../count_insns.py</span></code></pre></div>
+<p><code>peephole.py</code> は単体のフィルタとしても使える。</p>
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../../final/mycc.py foo.c <span class="kw">|</span> <span class="ex">python3</span> peephole.py</span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># fixed17 全通の確認 + 命令数の before/after 表</span></span></code></pre></div>
+<p><code>golden.py</code> は2つのことを続けて行う。</p>
+<ol type="1">
+<li><strong>正しさ</strong>: <code>fixed17</code> を最適化ありでコンパイルして全テスト実行</li>
+<li><strong>効果</strong>: 各テストの命令数を最適化なし／ありで数えて表示</li>
+</ol>
+<p><strong>全テスト PASS かつ命令数が減っている</strong>ことが、この回の完了条件である。
+参考までに、教員の実装では合計 1250 → 1052 命令（約16%減）になる。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>代数的な単純化</strong>: <code>x * 1</code> → <code>x</code>、<code>x + 0</code> → <code>x</code>、<code>x * 0</code> → <code>0</code> を
+<code>fold_expr</code> に追加する。<code>x * 0</code> はなぜ安全か（副作用がないか）も考える</li>
+<li><strong><code>li</code> の直後の演算</strong>: <code>li a1, C</code> + <code>add a0, a1, a0</code> を
+<code>addi a0, a0, C</code>（C が12bit に収まるとき）に潰す規則を追加する</li>
+<li><strong>到達不能コードの削除</strong>: <code>j</code> や <code>ret</code> の直後からラベルまでの命令は
+決して実行されない。これを削除する規則を書く</li>
+<li><strong>動的命令数で測り直す</strong>: 上の「16%減」は静的命令数（出力に命令が何個あるか）の話で、
+実行が16%速くなったという意味ではない。ループの中の1命令は何度も実行されるからである。
+実行された命令の回数を数える方法は <strong>O1</strong> が扱う
+（<code>qemu-riscv64 -one-insn-per-tb -d exec,nochain</code> で実行を追い、
+<code>nm</code> で引いた自作関数のアドレス範囲だけに絞る。絞らないと libc の起動処理が
+95%を占めて効果が埋もれる）。O1 の発展課題1 が、この回の出力を実際にその物差しで測り直す</li>
+<li><strong>Cond の畳み込み</strong>: <code>cond</code> が定数なら、<code>then</code>/<code>else_</code> のどちらか一方を選んで
+その枝だけに置き換える変換を <code>fold_expr</code> に足す</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 最適化の名前。</strong>
+定数畳み込み（constant folding）とピープホール（peephole optimization）は、
+どちらも1960年代から知られている古典的な手法である。
+この先には、レジスタ割り当て（B2・O4）、末尾呼び出し最適化（B3）、
+命令選択（O3）、生存解析（O5）、コピー伝播と死コード除去（O6）、
+ループ回転（O7）が続く。さらにその先には、この教材では扱わない
+共通部分式の除去やループ不変式の移動がある。
+最適化は「賢いことをする」よりも「<strong>壊さない範囲で無駄を見つける</strong>」技術であり、
+そのために必要なのは、いま自分が持っているようなテストスイートと、
+「本当に良くなったのか」を答える物差し（O1）である。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/F4_parser_decl/"><span class="label">前へ</span>再帰下降パーサ③ — 宣言・型・プログラム全体（最終回）</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/B2_regalloc/"><span class="label">次へ</span>レジスタ割り当て入門 — スタックマシンを卒業する</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/B1_fold_peephole.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学習者向けドキュメント — 索引 — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../assets/style.css">
+<script defer src="../assets/lightbox.js"></script>
+
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../sessions/">通常回</a><a href="../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../docs/" aria-current="page">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../guides/">補助ガイド</a><a href="../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../">ホーム</a> / 仕様・参考文書</nav>
+    <h1 class="page-title">学習者向けドキュメント — 索引</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#文書の一覧" id="toc-文書の一覧">文書の一覧</a></li>
+      <li><a href="#知りたいことから引く" id="toc-知りたいことから引く">知りたいことから引く</a></li>
+      <li><a href="#この外にあるもの" id="toc-この外にあるもの">この外にあるもの</a></li>
+      </ul>
+    </nav>
+    
+<p><strong>始めるときは <a href="../docs/getting_started/"><code>getting_started.md</code></a> から。</strong> ここは入口ではなく、
+どの文書に何があるか・知りたいことがどこにあるかを引くための索引である。</p>
+<h2 id="文書の一覧">文書の一覧</h2>
+<p>上の3つが「読むもの」、下の3つが「引くもの」である。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 28%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>文書</th>
+<th>内容</th>
+<th>読みどき</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="../docs/getting_started/"><code>getting_started.md</code></a></td>
+<td>進め方・環境の用意（実体はコマ0）・読む順序・本体であるコマ1〜15 の一覧（準備回のコマ0 と発表会のコマ16 は別枠）・コマ15 のあと</td>
+<td><strong>最初に</strong>（入口）</td>
+</tr>
+<tr class="even">
+<td><a href="../docs/conventions/"><code>conventions.md</code></a></td>
+<td>実装の約束ごと（編集するファイル・<code>emit()</code>・命名）</td>
+<td>コマ2 の前に一度。<code>codegen</code> / <code>codegen_lval</code> の分離はコマ3 で最小形を導入しコマ7 で拡張するので、両方の回に読み直す</td>
+</tr>
+<tr class="odd">
+<td><a href="../docs/testing/"><code>testing.md</code></a></td>
+<td><code>test_runner</code> の使い方・テストケースの形式と、動かないときの確認手順・症状表</td>
+<td>テストはコマ2 から毎回。デバッグの後半は詰まったとき</td>
+</tr>
+<tr class="even">
+<td><a href="../docs/language_spec/"><code>language_spec.md</code></a></td>
+<td>Core プロファイルの言語仕様（型・演算子・EBNF・除外機能・標準/発展の到達範囲）</td>
+<td>引くもの。冒頭に目次がある</td>
+</tr>
+<tr class="odd">
+<td><a href="../docs/rv64_reference/"><code>rv64_reference.md</code></a></td>
+<td>呼び出し規約・スタックフレーム・よく使う命令</td>
+<td>引くもの</td>
+</tr>
+<tr class="even">
+<td><a href="../docs/code_example/"><code>code_example.md</code></a></td>
+<td>各コマ終了時点でコンパイルできるプログラム（コマ1〜15）</td>
+<td>引くもの。冒頭に目次がある</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="知りたいことから引く">知りたいことから引く</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 75%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>知りたいこと・キーワード</th>
+<th>行き先</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>環境を作りたい / Docker / Python のバージョン</td>
+<td><a href="../docs/getting_started/#環境を用意する"><code>getting_started.md</code> の「環境を用意する」</a></td>
+</tr>
+<tr class="even">
+<td>この機能は書けるのか（<code>switch</code>・<code>+=</code>・後置 <code>++</code>・ビット演算 など）</td>
+<td><a href="../docs/language_spec/#excluded"><code>language_spec.md</code> の除外機能の一覧</a></td>
+</tr>
+<tr class="odd">
+<td>使える型・演算子・優先順位</td>
+<td><a href="../docs/language_spec/#types"><code>language_spec.md</code> の型</a>・<a href="../docs/language_spec/#operators">演算子</a></td>
+</tr>
+<tr class="even">
+<td>構文が通らない / EBNF を確かめたい</td>
+<td><a href="../docs/language_spec/#grammar"><code>language_spec.md</code> の形式文法</a></td>
+</tr>
+<tr class="odd">
+<td>この機能はどのコマで導入されるか</td>
+<td><a href="../docs/language_spec/#feature-map"><code>language_spec.md</code> の対応表</a></td>
+</tr>
+<tr class="even">
+<td>除算の丸め方向・評価順序・未定義動作</td>
+<td><a href="../docs/language_spec/#semantics"><code>language_spec.md</code> の実行時の意味</a></td>
+</tr>
+<tr class="odd">
+<td>gcc で通る C との違い</td>
+<td><a href="../docs/language_spec/#isoc"><code>language_spec.md</code> の ISO C との関係</a></td>
+</tr>
+<tr class="even">
+<td><code>printf</code> / <code>malloc</code> の宣言</td>
+<td><a href="../docs/language_spec/#stdlib"><code>language_spec.md</code> の標準ライブラリ</a></td>
+</tr>
+<tr class="odd">
+<td>どこまで書けるコンパイラになったか / 具体例が見たい</td>
+<td><a href="../docs/code_example/"><code>code_example.md</code> の目次</a></td>
+</tr>
+<tr class="even">
+<td><code>codegen</code> と <code>codegen_lval</code> の分け方</td>
+<td><a href="../docs/conventions/#守ってほしい設計"><code>conventions.md</code> の「守ってほしい設計」</a></td>
+</tr>
+<tr class="odd">
+<td>関数名・変数名をどう付けるか / 名前を変えてよいか</td>
+<td><a href="../docs/conventions/#命名の目安"><code>conventions.md</code> の「命名の目安」</a></td>
+</tr>
+<tr class="even">
+<td>テストの走らせ方・テストケースの書き方</td>
+<td><a href="../docs/testing/"><code>testing.md</code></a></td>
+</tr>
+<tr class="odd">
+<td>呼び出し規約・スタックフレーム・命令の意味</td>
+<td><a href="../docs/rv64_reference/"><code>rv64_reference.md</code></a></td>
+</tr>
+<tr class="even">
+<td>テストが落ちる / 終了コードが変 / 実行時に壊れる</td>
+<td><a href="../docs/testing/#症状から当たりをつける"><code>testing.md</code> の症状表</a></td>
+</tr>
+<tr class="odd">
+<td><code>AttributeError</code> が出る / 昔取得したファイルがある</td>
+<td><a href="../docs/testing/#症状から当たりをつける"><code>testing.md</code> の症状表</a></td>
+</tr>
+<tr class="even">
+<td>コマ15 のあと何をするか</td>
+<td><a href="../docs/getting_started/#コマ15-のあと"><code>getting_started.md</code> の「コマ15 のあと」</a></td>
+</tr>
+<tr class="odd">
+<td>発展課題26トピックからどれを選ぶか</td>
+<td><a href="../advanced/"><code>../advanced/README.md</code></a>（一覧・前提の出典と「どこから始めるか」）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="この外にあるもの">この外にあるもの</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>場所</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="../advanced/"><code>../advanced/README.md</code></a></td>
+<td>発展課題 26 トピックの一覧と依存関係(C 移植・セルフホスト P1 を含む)</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../ocaml/README.md</code></a></td>
+<td>各回の完成形に相当する OCaml 版参考実装(完成相当なので、自分の方針を考えたあとの確認に)</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/docker/rv64/README.md"><code>../docker/rv64/README.md</code></a></td>
+<td>Docker 環境の詳細設定とトラブルシュート</td>
+</tr>
+<tr class="even">
+<td><code>design/curriculum.md</code>（開発リポジトリ）</td>
+<td>教材の設計思想（なぜこの順序・なぜ RV64 なのか）</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="next" href="../docs/getting_started/"><span class="label">次へ</span>進め方ガイド</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/docs/README.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../LICENSE">code: MIT</a>) ·
+     <a href="../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コマ13: グローバル変数・スコープ管理 — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/" aria-current="page">通常回</a><a href="../../advanced/">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
+    <h1 class="page-title">コマ13: グローバル変数・スコープ管理</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+      <li><a href="#ast-を確認する-グローバル変数" id="toc-ast-を確認する-グローバル変数">AST を確認する: グローバル変数</a></li>
+      <li><a href="#ast-を確認する-ローカル変数による隠蔽" id="toc-ast-を確認する-ローカル変数による隠蔽">AST を確認する: ローカル変数による隠蔽</a></li>
+      <li><a href="#グローバル変数の置き場所" id="toc-グローバル変数の置き場所">グローバル変数の置き場所</a></li>
+      <li><a href="#グローバル変数のアドレス" id="toc-グローバル変数のアドレス">グローバル変数のアドレス</a></li>
+      <li><a href="#変数表を2種類に分ける" id="toc-変数表を2種類に分ける">変数表を2種類に分ける</a></li>
+      <li><a href="#ローカル変数によるグローバル変数の隠蔽" id="toc-ローカル変数によるグローバル変数の隠蔽">ローカル変数によるグローバル変数の隠蔽</a></li>
+      <li><a href="#残りの演算子" id="toc-残りの演算子">残りの演算子 <code>!</code> <code>&amp;&amp;</code> <code>||</code></a></li>
+      <li><a href="#文字列収集とプログラム全体の出力" id="toc-文字列収集とプログラム全体の出力">文字列収集とプログラム全体の出力</a></li>
+      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+      <li><a href="#tests" id="toc-tests">tests/</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#注意" id="toc-注意">注意</a></li>
+      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>関数外で宣言されたグローバル変数を扱い、ローカル変数とグローバル変数が混在するプログラムを動かす。</p>
+<p>コマ12までは、変数はすべて関数内のローカル変数としてスタックフレーム上に置いていた。
+この回では、関数の外にある変数をプログラム全体から参照できるようにする。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> total<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> add<span class="op">(</span><span class="dt">int</span> x<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> total <span class="op">+</span> x<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> total<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><code>total</code> は関数の外で宣言されているため、グローバル変数である。
+<code>add()</code> の中からも <code>main()</code> の中からも同じ <code>total</code> を参照する。</p>
+</section>
+<h2 id="この回で扱う範囲">この回で扱う範囲</h2>
+<p>対象にする機能は次の通り。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>種類</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>グローバル変数</td>
+<td><code>int count;</code></td>
+</tr>
+<tr class="even">
+<td>グローバル構造体変数</td>
+<td><code>struct Pair gp;</code></td>
+</tr>
+<tr class="odd">
+<td>ローカルによる隠蔽</td>
+<td>グローバル <code>x</code> とローカル <code>x</code></td>
+</tr>
+<tr class="even">
+<td>スコープ探索</td>
+<td>local scopes → globals</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>言語仕様に初期化子はない。グローバル変数は<strong>すべて 0 に初期化される</strong>ことが
+保証されており（ポインタなら null）、初期値が必要なら代入文で設定する。</p>
+<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<p>この回までに書けるプログラムの文法を、累積の形でまとめる。
+記法と最終形の全体像は
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
+<p><strong>この回で、構文は最終形と完全に一致する。</strong> コマ14 で増えるのは前処理指令だけである。
+この回で書ける <code>#include</code> は提供物の <code>lib.h</code> の取込みだけで、
+自作ヘッダと入れ子の取込み、<code>#define</code> はコマ14 で扱う。</p>
+<pre class="ebnf" data-lang="ebnf"><code>include_dir ::= &#39;#&#39; &#39;include&#39; &#39;&quot;&#39; FILENAME &#39;&quot;&#39; NEWLINE
+
+stars       ::= &#39;*&#39; { &#39;*&#39; }
+
+scalar_type ::= &#39;int&#39;  [ stars ]
+              | &#39;char&#39; [ stars ]
+              | &#39;void&#39; stars
+              | &#39;struct&#39; IDENT stars
+obj_type    ::= scalar_type
+              | &#39;struct&#39; IDENT
+ret_type    ::= scalar_type
+              | &#39;void&#39;
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= struct_decl
+                | var_decl
+                | func_proto
+                | func_def
+struct_decl   ::= &#39;struct&#39; IDENT &#39;{&#39; field_decl { field_decl } &#39;}&#39; &#39;;&#39;
+                | &#39;struct&#39; IDENT &#39;;&#39;
+field_decl    ::= scalar_type IDENT &#39;;&#39;
+var_decl      ::= obj_type IDENT &#39;;&#39;
+
+param       ::= scalar_type IDENT
+param_list  ::= param { &#39;,&#39; param }
+func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list [ &#39;,&#39; &#39;...&#39; ] ] &#39;)&#39; &#39;;&#39;
+func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
+func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | &#39;break&#39; &#39;;&#39;
+              | &#39;continue&#39; &#39;;&#39;
+              | &#39;return&#39; [ expr ] &#39;;&#39;
+expr_stmt   ::= [ expr ] &#39;;&#39;
+block       ::= &#39;{&#39; { stmt } &#39;}&#39;
+if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
+while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
+for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;
+              | &#39;+&#39; | &#39;-&#39;
+              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
+              | &#39;==&#39; | &#39;!=&#39;
+              | &#39;&amp;&amp;&#39;
+              | &#39;||&#39;
+unary_expr  ::= postfix_expr
+              | &#39;-&#39;  unary_expr
+              | &#39;!&#39;  unary_expr
+              | &#39;*&#39;  unary_expr
+              | &#39;&amp;&#39;  unary_expr
+              | &#39;++&#39; unary_expr
+              | &#39;--&#39; unary_expr
+              | &#39;sizeof&#39; &#39;(&#39; type_name &#39;)&#39;
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= &#39;[&#39; expr &#39;]&#39;
+                 | &#39;.&#39;  IDENT
+                 | &#39;-&gt;&#39; IDENT
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | STRING_LITERAL
+               | IDENT &#39;(&#39; [ arg_list ] &#39;)&#39;
+               | IDENT
+               | &#39;(&#39; expr &#39;)&#39;
+arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+<p>この回までの二項演算子の優先順位（高い順）:</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>優先順位</th>
+<th>演算子</th>
+<th>結合</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1（高）</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>+</code> <code>-</code></td>
+<td>左</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>==</code> <code>!=</code></td>
+<td>左</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>&amp;&amp;</code></td>
+<td>左</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td><code>\|\|</code></td>
+<td>左</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>表の読み方はコマ1の「木の形は規則で決まっている」と
+<a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
+<p>グローバル変数は <code>external_decl</code> に <code>var_decl</code> が加わっただけである。
+<code>var_decl</code> の形はローカル宣言と同一で、どちらであるかは書かれた位置だけで決まる。
+<code>&amp;&amp;</code> と <code>||</code> はこの回で入るが、短絡評価はしない。
+字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+<a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+<h2 id="ast-を確認する-グローバル変数">AST を確認する: グローバル変数</h2>
+<p>まず、関数外の変数宣言が AST でどう見えるか確認する。</p>
+<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/13_globals_scope/tests/global_min.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> total<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> add<span class="op">(</span><span class="dt">int</span> x<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> total <span class="op">+</span> x<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> total<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    add<span class="op">(</span><span class="dv">10</span><span class="op">);</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    add<span class="op">(</span><span class="dv">20</span><span class="op">);</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> total<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>実行すると、次のようなS式が表示される。</p>
+<div class="sourceCode" id="cb5" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(program (decl <span class="st">&quot;total&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;add&quot;</span> <span class="bu">:type</span> int</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;x&quot;</span> <span class="bu">:type</span> int))</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;total&quot;</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>          (add (var <span class="st">&quot;total&quot;</span>) (var <span class="st">&quot;x&quot;</span>))))</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (var <span class="st">&quot;total&quot;</span>))))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;total&quot;</span>) (num <span class="dv">0</span>)))</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        (call <span class="st">&quot;add&quot;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>          (args (num <span class="dv">10</span>))))</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        (call <span class="st">&quot;add&quot;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>          (args (num <span class="dv">20</span>))))</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (var <span class="st">&quot;total&quot;</span>)))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/13_global_counter_ast.svg" alt="global_min.c の AST" />
+<figcaption aria-hidden="true"><code>global_min.c</code> の AST</figcaption>
+</figure>
+<p>トップレベルにある <code>(decl "total" :type int)</code> がグローバル変数宣言である。
+同じ <code>'Decl'</code> ノードでも、関数本体のブロック内にあればローカル変数、トップレベルにあればグローバル変数として扱う。</p>
+<h2 id="ast-を確認する-ローカル変数による隠蔽">AST を確認する: ローカル変数による隠蔽</h2>
+<p>次に、同じ名前のグローバル変数とローカル変数がある例を見る。</p>
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/13_globals_scope/tests/shadow_min.c</span></code></pre></div>
+<p>このプログラムの内容は次の通り。</p>
+<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> value<span class="op">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> read_global<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> value<span class="op">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> value<span class="op">;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    value <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> value <span class="op">+</span> read_global<span class="op">();</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>実行すると、次のようなS式が表示される。</p>
+<div class="sourceCode" id="cb8" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(program (decl <span class="st">&quot;value&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;read_global&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (var <span class="st">&quot;value&quot;</span>))))</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span> (decl <span class="st">&quot;value&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;value&quot;</span>) (num <span class="dv">5</span>)))</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        (add (var <span class="st">&quot;value&quot;</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>          (call <span class="st">&quot;read_global&quot;</span> (args)))))))</span></code></pre></div>
+<figure>
+<img src="../../figures/ast/13_global_shadow_ast.svg" alt="shadow_min.c の AST" />
+<figcaption aria-hidden="true"><code>shadow_min.c</code> の AST</figcaption>
+</figure>
+<p><code>main()</code> の中の <code>value</code> はローカル変数である。
+一方、<code>read_global()</code> の中にはローカル変数 <code>value</code> がないので、グローバル変数 <code>value</code> を参照する。</p>
+<h2 id="グローバル変数の置き場所">グローバル変数の置き場所</h2>
+<p>ローカル変数は関数呼び出しごとに作られるため、スタックフレームに置く。
+グローバル変数はプログラム全体で1つだけ存在し、関数呼び出しが終わっても残る。
+そのため、スタックではなくデータ領域に置く。</p>
+<p>アセンブリでは、主に次の2つのセクションを使う。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>セクション</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>.bss</code></td>
+<td>グローバル変数（0 初期化された領域）</td>
+</tr>
+<tr class="even">
+<td><code>.data</code></td>
+<td>文字列リテラル</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>たとえば、次の宣言を考える。</p>
+<div class="sourceCode" id="cb9" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> count<span class="op">;</span></span></code></pre></div>
+<p>この回の実装では、おおよそ次のように出力する。</p>
+<div class="sourceCode" id="cb10" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.bss</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.globl</span> count</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">count:</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.zero</span> <span class="dv">4</span></span></code></pre></div>
+<p><code>.zero 4</code> は 4 バイトぶんのゼロ領域を確保する指定である。
+<code>.bss</code> セクションは OS がプログラム開始時に 0 埋めするため、
+「グローバル変数は 0 で始まる」という言語仕様の保証が
+追加のコードなしでそのまま実現できる。</p>
+<figure>
+<img src="../../figures/13_memory_map.svg" alt="プログラム実行時のメモリ全体像と変数の置き場所" />
+<figcaption aria-hidden="true">プログラム実行時のメモリ全体像と変数の置き場所</figcaption>
+</figure>
+<p>ローカル変数はスタック、<code>malloc</code> で確保した領域はヒープ、グローバル変数は <code>.data</code> / <code>.bss</code> に置かれる。
+どの領域に置くかが決まると、アドレスの計算方法（<code>s0</code> からのオフセットか、ラベルか）も決まる。</p>
+<h2 id="グローバル変数のアドレス">グローバル変数のアドレス</h2>
+<p>ローカル変数のアドレスは、これまで通り <code>s0</code> からのオフセットで計算する。</p>
+<div class="sourceCode" id="cb11" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span></span></code></pre></div>
+<p>グローバル変数にはアセンブリ上のラベルを付ける。
+そのため、アドレスは <code>la</code> で取得できる。</p>
+<div class="sourceCode" id="cb12" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>  la a0<span class="op">,</span> total</span></code></pre></div>
+<p>したがって <code>self.codegen_lval_Var(node)</code> では、<code>self._is_local()</code> を使って変数がローカルかグローバルかで分岐する。</p>
+<div class="sourceCode" id="cb13" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_lval_Var(<span class="va">self</span>, node):</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">self</span>._is_local(node.name):</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        off <span class="op">=</span> <span class="va">self</span>._locals[node.name][<span class="dv">0</span>]</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="ss">f&quot;  addi a0, s0, </span><span class="sc">{</span>off<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="ss">f&quot;  la a0, </span><span class="sc">{</span>node<span class="sc">.</span>name<span class="sc">}</span><span class="ss">&quot;</span>)</span></code></pre></div>
+<p>値を読む処理は同じである。
+まず lvalue としてアドレスを求め、その型に応じて <code>lw</code>、<code>lb</code>、<code>ld</code> でロードする。</p>
+<h2 id="変数表を2種類に分ける">変数表を2種類に分ける</h2>
+<p>コマ12までは <code>self._locals</code> という辞書にローカル変数だけを入れていた。
+コマ13では、グローバル変数用の表をもう1つ持つ。</p>
+<div class="sourceCode" id="cb14" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># インスタンス変数として持つ</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._globals: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">str</span>]                      <span class="co"># name → ty_str（コマ13で追加）</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._locals: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">tuple</span>[<span class="bu">int</span>, <span class="bu">str</span>]]           <span class="co"># name → (offset, ty_str)（コマ8 のまま）</span></span></code></pre></div>
+<p><code>self._locals</code> の形はコマ8 で <code>(offset, ty_str)</code> のタプルになって以来変わらない。
+グローバル変数はスタック上に置かないのでオフセットを持たず、型だけを覚える。</p>
+<p><code>self._globals</code> はプログラム全体で1つだけ持つ。トップレベルの宣言を <code>self.collect_globals(prog)</code> で集めてからコード生成に入る。</p>
+<p><code>self._locals</code> は関数ごとに1つ持ち、<code>self._reset_func_state()</code> で関数に入るたびに空にする。1関数につき1つの辞書で済む。</p>
+<p>変数名を探すときは、まず <code>self._locals</code> を調べ、なければ <code>self._globals</code> を調べる。</p>
+<div class="sourceCode" id="cb15" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> lookup_var_ty(<span class="va">self</span>, name, line):</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> name <span class="kw">in</span> <span class="va">self</span>._locals:</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._locals[name][<span class="dv">1</span>]</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> name <span class="kw">in</span> <span class="va">self</span>._globals:</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>._globals[name]</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">RuntimeError</span>(<span class="ss">f&quot;[line </span><span class="sc">{</span>line<span class="sc">}</span><span class="ss">] 未定義の変数: &#39;</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">&#39;&quot;</span>)</span></code></pre></div>
+<p>アドレスの作り方はローカルとグローバルで違うので、
+型の問い合わせ（<code>lookup_var_ty</code>）とアドレス生成（<code>codegen_lval_Var</code>）を分けて書く。
+どちらがローカルかの判定はスケルトンの <code>self._is_local(name)</code> を使う。</p>
+<p>この順序が、次の節で見る「ローカル変数による隠蔽」の仕組みそのものである。</p>
+<h2 id="ローカル変数によるグローバル変数の隠蔽">ローカル変数によるグローバル変数の隠蔽</h2>
+<p>C では、ブロックごとにスコープが作られる。</p>
+<div class="sourceCode" id="cb16" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> x<span class="op">;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x<span class="op">;</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>この <code>main()</code> の中の <code>x</code> は、グローバル変数 <code>x</code> とは別の変数である。
+<code>main()</code> の中で <code>x</code> と書いたときは、内側のローカル変数を優先して参照する。</p>
+<p>スキャフォールドでは関数ごとに1つの <code>self._locals</code> 辞書を持つ。
+同じ名前の変数が既に <code>self._locals</code> にあっても、新しい宣言なら上書きせずエラーにする（または新しいオフセットで登録する）。
+変数探索は常に <code>self._locals</code> → <code>self._globals</code> の順なので、ローカルがグローバルを隠す動作が自然に実現される。</p>
+<figure>
+<img src="../../figures/13_scope_lookup.svg" alt="_locals → _globals の2段探索と、当たった表で決まるアドレスの作り方" />
+<figcaption aria-hidden="true"><code>_locals</code> → <code>_globals</code> の2段探索と、当たった表で決まるアドレスの作り方</figcaption>
+</figure>
+<p><code>self._locals</code> は関数ごとに作り直すため、<code>read_global()</code> を処理しているときは空である。
+同じ <code>value</code> という名前でも、そこでは <code>self._globals</code> に当たり、アドレスは <code>la</code> で取る。</p>
+<p>オフセットの割り当ては、関数本体を走査して各ローカル変数のオフセットを先に決めておく。</p>
+<h2 id="残りの演算子">残りの演算子 <code>!</code> <code>&amp;&amp;</code> <code>||</code></h2>
+<p>この回で最後の演算子3つを足す。どれも結果は <code>0</code> か <code>1</code> の int である。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 34%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ノード</th>
+<th>ハンドラ</th>
+<th>生成の要点</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>'Not'</code></td>
+<td><code>codegen_Not</code></td>
+<td>operand を評価し、<code>seqz a0, a0</code></td>
+</tr>
+<tr class="even">
+<td><code>'And'</code></td>
+<td><code>codegen_And</code></td>
+<td>両辺を評価し、それぞれ <code>snez</code> で 0/1 にしてから <code>and</code></td>
+</tr>
+<tr class="odd">
+<td><code>'Or'</code></td>
+<td><code>codegen_Or</code></td>
+<td>両辺を評価して <code>or</code> を取り、<code>snez</code> で 0/1 にする</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>&amp;&amp;</code> と <code>||</code> は<strong>短絡しない</strong>（<code>language_spec.md</code> 例外 E3）。
+左辺の値にかかわらず右辺も評価するので、分岐を作る必要はなく、
+比較演算子と同じ「両辺を評価してから合成する」形で書ける。</p>
+<figure>
+<img src="../../figures/13_no_short_circuit.svg" alt="短絡する本物の C と、両辺を必ず評価するこの言語の対比" />
+<figcaption aria-hidden="true">短絡する本物の C と、両辺を必ず評価するこの言語の対比</figcaption>
+</figure>
+<p>そのぶん <code>p != 0 &amp;&amp; p-&gt;val &gt; 0</code> のような書き方はできず、NULL の判定と中身の判定は文を分ける。
+短絡する版は発展課題 S1 で扱う。</p>
+<h2 id="文字列収集とプログラム全体の出力">文字列収集とプログラム全体の出力</h2>
+<p>この回はグローバル変数を扱うため、<code>main()</code> の処理が「文字列を集める → <code>.data</code> → <code>.bss</code> → <code>.text</code>」
+という並びになる。そこで、コマ10 まで <code>main()</code> に直接書いていた
+「各 <code>FuncDef</code> の本体から文字列を集める」ループを <code>collect_all_strings(prog)</code> に、
+セクションを順に出す部分を <code>gen_program(prog)</code> に切り出す。</p>
+<p><code>emit_data_section()</code> はコマ10 で実装したものをそのまま継承して使う。
+この回で書き直す必要はない（スケルトンにも再宣言は無い）。
+グローバル変数のための <code>.bss</code> は <code>emit_bss_section()</code> として新しく書く。</p>
+<p>もう1つ、<code>collect_strings_expr()</code> のディスパッチをこの回で整理する。
+<code>!</code> <code>&amp;&amp;</code> <code>||</code> が増えて二項演算のハンドラがさらに2つ必要になるが、
+<code>Assign</code> / <code>Add</code> / … / <code>Index</code> / <code>And</code> / <code>Or</code> の走査はどれも
+「<code>node.lhs</code> と <code>node.rhs</code> を再帰的に見る」という同じ形である。
+そこで、この形のものを <code>_collect_strings_binary_expr(node)</code> 1つにまとめ、
+ディスパッチをそこへ振り替えてある。</p>
+<p>この整理により、コマ11 で書いた二項演算ごとのハンドラ
+（<code>collect_strings_expr_Add</code> など）はコマ13 以降は呼ばれなくなる。
+削除はしなくてよい（継承したまま残しておいて構わない）。
+<code>collect_strings_expr_Str</code> / <code>_Neg</code> / <code>_Cond</code> / <code>_Call</code>（コマ10〜11）と
+<code>collect_strings_expr_Member</code>（コマ12）は、形が違うのでこれまで通り使われる。</p>
+<p>この教材は普段、前回までのハンドラをそのまま継承し新しいノード種別の分だけ
+書き足す「積み上げ」で進める。ここはその方針の部分的な例外である。
+コマ11では <code>collect_strings_expr_Add</code> / <code>_Sub</code> / <code>_Mul</code> / … と種類ごとに
+1つずつハンドラを書いたが、コマ13 で <code>&amp;&amp;</code> <code>||</code> が増えて同じ形の走査が
+さらに2つ必要になった時点で、「形が同じものは重複させずに1箇所へまとめる」
+判断を優先した。結果として、コマ11 で書いた15個の per-kind ハンドラ
+（<code>Assign</code> / <code>Add</code> / <code>Sub</code> / <code>Mul</code> / <code>Div</code> / <code>Mod</code> / <code>Eq</code> / <code>Ne</code> / <code>Lt</code> / <code>Le</code> / <code>Index</code>
+など二項演算に対応するもの）は、<code>collect_strings_expr()</code> のディスパッチが
+<code>_collect_strings_binary_expr()</code> を直接呼ぶように書き換わったことで、
+コマ13 以降は実行経路から外れる。バグではなく、「継承で積み上げる」設計と
+「同じ形のコードは重複させない」設計が衝突した箇所で、後者を優先した
+トレードオフだと理解しておく。</p>
+<h2 id="編集するファイル">編集するファイル</h2>
+<p><code>sessions/13_globals_scope/</code> 以下のスケルトンファイルを編集する。</p>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>実装するハンドラ・メソッド</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>mycc.py</code></td>
+<td><code>Codegen13</code> クラスと <code>main()</code>。下の一覧の11個</td>
+</tr>
+<tr class="even">
+<td>(AST パーサ)</td>
+<td>変更不要（<code>'Decl'</code> ノードはコマ12から存在する）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>実装対象は、スケルトンの <code>raise NotImplementedError</code> が置かれている次の11個である。</p>
+<div class="table-scroll">
+<table style="width:100%;">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 52%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>実装対象</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>lookup_var_ty(name, line)</code></td>
+<td><code>self._locals</code> → <code>self._globals</code> の順に型を引く</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>codegen_lval_Var(node)</code></td>
+<td>ローカルは <code>s0</code> からのオフセット、グローバルは <code>la</code></td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>codegen_Not(node)</code></td>
+<td>operand を評価し <code>seqz</code></td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>codegen_And(node)</code></td>
+<td>両辺を評価し、<code>snez</code> してから <code>and</code>（短絡しない）</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>codegen_Or(node)</code></td>
+<td>両辺を評価して <code>or</code> を取り、<code>snez</code>（短絡しない）</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td><code>collect_globals(prog)</code></td>
+<td>トップレベルの <code>'Decl'</code> の名前と型を <code>self._globals</code> に登録する</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td><code>collect_all_strings(prog)</code></td>
+<td>各 <code>FuncDef</code> の本体から文字列を集める</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td><code>_collect_strings_binary_expr(node)</code></td>
+<td>二項演算の <code>node.lhs</code> / <code>node.rhs</code> を走査する</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td><code>emit_bss_section()</code></td>
+<td>グローバル変数を <code>.bss</code> に出力する（<code>.zero</code> で 0 初期化）</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td><code>gen_program(prog)</code></td>
+<td><code>.data</code> → <code>.bss</code> → <code>.text</code> の順に出し、<code>FuncDef</code> だけ <code>gen_func()</code> する</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td><code>main()</code></td>
+<td><code>parse_file()</code> で AST を作り、6・7・10 を呼ぶ</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>スケルトンに<strong>あらかじめ書かれている</strong>ものは次の通りで、実装対象ではない。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 62%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>提供済み</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>parse_file(filename)</code></td>
+<td>前処理・構造体定義の収集・字句解析・構文解析をまとめて行う</td>
+</tr>
+<tr class="even">
+<td><code>_is_local(name)</code></td>
+<td>変数がローカルかどうかの判定</td>
+</tr>
+<tr class="odd">
+<td><code>type_of_expr_Var</code> / <code>type_of_lval_Var</code> / <code>type_of_expr_Not</code> / <code>_And</code> / <code>_Or</code></td>
+<td>型は <code>lookup_var_ty</code> に任せるか <code>int</code> を返すだけなので提供済み</td>
+</tr>
+<tr class="even">
+<td><code>collect_strings_expr_Not</code> / <code>_And</code> / <code>_Or</code></td>
+<td>8 番のハンドラ等へ振り分けるだけ</td>
+</tr>
+<tr class="odd">
+<td><code>_type_of_expr()</code> / <code>_type_of_lval()</code> / <code>codegen_lval()</code> / <code>codegen()</code> / <code>collect_strings_expr()</code> のディスパッチ</td>
+<td>新しいノード種別の分岐は既に書かれている</td>
+</tr>
+<tr class="even">
+<td><code>emit_data_section()</code></td>
+<td>コマ10 で実装済み。継承してそのまま使う</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>コマ12の実装を <code>sessions/13_globals_scope/mycc.py</code> に反映する<br>（スケルトンの <code>importlib</code> 継承により、前回の <code>Codegen</code> クラスを継承する。新機能の handler だけを実装すればよい。）</li>
+<li><code>self._globals</code> と <code>self._locals</code> を確認する（<code>self._globals</code> の追加はスケルトンにあらかじめ書かれている）</li>
+<li>トップレベルの <code>'Decl'</code> ノードを <code>collect_globals()</code> で集める（覚えるのは名前と型だけでよい）</li>
+<li><code>lookup_var_ty()</code> を <code>self._locals</code> → <code>self._globals</code> の順にする</li>
+<li><code>codegen_lval_Var()</code> で <code>self._is_local()</code> を使って分岐し、グローバル変数なら <code>la a0, name</code> を出す</li>
+<li><code>emit_bss_section()</code> でグローバル変数を <code>.bss</code> に出力する（全て 0 初期化）</li>
+<li><code>collect_all_strings()</code> と <code>_collect_strings_binary_expr()</code> を実装する（文字列収集の入口と、二項演算の走査）</li>
+<li><code>gen_program()</code> で <code>.data</code> → <code>.bss</code> → <code>.text</code> の順に出力する（<code>.data</code> は継承した <code>emit_data_section()</code> を呼ぶだけでよい）</li>
+<li><code>main()</code> から <code>parse_file()</code> → <code>collect_globals()</code> → <code>collect_all_strings()</code> → <code>gen_program()</code> を呼ぶ</li>
+<li><code>codegen_Not()</code> / <code>codegen_And()</code> / <code>codegen_Or()</code> を実装する（<code>&amp;&amp;</code> <code>||</code> は短絡しない）</li>
+<li><code>global_min.c</code>、<code>global_counter.c</code>、<code>global_init.c</code>、<code>shadow_min.c</code>、<code>global_local_shadow.c</code>、<code>global_struct.c</code>、<code>logical_ops.c</code> を通す</li>
+</ol>
+<h2 id="tests">tests/</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 25%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ファイル</th>
+<th>内容</th>
+<th>期待値</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>global_min.c</code></td>
+<td>グローバル <code>total</code> を関数から更新する最小形</td>
+<td><code>30</code></td>
+</tr>
+<tr class="even">
+<td><code>global_counter.c</code></td>
+<td>グローバル <code>call_count</code> / <code>total</code> と <code>printf</code></td>
+<td>stdout <code>60</code>, exit <code>3</code></td>
+</tr>
+<tr class="odd">
+<td><code>global_init.c</code></td>
+<td>0 初期化保証（代入せず読み始められる）</td>
+<td><code>12</code></td>
+</tr>
+<tr class="even">
+<td><code>shadow_min.c</code></td>
+<td>同名のローカル変数とグローバル変数の最小形</td>
+<td><code>5</code></td>
+</tr>
+<tr class="odd">
+<td><code>global_local_shadow.c</code></td>
+<td>ローカル変数がグローバル変数を隠す</td>
+<td><code>5</code></td>
+</tr>
+<tr class="even">
+<td><code>global_struct.c</code></td>
+<td>グローバル構造体変数と <code>.</code> / <code>&amp;</code></td>
+<td><code>30</code></td>
+</tr>
+<tr class="odd">
+<td><code>logical_ops.c</code></td>
+<td><code>!</code> <code>&amp;&amp;</code> <code>\|\|</code> の結果が 0/1 であること・短絡しないこと</td>
+<td><code>40</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb17" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/13_globals_scope</span></code></pre></div>
+<p><code>tests/global_min.c</code> がコンパイルでき、終了コード <code>30</code> になれば基本形は成功。</p>
+<p>個別に動かす場合は、次のようにする。</p>
+<div class="sourceCode" id="cb18" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/13_globals_scope/mycc.py sessions/13_globals_scope/tests/global_min.c <span class="dt">\</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<h2 id="注意">注意</h2>
+<p>言語仕様に初期化子はない。<code>int total = 0;</code> とは書けず、グローバル変数は <code>.bss</code> に置いて
+すべて 0 に初期化される（ポインタなら null）。初期値が必要なら代入文で設定する。</p>
+<p>変数表の探索順は <code>self._locals</code> → <code>self._globals</code> の順に固定する。
+同名のローカル変数があればそちらが優先され、グローバル変数は隠される。</p>
+<p>アドレスの作り方が2通りになる。ローカル変数は <code>s0</code> からのオフセット、
+グローバル変数は <code>la a0, name</code> である。<code>codegen_lval_Var()</code> で <code>self._is_local()</code> を見て分ける。</p>
+<p><code>&amp;&amp;</code> と <code>||</code> は<strong>短絡しない</strong>（<code>language_spec.md</code> 例外 E3）。
+左辺が偽でも右辺を必ず評価するので、<code>p != 0 &amp;&amp; p-&gt;val &gt; 0</code> のような書き方はできない。
+分岐は作らず、比較演算子と同じ「両辺を評価してから合成する」形で書く。
+<code>!</code> <code>&amp;&amp;</code> <code>||</code> の結果は必ず <code>0</code> か <code>1</code> にする。</p>
+<h2 id="ここまでで着手できる発展課題">ここまでで着手できる発展課題</h2>
+<p>グローバル変数・スコープまで学んだので、複合代入（<code>x += 3</code> など、左辺は1回だけ評価）に
+意味を足す <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L2_compound_assign/README.md">L2</a> に着手できる。</p>
+<p>生成したアセンブリでグローバル変数のアドレスの作り方を1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../sessions/12_struct_malloc_list/"><span class="label">前へ</span>コマ12: 構造体とヒープ（struct / . / -&gt; / sizeof / malloc / 連結リスト）</a><a class="index" href="../../sessions/"><span class="label">一覧</span>通常回</a><a class="next" href="../../sessions/14_preprocess_multifile/"><span class="label">次へ</span>コマ14: 複数ファイル・前処理の概念</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/sessions/13_globals_scope.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

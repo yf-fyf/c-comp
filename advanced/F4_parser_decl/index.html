@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>再帰下降パーサ③ — 宣言・型・プログラム全体（最終回） — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">再帰下降パーサ③ — 宣言・型・プログラム全体（最終回）</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#宣言か文か-判定は4語の照合で終わる" id="toc-宣言か文か-判定は4語の照合で終わる">宣言か、文か — 判定は4語の照合で終わる</a></li>
+      <li><a href="#型を読む-どこに書かれた型かで許される型が違う" id="toc-型を読む-どこに書かれた型かで許される型が違う">型を読む — 「どこに書かれた型か」で許される型が違う</a></li>
+      <li><a href="#局所宣言と関数本体-宣言を置ける場所は1箇所だけ" id="toc-局所宣言と関数本体-宣言を置ける場所は1箇所だけ">局所宣言と関数本体 — 宣言を置ける場所は1箇所だけ</a></li>
+      <li><a href="#struct-定義-検証はするがast-には残さない" id="toc-struct-定義-検証はするがast-には残さない">struct 定義 — 検証はするが、AST には残さない</a></li>
+      <li><a href="#sizeof-f2-で先送りした最後のピース" id="toc-sizeof-f2-で先送りした最後のピース">sizeof — F2 で先送りした最後のピース</a></li>
+      <li><a href="#関数-宣言か定義かは読み進めた結果で分かる" id="toc-関数-宣言か定義かは読み進めた結果で分かる">関数 — 宣言か定義かは「読み進めた結果」で分かる</a></li>
+      <li><a href="#parse_program-全体を組み立てる" id="toc-parse_program-全体を組み立てる">parse_program — 全体を組み立てる</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#総仕上げ任意-mycc.py-に差し替えて-fixed17-を回す" id="toc-総仕上げ任意-mycc.py-に差し替えて-fixed17-を回す">総仕上げ（任意）— mycc.py に差し替えて fixed17 を回す</a></li>
+      <li><a href="#シリーズのまとめ" id="toc-シリーズのまとめ">シリーズのまとめ</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p>型・宣言・<code>struct</code> 定義・関数を実装して <code>parse_program</code> を完成させる。
+講義の全テスト入力（約100本の <code>.c</code>）で AST が スキャフォールド と<strong>完全一致</strong>したら、
+Lexer（F1）とあわせて<strong>ブラックボックスの完全な置き換え</strong>を宣言する。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>F3</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code></td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>myparser.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が全テスト入力（約100本の <code>.c</code>）でAST の完全一致を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>フロントエンド発展シリーズの最終回。F1 とあわせてブラックボックスの完全な置き換えになる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>ProgramParser</code> は自分の F3 <code>StmtParser</code> を継承する。継承の連鎖は
+F2（式）→ F3（文）→ F4（宣言・型）で完結する。
+F2 で先送りした <code>sizeof</code> も、この回で最後のピースとして埋める。</p>
+<h2 id="宣言か文か-判定は4語の照合で終わる">宣言か、文か — 判定は4語の照合で終わる</h2>
+<p>F3 のコラムで予告した問題から始める。関数本体の先頭の2行を考える。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Point p<span class="op">;</span>   <span class="co">// 宣言</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="dv">1</span><span class="op">;</span>            <span class="co">// 式文</span></span></code></pre></div>
+<p>宣言と式文を見分ける必要がある。この言語では、その判定は次の1行で終わる。</p>
+<div class="sourceCode" id="cb2" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> is_type_start(<span class="va">self</span>):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.cur.kind <span class="op">==</span> TK_KW <span class="kw">and</span> <span class="va">self</span>.cur.sval <span class="kw">in</span> TYPE_KEYWORDS</span></code></pre></div>
+<p><code>TYPE_KEYWORDS</code> は <code>('int', 'char', 'void', 'struct')</code> の4語である。
+型を書き始められるトークンはこの4語だけで、<strong>解析中に増えることがない</strong>。
+だから表もいらず、字句解析器へ情報を戻す必要もない。</p>
+<figure>
+<img src="../../figures/F4_decl_or_stmt.svg" alt="宣言か文か — トップレベルと関数本体の判定" />
+<figcaption aria-hidden="true">宣言か文か — トップレベルと関数本体の判定</figcaption>
+</figure>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 本物の C ではこの1行が書けない。</strong>
+C には <code>typedef</code> があるので、<code>Point p;</code> の <code>Point</code> が型名かどうかは
+「そこまでに <code>typedef</code> を読んだか」で変わる。つまり同じトークン列
+「識別子 識別子 <code>;</code>」が、宣言にも式にもなりうる。
+パーサは型名の集合を持ち歩き、解析しながらそれを育てなければならない
+——これが C の文法の<strong>文脈依存性</strong>である。
+<code>language_spec.md</code> の EBNF が参照している N1570 の文法では、
+型名は <code>TYPEDEF_NAME</code> という<strong>別のトークン種別</strong>になっていて、
+多くの実装はパーサから字句解析器へ型名の表をフィードバックしてこれを作る。
+この折衷は俗に <strong>lexer hack</strong> と呼ばれ、C の文法の設計上の傷と言われる。</p>
+<p>Core プロファイルは <code>typedef</code> を持たない。
+その1つの決定だけで、パーサは表もフィードバックも持たずに済み、
+判定は4語の集合照合に縮んだ。
+<strong>言語の設計が実装の難しさを決める</strong>——F1 のコラムで見た <code>a--&gt;b</code> も、
+「後置 <code>--</code> を持たない」という決定ひとつで解釈の分かれ道が消えていた。
+同じことが、ここではもっと大きな規模で起きている。</p>
+</div>
+<h2 id="型を読む-どこに書かれた型かで許される型が違う">型を読む — 「どこに書かれた型か」で許される型が違う</h2>
+<p>型そのものの読み方は単純である。基底（<code>int</code> / <code>char</code> / <code>void</code> / <code>struct タグ</code>）を
+読み、続く <code>*</code> を数えるだけ。</p>
+<div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_base_and_stars(<span class="va">self</span>):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;(&#39;int&#39;, &#39;**&#39;) のような組を返す&quot;&quot;&quot;</span></span></code></pre></div>
+<p><code>ty_str</code> 文字列（<code>'int'</code> <code>'char*'</code> <code>'struct Node*'</code>）は、この組をつないで作る。
+コマ8 からずっと使ってきた表記の出所がここである。</p>
+<p>問題は<strong>その型がどこに書かれたか</strong>である。<code>language_spec.md</code> の型の EBNF は、
+1つではなく<strong>位置ごとに3つ</strong>の非終端記号に分かれている。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 27%" />
+<col style="width: 27%" />
+<col style="width: 29%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>位置</th>
+<th>呼ぶ関数</th>
+<th>書ける型</th>
+<th>弾かれる型</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>引数・<code>struct</code> フィールド</td>
+<td><code>parse_scalar_type</code></td>
+<td><code>int</code> / <code>char</code> / ポインタ全般</td>
+<td><code>void</code> 単独、<code>struct</code> 値</td>
+</tr>
+<tr class="even">
+<td>変数宣言・<code>sizeof</code> の型名</td>
+<td><code>parse_obj_type</code></td>
+<td>上記 + <code>struct</code> 値</td>
+<td><code>void</code> 単独</td>
+</tr>
+<tr class="odd">
+<td>関数の戻り値</td>
+<td>（<code>parse_program</code> 内で検証）</td>
+<td>上記 + <code>void</code> 単独</td>
+<td><code>struct</code> 値</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure>
+<img src="../../figures/F4_type_positions.svg" alt="位置ごとに許される型 — scalar / obj / ret" />
+<figcaption aria-hidden="true">位置ごとに許される型 — scalar / obj / ret</figcaption>
+</figure>
+<p>同じ「基底 + <code>*</code>」の文法を読んでいるのに、通る型が位置ごとに違う。
+スキャフォールド はこれを<strong>読んでから検証する</strong>形で実装している。</p>
+<div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_scalar_type(<span class="va">self</span>):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    base, stars <span class="op">=</span> <span class="va">self</span>.parse_base_and_stars()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> base <span class="op">==</span> <span class="st">&#39;void&#39;</span> <span class="kw">and</span> <span class="kw">not</span> stars:</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.error(<span class="st">&quot;void 型は使えません(void * は可)&quot;</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> base.startswith(<span class="st">&#39;struct&#39;</span>) <span class="kw">and</span> <span class="kw">not</span> stars:</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.error(<span class="st">&quot;struct 値はここでは使えません(ポインタにする)&quot;</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> base <span class="op">+</span> stars</span></code></pre></div>
+<p>弾かれる2つには、それぞれ理由がある。</p>
+<ul>
+<li><strong><code>void</code> 単独</strong>は「サイズを持たない型」である。スタックにも <code>.bss</code> にも
+場所を取れないので、変数・フィールド・引数という<strong>実体</strong>にはできない。
+戻り値だけは「値を返さない」という意味で使える</li>
+<li><strong><code>struct</code> 値</strong>を引数や戻り値にすると、コピーの規則が必要になる。
+サイズは型ごとに違い、小さければレジスタ2本、大きければ呼び出し側が
+確保した領域へ——というのが実際の ABI の規定である（コマ6 の引数渡し規則が
+一気に複雑になる）。この言語は「struct はポインタで渡す」に限定して、
+その規則ごと避けた。フィールドに <code>struct</code> 値を許さないのも同じ判断で、
+コマ12 のレイアウト計算をスカラーとポインタだけに閉じている</li>
+</ul>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>この検査は構文の仕事か、意味解析の仕事か。</strong>
+「<code>void</code> の変数は作れない」は、型に関する制約なので意味解析（型検査）に
+置くこともできる。実際 F2 では、<code>1 + 2 = x</code> の左辺検査を
+「意味解析に任せる」として通していた。
+ここで構文側に置けたのは、<strong>位置と型の組み合わせだけで判定が閉じる</strong>からである。
+変数表も型環境も要らず、その場のトークンだけで決まる制約は、文法に書ける。
+逆に「代入の左右の型が合うか」は周囲の情報が要るので文法には書けず、
+発展課題 Q1（型検査器）の仕事になる。
+<strong>どの層で弾くかは設計判断</strong>であり、文法に書けるものを文法に書いておくと、
+後段が扱う場合の数がその分減る。</p>
+</div>
+<h2 id="局所宣言と関数本体-宣言を置ける場所は1箇所だけ">局所宣言と関数本体 — 宣言を置ける場所は1箇所だけ</h2>
+<p>局所宣言は初期化子を持たない（<code>int a;</code> と書いて、値は次の行で代入する）。</p>
+<pre data-lang="text"><code>local_decl ::= obj_type IDENT &#39;;&#39;</code></pre>
+<p>宣言を書けるのは<strong>関数本体の先頭だけ</strong>である。そこで F4 が新設するのは
+<code>parse_func_body</code> で、F3 の <code>parse_block</code> は<strong>上書きしない</strong>。</p>
+<div class="sourceCode" id="cb6" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_func_body(<span class="va">self</span>):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.expect(<span class="st">&#39;{&#39;</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    stmts <span class="op">=</span> []</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="va">self</span>.is_type_start():          <span class="co"># ← 宣言の並び。関数本体だけの特権</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        stmts.append(<span class="va">self</span>.parse_local_decl())</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="kw">not</span> <span class="va">self</span>.consume_if(<span class="st">&#39;}&#39;</span>):      <span class="co"># ← ここから先は F3 の parse_block と同じ</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        stmts.append(<span class="va">self</span>.parse_stmt())</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Node(ND_BLOCK, stmts<span class="op">=</span>stmts)</span></code></pre></div>
+<p>同じ <code>{ ... }</code> の見た目でも、関数本体と入れ子ブロックは<strong>別の規則</strong>である。
+<code>if</code> の中の <code>{ ... }</code> は <code>parse_stmt</code> 経由で F3 の <code>parse_block</code> に届き、
+そこには <code>is_type_start</code> のループがない。だから入れ子ブロックの中の
+<code>int y;</code> は「型キーワードで始まる式文」として読まれ、構文エラーになる。
+「関数の中の宣言は先頭にまとめる」という規則が、
+<strong>2つの関数を分けた</strong>という形でコードに刻まれている。</p>
+<h2 id="struct-定義-検証はするがast-には残さない">struct 定義 — 検証はするが、AST には残さない</h2>
+<p>トップレベルには <code>struct</code> で始まる形が3つ並ぶ。</p>
+<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">{</span> <span class="dt">int</span> val<span class="op">;</span> <span class="kw">struct</span> Node <span class="op">*</span>next<span class="op">;</span> <span class="op">};</span>   <span class="co">// 定義</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node<span class="op">;</span>                                   <span class="co">// 前方宣言</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">*</span>head<span class="op">;</span>                             <span class="co">// グローバル変数</span></span></code></pre></div>
+<p>先頭トークンはどれも <code>struct</code>、次はどれもタグ名である。
+分かれるのは<strong>その次</strong>なので、判定には2トークン先読みが要る。</p>
+<div class="sourceCode" id="cb8" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">self</span>.cur.sval <span class="op">==</span> <span class="st">&#39;struct&#39;</span> <span class="kw">and</span> <span class="va">self</span>.peek(<span class="dv">2</span>).sval <span class="kw">in</span> (<span class="st">&#39;{&#39;</span>, <span class="st">&#39;;&#39;</span>):</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.parse_struct_decl()</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">continue</span></span></code></pre></div>
+<p><code>parse_struct_decl</code> はフィールドを1個以上読み、それぞれを
+<code>parse_scalar_type</code>（= <code>struct</code> 値と <code>void</code> 単独を弾く）で検証する。
+そして——<strong>Node を1つも作らずに戻る</strong>。</p>
+<p>これがコマ12 の種明かしである。あの回で構造体のフィールドを
+「ソース文字列を走査して集める」という一見遠回りな方法で扱ったのは、
+Parser が意図的にフィールドを AST に残していないからだった。
+<strong>何を AST に残し、何を残さないかも設計</strong>であり、スキャフォールド は
+「コード生成に必要な最小限」に絞る側に倒している（発展課題で逆の設計も試せる）。</p>
+<h2 id="sizeof-f2-で先送りした最後のピース">sizeof — F2 で先送りした最後のピース</h2>
+<p><code>sizeof</code> の形は1つだけである。</p>
+<pre data-lang="text"><code>&#39;sizeof&#39; &#39;(&#39; obj_type &#39;)&#39;    →  ND_SIZEOF_TYPE（ty_str を持つ）</code></pre>
+<p>式に対する <code>sizeof</code> はこの言語にはない。<code>sizeof(x)</code> は構文エラーになる。
+<code>(</code> の次が型キーワードなら型名形式、そうでなければ——<strong>そうでない場合はない</strong>。</p>
+<div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_sizeof(<span class="va">self</span>):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.pos <span class="op">+=</span> <span class="dv">1</span>  <span class="co"># &#39;sizeof&#39;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> (<span class="va">self</span>.cur.sval <span class="op">==</span> <span class="st">&#39;(&#39;</span> <span class="kw">and</span> <span class="va">self</span>.peek_is_type()):</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.error(<span class="st">&quot;sizeof は sizeof(型名) 形式のみ使えます&quot;</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    ...</span></code></pre></div>
+<p>F2 の LL(1) のコラムで「唯一きわどいのは <code>sizeof(x)</code> の <code>(</code> の次が型か式かの判定だ」
+と書いた。その曖昧さは、<code>sizeof</code> を型名形式に絞った時点で<strong>消えている</strong>。
+<code>peek_is_type</code> が残っているのは判定のためではなく、
+「<code>(</code> が来ていない」「型でないものが来た」を<strong>その場で名指しできる</strong>ようにするため——
+つまり良いエラーメッセージのためである。</p>
+<p>先読みが本当に必要だったのは、むしろ1つ上の節の <code>struct</code> 定義の判定
+（<code>peek(2)</code>）のほうだった。<strong>きわどい箇所は、思っていたのと別の場所にある</strong>。</p>
+<h2 id="関数-宣言か定義かは読み進めた結果で分かる">関数 — 宣言か定義かは「読み進めた結果」で分かる</h2>
+<pre data-lang="text"><code>func_proto ::= ret_type IDENT &#39;(&#39; [ params [ &#39;,&#39; &#39;...&#39; ] ] &#39;)&#39; &#39;;&#39;
+func_def   ::= ret_type IDENT &#39;(&#39; [ params ] &#39;)&#39; func_body</code></pre>
+<p>引数リストを読み終えるまで、宣言（<code>ND_FUNCPROTO</code>）か定義（<code>ND_FUNCDEF</code>）かは
+分からなくてよい。<strong>閉じカッコの次が <code>;</code> なら宣言、<code>{</code> なら定義</strong>と、
+読み進めた結果で決めればよい（先読み不要）。</p>
+<p>引数リストの規則は4つ。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>形</th>
+<th>扱い</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>f()</code></td>
+<td>引数なし（<code>params</code> は空リスト）</td>
+</tr>
+<tr class="even">
+<td><code>f(void)</code></td>
+<td><strong>構文エラー</strong>。<code>parse_scalar_type</code> が <code>void</code> 単独を弾く</td>
+</tr>
+<tr class="odd">
+<td><code>f(int)</code></td>
+<td><strong>構文エラー</strong>。仮引数は名前必須</td>
+</tr>
+<tr class="even">
+<td><code>f(char *fmt, ...)</code></td>
+<td><code>...</code> で打ち切る。固定引数が1個以上必要で、<strong>プロトタイプ限定</strong>（<code>lib.h</code> の <code>printf</code> 用）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>下2つは、F2 までの「多めに受理して後段で弾く」方針とは逆の判断である。
+<code>(void)</code> も引数名の省略も、<strong>書けても意味が増えない</strong>（本物の C では
+<code>()</code> と <code>(void)</code> に意味の差があるが、この言語の <code>()</code> は常に「0引数」である）。
+受理する形を1つに絞れば、後段が場合分けを持たずに済む。</p>
+<h2 id="parse_program-全体を組み立てる">parse_program — 全体を組み立てる</h2>
+<p>トップレベルは3種類だけである。</p>
+<pre data-lang="text"><code>program ::= { struct 定義/前方宣言 | グローバル変数宣言 | 関数宣言/定義 }+</code></pre>
+<ol type="1">
+<li><code>struct</code> + タグ名 + <code>{</code> または <code>;</code> なら <code>parse_struct_decl()</code>。<strong>AST には何も足さない</strong></li>
+<li>それ以外は基底と <code>*</code> を読み、名前を読む。次が <code>(</code> なら関数、そうでなければ
+グローバル変数</li>
+<li>空のプログラム（外部宣言が0個）はエラーにする</li>
+</ol>
+<p>戻り値型の検証（<code>struct</code> 値は不可）とグローバル変数の検証（<code>void</code> 単独は不可）が
+ここに直接書かれているのは、<strong>名前の次を見るまで、どちらの位置なのか決まらない</strong>
+からである。<code>parse_scalar_type</code> のように読む前から位置が分かっていれば関数に
+くくれるが、ここだけは「読んでから分岐して、分岐先で検証する」形になる。</p>
+<p>グローバル変数（コマ13 の <code>int total;</code>）は、ローカル宣言と同じ <code>ND_DECL</code> になる。
+トップレベルにあるか関数の中にあるかでコード生成側が <code>.bss</code> かスタックかを
+決めていた（コマ13）。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 45%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>is_type_start</code> / <code>parse_base_and_stars</code> / <code>parse_obj_type</code> / <code>parse_scalar_type</code></td>
+<td>型の読み取りと位置ごとの検証</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>parse_local_decl</code> / <code>parse_func_body</code></td>
+<td>宣言は関数本体の先頭のみ</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>peek_is_type</code> / <code>parse_sizeof</code></td>
+<td>型名形式のみ</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>parse_func</code></td>
+<td>params・<code>...</code>・宣言/定義の後決め</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>parse_field</code> / <code>parse_struct_decl</code> / <code>parse_program</code></td>
+<td>struct 定義とトップレベル</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>expect_ident</code> / <code>parse_unary</code> の上書き（<code>sizeof</code> への分岐）/ 入口 <code>parse()</code> は完成済み。</p>
+<div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> myparser.py ../../sessions/12_struct_malloc_list/tests/list_min.c</span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb14" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 全テスト入力(約100本)で scaffold と突き合わせ</span></span></code></pre></div>
+<p>check.py の Step 2 以降は、同じ入力を スキャフォールド にも解析させて構造比較する。
+各 Step には「弾かれるべき入力」の確認（<code>void v;</code> / <code>f(struct Point p)</code> /
+<code>sizeof x</code> など）も入っている。<strong>通す</strong>だけでなく<strong>弾く</strong>のもパーサの仕事だからである。</p>
+<p>golden.py が<strong>全ファイル一致になったら、このシリーズの完了</strong>である。</p>
+<figure>
+<img src="../../figures/F4_full_pipeline.svg" alt="完成したフロントエンド — ブラックボックスはもうない" />
+<figcaption aria-hidden="true">完成したフロントエンド — ブラックボックスはもうない</figcaption>
+</figure>
+<h2 id="総仕上げ任意-mycc.py-に差し替えて-fixed17-を回す">総仕上げ（任意）— mycc.py に差し替えて fixed17 を回す</h2>
+<p>golden test は「同じ AST が出る」ことの証明なので、理屈の上では
+自作フロントエンドで <a href="../../advanced/#fixed17"><code>fixed17</code></a> も通るはずである。実際に確かめたい場合は、
+<code>final/mycc.py</code> の先頭にある</p>
+<div class="sourceCode" id="cb15" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> parser <span class="im">import</span> parse</span></code></pre></div>
+<p>を、自作パーサを読み込む形に差し替える。</p>
+<div class="sourceCode" id="cb16" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> importlib.util <span class="im">as</span> _il</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>_spec <span class="op">=</span> _il.spec_from_file_location(</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;myparser&quot;</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    os.path.join(os.path.dirname(<span class="va">__file__</span>), <span class="st">&quot;..&quot;</span>, <span class="st">&quot;advanced&quot;</span>,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>                 <span class="st">&quot;F4_parser_decl&quot;</span>, <span class="st">&quot;myparser.py&quot;</span>))</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>_mod <span class="op">=</span> _il.module_from_spec(_spec)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>_spec.loader.exec_module(_mod)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>parse <span class="op">=</span> _mod.parse</span></code></pre></div>
+<p>そのまま <code>python3 scaffold/test_runner.py</code> を実行して全 PASS すれば、
+<strong>自作の Lexer/Parser + 自作のコード生成器</strong>でコンパイラ一式が動いたことになる。</p>
+<h2 id="シリーズのまとめ">シリーズのまとめ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 73%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>回</th>
+<th>学んだこと</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>F0</td>
+<td>言語と文法・曖昧性。CYK 法 — 表を埋めれば任意の CFG が解ける（が O(n³)）</td>
+</tr>
+<tr class="even">
+<td>F1</td>
+<td>字句解析 — 最長一致・分岐の順序・行番号。golden test という検証手法</td>
+</tr>
+<tr class="odd">
+<td>F2</td>
+<td>再帰下降（式）— EBNF の階層 = 関数の階層。左結合はループ、右結合は再帰</td>
+</tr>
+<tr class="even">
+<td>F3</td>
+<td>再帰下降（文）— 先頭トークンでのディスパッチ。dangling else の自然な解決</td>
+</tr>
+<tr class="odd">
+<td>F4</td>
+<td>宣言・型 — 位置ごとに許される型が違う。文法に書ける制約は文法に書く</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>出発点の CYK は汎用だが遅く、到達点の再帰下降は
+「文法を LL(1) に設計しておけば、先読み1〜2トークン・線形時間・手書き可能」だった。
+この対比が、実用コンパイラのフロントエンドが再帰下降で書かれている理由である。</p>
+<p>そして F4 で繰り返し見たのは、その「設計しておけば」の重みである。
+<code>typedef</code> を持たない・<code>sizeof</code> を型名形式に絞る・<code>(void)</code> を受理しない・
+<code>struct</code> 値を渡さない——どれも<strong>言語の側の1行の決定</strong>だが、
+その1つずつが、パーサから表・先読み・場合分けを1つずつ消していった。
+コンパイラの複雑さは、書き方より先に<strong>何を許すかで決まる</strong>。</p>
+<p>次の一歩は発展課題 P1（C 移植・セルフホスト）である。
+いま Python で書いたこのフロントエンドを C に写せば
+（<code>dict</code> → 連結リスト、クラス → <code>struct</code> の定石どおり）、
+セルフホストに必要な部品がすべて自分の手の中に揃う。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>前処理も自作する</strong>: <code>preprocess()</code>（<code>#include</code> / <code>#define</code>）を自作して、
+スキャフォールド への依存を完全にゼロにする（発展課題 P1 の <code>#define</code> 自前化と同じ課題）</li>
+<li><strong>struct のフィールドを AST に残す</strong>: <code>parse_struct_decl</code> を、フィールドを
+<code>ND_DECL</code> のリストとして持つノードを返す形に改造し、コマ12 のソース走査を
+不要にする設計を試す（スキャフォールド を超える設計変更。golden は通らなくなる）</li>
+<li><strong><code>typedef</code> を足してみる</strong>: 型名の集合 <code>typedef_names</code> を持ち、
+<code>is_type_start</code> を「4語 <strong>または</strong> 表にある識別子」に広げる。
+golden は通らなくなるが、コラムで述べた文脈依存性を自分の手で作れる。
+そのうえで、増えたコードの量を数えてみるとよい</li>
+<li><strong>エラー回復</strong>: エラーで即座に止めず、<code>;</code> か <code>}</code> まで読み飛ばして解析を続行し、
+1回の実行で複数のエラーを報告する（パニックモード回復）</li>
+<li><strong>OCaml 参考実装と読み比べる</strong>: 配布済みの <code>workbook/ocaml/support/parser.mly</code>（Menhir）は、
+同じ文法を宣言的に書いている。自分の手書き再帰下降と見比べ、
+生成系が何を自動化しているのかを確かめる</li>
+</ol>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/F3_parser_stmt/"><span class="label">前へ</span>再帰下降パーサ② — 文を解析する</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/B1_fold_peephole/"><span class="label">次へ</span>最適化入門 — 定数畳み込みとピープホール</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/F4_parser_decl.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

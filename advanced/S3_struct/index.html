@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>構造体の代入 — レジスタに載らないものを運ぶ — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">構造体の代入 — レジスタに載らないものを運ぶ</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#いまはどうなっているか" id="toc-いまはどうなっているか">いまはどうなっているか</a></li>
+      <li><a href="#なぜ壊れるのか-レジスタに載らない" id="toc-なぜ壊れるのか-レジスタに載らない">なぜ壊れるのか — レジスタに載らない</a></li>
+      <li><a href="#どう直すか-アドレスからアドレスへ" id="toc-どう直すか-アドレスからアドレスへ">どう直すか — アドレスからアドレスへ</a></li>
+      <li><a href="#代入式の値は何か" id="toc-代入式の値は何か">代入式の値は何か</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>q = p;</code> のように、構造体をまるごとコピーできるようにする。
+ポインタ・フィールドを持つ構造体（<code>Line</code> の中の <code>Point *</code>）やポインタ経由
+（<code>*dst = *src</code>）も動くようにする。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ12（構造体）まで。完了条件のうち <code>golden.py</code> は完成した <code>final/mycc.py</code> を土台に <a href="../../advanced/#fixed17"><code>fixed17</code></a> を回すので、やり切るにはコマ15 も要る</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code>、ラッパー <code>semcc.py</code>（配布済み・完成品）</td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>structcopy.py</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になり、<code>golden.py</code> が構造体代入のテストの通過と <code>fixed17</code> 全通を報告する</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>仕様との関係</td>
+<td><strong>仕様の内側</strong>。<code>language_spec.md</code> は「struct 変数は宣言できるが、struct 値の代入・実引数・戻り値は不可」と定めているのに、実装は <code>q = p;</code> をエラーにせず受理して誤った答えを返す。判定基準どおりの <strong>S 系</strong>である</td>
+</tr>
+<tr class="even">
+<td>備考</td>
+<td>意味論発展シリーズの第3回。引数・戻り値の値渡しはこの回では扱わない（発展課題 L5 で実装する）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="なぜ-s-系なのか">なぜ S 系なのか</h3>
+<p><code>language_spec.md</code> は struct について、こう定めている。</p>
+<blockquote>
+<p><strong>struct 変数は宣言できるが、struct 値の代入・実引数・戻り値は不可</strong>
+（<code>.</code> によるフィールドアクセスと <code>&amp;s</code> は可）。struct の受け渡しはポインタで行う。</p>
+</blockquote>
+<p>つまり <code>q = p;</code> は、<strong>仕様が受け付けないと決めた形</strong>である。
+ところがいまの実装はこれをエラーにせず、黙って受理して誤った答えを返す
+（何が起きるかは次節で見る）。<strong>仕様が禁じた形を実装が素通しさせている</strong>——
+これは「無い機能を足す」話ではなく、仕様と実装のずれである。</p>
+<p>S 系と L 系は、その回で作る振る舞いの「正解」がどこに書いてあるかで分かれる。
+仕様が意味を決めている構文の、仕様と実装のずれを埋めるのが S 系。
+仕様が対象外と決めた機能に、意味を自分で決めて足すのが L 系である
+（<a href="../../advanced/">発展課題の索引</a>の「S と L の判定基準」節）。
+この回は仕様の該当行を引用でき、そこから出発するので <strong>S 系</strong>にあたる。
+ずれの解消の向きは「受け付けない」ではなく「正しくコピーする」側へ倒す
+——仕様のこの行は、いずれ改訂の対象になる。</p>
+<blockquote>
+<p><strong>この回は 2026-08-01 に <code>L1_struct</code> から <code>S3_struct</code> へ改名した。</strong>
+以前は判定が S 系なのに ID が <code>L1</code> のままという食い違いがあり、それを解消した。
+ラッパーも L ファミリの <code>langcc.py</code> から S ファミリの <code>semcc.py</code> に変わっている。</p>
+</blockquote>
+<p>題材としては、コマ12 の資料が「構造体のネスト、構造体代入、グローバル構造体変数は
+扱わない」と明示的に先送りした宿題の回収でもある。</p>
+<div class="adm adm-warning">
+<div class="adm-title">
+注意
+</div>
+<p><strong>引数の値渡し（<code>f(p)</code> で構造体を渡す）と戻り値の値渡しは、この回では扱わない。</strong>
+どちらも RV64 の呼び出し規約に踏み込む必要があり（16バイト以下はレジスタ2本、
+それより大きければ呼び出し側が領域を用意して隠し引数で渡す）、
+分量が2倍以上になるためである。
+この回ではいままで通り、関数へはポインタで渡す（<code>f(&amp;p)</code>）。
+値渡し・値返しそのものは、この回を前提とする
+<a href="../../advanced/L5_struct_byval/">発展課題 L5</a> が実装する
+（呼び出し規約を自分で決めるところから始める、L 系列で最も重い回である）。</p>
+</div>
+<h2 id="いまはどうなっているか">いまはどうなっているか</h2>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Point p<span class="op">;</span> <span class="kw">struct</span> Point q<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>p<span class="op">.</span>x <span class="op">=</span> <span class="dv">3</span><span class="op">;</span> p<span class="op">.</span>y <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> p<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> q<span class="op">.</span>x <span class="op">+</span> q<span class="op">.</span>y<span class="op">;</span>     <span class="co">// 7 のはず</span></span></code></pre></div>
+<p>いまのコンパイラは、これを<strong>エラーにせず、間違った答えを返す</strong>。</p>
+<p>ポインタ・フィールド経由のメンバアクセス（<code>l.a-&gt;y</code>）は、実は既に正しく動く。
+<code>l.a</code> はただのポインタなので、<code>-&gt;</code> は「ポインタの指す先の <code>y</code> を読む」という、
+コマ11までと同じ処理でしかない。
+<strong>壊れているのは代入（<code>m = l</code> で <code>l.a</code>・<code>l.b</code> という2本のポインタをコピーする部分）だけ</strong>である。</p>
+<h2 id="なぜ壊れるのか-レジスタに載らない">なぜ壊れるのか — レジスタに載らない</h2>
+<p>いままでの代入は、こういう形だった。</p>
+<pre data-lang="text"><code>左辺のアドレスを求める → 退避
+右辺の値を a0 に載せる
+a0 を左辺のアドレスへ書き込む</code></pre>
+<p>「右辺の<strong>値</strong>を a0 に載せる」——ここが構造体では成り立たない。
+<code>Point</code> は8バイト、<code>Line</code> は16バイト、もっと大きい構造体もある。
+<strong>レジスタ1本に載らないものは、この方式では運べない。</strong></p>
+<p>いまの実装は、構造体でも同じ道を通って <code>ld</code> / <code>sd</code> で8バイトだけ写す。
+<code>Point</code>（ちょうど8バイト）なら偶然動きそうに見えるが、
+型サイズの計算がずれて <code>lw</code>（4バイト）になり、<code>y</code> が写らない。
+結果として <code>q.y</code> はゴミになる。</p>
+<h2 id="どう直すか-アドレスからアドレスへ">どう直すか — アドレスからアドレスへ</h2>
+<p>構造体の代入は、<strong>値の移動ではなくメモリのコピー</strong>である。</p>
+<pre data-lang="text"><code>左辺の「アドレス」を求める   → a1
+右辺の「アドレス」を求める   → a0     ← 値ではない
+a0 から a1 へ、size バイト写す</code></pre>
+<p>右辺に <code>codegen()</code> ではなく <strong><code>codegen_lval()</code></strong> を使うのが要点である。
+コマ7 で学んだ「rvalue と lvalue」の区別が、ここで効いてくる。
+構造体の代入では、<strong>右辺も lvalue として扱う</strong>。</p>
+<p>コピーは大きい単位から行う。</p>
+<div class="sourceCode" id="cb4" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span>      <span class="co">;; 8バイトずつ</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  sd a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">8</span><span class="op">(</span>a0<span class="op">)</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  sd a2<span class="op">,</span> <span class="dv">8</span><span class="op">(</span>a1<span class="op">)</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  lw a2<span class="op">,</span> <span class="dv">16</span><span class="op">(</span>a0<span class="op">)</span>     <span class="co">;; 残りが4バイト以上なら4バイト</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  sw a2<span class="op">,</span> <span class="dv">16</span><span class="op">(</span>a1<span class="op">)</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  lb a2<span class="op">,</span> <span class="dv">20</span><span class="op">(</span>a0<span class="op">)</span>     <span class="co">;; 最後の端数は1バイト</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  sb a2<span class="op">,</span> <span class="dv">20</span><span class="op">(</span>a1<span class="op">)</span></span></code></pre></div>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>これは <code>memcpy</code> である。</strong>
+いま書いたループは、libc の <code>memcpy(dst, src, n)</code> がやっていることそのものである。
+実際のコンパイラも、構造体の代入を <code>memcpy</code> の呼び出しに変換することが多い
+（サイズが小さいときは、いまのように命令を並べて展開する）。
+「構造体の代入」という言語機能の正体は、<strong>メモリのコピー</strong>である。</p>
+</div>
+<h2 id="代入式の値は何か">代入式の値は何か</h2>
+<p>C では代入も式なので、<code>a = (b = c)</code> のように値を持つ。
+構造体の代入の場合、その値は「代入された構造体」である。</p>
+<p>レジスタには載らないので、この回では<strong>左辺のアドレス</strong>を <code>a0</code> に残しておく。
+<code>p = q = r;</code> のような連鎖でも、次の代入が <code>codegen_lval</code> でアドレスを求め直すので
+辻褄が合う。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>is_struct_assign</code></td>
+<td>左辺の型が構造体かを判定する</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>gen_struct_copy</code></td>
+<td>両辺のアドレスを用意して size バイト写す</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/assign.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A6</span> <span class="st">&quot;ld a2&quot;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/nested.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&quot;sd a2&quot;</span>    <span class="co"># 16バイト = 2回</span></span></code></pre></div>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 判定と生成命令列を確認(未実装は SKIP)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 構造体代入のテスト + fixed17</span></span></code></pre></div>
+<p><code>golden.py</code> の後半で回す <a href="../../advanced/#fixed17"><code>fixed17</code></a> が、
+構造体のコピーを足したせいで既存の代入を壊していないことの安全網になる。</p>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>assign.c</code></td>
+<td><code>q = p</code> でコピーされ、その後 <code>p</code> を変えても <code>q</code> が変わらない</td>
+</tr>
+<tr class="even">
+<td><code>nested.c</code></td>
+<td><code>l.a = &amp;p</code>（ポインタ・フィールドへの代入）と <code>m = l</code></td>
+</tr>
+<tr class="odd">
+<td>（ポインタ2本＝16バイトのコピー。コピー後 <code>m.a</code> と <code>l.a</code> は同じ <code>Point</code> を指す）</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>via_ptr.c</code></td>
+<td><code>*dst = *src</code>（ポインタ経由）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>assign.c</code> の「コピー後に元を変えても影響しない」が本質的である。
+参照ではなく<strong>複製</strong>であることを、そこで確かめている。</p>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>引数の値渡し・戻り値の値返し</strong>: <code>int area(struct Point p)</code> と
+<code>struct Point make(int x, int y)</code> を書けるようにする。
+どちらも「誰がコピーするのか」「戻り値の置き場を誰が用意するのか」という、
+言語仕様には書かれていない取り決め —— <strong>呼び出し規約</strong> —— を決める話になる。
+ここは独立した回になった。詳しくは
+<a href="../../advanced/L5_struct_byval/">発展課題 L5「構造体の値渡し・値返し」</a> を見ること
+（この回で書く <code>gen_struct_copy</code> が、そのまま L5 のコピー部品の土台になる）。
+考えるとっかかりだけ挙げておく: 実 RV64 の規約では 16バイト以下の構造体は
+レジスタ2本に分けて渡し、それより大きければ呼び出し側がコピーを作って
+アドレスを渡す。戻り値は呼び出し側が領域を用意して、その<strong>アドレスを
+隠し引数として渡す</strong>（sret と呼ばれる）。
+なぜ「戻り値を a0 に載せる」では足りないのか、を先に自分で考えてみるとよい</li>
+<li><strong>大きな構造体</strong>: 1KB の構造体を代入すると、命令が何百行も並ぶ。
+サイズが一定を超えたら <code>memcpy</code> を呼ぶように変える</li>
+<li><strong>グローバル構造体変数</strong>: <code>struct Point origin;</code> をグローバルに置けるようにする
+（<code>.bss</code> のサイズ計算は <code>_struct_defs</code> から引ける）</li>
+<li><strong>構造体の比較</strong>: C では <code>p == q</code> は<strong>書けない</strong>。なぜ代入はできて比較はできないのか</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: 「値」の大きさが違うということ。</strong>
+<code>int</code> の代入も構造体の代入も、C の文法上は同じ <code>=</code> である。
+しかし機械語のレベルでは、片方は1命令、もう片方はコピーのループになる。
+<strong>言語が同じに見せているものが、実装では違う</strong>——これはコンパイラを書いて
+初めて実感できることの1つである。
+値になる大きさをどこまで許すかは言語設計の選択で、
+この言語は構造体を「値になる」側に置いた結果、
+コンパイラがコピーを生成する義務を負っている。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/S2_int32/"><span class="label">前へ</span>int は32ビット — 桁あふれを正しく折り返す</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/L1_ptrdiff/"><span class="label">次へ</span>ポインタ同士の引き算 — 差は「要素いくつ分か」</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/S3_struct.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>実践・C コンパイラ演習</title>
+  <style>
+    body { max-width: 58rem; margin: 0 auto; padding: 2rem 1rem 4rem; color: #18212f; font: 16px/1.6 system-ui, sans-serif; }
+    h1 { margin-bottom: .2rem; } h2 { margin-top: 2rem; } a { color: #0759a5; }
+    .lead { font-size: 1.15rem; } .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.5rem 0; }
+    .actions a { background: #0759a5; border-radius: .35rem; color: white; padding: .65rem 1rem; text-decoration: none; }
+    .meta { color: #52606d; font-size: .9rem; } ul { padding-left: 1.3rem; }
+  </style>
+</head>
+<body>
+<div style="background:#fff3cd;color:#664d03;border-bottom:2px solid #ffcd39;padding:0.75em 1em;font-size:0.95em">
+これは 2026-07-29 公開の<strong>旧版アーカイブ</strong>です。言語仕様は現行版（Core プロファイル v2）適用前のものです。
+今学期の履修者向けの時限的な移行措置であり、移行完了後に削除されます。
+最新の資料は<a href="../../">現行版のトップページ</a>を参照してください。
+なお、このスナップショット当時の教材は MIT ライセンスで公開されたものです（現行の教材ライセンスは CC BY-NC-SA 4.0）。
+</div>
+  <h1>実践・C コンパイラ演習</h1>
+  <p class="lead">Python で C 言語サブセットのコンパイラを段階的に作り、RISC-V RV64 で動かす演習教材です。</p>
+  <div class="actions">
+    <a href="downloads/c-comp-workbook-v0.1.0.zip">開発環境をダウンロード</a>
+    <a href="tools/">補助ツールを開く</a>
+  </div>
+  <p>ZIP には <code>workbook/</code> 全体（資料、starter、テスト、Docker 環境、参考実装、発展教材）を収録しています。</p>
+  <section><h2>通常回</h2><ul><li><a href="handouts/sessions/01_environment/handout.pdf">01_environment</a></li><li><a href="handouts/sessions/02_interpreter/handout.pdf">02_interpreter</a></li><li><a href="handouts/sessions/03_arithmetic_codegen/handout.pdf">03_arithmetic_codegen</a></li><li><a href="handouts/sessions/04_variables/handout.pdf">04_variables</a></li><li><a href="handouts/sessions/05_if_else/handout.pdf">05_if_else</a></li><li><a href="handouts/sessions/06_loops/handout.pdf">06_loops</a></li><li><a href="handouts/sessions/07_functions_abi/handout.pdf">07_functions_abi</a></li><li><a href="handouts/sessions/08_functions_recursion/handout.pdf">08_functions_recursion</a></li><li><a href="handouts/sessions/09_lvalue_rvalue/handout.pdf">09_lvalue_rvalue</a></li><li><a href="handouts/sessions/10_types_arrays/handout.pdf">10_types_arrays</a></li><li><a href="handouts/sessions/11_strings_printf/handout.pdf">11_strings_printf</a></li><li><a href="handouts/sessions/12_struct_typedef/handout.pdf">12_struct_typedef</a></li><li><a href="handouts/sessions/13_sizeof_malloc_list/handout.pdf">13_sizeof_malloc_list</a></li><li><a href="handouts/sessions/14_globals_scope/handout.pdf">14_globals_scope</a></li><li><a href="handouts/sessions/15_preprocess_multifile/handout.pdf">15_preprocess_multifile</a></li><li><a href="handouts/sessions/16_integrate_mycc/handout.pdf">16_integrate_mycc</a></li></ul></section>
+<section><h2>発展課題</h2><ul><li><a href="handouts/advanced/B1_fold_peephole/handout.pdf">B1_fold_peephole</a></li><li><a href="handouts/advanced/B2_regalloc/handout.pdf">B2_regalloc</a></li><li><a href="handouts/advanced/B3_tailcall/handout.pdf">B3_tailcall</a></li><li><a href="handouts/advanced/F0_cyk/handout.pdf">F0_cyk</a></li><li><a href="handouts/advanced/F1_lexer/handout.pdf">F1_lexer</a></li><li><a href="handouts/advanced/F2_parser_expr/handout.pdf">F2_parser_expr</a></li><li><a href="handouts/advanced/F3_parser_stmt/handout.pdf">F3_parser_stmt</a></li><li><a href="handouts/advanced/F4_parser_decl/handout.pdf">F4_parser_decl</a></li><li><a href="handouts/advanced/L1_struct/handout.pdf">L1_struct</a></li><li><a href="handouts/advanced/L2_initializer/handout.pdf">L2_initializer</a></li><li><a href="handouts/advanced/L3_variadic/handout.pdf">L3_variadic</a></li><li><a href="handouts/advanced/O1_measure/handout.pdf">O1_measure</a></li><li><a href="handouts/advanced/O2_cfg/handout.pdf">O2_cfg</a></li><li><a href="handouts/advanced/O3_isel/handout.pdf">O3_isel</a></li><li><a href="handouts/advanced/O4_regalloc/handout.pdf">O4_regalloc</a></li><li><a href="handouts/advanced/O5_liveness/handout.pdf">O5_liveness</a></li><li><a href="handouts/advanced/O6_copyprop/handout.pdf">O6_copyprop</a></li><li><a href="handouts/advanced/O7_layout/handout.pdf">O7_layout</a></li><li><a href="handouts/advanced/Q1_typecheck/handout.pdf">Q1_typecheck</a></li><li><a href="handouts/advanced/R1_nolibc/handout.pdf">R1_nolibc</a></li><li><a href="handouts/advanced/R2_printf/handout.pdf">R2_printf</a></li><li><a href="handouts/advanced/R3_malloc/handout.pdf">R3_malloc</a></li><li><a href="handouts/advanced/S1_shortcircuit/handout.pdf">S1_shortcircuit</a></li><li><a href="handouts/advanced/S2_int32/handout.pdf">S2_int32</a></li><li><a href="handouts/advanced/S3_ptrdiff/handout.pdf">S3_ptrdiff</a></li></ul></section>
+<section><h2>補助ガイド</h2><ul><li><a href="handouts/guides/opencode.pdf">opencode</a></li></ul></section>
+  <footer class="meta"><p>Release v0.1.0 / source b3a1119055995fb1e42732ac7cd351d0add70113 / 2026-07-29 04:07 UTC</p><p><a href="LICENSE">MIT License</a> · <a href="THIRD_PARTY_NOTICES.md">Third-party notices</a></p></footer>
+</body>
+</html>

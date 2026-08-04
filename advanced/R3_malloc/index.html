@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自前 malloc — ヒープを自分で管理する — 実践・C コンパイラ演習</title>
+
+<link rel="stylesheet" href="../../assets/style.css">
+<script defer src="../../assets/lightbox.js"></script>
+<style>
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #204a87; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #8f5902; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #204a87; font-weight: bold; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #ce5c00; font-weight: bold; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+</head>
+<body>
+<a class="skiplink" href="#main">本文へスキップ</a>
+
+<header class="topbar">
+  <a class="brand" href="../../">実践・C コンパイラ演習</a>
+  <nav class="topnav" aria-label="セクション"><a href="../../sessions/">通常回</a><a href="../../advanced/" aria-current="page">発展課題</a><span class="sep" aria-hidden="true"></span><a href="../../docs/">仕様・参考文書</a><span class="sep" aria-hidden="true"></span><a href="../../guides/">補助ガイド</a><a href="../../tools/">補助ツール</a></nav>
+</header>
+
+<div class="layout">
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
+    <h1 class="page-title">自前 malloc — ヒープを自分で管理する</h1>
+        <nav class="toc" aria-label="このページの目次">
+      <p class="toc-head">このページの内容</p>
+      <ul>
+      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+      <li><a href="#malloc-は何をしているのか" id="toc-malloc-は何をしているのか">malloc は何をしているのか</a></li>
+      <li><a href="#段階1-バンプ割り当て-ただ切り出す" id="toc-段階1-バンプ割り当て-ただ切り出す">段階1: バンプ割り当て — ただ切り出す</a></li>
+      <li><a href="#段階2-ヘッダを付けて再利用する" id="toc-段階2-ヘッダを付けて再利用する">段階2: ヘッダを付けて再利用する</a></li>
+      <li><a href="#バイト境界に揃える" id="toc-バイト境界に揃える">8バイト境界に揃える</a></li>
+      <li><a href="#実装" id="toc-実装">実装</a></li>
+      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
+      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+      </ul>
+    </nav>
+    
+<section id="今日のゴール" class="goal">
+<h2>今日のゴール</h2>
+<p><code>malloc</code> を自分で書く。バンプ割り当て（切り出すだけ）から始め、
+<code>free</code> した領域を再利用できるところまで作る。
+コマ12 で作った連結リストが、<strong>自前のアロケータの上で</strong>動くことを確認する。</p>
+</section>
+<h2 id="この回の位置づけ">この回の位置づけ</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>必須の前提</td>
+<td>コマ12（<code>malloc</code> と連結リスト）まで、およびコマ15。<code>check.py</code> が完成した <code>final/mycc.py</code> で <code>mymalloc.c</code> と <code>tests/*.c</code> をコンパイルするので、コマ15 が無いと1件も実行できない</td>
+</tr>
+<tr class="even">
+<td>推奨の前提</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>改変しない</td>
+<td><code>mycc.py</code>、<code>scaffold/</code></td>
+</tr>
+<tr class="even">
+<td>編集する</td>
+<td><code>mymalloc.c</code></td>
+</tr>
+<tr class="odd">
+<td>完了条件</td>
+<td><code>check.py</code> の全 Step が PASS になる（このトピックに <code>golden.py</code> は無い）</td>
+</tr>
+<tr class="even">
+<td>コマ数</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td>備考</td>
+<td>ランタイム発展シリーズの第3回。R1・R2 とは独立している（libc は使ってよい）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>コマ12 の資料で「<code>malloc</code> の仕組みは実装しない」と言った、その中身を作る。</p>
+<h2 id="malloc-は何をしているのか">malloc は何をしているのか</h2>
+<p>コマ12 では、こう説明した。</p>
+<blockquote>
+<p><code>malloc</code> は、指定されたバイト数ぶんのメモリ領域をヒープから確保し、
+その先頭アドレスを返すライブラリ関数である。</p>
+</blockquote>
+<p>ではその「確保」とは何か。<strong>大きな領域を、要求されたぶんずつ切り分けて配る</strong>ことである。
+配った場所を覚えておかないと、次の要求で同じ場所を二重に配ってしまう。</p>
+<p>この回では、ヒープの元になる領域（プール）を呼び出し側から渡してもらう。</p>
+<div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span> <span class="op">*</span>pool<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>pool <span class="op">=</span> malloc<span class="op">(</span><span class="dv">1024</span><span class="op">);</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>heap_init<span class="op">(</span>pool<span class="op">,</span> <span class="dv">1024</span><span class="op">);</span></span></code></pre></div>
+<p>プール自体は libc の <code>malloc</code> から借り、その中の切り分け（自作アロケータ）を
+自分で書く、という位置づけである。</p>
+<p>本物の <code>malloc</code> は OS から <code>brk</code> / <code>mmap</code> で領域をもらうが、
+そこは R1 のシステムコールの話で、割り当ての本質ではない。</p>
+<h2 id="段階1-バンプ割り当て-ただ切り出す">段階1: バンプ割り当て — ただ切り出す</h2>
+<p>いちばん単純な方式は、「次に配る位置」を1つ覚えておき、要求されたぶんだけ進めることである。</p>
+<pre data-lang="text"><code>pool ┌──────┬──────┬────────────────────────┐
+     │ 16B  │ 32B  │       未使用            │
+     └──────┴──────┴────────────────────────┘
+                    ^ heap_brk（次はここから配る）</code></pre>
+<p><code>heap_brk</code> を進めるだけなので<strong>非常に速い</strong>。しかし <code>free</code> ができない
+（真ん中を返されても、<code>heap_brk</code> を戻せない）。
+それでもコンパイラのような「起動して、確保しまくって、終わったら全部捨てる」
+プログラムには十分で、実際に発展課題 P1（C 移植・セルフホスト）の
+C 実装の規約でも「<code>free</code> は不要」としている。</p>
+<h2 id="段階2-ヘッダを付けて再利用する">段階2: ヘッダを付けて再利用する</h2>
+<p><code>free</code> を作るには、<strong>返された領域がどれだけの大きさだったか</strong>を知る必要がある。
+<code>my_free(p)</code> に渡されるのはアドレスだけだからである。</p>
+<p>そこで、配る領域の<strong>手前</strong>に管理用のヘッダを置く。</p>
+<pre data-lang="text"><code>      ┌────────────┬──────────────────┐
+      │ Header     │ ユーザ領域        │
+      └────────────┴──────────────────┘
+      ^ h                ^ my_malloc が返すアドレス p
+                         p = h + sizeof(Header)
+                         h = p - sizeof(Header)</code></pre>
+<p>ヘッダには、大きさ・解放済みフラグ・次のブロックへのポインタを持たせる。
+コマ12 で作った<strong>自己参照構造体そのもの</strong>である。</p>
+<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Header <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> size<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> free<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> Header <span class="op">*</span>next<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<p>これで、<code>my_free(p)</code> は「<code>p</code> の手前のヘッダを見て <code>free = 1</code> にする」だけでよい。
+<code>my_malloc</code> は、まず管理リストから「解放済みで十分な大きさ」のブロックを探し
+（<strong>first fit</strong>）、あればそれを再利用する。なければ未使用領域から切り出す。</p>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>アドレスの計算にキャストが使えない。</strong>
+本物の C なら <code>(char *)h + sizeof(Header)</code> と書くところだが、
+Core プロファイルにキャストはない（<code>language_spec.md</code> の除外一覧）。
+代わりに、いったん <code>char *</code> の変数に代入してからポインタ演算する。
+<code>char *</code> の演算は1バイト単位なので、<code>sizeof(Header)</code> を足せば期待どおりに進む
+（コマ9 のポインタ演算の型サイズの話）。</p>
+</div>
+<h2 id="バイト境界に揃える">8バイト境界に揃える</h2>
+<p>要求サイズは 8 の倍数に切り上げる（<code>align8</code>）。
+コマ8・コマ12 で見たように、<code>int</code> は4バイト境界、ポインタは8バイト境界に
+置かれる必要があり、揃っていないアドレスを返すと <code>Bus error</code> や
+無音の誤動作になるからである。
+「アラインメントを揃える」のは、フレームサイズのときと同じ考え方である。</p>
+<h2 id="実装">実装</h2>
+<div class="table-scroll">
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 45%" />
+<col style="width: 27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>実装対象</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>align8</code> / <code>heap_init</code> / <code>my_malloc</code>（切り出し）</td>
+<td>バンプ割り当て</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>find_free</code> / <code>my_free</code> / <code>my_malloc</code>（再利用）</td>
+<td>ヘッダとフリーリスト</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>heap_used</code></td>
+<td>使用量の観察</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Step 1 だけでも <code>tests/list_build.c</code> は通る。
+Step 2 まで進むと <code>tests/reuse.c</code>（解放した跡地が再利用される）が通る。</p>
+<h2 id="テスト">テスト</h2>
+<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py</span></code></pre></div>
+<div class="table-scroll">
+<table>
+<thead>
+<tr class="header">
+<th>テスト</th>
+<th>確認内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>list_build.c</code></td>
+<td>自前 malloc で連結リストが作れる（コマ12 の再現）</td>
+</tr>
+<tr class="even">
+<td><code>reuse.c</code></td>
+<td>解放したブロックが同じアドレスで再利用される</td>
+</tr>
+<tr class="odd">
+<td><code>exhaust.c</code></td>
+<td>プールを使い切ったら <code>0</code>（NULL）を返して止まる</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>exhaust.c</code> は「無限に確保できてしまう」バグ（終端チェック忘れ）を検出する。</p>
+<p>この回の編集対象は C なので、未実装は <code>NotImplementedError</code> ではなく
+<code>mymalloc.c</code> の <code>TODO(...)</code> コメントで表してある。<code>check.py</code> は TODO が残っている間、
+テストを回さず <code>[SKIP] 未実装: …</code> と報告する。SKIP は未達なので、完了条件は満たしていない。</p>
+<div class="adm adm-important">
+<div class="adm-title">
+重要
+</div>
+<p><strong>大きなローカル変数には注意。</strong>
+プール自体は <code>malloc</code> で確保するので配列サフィックスの問題はないが、
+大きな <code>struct</code> をスタック上のローカル変数として大量に持つと、
+スタックフレームのオフセットが RV64 の <code>addi</code> 命令の即値の範囲
+（12bit = -2048〜2047）を超え、<strong>アセンブラがエラーを出す</strong>ことがある。
+これは自作コンパイラの実際の制限で、発展課題で直せる。</p>
+</div>
+<h2 id="発展課題">発展課題</h2>
+<ol type="1">
+<li><strong>12bit の壁を越える</strong>: フィールドの多い <code>struct</code> のローカル変数を
+いくつも並べてフレームを膨らませ、実際に壁を越えさせてみる。そのうえで、
+オフセットが範囲外のときは <code>li</code> で一度レジスタに入れてから <code>add</code> する
+コード生成に直す（コマ3・コマ6 のプロローグとローカル変数アクセス）</li>
+<li><strong>分割（split）</strong>: 100 バイトの空きブロックに 16 バイトの要求が来たとき、
+いまは 100 バイト丸ごと使ってしまう。余りを新しい空きブロックに分ける</li>
+<li><strong>併合（coalesce）</strong>: 隣り合う空きブロックを1つにまとめる。
+さもないと、小さな空きだらけになって大きな要求が通らなくなる（<strong>断片化</strong>）</li>
+<li><strong>best fit にする</strong>: <code>find_free</code> を「最初に見つかったもの」ではなく
+「要求に最も近い大きさのもの」を返す方式に変え、断片化の減り方を比べる</li>
+<li><strong>libc の malloc と差し替えて計測</strong>: 確保・解放を何万回も繰り返すプログラムを書き、
+自前版と libc 版で実行時間を比べる</li>
+</ol>
+<div class="adm adm-note">
+<div class="adm-title">
+補足
+</div>
+<p><strong>コラム: アロケータは奥が深い。</strong>
+実用の <code>malloc</code> は、サイズ別のフリーリスト（bins）、スレッドごとのアリーナ、
+小さい要求専用の高速path、OS への返却など、多層の工夫でできている。
+それでも中心にあるのは、いま書いた「<strong>ヘッダで大きさを覚え、空きを探して配る</strong>」
+という考え方である。
+ガベージコレクションを持つ言語（Java や Go）では、この「空きを探す」部分に
+「もう誰も指していない領域を見つける」処理が加わる。</p>
+</div>
+
+    
+    <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../advanced/R2_printf/"><span class="label">前へ</span>自前 printf — 数を文字に変える</a><a class="index" href="../../advanced/"><span class="label">一覧</span>発展課題</a><a class="next" href="../../advanced/S1_shortcircuit/"><span class="label">次へ</span>短絡評価 — &amp;&amp; と || の本当の意味</a></nav>
+    <p class="source"><a href="https://github.com/yf-fyf/c-comp/blob/dev/materials/advanced/R3_malloc.md">この資料の原稿を見る</a></p>
+  </main>
+</div>
+
+<footer class="sitefoot">
+  <p>実践・C コンパイラ演習 — <a href="../../LICENSE-MATERIALS">CC BY-NC-SA 4.0</a>
+     (<a href="../../LICENSE">code: MIT</a>) ·
+     <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
+     <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
+  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+</footer>
+</body>
+</html>
