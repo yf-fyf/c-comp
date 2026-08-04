@@ -35,15 +35,31 @@ Python 版コンパイラを C 言語で書き直し、最終的に自分自身�
    先にやっておくと楽になる）
 4. セルフホストへの挑戦（`#include` / `#define` の自前実装 + Stage 0/Stage 1 の確認）
 
+複数の `.c` に分ける場合も、**ルートとなる1つの `.c` が他の `.c` を `#include` する
+単一の翻訳単位**として構成する（共有する型定義は1つのヘッダに集約し、ルートから1回だけ取り込む）。
+
 詳しい方針は資料本文を参照。
 
 ## 検証の例
 
+このコンパイラは `-o` を持たず、**ソース1本を受け取ってアセンブリを標準出力へ出す**。
+Stage 1 は RV64 の実行可能ファイルなので `qemu-riscv64` 経由で動かす。
+
 ```bash
-gcc -o mycc_stage0 src/*.c
-./mycc_stage0 src/*.c -o mycc_stage1
-python3 ../../scaffold/test_runner.py --compiler ./mycc_stage1 --tests ../../final/tests
+gcc -o mycc_stage0 src/mycc.c                          # Stage 0
+./mycc_stage0 src/mycc.c > stage1.s                    # Stage 1 のアセンブリ
+riscv64-linux-gnu-gcc -x assembler -static stage1.s -o mycc_stage1
+
+qemu-riscv64 ./mycc_stage1 src/mycc.c > stage2.s       # 固定点の確認
+cmp stage1.s stage2.s && echo "fixpoint OK"
+
+# test_runner には qemu 経由で Stage 1 を起動する短いラッパを渡す
+python3 ../../scaffold/test_runner.py --compiler ./run_stage1.sh --tests ../../final/tests
 ```
 
+セルフホストが正しく達成できたことを確かめる本筋は、**Stage 0 と Stage 1 が同じソース
+（コンパイラ自身）に対して生成するアセンブリのバイト一致（固定点）**を見ることである。
+「Stage 1 が生成できた」だけでは証拠にならない。
+
 参考達成条件（必達目標ではない）: `mycc_stage1` の生成成功 + `final/tests`（fixed17）全通 +
-前処理の自前実装が動くこと。
+前処理の自前実装が動くこと（さらに固定点比較まで確認できるとよい）。

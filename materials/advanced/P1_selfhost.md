@@ -52,6 +52,12 @@
    Stage 0（gcc で自分の C 版をビルド）→ Stage 1（Stage 0 でできた自分のコンパイラで、
    もう一度自分自身をビルド）という段階を踏んで確認する
 
+**ファイル構成の注意**: このコンパイラの駆動は「ソース1本を受け取る」形なので、
+複数の `.c` に分けた場合も**ルートとなる1つの `.c` が他の `.c` を `#include` する
+単一の翻訳単位**として構成する。共有する `struct` 定義・定数・プロトタイプは
+1つのヘッダに集約し、ルートから1回だけ取り込む。これは C の複数ファイル構成一般の注意点でもある
+（同じ `struct` タグを複数の翻訳単位でそれぞれ定義する形は、本仕様が扱いを定めていない）。
+
 最初の目標は、算術式・変数・制御構文までを C 版で出力できるようにすることに置くとよい。
 一気に全部を移植しようとせず、Python 版のコマ順（コマ2〜15 の積み上げ）をそのまま
 移植の順番として使える。
@@ -77,14 +83,44 @@ RV64 の呼び出し規約とアラインメント規則は `rv64_reference.md` 
 
 雛形は用意しない。以下の段階を自分のビルドスクリプトで踏めばよい。
 
+このコンパイラは `-o` のような出力先オプションを持たず、
+**ソース1本を受け取ってアセンブリを標準出力へ出す**（`test_runner.py` が期待する駆動と同じ）。
+Stage 1 は RV64 の実行可能ファイルなので、ホスト環境では直接実行できず `qemu-riscv64` を経由する。
+
 ```bash
-gcc -o mycc_stage0 src/*.c                       # Stage 0: gcc でビルド
-./mycc_stage0 src/*.c -o mycc_stage1             # Stage 1: 自分でビルド
-python3 scaffold/test_runner.py --compiler ./mycc_stage1 --tests final/tests
+# Stage 0: gcc で自分の C 版をビルドする（ルートの .c を1本渡す）
+gcc -o mycc_stage0 src/mycc.c
+
+# Stage 1: Stage 0 に自分自身をコンパイルさせ、アセンブルして RV64 実行可能ファイルにする
+./mycc_stage0 src/mycc.c > stage1.s
+riscv64-linux-gnu-gcc -x assembler -static stage1.s -o mycc_stage1
+
+# 固定点の確認: Stage 1 にも同じソースをコンパイルさせ、Stage 0 の出力と突き合わせる
+qemu-riscv64 ./mycc_stage1 src/mycc.c > stage2.s
+cmp stage1.s stage2.s && echo "fixpoint OK"
+```
+
+`test_runner.py` に Stage 1 を渡すときは、`qemu-riscv64 ./mycc_stage1 "$@"` を実行するだけの
+短いシェルスクリプトを用意し、それを `--compiler` に指定する
+（`test_runner.py` はコンパイラを直接実行するため、RV64 バイナリをそのままは渡せない）。
+
+```bash
+python3 scaffold/test_runner.py --compiler ./run_stage1.sh --tests final/tests
 ```
 
 **なぜ段階を踏むか**: セルフホストは「動いた気がする」状態になりやすい。
 どの段階の成果物でテストを通したのかを自分で明示的に確認する必要がある。
 
+**本質的な判定は固定点比較である**: 「Stage 1 が生成できた」「テストが通った」だけでは、
+自分自身を正しく翻訳できている証拠にならない。ブートストラップするコンパイラの検証では、
+**Stage 0 と Stage 1 がそれぞれ同じソース（コンパイラ自身）に対して生成するアセンブリが
+バイト単位で完全に一致すること**（固定点）を確認するのが本筋である。
+これが成り立てば、Stage 1 が出力するコンパイラは Stage 1 自身と同じものになり、
+以降いくら段を重ねても変化しない。なお固定点の確認は出力が決定的であること
+（実行のたびに同じアセンブリが出ること）を前提にするので、
+ラベル名やメモリアドレスに依存した出力を混ぜないよう気をつける。
+
 参考達成条件（必達目標ではない）: `mycc_stage1` の生成成功 + `final/tests`（[fixed17](../../workbook/advanced/README.md#fixed17)）全通 +
 前処理（`#include` / `#define`）の自前実装が動くこと。
+さらに固定点比較（Stage 0 と Stage 1 の出力アセンブリのバイト一致）まで確認できれば、
+セルフホストが正しく達成できたことの証拠になる。
