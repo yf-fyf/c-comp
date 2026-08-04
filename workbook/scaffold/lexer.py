@@ -69,17 +69,86 @@ def _escape_char(c: str, filename: str, line: int) -> int:
 
 # ---- 前処理器 ----
 
+def _code_spans(line: str) -> List[tuple]:
+    """1 行を走査して「コード」区間 (start, end) の並びを返す。
+
+    文字列リテラル "..."、文字リテラル '...'、行コメント // ... の内側は
+    コードではないので除外する。マクロ置換をコード区間だけに限るために使う。
+
+    リテラルの終端判定（バックスラッシュが次の 1 文字を打ち消す）と、
+    行コメントが // のみ（ブロックコメントは言語仕様外）である点は
+    tokenize() と同じ規則である。tokenize() 側は文字コードへの変換や
+    エラー報告まで行うため、走査そのものを 1 つの関数に統合すると
+    かえって読みにくくなる。そこでここでは「区間を切り出すだけ」の
+    軽量な状態機械を別に置き、規則が対応することをこのコメントで示す。
+    エスケープの種類の妥当性（ESCAPES の 6 種か）は検査しない。
+    それは tokenize() の役目で、ここでは終端を誤認しなければ十分である。
+
+    終端しないリテラルが行末まで続く場合は、その残りをコード外として扱う。
+    不正な入力そのものは後段の tokenize() が字句解析エラーとして報告する。
+    """
+    spans = []
+    i = 0
+    n = len(line)
+    start = 0
+    while i < n:
+        c = line[i]
+        if c == '/' and line[i:i+2] == '//':
+            break                      # 以降は行コメント
+        if c == '"' or c == "'":
+            if start < i:
+                spans.append((start, i))
+            quote = c
+            i += 1
+            while i < n and line[i] != quote:
+                if line[i] == '\\':    # 次の 1 文字は終端記号にならない
+                    i += 1
+                i += 1
+            i += 1                     # 閉じ引用符（無ければ行末を越えるだけ）
+            start = i
+            continue
+        i += 1
+    if start < n:
+        spans.append((start, min(i, n)))
+    return spans
+
+
+def _sub_in_code(line: str, pattern, defines: Dict[str, str]) -> str:
+    """コード区間だけにマクロ置換を適用した行を返す。"""
+    out = []
+    pos = 0
+    for s, e in _code_spans(line):
+        out.append(line[pos:s])                                   # リテラル等はそのまま
+        out.append(pattern.sub(lambda m: defines[m.group(1)], line[s:e]))
+        pos = e
+    out.append(line[pos:])
+    return ''.join(out)
+
+
+def _search_in_code(line: str, pattern):
+    """コード区間だけを対象に pattern を探す。見つかれば Match を返す。"""
+    for s, e in _code_spans(line):
+        m = pattern.search(line, s, e)
+        if m:
+            return m
+    return None
+
+
 def _apply_defines(line: str, defines: Dict[str, str],
                    filename: str, lineno: int) -> str:
     """オブジェクト形式マクロを 1 段だけ置換する。
-    置換結果にマクロ名が残る場合はエラー（多段参照は言語仕様外）。"""
+
+    置換対象は文字列リテラル・文字リテラル・行コメントの外側にある
+    識別子トークンだけである（"N" や 'N' や // N の中身は変えない）。
+    置換結果のコード部分にマクロ名が残る場合はエラー（多段参照は言語仕様外）。
+    """
     if not defines:
         return line
     pattern = re.compile(r'\b(' + '|'.join(re.escape(n) for n in defines) + r')\b')
-    if not pattern.search(line):
+    if not _search_in_code(line, pattern):
         return line
-    replaced = pattern.sub(lambda m: defines[m.group(1)], line)
-    m = pattern.search(replaced)
+    replaced = _sub_in_code(line, pattern, defines)
+    m = _search_in_code(replaced, pattern)
     if m:
         _pp_error(f"マクロの多段参照は使えない: {m.group(1)}", filename, lineno)
     return replaced
