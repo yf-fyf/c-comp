@@ -190,7 +190,7 @@ codegen(node) -> アセンブリを出力する
 
 ## codegen の基本方針
 
-`Codegen03` クラスの `codegen(node)` は、`node.kind` を文字列で見て `match` で処理を分ける。
+`Codegen02` クラスの `codegen(node)` は、`node.kind` を文字列で見て `match` で処理を分ける。
 本体のディスパッチはスケルトンにすでに書いてある。学習者が実装するのは各 handler method である。
 
 | `node.kind` | 実装する handler method | 生成する処理 |
@@ -261,11 +261,11 @@ sub a0, a1, a0
 
 ## コード生成器の枠組み
 
-コード生成器は `Codegen03` クラスとして実装する。すべての状態はインスタンス変数に保持され、
+コード生成器は `Codegen02` クラスとして実装する。すべての状態はインスタンス変数に保持され、
 アセンブリの行は `list[str]` に蓄積して最後にまとめて出力する。
 
 ```python
-class Codegen03:
+class Codegen02:
     def __init__(self) -> None:
         self._out: list[str] = []   # 出力行バッファ
 
@@ -316,7 +316,7 @@ addi s0, sp, 16
 
 - `mycc.py`
 
-`Codegen03` クラスの以下の TODO を埋める。
+`Codegen02` クラスの以下の TODO を埋める。
 
 | 実装対象 | 役割 |
 |----------|------|

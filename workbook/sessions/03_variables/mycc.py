@@ -20,7 +20,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen04(prev.Codegen03):
+class Codegen03(prev.Codegen02):
     def __init__(self) -> None:
         super().__init__()
         self._locals: dict[str, int] = {}
@@ -129,7 +129,7 @@ class Codegen04(prev.Codegen03):
         raise NotImplementedError("関数ごとの変数状態初期化を実装してください")
 
 
-Codegen = Codegen04
+Codegen = Codegen03
 
 
 def main() -> None:
@@ -142,7 +142,7 @@ def main() -> None:
     source = preprocess(source, filename)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen04()
+    cg = Codegen03()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

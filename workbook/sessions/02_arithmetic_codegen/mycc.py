@@ -2,7 +2,7 @@
 コマ 2: コード生成① — 算術式 → RV64 アセンブリ（学生用スケルトン）
 
 目標: 整数定数・四則演算・剰余・括弧・単項マイナスを含む式を
-      RV64 アセンブリに変換する Codegen03 を実装する。
+      RV64 アセンブリに変換する Codegen02 を実装する。
 
 実行方法:
     python3 sessions/02_arithmetic_codegen/mycc.py input.c \
@@ -20,7 +20,7 @@ from lexer import preprocess, tokenize
 from parser import parse
 
 
-class Codegen03:
+class Codegen02:
     """RISC-V 64 アセンブリを生成するコード生成器。"""
 
     def __init__(self) -> None:
@@ -122,7 +122,7 @@ class Codegen03:
         self._emit_func_epilogue(frame_size)
 
 
-Codegen = Codegen03
+Codegen = Codegen02
 
 
 def main() -> None:
@@ -138,7 +138,7 @@ def main() -> None:
     tokens = tokenize(source, filename)
     prog = parse(tokens)
 
-    cg = Codegen03()
+    cg = Codegen02()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

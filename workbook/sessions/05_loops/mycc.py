@@ -20,7 +20,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen06(prev.Codegen05):
+class Codegen05(prev.Codegen04):
     def __init__(self) -> None:
         super().__init__()
         self._break_stack: list[str] = []
@@ -90,7 +90,7 @@ class Codegen06(prev.Codegen05):
         raise NotImplementedError("ループ状態の初期化を実装してください")
 
 
-Codegen = Codegen06
+Codegen = Codegen05
 
 
 def main() -> None:
@@ -103,7 +103,7 @@ def main() -> None:
     source = preprocess(source, filename)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen06()
+    cg = Codegen05()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

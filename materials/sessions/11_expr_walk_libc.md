@@ -150,7 +150,7 @@ def collect_strings_expr_Add(self, node: Node) -> None:
     self.collect_strings_expr(node.rhs)
 ```
 
-dispatch の `match` はスケルトンに書いてある（`Codegen12.collect_strings_expr()` が
+dispatch の `match` はスケルトンに書いてある（`Codegen11.collect_strings_expr()` が
 コマ10 版を上書きし、すべての式の種類を枝に持つ）。実装するのは呼ばれる側だけである。
 
 同じ本体を何度も書くのが冗長に見えるなら、共通の実体を1つ書いて名前を束ねてもよい。
@@ -185,7 +185,7 @@ printf("%s\n", n < 2 ? "then side" : "else side");
 
 - `mycc.py`
 
-`importlib` でコマ10 の `Codegen11` を継承した `Codegen12` に、以下を追加する。
+`importlib` でコマ10 の `Codegen10` を継承した `Codegen11` に、以下を追加する。
 
 | 実装対象 | 役割 |
 |----------|------|
@@ -276,7 +276,7 @@ python3 scaffold/test_runner.py sessions/11_expr_walk_libc
 ```
 
 コマ10 のテストも引き続き通ることを確かめる。
-`Codegen12` はコマ10 の実装を継承しているので、両方が通って初めて走査が完成したと言える。
+`Codegen11` はコマ10 の実装を継承しているので、両方が通って初めて走査が完成したと言える。
 
 ```bash
 python3 scaffold/test_runner.py sessions/10_strings_data_section

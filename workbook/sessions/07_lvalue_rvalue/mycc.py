@@ -16,7 +16,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen08(prev.Codegen07):
+class Codegen07(prev.Codegen06):
     def codegen_lval_Deref(self, node: Node) -> None:
         # TODO: *ptr の左辺値は ptr の値そのもの。operand を rvalue として評価する。
         raise NotImplementedError("codegen_lval_Deref を実装してください")
@@ -76,7 +76,7 @@ class Codegen08(prev.Codegen07):
                 raise RuntimeError(f'codegen: コマ7で未対応の式です (kind={node.kind!r})')
 
 
-Codegen = Codegen08
+Codegen = Codegen07
 
 
 def main() -> None:
@@ -89,7 +89,7 @@ def main() -> None:
     source = preprocess(source, filename)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen08()
+    cg = Codegen07()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

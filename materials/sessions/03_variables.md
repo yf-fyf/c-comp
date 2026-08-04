@@ -266,7 +266,7 @@ a = 10;
 | `self.gen_stmt(node)` | 文ノード | 文を実行する命令列を出力する |
 | `self.codegen_lval(node)` | 代入先になる式 | 書き込み先のアドレスを `a0` に置く |
 
-これらのメソッドはすべて `Codegen04` クラスのインスタンスメソッドである。
+これらのメソッドはすべて `Codegen03` クラスのインスタンスメソッドである。
 それぞれ `match node.kind` で処理を分けた後、対応する handler method（例: `gen_stmt_Return`）を呼ぶ。
 スケルトンではディスパッチ部分はあらかじめ書かれている。
 
@@ -296,10 +296,10 @@ a = 10;
 
 この回では、ローカル変数をスタック上に置く。
 
-`Codegen04` には、次のインスタンス変数が用意されている。
+`Codegen03` には、次のインスタンス変数が用意されている。
 
 ```python
-class Codegen04(prev.Codegen03):
+class Codegen03(prev.Codegen02):
     def __init__(self) -> None:
         super().__init__()
         self._locals: dict[str, int] = {}
@@ -491,7 +491,7 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 
 - `mycc.py`
 
-コマ2 の `Codegen03` を `importlib` で継承した `Codegen04` を実装する。
+コマ2 の `Codegen02` を `importlib` で継承した `Codegen03` を実装する。
 
 コマ2 で埋めた TODO（`_codegen_binary_value`、`codegen_Neg`、`codegen_Add` 〜 `codegen_Mod`、
 `gen_stmt_Return`、`_emit_func_prologue` / `_emit_func_body` / `_emit_func_epilogue`）は、

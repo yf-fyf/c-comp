@@ -20,7 +20,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen05(prev.Codegen04):
+class Codegen04(prev.Codegen03):
     def __init__(self) -> None:
         super().__init__()
         self._label_n: int = 0
@@ -131,7 +131,7 @@ class Codegen05(prev.Codegen04):
         raise NotImplementedError("return ラベル付きエピローグを実装してください")
 
 
-Codegen = Codegen05
+Codegen = Codegen04
 
 
 def main() -> None:
@@ -144,7 +144,7 @@ def main() -> None:
     source = preprocess(source, filename)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen05()
+    cg = Codegen04()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

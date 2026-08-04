@@ -347,7 +347,7 @@ void swap(int *a, int *b) {
 
 - `mycc.py`
 
-`importlib` でコマ6 の `Codegen07` を継承した `Codegen08` に、以下の3つを実装する。
+`importlib` でコマ6 の `Codegen06` を継承した `Codegen07` に、以下の3つを実装する。
 `codegen_lval()` と `codegen()` のディスパッチはスケルトンにあらかじめ書かれている。
 
 | 実装対象 | 役割 |
@@ -361,7 +361,7 @@ void swap(int *a, int *b) {
 
 ## 実装手順
 
-1. スケルトンの `Codegen08` が `Codegen07` を `importlib` で継承していることを確認する
+1. スケルトンの `Codegen07` が `Codegen06` を `importlib` で継承していることを確認する
 2. `codegen_lval_Deref(node)` を実装する
 3. `codegen_Addr(node)` を実装する
 4. rvalue としての `codegen_Deref(node)` を実装する

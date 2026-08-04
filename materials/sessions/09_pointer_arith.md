@@ -357,7 +357,7 @@ rvalue としての `p[i]` は、このアドレスから値を読む。読む�
 
 - `mycc.py`
 
-`importlib` でコマ8 の `Codegen09` を継承した `Codegen10` に、以下の機能を追加する。
+`importlib` でコマ8 の `Codegen08` を継承した `Codegen09` に、以下の機能を追加する。
 
 スケルトンに**あらかじめ書かれている**ものは次の通りで、実装対象ではない。
 コマ8 で自分が実装したものと合わせて、呼び出して使う。
@@ -384,7 +384,7 @@ rvalue としての `p[i]` は、このアドレスから値を読む。読む�
 
 ## 実装手順
 
-1. スケルトンの `Codegen10` が `Codegen09` を `importlib` で継承していることを確認する
+1. スケルトンの `Codegen09` が `Codegen08` を `importlib` で継承していることを確認する
 2. `type_of_expr_Index` / `type_of_lval_Index` / `type_of_expr_Add` / `type_of_expr_Sub` を埋める
 3. `_scale_index` と `codegen_lval(node)` の `'Index'` handler を実装する（`a0 = base + i * elem_size`）
 4. `codegen(node)` の `'Index'` handler を実装する（lval → `_load_ty`）

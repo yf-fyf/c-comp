@@ -16,7 +16,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen11(prev.Codegen10):
+class Codegen10(prev.Codegen09):
     def __init__(self) -> None:
         super().__init__()
         self._strings: dict[str, str] = {}
@@ -194,7 +194,7 @@ class Codegen11(prev.Codegen10):
                 raise RuntimeError(f'codegen: コマ10で未対応の式です (kind={node.kind!r})')
 
 
-Codegen = Codegen11
+Codegen = Codegen10
 
 
 def main() -> None:

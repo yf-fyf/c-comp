@@ -16,7 +16,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen09(prev.Codegen08):
+class Codegen08(prev.Codegen07):
     @classmethod
     def size_of_ty_str(cls, ty_str: str) -> int:
         if ty_str.endswith('*'):
@@ -228,7 +228,7 @@ class Codegen09(prev.Codegen08):
         raise NotImplementedError("パラメータのスタック退避（型対応版）を実装してください")
 
 
-Codegen = Codegen09
+Codegen = Codegen08
 
 
 def main() -> None:
@@ -241,7 +241,7 @@ def main() -> None:
     source = preprocess(source, filename)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen09()
+    cg = Codegen08()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

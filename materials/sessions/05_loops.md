@@ -430,7 +430,7 @@ def codegen_PreInc(self, node):
 
 - `mycc.py`
 
-`importlib` でコマ4 の `Codegen05` を継承した `Codegen06` に、以下の要素を追加する。
+`importlib` でコマ4 の `Codegen04` を継承した `Codegen05` に、以下の要素を追加する。
 
 | 実装対象 | 追加する役割 |
 |----------|--------------|

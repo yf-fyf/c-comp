@@ -16,7 +16,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen07(prev.Codegen):
+class Codegen06(prev.Codegen):
     def codegen_lval_Var(self, node: Node) -> None:
         offset = self.lookup_var(node.name, node.line)
         self.emit(f'  addi a0, s0, {offset}')
@@ -174,7 +174,7 @@ class Codegen07(prev.Codegen):
         self.emit('  ret')
 
 
-Codegen = Codegen07
+Codegen = Codegen06
 
 
 def main() -> None:
@@ -187,7 +187,7 @@ def main() -> None:
     source = preprocess(source, filename)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen07()
+    cg = Codegen06()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

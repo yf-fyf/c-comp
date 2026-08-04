@@ -444,7 +444,7 @@ Parser はこれを `ND_FUNCPROTO` として返す。
 
 - `mycc.py`
 
-`importlib` でコマ5 の `Codegen06` を継承した `Codegen07` に、以下の機能を追加する（スケルトンにあらかじめ書かれている）。
+`importlib` でコマ5 の `Codegen05` を継承した `Codegen06` に、以下の機能を追加する（スケルトンにあらかじめ書かれている）。
 
 主な追加・変更点は次の通り。
 

@@ -27,7 +27,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen14(prev.Codegen13):
+class Codegen13(prev.Codegen12):
     def __init__(self, struct_defs: dict[str, dict]) -> None:
         super().__init__(struct_defs)
         self._globals: dict[str, str] = {}
@@ -263,7 +263,7 @@ class Codegen14(prev.Codegen13):
         raise NotImplementedError("gen_program を実装してください")
 
 
-Codegen = Codegen14
+Codegen = Codegen13
 
 
 def main() -> None:

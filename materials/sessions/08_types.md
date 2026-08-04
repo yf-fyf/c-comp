@@ -244,7 +244,7 @@ def _store_ty(self, ty):
 
 - `mycc.py`
 
-`importlib` でコマ7 の `Codegen08` を継承した `Codegen09` に、以下の機能を追加する。
+`importlib` でコマ7 の `Codegen07` を継承した `Codegen08` に、以下の機能を追加する。
 
 スケルトンに**あらかじめ書かれている**ものは次の通りで、実装対象ではない。
 呼び出して使うだけでよい。
@@ -272,7 +272,7 @@ def _store_ty(self, ty):
 
 ## 実装手順
 
-1. スケルトンの `Codegen09` が `Codegen08` を `importlib` で継承していることを確認する
+1. スケルトンの `Codegen08` が `Codegen07` を `importlib` で継承していることを確認する
 2. `collect_decls_Decl` / `_alloc_params` / 関数プロローグの退避を型付きにする（どのテストでも必要）
 3. `type_of_expr_*` / `type_of_lval_*` を埋めて、式の型を引けるようにする
 4. `_load_ty` / `_store_ty` を型サイズ対応にする（提供済みの `size_of_ty_str` を使う）

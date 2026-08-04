@@ -16,7 +16,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen12(prev.Codegen11):
+class Codegen11(prev.Codegen10):
     # コマ10 の dispatch は Str / Assign / Call だけを見ていた。ここでは残りの
     # 式もすべて枝に入れ、どの式の下にある文字列リテラルも拾えるようにする。
     # dispatch 自体はここに書いてあるので、実装するのは呼ばれる側だけである。
@@ -120,7 +120,7 @@ class Codegen12(prev.Codegen11):
         raise NotImplementedError("collect_strings_expr_Cond を実装してください")
 
 
-Codegen = Codegen12
+Codegen = Codegen11
 
 
 def main() -> None:

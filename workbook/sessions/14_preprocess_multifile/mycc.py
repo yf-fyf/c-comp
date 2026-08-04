@@ -24,11 +24,11 @@ _SPEC.loader.exec_module(prev)
 Node = prev.Node
 
 
-class Codegen15(prev.Codegen14):
+class Codegen14(prev.Codegen13):
     pass
 
 
-Codegen = Codegen15
+Codegen = Codegen14
 
 
 def main() -> None:
@@ -36,7 +36,7 @@ def main() -> None:
         print("使い方: python3 sessions/14_preprocess_multifile/mycc.py <source.c> [...]", file=sys.stderr)
         sys.exit(1)
 
-    # TODO: sys.argv[1:] の各ファイルを Codegen15.parse_file() で読み、
+    # TODO: sys.argv[1:] の各ファイルを Codegen14.parse_file() で読み、
     #       prog と all_struct_defs に統合してから gen_program() する。
     raise NotImplementedError("複数ファイル対応の main ループを実装してください")
 

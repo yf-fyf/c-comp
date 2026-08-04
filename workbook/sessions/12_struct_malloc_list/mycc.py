@@ -28,7 +28,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen13(prev.Codegen12):
+class Codegen12(prev.Codegen11):
     def __init__(self, struct_defs: dict[str, dict]) -> None:
         super().__init__()
         self._struct_defs = struct_defs
@@ -382,7 +382,7 @@ class Codegen13(prev.Codegen12):
                 pass
 
 
-Codegen = Codegen13
+Codegen = Codegen12
 
 
 def main() -> None:
@@ -394,10 +394,10 @@ def main() -> None:
     with open(filename, 'r', encoding='utf-8') as f:
         source = f.read()
     source = preprocess(source, filename)
-    struct_defs = Codegen13.parse_struct_defs(source)
+    struct_defs = Codegen12.parse_struct_defs(source)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen13(struct_defs)
+    cg = Codegen12(struct_defs)
     for node in prog:
         if node.kind == 'FuncDef':
             cg.collect_strings_stmt(node.body)

@@ -16,7 +16,7 @@ tokenize = prev.tokenize
 parse = prev.parse
 
 
-class Codegen10(prev.Codegen09):
+class Codegen09(prev.Codegen08):
     def _type_of_expr(self, node: Node) -> str:
         match node.kind:
             case 'Num':
@@ -163,7 +163,7 @@ class Codegen10(prev.Codegen09):
                 raise RuntimeError(f'codegen: コマ9で未対応の式です (kind={node.kind!r})')
 
 
-Codegen = Codegen10
+Codegen = Codegen09
 
 
 def main() -> None:
@@ -176,7 +176,7 @@ def main() -> None:
     source = preprocess(source, filename)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
-    cg = Codegen10()
+    cg = Codegen09()
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

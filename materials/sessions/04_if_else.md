@@ -443,7 +443,7 @@ def codegen_Cond(self, node):
 
 - `mycc.py`
 
-`importlib` でコマ3 の `Codegen04` を継承した `Codegen05` に、以下の機能を追加する。
+`importlib` でコマ3 の `Codegen03` を継承した `Codegen04` に、以下の機能を追加する。
 
 | 実装対象 | 役割 |
 |----------|------|
