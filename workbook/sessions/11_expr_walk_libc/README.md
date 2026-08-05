@@ -20,6 +20,10 @@
 
 ## テスト
 
+> - `workbook/` から実行する。
+> - 前回までのテストが全通していることを前提とする。
+> - FAIL したら、まず最初の失敗ケースを単体で確認する。詳しい手順は [`docs/testing.md`](../../docs/testing.md) を参照。
+
 ```bash
 python3 scaffold/test_runner.py sessions/11_expr_walk_libc
 ```

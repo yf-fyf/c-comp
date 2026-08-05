@@ -30,6 +30,8 @@
               単調に増えているか（右辺の精密化は許可リストで扱う）、コマ14 が
               language_spec.md の最終形 EBNF と一致するか、各スナップショットが
               参照閉包（現れる非終端記号が定義済み）を満たすか
+    testguide workbook/sessions/*/README.md（コマ00 を除く）の「## テスト」節に
+              docs/testing.md への案内リンクがあるか
 
 除外リストは tools/doc_check_allowlist.yaml。理由は各エントリの reason に書く。
 除外は「ファイル + 行の内容（match） + 検出種別（check）」の3点で指定する。
@@ -1448,6 +1450,55 @@ def check_precedence_tables() -> list[Violation]:
     return violations
 
 
+# ── チェック11: 各コマの「テスト」節の共通案内 ──
+#
+# 2026-08-04 学習者導線レビュー Improvements I2（俯瞰レビューN14）の指摘を受け、
+# 各コマの README「## テスト」節に次の3点の共通案内を置く運用にした:
+#   1. workbook/ から実行すること
+#   2. 前回までのテストが全通していることが前提であること
+#   3. FAIL したら最初の失敗ケースを単体で確認し、docs/testing.md を見ること
+# 機械的に判定できるのはリンクの有無までなので、docs/testing.md への相対リンクが
+# 「## テスト」節に含まれているかを検査する（文面そのものの巧拙までは見ない）。
+# コマ00（00_setup）は環境構築の確認であり「前回のテストが全通している」という
+# 前提が成立しないため対象外にする。
+
+TESTGUIDE_EXEMPT_SESSIONS = {"00_setup"}
+TESTGUIDE_HEADING = "## テスト"
+TESTGUIDE_LINK_RE = re.compile(r"\]\([./]*docs/testing\.md\)")
+
+
+def check_test_guidance() -> list[Violation]:
+    violations: list[Violation] = []
+    if not WORKBOOK_SESSIONS.is_dir():
+        return violations
+    checked = 0
+    for session_dir in sorted(WORKBOOK_SESSIONS.iterdir()):
+        if not session_dir.is_dir() or session_dir.name in TESTGUIDE_EXEMPT_SESSIONS:
+            continue
+        readme = session_dir / "README.md"
+        if not readme.is_file():
+            continue
+        lines = readme.read_text(encoding="utf-8").splitlines()
+        heading_idx = next((i for i, line in enumerate(lines)
+                            if line.strip() == TESTGUIDE_HEADING), None)
+        if heading_idx is None:
+            violations.append(Violation(
+                readme, 1, f"「{TESTGUIDE_HEADING}」節が見つからない"))
+            continue
+        checked += 1
+        end = next((i for i in range(heading_idx + 1, len(lines))
+                    if lines[i].startswith("## ")), len(lines))
+        section = lines[heading_idx:end]
+        if not any(TESTGUIDE_LINK_RE.search(line) for line in section):
+            violations.append(Violation(
+                readme, heading_idx + 1,
+                f"「{TESTGUIDE_HEADING}」節に docs/testing.md への案内リンクが無い"
+                "（workbook/ から実行する・前回までのテストが全通していることが前提・"
+                "FAIL 時はまず最初の失敗ケースを単体で確認する、の共通案内を置く）"))
+    NOTES.append(f"コマ {checked} 件の「{TESTGUIDE_HEADING}」節を確認した")
+    return violations
+
+
 CHECKS = {
     "tests": ("原稿とテスト実体の突合", check_test_tables),
     "terms": ("旧仕様語の検出", check_legacy_terms),
@@ -1459,6 +1510,7 @@ CHECKS = {
     "ident": ("規約文書が挙げる識別子の実在", check_identifiers),
     "grammar": ("各コマの EBNF スナップショットの単調性", check_grammar_snapshots),
     "prec": ("各コマの二項演算子 優先順位表の整合", check_precedence_tables),
+    "testguide": ("各コマの「テスト」節の共通案内", check_test_guidance),
 }
 
 
