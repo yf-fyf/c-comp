@@ -461,20 +461,39 @@ Parser はこれを `ND_FUNCPROTO` として返す。
 | `_alloc_params(node)` | `node.params` を `alloc_local()` してスロットを確保する |
 | `_emit_func_prologue(name, frame_size)` | プロローグの末尾で `a0`〜`a7` をパラメータのスロットへ退避する |
 
+## 実装手順
+
+1. スケルトンの `Codegen06` がコマ5 の `Codegen` を `importlib` で継承していることを確認する。コマ2〜5 で埋めた `codegen_Num` / `codegen_Var` / `codegen_Assign` / `codegen_Neg` / `_binary_value` / `codegen_Add`〜`codegen_Le` と、`codegen()` のディスパッチ・`_reset_func_state()`・`gen_func()` はコマ6 のスケルトンに完成形として書かれている。この回で書き直すものは無い
+2. `_alloc_params(node)` を実装する（`node.params` の各パラメータ（`Decl` ノード）の `name` を `self.alloc_local()` に渡し、ローカル変数と同じスロットを確保する。`_reset_func_state()` が `self.collect_decls(node.body)` より先にこれを呼ぶ形はあらかじめ書かれている）
+3. `_emit_func_prologue(name, frame_size)` の末尾を埋める（`_reset_func_state()` が置いた `self._current_params` を先頭から見て、i 番目のパラメータを `a{i}` から `self.lookup_var()` のオフセットへ `sd` する。フレーム確保と `ra`/`s0` の退避まではあらかじめ書かれている）
+4. `codegen_Call(node)` を実装する（`self._gen_call(node.name, node.args)` に委譲するだけ）
+5. `_gen_call(name, args)` の引数の並べ方を実装する（引数を左から順に `codegen` し、そのつど `self._push_a0()` で積む。先に評価した値をレジスタへ直接置くと後続の引数評価で壊れるためである。積み終えたら積んだ順の逆から `self._pop_into(f'a{i}')` で `a0`〜`a7` へ戻し、`call {name}` を emit する）
+6. `_gen_call` の `call` の直前に 16 バイト境界へのそろえを入れる（ずれるかどうかは引数の個数ではなく、そのとき外側の式が積んでいる一時値の個数 `self._depth` の偶奇で決まる。`pad = 8 if self._depth % 2 else 0` とし、`pad` が 0 でなければ `call` の前に `addi sp, sp, -pad`、戻ってきたら `addi sp, sp, pad` を出す）
+
 ## tests/
 
-| ファイル | 内容 | 期待値 |
-|----------|------|--------|
-| `target.c` | フィボナッチ再帰 `fib(10)` | 55 |
-| `fact.c` | 階乗再帰 `fact(5)` | 120 |
-| `add_mul.c` | 複合関数（add + mul） | 42 |
-| `sum_rec.c` | 再帰総和 `sum(10)` | 55 |
-| `call_add.c` | 単純な関数呼び出し | 対応する `.ans` を参照 |
-| `call_mul.c` | 乗算関数の呼び出し | 対応する `.ans` を参照 |
-| `three_args.c` | 3引数関数の呼び出し | 対応する `.ans` を参照 |
-| `fib_rec.c` | 再帰フィボナッチ | 対応する `.ans` を参照 |
-| `fact_rec.c` | 再帰階乗 | 対応する `.ans` を参照 |
-| `mutual_rec.c` | 相互再帰 | 対応する `.ans` を参照 |
+上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。
+
+`call_add.c` だけが通って他が落ちるときは、手順6 のアラインメントを疑う。
+`call_add.c` の `add(3, 4)` は `return` 直下にあり、`self._depth` が 0 なので
+padding を出さなくても偶然通ってしまうからである。
+
+| ファイル | 内容 | 通る目安 | 期待値 |
+|----------|------|----------|--------|
+| `call_add.c` | 単純な関数呼び出し | 手順5 | 対応する `.ans` を参照 |
+| `target.c` | フィボナッチ再帰 `fib(10)` | 手順6 | 55 |
+| `fact.c` | 階乗再帰 `fact(5)` | 手順6 | 120 |
+| `add_mul.c` | 複合関数（add + mul） | 手順6 | 42 |
+| `sum_rec.c` | 再帰総和 `sum(10)` | 手順6 | 55 |
+| `call_mul.c` | 乗算関数の呼び出し | 手順6 | 対応する `.ans` を参照 |
+| `three_args.c` | 3引数関数の呼び出し | 手順6 | 対応する `.ans` を参照 |
+| `fib_rec.c` | 再帰フィボナッチ | 手順6 | 対応する `.ans` を参照 |
+| `fact_rec.c` | 再帰階乗 | 手順6 | 対応する `.ans` を参照 |
+| `mutual_rec.c` | 相互再帰 | 手順6 | 対応する `.ans` を参照 |
+| `call_nested_temp.c` | 一時値を積んだ途中での呼び出し（padding の判定が `self._depth` 依存であること） | 手順6 | 52 |
+| `call_in_cond.c` | 三項演算子の腕と条件の中での呼び出し | 手順6 | 25 |
+| `call_preinc.c` | 前置 `++`/`--` を引数に使う呼び出し | 手順6 | 20 |
 
 ## テスト
 

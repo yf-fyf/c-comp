@@ -457,23 +457,37 @@ def codegen_Cond(self, node):
 | `codegen_Cond(node)` | 三項演算子。分岐して選ばれた腕の値を `a0` に残す |
 | （dispatcher 対応） | `codegen` に `'Eq'` `'Ne'` `'Lt'` `'Le'` `'Cond'` の case を追加する |
 
+## 実装手順
+
+1. スケルトンの `Codegen04` が `Codegen03` を `importlib` で継承していることを確認する。ラベル採番の `new_label()` と、左右を評価して `a1`/`a0` に載せる `_binary(lhs, rhs)`、`codegen()` / `gen_stmt()` のディスパッチはあらかじめ書かれている
+2. `_reset_func_state(node)` を実装する（`super()._reset_func_state(node)` で frame_size を受け、`self._ret_label = self.new_label()` でこの関数専用の return ラベルを作る。どのテストでも必要）
+3. `_emit_func_epilogue(frame_size)` を実装する（エピローグ本体の前に `self._ret_label` のラベル行を出す。その後の `s0`/`ra` 復元は親クラスの hook を呼んでよい）
+4. `gen_stmt_Return(node)` を上書きする（式を `codegen` した後、その場で `ret` せず `j <self._ret_label>` へ飛ばす）
+5. `gen_stmt_Block(node)` を実装する（`node.stmts` を先頭から順に `self.gen_stmt()` する）
+6. `codegen_Eq` / `codegen_Ne` / `codegen_Lt` / `codegen_Le` を実装する（いずれも `self._binary(node.lhs, node.rhs)` の後に `sub`+`seqz` / `sub`+`snez` / `slt a0, a1, a0` / `slt a0, a0, a1`+`xori a0, a0, 1`）
+7. `gen_stmt_If(node)` を実装する（`node.cond` を `codegen` し、`beqz` と `new_label()` で then / else / end の制御フローを作る。`node.else_` が `None` のときは then を抜けた直後に else ラベルだけを置く）
+8. `codegen_Cond(node)` を実装する（`if`/`else` と同じ分岐を作り、選ばれた腕の値を `a0` に残す。文ではなく式なので値が残るのがポイント）
+
 ## tests/
 
-| ファイル | 内容 | 期待値 |
-|----------|------|--------|
-| `target.c` | `if (a > b)` の else 分岐 | 7 |
-| `if_only.c` | if のみ（else なし） | 1 |
-| `compare.c` | `==`, `>=`, `<` の組み合わせ | 42 |
-| `nested.c` | 入れ子 if | 8 |
-| `if_true.c` | if の条件が真になる場合 | 対応する `.ans` を参照 |
-| `if_false.c` | if の条件が偽になる場合 | 対応する `.ans` を参照 |
-| `if_elseif.c` | else if の連なり | 対応する `.ans` を参照 |
-| `nested_if.c` | if の入れ子 | 対応する `.ans` を参照 |
-| `ternary.c` | 三項演算子 `a > b ? a : b` | 8 |
-| `nested_block.c` | 関数先頭で宣言した変数を `if` の中で使う | 7 |
-| `nested_use.c` | 二重の入れ子ブロックの中での変数の使用 | 7 |
-| `early_return.c` | 複数の return 文（共通エピローグへのジャンプ） | 10 |
-| `rel_value.c` | 比較・等値演算子の結果が int の `0` / `1` であること | 41 |
+上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。
+
+| ファイル | 内容 | 通る目安 | 期待値 |
+|----------|------|----------|--------|
+| `target.c` | `if (a > b)` の else 分岐 | 手順7 | 7 |
+| `if_only.c` | if のみ（else なし） | 手順7 | 1 |
+| `compare.c` | `==`, `>=`, `<` の組み合わせ | 手順6 | 42 |
+| `nested.c` | 入れ子 if | 手順7 | 8 |
+| `if_true.c` | if の条件が真になる場合 | 手順7 | 対応する `.ans` を参照 |
+| `if_false.c` | if の条件が偽になる場合 | 手順7 | 対応する `.ans` を参照 |
+| `if_elseif.c` | else if の連なり | 手順7 | 対応する `.ans` を参照 |
+| `nested_if.c` | if の入れ子 | 手順7 | 対応する `.ans` を参照 |
+| `ternary.c` | 三項演算子 `a > b ? a : b` | 手順8 | 8 |
+| `nested_block.c` | 関数先頭で宣言した変数を `if` の中で使う | 手順7 | 7 |
+| `nested_use.c` | 二重の入れ子ブロックの中での変数の使用 | 手順7 | 7 |
+| `early_return.c` | 複数の return 文（共通エピローグへのジャンプ） | 手順5 | 10 |
+| `rel_value.c` | 比較・等値演算子の結果が int の `0` / `1` であること | 手順6 | 41 |
 
 ## テスト
 

@@ -441,19 +441,31 @@ def codegen_PreInc(self, node):
 | `codegen_PreInc(node)` / `codegen_PreDec(node)` | 前置 `++`/`--` のコード生成 |
 | `self._break_stack` / `self._continue_stack` | インスタンス変数を `__init__` で追加する |
 
+## 実装手順
+
+1. スケルトンの `Codegen05` が `Codegen04` を `importlib` で継承していることを確認する。`self._break_stack` / `self._continue_stack` の初期化と、`codegen()` / `gen_stmt()` のディスパッチはあらかじめ書かれている
+2. `_reset_func_state(node)` を実装する（関数ごとに `self._break_stack` と `self._continue_stack` を空にしてから、`super()._reset_func_state(node)` の frame_size を返す。どのテストでも必要）
+3. `gen_stmt_While(node)` を実装する（`new_label()` で条件ラベルと終了ラベルを作り、`node.cond` を `codegen` して `beqz` で終了へ抜け、`node.body` の後に条件ラベルへ `j` する。break 用に終了ラベル、continue 用に条件ラベルをスタックへ push し、生成後に pop する）
+4. `gen_stmt_For(node)` を実装する（`node.init` → 条件 → `node.body` → `node.step` の順に実行されるようラベルを置く。continue は step ラベル、break は終了ラベルへ飛ばす。`init` / `cond` / `step` は `None` になり得るので、`cond` が `None` なら `beqz` を出さない）
+5. `gen_stmt_Break(node)` / `gen_stmt_Continue(node)` を実装する（`self._break_stack[-1]` / `self._continue_stack[-1]` の最内ループのラベルへ `j` する）
+6. `codegen_PreInc(node)` / `codegen_PreDec(node)` を実装する（`codegen_lval` で左辺値のアドレスを1回だけ求め、`ld` → ±1 → `sd` で書き戻し、更新した後の値を `a0` に残す）
+
 ## tests/
 
-| ファイル | 内容 | 期待値 |
-|----------|------|--------|
-| `target.c` | while で 1..10 の総和 | 55 |
-| `for_count.c` | for で 0..4 の総和 | 10 |
-| `nested_loop.c` | while の入れ子 (3×2) | 6 |
-| `break_early.c` | break で抜ける | 15 |
-| `while_sum.c` | while による集計 | 対応する `.ans` を参照 |
-| `for_fib.c` | for によるフィボナッチ計算 | 対応する `.ans` を参照 |
-| `break_loop.c` | break を含むループ | 対応する `.ans` を参照 |
-| `continue_odd.c` | continue を含むループ | 対応する `.ans` を参照 |
-| `incr_loop.c` | `++i` を更新式に使うループと `--s` | 44 |
+上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。
+
+| ファイル | 内容 | 通る目安 | 期待値 |
+|----------|------|----------|--------|
+| `target.c` | while で 1..10 の総和 | 手順3 | 55 |
+| `for_count.c` | for で 0..4 の総和 | 手順4 | 10 |
+| `nested_loop.c` | while の入れ子 (3×2) | 手順3 | 6 |
+| `break_early.c` | break で抜ける | 手順5 | 15 |
+| `while_sum.c` | while による集計 | 手順3 | 対応する `.ans` を参照 |
+| `for_fib.c` | for によるフィボナッチ計算 | 手順4 | 対応する `.ans` を参照 |
+| `break_loop.c` | break を含むループ | 手順5 | 対応する `.ans` を参照 |
+| `continue_odd.c` | continue を含むループ | 手順5 | 対応する `.ans` を参照 |
+| `incr_loop.c` | `++i` を更新式に使うループと `--s` | 手順6 | 44 |
 
 ## テスト
 

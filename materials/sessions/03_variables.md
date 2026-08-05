@@ -513,21 +513,35 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 - `codegen()` / `gen_stmt()` / `codegen_lval()` のディスパッチ
 - `collect_decls()` のディスパッチと `collect_decls_Block()`（関数本体の `Block` を 1 段開くだけの処理）
 
+## 実装手順
+
+1. スケルトンの `Codegen03` が `Codegen02` を `importlib` で継承していることを確認する（あらかじめ書かれている）
+2. `_reset_func_state(node)` を実装する（`self._locals` と `self._stack_offset` を初期化し、`self.collect_decls(node.body)` を呼び、`self.align_to(self._stack_offset, 16)` を返す。どのテストでも必要）
+3. `collect_decls_Decl(node)` を実装する（提供済みの `self.alloc_local(node.name)` を呼ぶだけ）
+4. `gen_stmt_Decl(node)` を実装する（領域確保は手順3 で済んでいるので何も出力しない）
+5. `gen_stmt_ExprStmt(node)` を実装する（`node.operand` が `None` でなければ `self.codegen()` に渡す）
+6. `codegen_lval_Var(node)` を実装する（`self.lookup_var(node.name, node.line)` で `s0` からのオフセットを引き、`addi a0, s0, <offset>` でアドレスを `a0` に作る）
+7. `codegen_Var(node)` を実装する（`self.codegen_lval(node)` でアドレスを作ってから `ld a0, 0(a0)`）
+8. `codegen_Assign(node)` を実装する（`node.lhs` を `codegen_lval` → `self._push_a0()` → `node.rhs` を `codegen` → `self._pop_into('a1')` → `sd a0, 0(a1)`。`sp` は直接動かさない）
+
 ## tests/
 
-| ファイル | 内容 | 期待値 |
-|----------|------|--------|
-| `target.c` | `a = 3; b = 5; c = a + b; return c;` | 8 |
-| `reassign.c` | `n = 5; n = n * n; n = n - 10; return n;` | 15 |
-| `init.c` | `int a; int b; int c; a = 3; b = 5; c = a * b; return c;` | 15 |
-| `chain_assign.c` | `a = 5; b = a; a = b + 1; return a;` | 6 |
-| `single.c` | 1変数への代入と参照 | 対応する `.ans` を参照 |
-| `add_vars.c` | 複数変数の加算 | 対応する `.ans` を参照 |
-| `expr_chain.c` | 変数を含む式の連鎖 | 対応する `.ans` を参照 |
-| `multi_expr.c` | 複数変数と複数式 | 対応する `.ans` を参照 |
-| `many_locals.c` | 6変数の総和 | 21 |
-| `eight_locals.c` | 8変数（アラインメント境界） | 36 |
-| `minimal.c` | 最小関数（ローカル変数なし） | 42 |
+上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。
+
+| ファイル | 内容 | 通る目安 | 期待値 |
+|----------|------|----------|--------|
+| `target.c` | `a = 3; b = 5; c = a + b; return c;` | 手順8 | 8 |
+| `reassign.c` | `n = 5; n = n * n; n = n - 10; return n;` | 手順8 | 15 |
+| `init.c` | `int a; int b; int c; a = 3; b = 5; c = a * b; return c;` | 手順8 | 15 |
+| `chain_assign.c` | `a = 5; b = a; a = b + 1; return a;` | 手順8 | 6 |
+| `single.c` | 1変数への代入と参照 | 手順8 | 対応する `.ans` を参照 |
+| `add_vars.c` | 複数変数の加算 | 手順8 | 対応する `.ans` を参照 |
+| `expr_chain.c` | 変数を含む式の連鎖 | 手順8 | 対応する `.ans` を参照 |
+| `multi_expr.c` | 複数変数と複数式 | 手順8 | 対応する `.ans` を参照 |
+| `many_locals.c` | 6変数の総和 | 手順8 | 21 |
+| `eight_locals.c` | 8変数（アラインメント境界。落ちるときは手順2 のフレームサイズを疑う） | 手順8 | 36 |
+| `minimal.c` | 最小関数（ローカル変数なし） | 手順2 | 42 |
 
 代入の前にローカル変数の宣言が必要である。宣言と同時に初期値を書くことはできず、初期値は代入文で設定する。
 
