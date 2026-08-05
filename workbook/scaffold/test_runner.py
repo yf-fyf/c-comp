@@ -71,7 +71,11 @@ def run_compiler(compiler: Path, src: Path, extra_srcs: list = None) -> str:
     if extra_srcs:
         args.extend(str(p) for p in extra_srcs)
 
-    result = subprocess.run(args, capture_output=True, text=True)
+    # Python 3.13+ はトレースバックを既定で色付けする。パイプ経由でも環境次第で
+    # 有効になり、ANSIエスケープが混入すると FAIL メッセージの文字列比較
+    # （CI の expected_fail_re 等）が壊れるので、ここで明示的に無効化する。
+    env = dict(os.environ, PYTHON_COLORS="0", NO_COLOR="1")
+    result = subprocess.run(args, capture_output=True, text=True, env=env)
     if result.returncode != 0:
         raise subprocess.CalledProcessError(result.returncode, args,
                                             output=result.stdout, stderr=result.stderr)
