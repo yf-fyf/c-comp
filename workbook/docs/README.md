@@ -36,13 +36,13 @@
 | テストが落ちる / 終了コードが変 / 実行時に壊れる | [`testing.md` の症状表](./testing.md#症状から当たりをつける) |
 | `AttributeError` が出る / 昔取得したファイルがある | [`testing.md` の症状表](./testing.md#症状から当たりをつける) |
 | コマ15 のあと何をするか | [`getting_started.md` の「コマ15 のあと」](./getting_started.md#コマ15-のあと) |
-| 発展課題26トピックからどれを選ぶか | [`../advanced/README.md`](../advanced/README.md)（一覧・前提の出典と「どこから始めるか」） |
+| 発展課題28トピックからどれを選ぶか | [`../advanced/README.md`](../advanced/README.md)（一覧・前提の出典と「どこから始めるか」） |
 
 ## この外にあるもの
 
 | 場所 | 内容 |
 |------|------|
-| [`../advanced/README.md`](../advanced/README.md) | 発展課題 26 トピックの一覧と依存関係(C 移植・セルフホスト P1 を含む) |
+| [`../advanced/README.md`](../advanced/README.md) | 発展課題 28 トピックの一覧と依存関係(C 移植・セルフホスト P1 を含む) |
 | [`../ocaml/README.md`](../ocaml/README.md) | 各回の完成形に相当する OCaml 版参考実装(完成相当なので、自分の方針を考えたあとの確認に) |
 | [`../docker/rv64/README.md`](../docker/rv64/README.md) | Docker 環境の詳細設定とトラブルシュート |
 | `design/curriculum.md`（開発リポジトリ） | 教材の設計思想（なぜこの順序・なぜ RV64 なのか） |

@@ -84,7 +84,7 @@ struct Tag   複合型（タグ必須）
 
 - **struct 変数は宣言できるが、struct 値の代入・実引数・戻り値は不可**
   (`.` によるフィールドアクセスと `&s` は可)。struct の受け渡しはポインタで行う
-  (代入は発展 S3 で、実引数・戻り値は発展 L5 で追加する)。
+  (代入は発展 S3 が本仕様の禁止行を改訂して追加し、実引数・戻り値は発展 L5 が仕様の外に新しく足す)。
 - 除外: `float` `double` `long` `short` `unsigned` `union` `enum`、配列、`typedef`
 
 ---
@@ -316,8 +316,12 @@ void exit(int code);
 - **代表テスト**のパスは `workbook/` からの相対パス。
   `python3 scaffold/test_runner.py sessions/NN_xxx` で回の分をまとめて実行できる。
 - `final/tests/` の 17 本(`fixed17`)はコマ15 の総合判定であり、
-  個々の機能の代表テストとしては挙げない(型対応の前置 `++` だけは例外)。
+  個々の機能の代表テストとしては挙げない。
 - **区分**が「発展」の行は本仕様の外側であり、標準トラックの実装対象ではない。
+- この表と区分列の「本仕様の外側」「仕様外」は、標準トラック(コマ1〜15)の実装対象かどうかを指す。
+  発展課題の S/L の区分は別の軸(その回の出発点となる正解が仕様に書いてあるか)であり、
+  S1・S3 のように「本仕様の外側」かつ S 系という組み合わせがある
+  (判定基準は発展課題の索引の「S と L の判定基準」節)。
 
 ### 字句とリテラル
 
@@ -341,7 +345,7 @@ void exit(int code);
 | 戻り値型 `void` | コマ7 | `sessions/07_lvalue_rvalue/tests/void_func.c` | 標準 | `return;` と末尾到達 |
 | `struct Tag` の定義・変数・フィールド | コマ12 | `sessions/12_struct_malloc_list/tests/dot_access.c` | 標準 | ファイルスコープのみ |
 | struct の自己参照・前方宣言 | コマ12 | `sessions/12_struct_malloc_list/tests/list_sum.c` | 標準 | 不完全型 `struct FILE` はコマ11 の `file_stream.c` |
-| struct 値の代入・実引数・戻り値 | — | — | 仕様外 | 本仕様が禁止。ポインタで受け渡す。代入は発展 S3、実引数・戻り値は発展 L5 が追加する |
+| struct 値の代入・実引数・戻り値 | — | — | 仕様外 | 本仕様が禁止。ポインタで受け渡す。代入は発展 S3 が本仕様の禁止行を改訂して追加し、実引数・戻り値は発展 L5 が仕様の外に新しく足す |
 
 ### 演算子
 
@@ -407,7 +411,7 @@ void exit(int code);
 
 | 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
 |------|---------|-----------|------|------|
-| `#include "..."` | コマ9(`lib.h`)・コマ14(自作ヘッダ・入れ子) | `sessions/14_preprocess_multifile/tests/multifile_math.c` | 標準 | 前処理はスキャフォールド提供 |
+| `#include "..."` | コマ10(`lib.h`)・コマ14(自作ヘッダ・入れ子) | `sessions/14_preprocess_multifile/tests/multifile_math.c` | 標準 | 前処理はスキャフォールド提供 |
 | `#define`(1 段置換) | コマ14 | `sessions/14_preprocess_multifile/tests/define_min.c` | 標準 | |
 | 複数ソースファイルの同時コンパイル | コマ14 | `sessions/14_preprocess_multifile/tests/multifile_global.c` | 標準 | |
 | 循環取込み・マクロ多段参照のエラー | コマ14 | — | 標準 | 診断。下の「テストを持たない項目」を参照 |
@@ -421,7 +425,7 @@ void exit(int code);
 | `malloc` | コマ9 | `sessions/09_pointer_arith/tests/ptr_sum.c` | 標準 | |
 | `exit` | コマ11 | `sessions/11_expr_walk_libc/tests/lib_exit.c` | 標準 | |
 | `NULL` | コマ12 | `sessions/12_struct_malloc_list/tests/list_sum.c` | 標準 | `#define NULL 0` |
-| `strcmp` / `strlen` 相当 | — | `sessions/11_expr_walk_libc/tests/strlen_literal.c` | 標準 | 提供しない。必要なら自作する |
+| `strcmp` / `strlen` 相当 | — | `sessions/11_expr_walk_libc/tests/strlen_literal.c` | 対象外 | 提供しない。必要なら自作する |
 
 ### 実行時の意味
 
@@ -443,7 +447,7 @@ void exit(int code);
 | 再宣言・再定義規則、仮引数との名前衝突、循環取込み、マクロ多段参照 | いずれも**コンパイルエラーの診断**である。テストランナーの判定手段は「終了コード」と「標準出力」の 2 つで、コンパイルが失敗すること自体を期待値にする仕組みを持たない |
 | 空文 `;`・`for` の 3 式の省略 | 文法上は書けるが、他の機能と独立に観測できる振舞いがないため単独のテストを置いていない |
 | 未定義動作 8 種 | 動作を定めない項目であり、どの結果になっても仕様違反にならない |
-| struct 値の代入・実引数・戻り値 | 仕様が受理しない書き方であり、機能として存在しない(本仕様の外側で追加するのが発展 S3・L5 である) |
+| struct 値の代入・実引数・戻り値 | 仕様が受理しない書き方であり、機能として存在しない(代入は発展 S3 が本仕様の禁止行を改訂して追加し、実引数・戻り値は発展 L5 が仕様の外に新しく足す) |
 
 ---
 

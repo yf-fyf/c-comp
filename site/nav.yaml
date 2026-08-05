@@ -45,7 +45,7 @@ sections:
   - slug: advanced
     title: 発展課題
     group: 教材
-    summary: 選択制の26トピック。回 ID の頭文字がカテゴリを表す。
+    summary: 選択制の28トピック。回 ID の頭文字がカテゴリを表す。
     pages:
       - workbook/advanced/README.md
       - materials/advanced/F0_cyk.md
