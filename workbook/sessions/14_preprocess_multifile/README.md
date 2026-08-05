@@ -9,7 +9,7 @@
 ## 実装する主な機能
 
 - 既存の `preprocess()` 関数で `#include` / `#define` を扱う
-- `parse_file(filename)` を導入し、ファイルごとの処理をまとめる
+- コマ13で提供済みの `parse_file(filename)` を使い、複数ファイルそれぞれの AST を作る
 - コマンドライン引数に複数の `.c` ファイルを受け取る
 - 全ファイルの AST を1つに連結する
 - `ND_FUNCPROTO` はコード生成しない

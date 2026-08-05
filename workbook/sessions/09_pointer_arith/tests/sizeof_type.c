@@ -16,8 +16,5 @@ int main() {
     if (sizeof(int **) != 8) {
         return 5;
     }
-    if (sizeof(void *) != 8) {
-        return 6;
-    }
     return sizeof(int) * 10;
 }

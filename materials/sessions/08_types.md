@@ -67,7 +67,7 @@ n = 4;     // 4バイト書く   → sw
 stars       ::= '*'              /* 多段ポインタ int ** はコマ9 */
 
 scalar_type ::= 'int'  [ stars ]
-              | 'char' [ stars ] /* struct はコマ11、void * はコマ12 */
+              | 'char' [ stars ] /* struct タグ * (不透明ポインタ) はコマ11、struct 定義・void * はコマ12 */
 obj_type    ::= scalar_type
 ret_type    ::= scalar_type
               | 'void'

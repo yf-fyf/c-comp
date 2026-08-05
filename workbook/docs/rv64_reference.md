@@ -28,9 +28,9 @@ RV64 を選ぶ理由（可変長命令や暗黙のフラグレジスタがない
 | 話題 | 内容 | 扱い |
 |------|------|------|
 | 9個以上の引数 | `a0`–`a7` に入りきらない分はスタックで渡す | 扱わない |
-| 可変長引数 | `printf` のように引数個数が変わる関数 | 発展課題 [L3](../advanced/L3_variadic/README.md) |
+| 可変長引数の**定義**（`...` を受け取る側） | `printf` のように引数個数が変わる関数を自分で定義する | 発展課題 [L3](../advanced/L3_variadic/README.md) |
 | 型チェック | 宣言と呼び出しの引数個数・型が一致するか確認する | 発展課題 [Q1](../advanced/Q1_typecheck/README.md) |
-| 外部関数呼び出し | libc の `printf` や `malloc` を呼ぶ | コマ10・コマ12 |
+| 外部関数呼び出し | libc の `printf` や `malloc` を呼ぶ | `printf` はコマ10、`malloc` はコマ9 |
 | caller-saved / callee-saved | 呼び出し前後でどのレジスタを誰が保存するか | 上表の `a0`–`a7`・`ra`・`s0` の基本だけ |
 | 末尾呼び出し最適化 | `return f(x);` をジャンプに変える最適化 | 発展課題 [B3](../advanced/B3_tailcall/README.md) |
 

@@ -65,7 +65,7 @@ codegen_lval(node) -> lvalue のアドレスを計算し、アドレスを a0 �
 ```ebnf
 stars       ::= '*'              /* 多段ポインタ int ** はコマ9 */
 
-scalar_type ::= 'int'  [ stars ] /* char はコマ8、struct はコマ11、void * はコマ12 */
+scalar_type ::= 'int'  [ stars ] /* char はコマ8、struct タグ * (不透明ポインタ) はコマ11、struct 定義・void * はコマ12 */
 obj_type    ::= scalar_type
 ret_type    ::= scalar_type
               | 'void'

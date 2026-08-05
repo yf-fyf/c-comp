@@ -638,6 +638,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 14. `malloc_struct.c` / `list_min.c` を通す<br>（`parse_struct_defs()` は自己参照フィールド `struct Node *next` をそのまま扱える。ポインタは中身を知らなくてもサイズ 8 で確定するからである。`malloc(sizeof(struct Node))` はコマ6 の関数呼び出しがそのまま働くので、追加の実装は要らない。）
 15. `list_sum.c` まで通す
 16. `void_ptr.c` を通す<br>（`void *` と任意の `T *` の相互変換。`void *` の変数・仮引数も書ける。ポインタ同士なのでサイズは常に 8 で、変換のための命令は要らない。）
+17. `sizeof_void_ptr.c` を通す（`sizeof(void *)` も他のポインタ型と同じくサイズ 8 として求まる）
 
 ## tests/
 
@@ -650,6 +651,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 | `list_min.c` | `malloc` した1ノードを `->` で読む最小形 | `10` |
 | `list_sum.c` | `struct Node` の連結リスト走査 | `60` |
 | `void_ptr.c` | `void *` と `T *` のキャストなしの相互変換 | `47` |
+| `sizeof_void_ptr.c` | `sizeof(void *)` の翻訳時定数（`void *` はこの回で導入） | `8` |
 
 ## テスト
 

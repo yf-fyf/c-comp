@@ -247,6 +247,8 @@ primary_expr ::= INT_LITERAL
 | `div_mod.c` | `100 / 4 + 17 % 5` | 27 |
 | `paren.c` | `(10 - 3) * 2` | 14 |
 | `neg.c` | `-3 + 10` | 7 |
+| `all_ops.c` | `1 + 2 * 3 - 8 / 2` | 3 |
+| `expression.c` | `1 + 2 * 3` | 7 |
 
 ## テスト
 

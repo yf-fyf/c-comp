@@ -518,7 +518,7 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 | ファイル | 内容 | 期待値 |
 |----------|------|--------|
 | `target.c` | `a = 3; b = 5; c = a + b; return c;` | 8 |
-| `reassign.c` | `x = 10; y = x * 2 + 3; x = y - x; return x;` | 13 |
+| `reassign.c` | `n = 5; n = n * n; n = n - 10; return n;` | 15 |
 | `init.c` | `int a; int b; int c; a = 3; b = 5; c = a * b; return c;` | 15 |
 | `chain_assign.c` | `a = 5; b = a; a = b + 1; return a;` | 6 |
 | `single.c` | 1変数への代入と参照 | 対応する `.ans` を参照 |
