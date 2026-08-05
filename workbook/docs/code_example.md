@@ -774,5 +774,6 @@ int main() {
 （この文書は「各コマの終わりに何が動くか」を実例で示し、対応表は
 「仕様のどの項目がどこで埋まるか」を網羅する）。
 
-コマ15 のあとは選択制の発展課題（`../advanced/README.md`）に進む。
+コマ15（`final/tests` 全通）で実装は完成する。学習経路の完了はコマ16（発表会）だが、
+発表会を待たずに選択制の発展課題（`../advanced/README.md`）へ進んでよい。
 C 移植・セルフホスト（P1）の進め方は [`../advanced/P1_selfhost/README.md`](../advanced/P1_selfhost/README.md) にある。
