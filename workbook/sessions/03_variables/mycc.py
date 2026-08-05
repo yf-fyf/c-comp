@@ -57,6 +57,7 @@ class Codegen03(prev.Codegen02):
 
     def codegen_Assign(self, node: Node) -> None:
         # TODO: 代入先アドレスを退避し、右辺を評価してから sd a0, 0(a1) で保存する。
+        # 退避と復元は self._push_a0() / self._pop_into('a1') を使う（sp は直接動かさない）。
         raise NotImplementedError("codegen: Assign を実装してください")
 
     def codegen(self, node: Node) -> None:

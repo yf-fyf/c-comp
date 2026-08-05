@@ -25,12 +25,28 @@ class Codegen02:
 
     def __init__(self) -> None:
         self._out: list[str] = []
+        # いま何個の一時値をスタックに積んでいるか（_push_a0/_pop_into が更新する）。
+        self._depth: int = 0
 
     def emit(self, line: str) -> None:
         self._out.append(line)
 
     def output(self) -> str:
         return '\n'.join(self._out) + '\n'
+
+    # ---- 一時値の退避・復元（一時値の push/pop は必ずこの 2 つを通す） ----
+
+    def _push_a0(self) -> None:
+        """a0 の値をスタックへ退避し、積んでいる一時値の個数を 1 増やす。"""
+        self.emit('  addi sp, sp, -8')
+        self.emit('  sd a0, 0(sp)')
+        self._depth += 1
+
+    def _pop_into(self, reg: str) -> None:
+        """退避しておいた一時値を reg へ戻し、積んでいる一時値の個数を 1 減らす。"""
+        self.emit(f'  ld {reg}, 0(sp)')
+        self.emit('  addi sp, sp, 8')
+        self._depth -= 1
 
     def codegen(self, node: Node) -> None:
         """式を評価し、結果を a0 レジスタに置く。"""
@@ -54,7 +70,8 @@ class Codegen02:
 
     def _codegen_binary_value(self, node: Node, op: str) -> None:
         # TODO: 左辺を評価してスタックへ退避し、右辺を評価してから a1 op a0 を計算する。
-        # 使う命令例: addi sp, sp, -8 / sd a0, 0(sp) / ld a1, 0(sp)
+        # 退避と復元は self._push_a0() / self._pop_into('a1') を使う。
+        # （sp を直接動かすと積んでいる一時値の個数がずれ、コマ6のアラインメント調整が狂う）
         raise NotImplementedError("二項演算子の共通処理を実装してください")
 
     def codegen_Num(self, node: Node) -> None:
@@ -113,13 +130,22 @@ class Codegen02:
         # TODO: s0/ra を復元し、sp を戻して ret するエピローグを出力する。
         raise NotImplementedError("関数エピローグを実装してください")
 
+    def _check_depth(self, name: str) -> None:
+        """関数を出し終えた時点で push と pop の数が合っているか確かめる。"""
+        if self._depth != 0:
+            raise RuntimeError(
+                f"内部エラー: 関数 '{name}' で push と pop の数が合っていません (depth={self._depth})"
+            )
+
     def gen_func(self, node: Node) -> None:
         if node.kind != 'FuncDef':
             return
+        self._depth = 0
         frame_size = self._reset_func_state(node)
         self._emit_func_prologue(node.name, frame_size)
         self._emit_func_body(node.body)
         self._emit_func_epilogue(frame_size)
+        self._check_depth(node.name)
 
 
 Codegen = Codegen02

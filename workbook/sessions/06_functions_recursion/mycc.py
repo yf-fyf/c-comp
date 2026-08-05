@@ -37,11 +37,9 @@ class Codegen06(prev.Codegen):
 
     def codegen_Assign(self, node: Node) -> None:
         self.codegen_lval(node.lhs)
-        self.emit('  addi sp, sp, -8')
-        self.emit('  sd a0, 0(sp)')
+        self._push_a0()
         self.codegen(node.rhs)
-        self.emit('  ld a1, 0(sp)')
-        self.emit('  addi sp, sp, 8')
+        self._pop_into('a1')
         self.emit('  sd a0, 0(a1)')
 
     def codegen_Neg(self, node: Node) -> None:
@@ -49,12 +47,11 @@ class Codegen06(prev.Codegen):
         self.emit('  neg a0, a0')
 
     def _binary_value(self, lhs: Node, rhs: Node) -> None:
+        # 一時値の退避・復元はコマ2の _push_a0 / _pop_into を通す。
         self.codegen(lhs)
-        self.emit('  addi sp, sp, -8')
-        self.emit('  sd a0, 0(sp)')
+        self._push_a0()
         self.codegen(rhs)
-        self.emit('  ld a1, 0(sp)')
-        self.emit('  addi sp, sp, 8')
+        self._pop_into('a1')
 
     def codegen_Add(self, node: Node) -> None:
         self._binary_value(node.lhs, node.rhs)
@@ -100,40 +97,23 @@ class Codegen06(prev.Codegen):
         raise NotImplementedError("codegen_Call を実装してください")
 
     def codegen(self, node: Node) -> None:
+        # コマ6で増えるのは Call だけ。それ以外はコマ5までのディスパッチへ委譲する。
+        # （ここで全 case を並べ直すと、コマ4の Cond やコマ5の PreInc/PreDec が落ちる）
         match node.kind:
-            case 'Num':
-                self.codegen_Num(node)
-            case 'Neg':
-                self.codegen_Neg(node)
-            case 'Add':
-                self.codegen_Add(node)
-            case 'Sub':
-                self.codegen_Sub(node)
-            case 'Mul':
-                self.codegen_Mul(node)
-            case 'Div':
-                self.codegen_Div(node)
-            case 'Mod':
-                self.codegen_Mod(node)
-            case 'Var':
-                self.codegen_Var(node)
-            case 'Assign':
-                self.codegen_Assign(node)
-            case 'Eq':
-                self.codegen_Eq(node)
-            case 'Ne':
-                self.codegen_Ne(node)
-            case 'Lt':
-                self.codegen_Lt(node)
-            case 'Le':
-                self.codegen_Le(node)
             case 'Call':
                 self.codegen_Call(node)
             case _:
-                raise RuntimeError(f'codegen: コマ6で未対応の式です (kind={node.kind!r})')
+                super().codegen(node)
 
     def _gen_call(self, name: str, args: list[Node]) -> None:
         # TODO: 引数を評価して ABI の a0-a7 に並べ、call {name} を emit する。
+        # 1. 引数を左から順に codegen し、そのつど self._push_a0() で積む
+        #    （先に評価した値をレジスタへ直接置くと、後続の引数評価で壊れる）
+        # 2. 積んだ順の逆から self._pop_into(f'a{i}') で a0-a7 へ戻す
+        # 3. call の直前で 16 バイト境界へそろえる。ずれるかどうかは引数の個数ではなく、
+        #    このとき外側の式が積んでいる一時値の個数 self._depth の偶奇で決まる。
+        #      pad = 8 if self._depth % 2 else 0
+        #    pad が 0 でなければ call の前に addi sp, sp, -pad、戻ってきたら addi sp, sp, pad。
         raise NotImplementedError("_gen_call を実装してください")
 
     def _alloc_params(self, node: Node) -> None:
@@ -164,6 +144,8 @@ class Codegen06(prev.Codegen):
     def gen_func(self, node: Node) -> None:
         if node.kind != 'FuncDef':
             return
+        # 積んでいる一時値の個数は関数ごとに数え直す。
+        self._depth = 0
         frame_size = self._reset_func_state(node)
         self._emit_func_prologue(node.name, frame_size)
         self.gen_stmt(node.body)
@@ -172,6 +154,7 @@ class Codegen06(prev.Codegen):
         self.emit(f'  ld ra, {frame_size + 8}(sp)')
         self.emit(f'  addi sp, sp, {frame_size + 16}')
         self.emit('  ret')
+        self._check_depth(node.name)
 
 
 Codegen = Codegen06

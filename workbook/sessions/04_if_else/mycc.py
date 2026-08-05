@@ -31,12 +31,11 @@ class Codegen04(prev.Codegen03):
         return f'.L{self._label_n}'
 
     def _binary(self, lhs: Node, rhs: Node) -> None:
+        # 一時値の退避・復元はコマ2の _push_a0 / _pop_into を通す。
         self.codegen(lhs)
-        self.emit('  addi sp, sp, -8')
-        self.emit('  sd a0, 0(sp)')
+        self._push_a0()
         self.codegen(rhs)
-        self.emit('  ld a1, 0(sp)')
-        self.emit('  addi sp, sp, 8')
+        self._pop_into('a1')
 
     def codegen_Eq(self, node: Node) -> None:
         # TODO: 左右を _binary で評価し、sub + seqz で == の 0/1 を a0 に作る。
