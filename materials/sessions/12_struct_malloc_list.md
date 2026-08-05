@@ -402,8 +402,9 @@ Parser は `struct Point { ... };` のフィールド一覧を AST には残さ�
 | `field_offset(struct_ty, name, struct_defs, line)` | フィールドのオフセットを返す |
 | `field_ty(struct_ty, name, struct_defs, line)` | フィールドの `ty_str` を返す |
 
-情報を集めるのはクラスメソッド `parse_struct_defs(source)` で、これもスケルトンにある。
-対象は `struct タグ { フィールド; ... };` の形だけでよい（タグは必須）。
+情報を集めるのはクラスメソッド `parse_struct_defs(prog)` で、これもスケルトンにある。
+Parser が構文解析の結果として残す `struct` 定義（`prog.struct_defs`）から読み取るので、
+フィールド間のコメントや、文字列・コメント内の `struct タグ {` 風のテキストに惑わされない。
 
 ## size_of_ty_str に引数が増える
 
@@ -590,7 +591,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 
 | 提供済み | 役割 |
 |----------|------|
-| `parse_struct_defs(source)` / `parse_field_decls(body)` | ソースから構造体定義を集める |
+| `parse_struct_defs(prog)` | Parser が残した構造体定義（`prog.struct_defs`）からレイアウトを集める |
 | `size_of_ty_str(ty, defs=None)` / `align_of_ty_str(ty)` / `is_struct_ty_str(ty, defs)` | サイズ・境界と struct 判定 |
 | `field_offset(...)` / `field_ty(...)` | フィールドのオフセットと型 |
 | `_type_of_expr()` / `_type_of_lval()` / `codegen_lval()` / `codegen()` / `collect_strings_expr()` のディスパッチ | `'Member'` と `'SizeofType'` の分岐は既に書かれている。書くのは飛び先のハンドラだけである |
@@ -623,7 +624,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 ## 実装手順
 
 1. スケルトンの `importlib` 継承によりコマ11の Codegen クラスを引き継ぐ（あらかじめ書かれている）
-2. `parse_struct_defs(source)` で構造体定義をパースし、コンストラクタで `self._struct_defs` に渡す（あらかじめ書かれている）
+2. `parse_struct_defs(prog)` で構造体定義のレイアウトを求め、コンストラクタで `self._struct_defs` に渡す（あらかじめ書かれている）
 3. `alloc_local()` / `_scale_index()` / `_load_ty()` / `_store_ty()` の `size_of_ty_str` 呼び出しに `self._struct_defs` を渡す
 4. `_load_ty()` は `struct` 型のときロードせず、アドレスのまま扱う（`is_struct_ty_str` で判定）
 5. `_member_struct_type(node)` を実装する（`.` は `_type_of_lval`、`->` は `_type_of_expr` + `elem_ty_str`）
