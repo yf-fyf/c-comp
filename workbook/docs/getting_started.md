@@ -50,8 +50,8 @@
 - Docker 環境（**推奨**）またはネイティブ実行の用意
 - 手書き RV64 アセンブリを qemu で動かして、環境が正しいことを確かめる
 
-**Python のバージョン基準（Python 3.10 以降）を含む環境の要件は、コマ0 の資料が
-教材全体を通じての唯一の出典である**（他の文書ではコマ0 を参照すること）。
+Python のバージョン基準（Python 3.10 以降）を含む環境の要件は、
+[コマ0 の資料](https://yf-fyf.github.io/c-comp/sessions/00_setup/)（原稿: `materials/sessions/00_setup.md`）を参照する。
 この文書では要件を重ねて書かない。
 
 イメージ名の変更やよくあるエラーは [`../docker/rv64/README.md`](../docker/rv64/README.md) を参照。

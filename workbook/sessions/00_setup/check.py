@@ -12,6 +12,20 @@ GCC = os.environ.get("GCC", "riscv64-linux-gnu-gcc")
 QEMU = os.environ.get("QEMU", "qemu-riscv64")
 DIR = Path(__file__).resolve().parent
 
+MIN_PYTHON = (3, 10)
+if sys.version_info < MIN_PYTHON:
+    print(
+        f"Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} 以降が必要です "
+        f"(現在: {sys.version_info.major}.{sys.version_info.minor})",
+        file=sys.stderr,
+    )
+    print(
+        "`match` 文や `str | None` のような合併型注釈を使うため。"
+        "詳細は materials/sessions/00_setup.md を参照。",
+        file=sys.stderr,
+    )
+    raise SystemExit(2)
+
 gcc_bin = shutil.which(GCC)
 if gcc_bin is None:
     print(f"gcc not found: {GCC}", file=sys.stderr)
