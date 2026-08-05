@@ -37,9 +37,10 @@ class Codegen13(prev.Codegen12):
         with open(filename, 'r', encoding='utf-8') as f:
             source = f.read()
         source = preprocess(source, filename)
-        struct_defs = cls.parse_struct_defs(source)
         tokens = tokenize(source, filename)
-        return parse(tokens), struct_defs
+        prog = parse(tokens)
+        struct_defs = cls.parse_struct_defs(prog)
+        return prog, struct_defs
 
     def _is_local(self, name: str) -> bool:
         return name in self._locals

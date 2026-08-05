@@ -123,7 +123,11 @@ def install_parser_shim(real_parser):
                     self.expect(';')
                     nodes.append(Node(real_parser.ND_DECL,
                                       name=name, ty_str=base + stars))
-            return nodes
+            # struct 定義自体は self.struct_defs へ積まれている
+            # (_parse_struct_decl は scaffold/parser.py の実装をそのまま継承する)。
+            # ここで Program として包まないと、mycc 側の parse_struct_defs(prog) が
+            # getattr(prog, 'struct_defs', []) で空を返してしまう。
+            return real_parser.Program(nodes, self.struct_defs)
 
         def _parse_func(self, ty_str, name):
             self.expect('(')

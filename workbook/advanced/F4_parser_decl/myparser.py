@@ -219,7 +219,13 @@ class ProgramParser(f3.StmtParser):
 
 
 def parse(tokens):
-    """scaffold の parse() と同じインターフェース(完成済み)。"""
+    """scaffold の parse() と同じ「トップレベル宣言をイテレートできるリスト」を返す(完成済み)。
+
+    scaffold 側は struct 定義を `Program.struct_defs` 属性にも残すが、
+    F4 はこの回の範囲(struct は検証のみ・AST化しない)により持たない。
+    golden.py の比較は `for n in parse(...)` によるイテレートだけなので、
+    この差異は影響しない。
+    """
     return ProgramParser(tokens).parse_program()
 
 
