@@ -209,7 +209,7 @@ printf("%s\n", n < 2 ? "then side" : "else side");
 1. 単項の3種（`Neg` / `Addr` / `Deref`）を書く
 2. 二項の10種（算術5・比較4・`Index`）を書く
 3. `Cond` を書く
-4. `str_in_expr.c` を通す（添字・ポインタ加算・間接参照・比較の奥にある文字列）
+4. `str_in_expr.c` と `str_in_ops.c` を通す（添字・ポインタ加算・間接参照・比較、および算術・単項・`<=` の奥にある文字列）
 5. `str_cond_select.c` を通す（三項演算子の両方の枝）
 6. `strlen_literal.c` を通す（文字列リテラルを自作関数に渡し、`'\0'` まで読む）
 7. 次節の `lib.h` の残りの関数に目を通し、`file_stream.c` と `lib_exit.c` を通す
@@ -270,9 +270,10 @@ fprintf(err, "error: unexpected token\n");
 | ファイル | 内容 | 期待値 |
 |----------|------|--------|
 | `str_in_expr.c` | 添字・ポインタ加算・間接参照・比較の奥にある文字列（式の走査） | 終了コード `42` |
+| `str_in_ops.c` | 単項マイナス・アドレス・減算・乗算・除算・剰余・`<=` の下にある文字列。二項は左右で別の文字列にしてあるので片側だけの走査も落ちる | 終了コード `42` |
 | `str_cond_select.c` | 三項演算子の両方の枝にある文字列（`Cond` の走査） | `big` / `else side` |
 | `strlen_literal.c` | 文字列を自作の `my_strlen` に渡す | 終了コード `3` |
-| `file_stream.c` | `fdopen`/`fprintf`/`fopen`/`fread`/`fclose` | `stream ok` / 終了コード `42` |
+| `file_stream.c` | `fdopen`/`fprintf`/`fopen`/`fread`/`fclose` | `stream ok` / `fdopen(2, "w")` への出力 / 終了コード `42` |
 | `lib_exit.c` | `exit` で終了コードを指定して打ち切る | `before exit` / 終了コード `7` |
 
 ## テスト

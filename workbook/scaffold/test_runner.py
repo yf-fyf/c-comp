@@ -15,6 +15,16 @@ mycc テストランナー
     tests/foo.c        入力ソース
     tests/foo.ans      期待する exit code（整数）
     tests/foo.stdout   期待する標準出力（省略可）
+    tests/foo.stderr   期待する標準エラー出力（省略可）
+    tests/foo.files    一緒にコンパイルする追加ソース（省略可）
+
+SKIP の扱い:
+    `.ans` が無い `*.c` は原則として FAIL にする（期待値の置き忘れを成功にしないため）。
+    例外は、同じディレクトリのどれかの `*.files` から参照されている補助ソース
+    （コマ14 の stat_lib.c / math_util.c）だけで、これは SKIP になる。
+
+失敗の条件:
+    FAIL が 1 件でもあるとき、または実行対象のテストがあるのに PASS が 0 件のとき。
 """
 
 import argparse
@@ -68,17 +78,50 @@ def run_compiler(compiler: Path, src: Path, extra_srcs: list = None) -> str:
     return result.stdout
 
 
-def run_test(src: Path, compiler: Path, gcc_bin: Path, qemu_bin: Path) -> str:
+def collect_helper_sources(tests_dir: Path) -> set:
+    """`*.files` から参照されている補助ソースの集合を返す。
+
+    補助ソースは単体では実行しないので `.ans` を持たない。`.ans` の置き忘れと
+    区別するために、参照されている事実そのものを根拠に使う。ディレクトリを
+    分けたり命名規則を決めたりするより、`.files` に書いてある内容が唯一の
+    真実になるので、テストを増やしても allowlist の更新が要らない。
+    """
+    helpers = set()
+    for files_file in sorted(tests_dir.glob("*.files")):
+        for line in files_file.read_text().splitlines():
+            line = line.strip()
+            if line:
+                helpers.add((tests_dir / line).resolve())
+    return helpers
+
+
+def run_test(src: Path, compiler: Path, gcc_bin: Path, qemu_bin: Path,
+             helper_sources: set) -> str:
     base = src.with_suffix("")
     ans_file = base.with_suffix(".ans")
     out_file = base.with_suffix(".stdout")
+    err_file = base.with_suffix(".stderr")
     files_file = base.with_suffix(".files")
 
     if not ans_file.exists():
-        return "SKIP"
+        if src.resolve() in helper_sources:
+            # 単体では実行しない補助ソース。`.files` から参照されている。
+            return "SKIP"
+        return "FAIL: *.ans がない（補助ソースでもないので期待値の置き忘れ）"
 
-    expected_code = int(ans_file.read_text().strip())
+    if not src.read_text().strip():
+        return "FAIL: テスト入力が空である"
+
+    raw_ans = ans_file.read_text().strip()
+    if not raw_ans:
+        return f"FAIL: {ans_file.name} が空である"
+    try:
+        expected_code = int(raw_ans)
+    except ValueError:
+        return f"FAIL: {ans_file.name} が整数でない: {raw_ans!r}"
+
     expected_out = out_file.read_text() if out_file.exists() else ""
+    expected_err = err_file.read_text() if err_file.exists() else ""
 
     extra_srcs = []
     if files_file.exists():
@@ -113,6 +156,7 @@ def run_test(src: Path, compiler: Path, gcc_bin: Path, qemu_bin: Path) -> str:
         )
         actual_code = result.returncode
         actual_out = result.stdout
+        actual_err = result.stderr
     finally:
         bin_path.unlink(missing_ok=True)
 
@@ -121,6 +165,9 @@ def run_test(src: Path, compiler: Path, gcc_bin: Path, qemu_bin: Path) -> str:
 
     if out_file.exists() and actual_out != expected_out:
         return f"FAIL: stdout mismatch\n  expected: {expected_out!r}\n  got:      {actual_out!r}"
+
+    if err_file.exists() and actual_err != expected_err:
+        return f"FAIL: stderr mismatch\n  expected: {expected_err!r}\n  got:      {actual_err!r}"
 
     return "PASS"
 
@@ -166,13 +213,16 @@ def main():
     fail_count = 0
     skip_count = 0
 
-    for src in sorted(Path(tests_dir).glob("*.c")):
-        result = run_test(src, compiler_path, gcc_bin, qemu_bin)
+    helper_sources = collect_helper_sources(Path(tests_dir))
+    sources = sorted(Path(tests_dir).glob("*.c"))
+
+    for src in sources:
+        result = run_test(src, compiler_path, gcc_bin, qemu_bin, helper_sources)
         if result == "PASS":
             print(f"[PASS] {src}")
             pass_count += 1
         elif result == "SKIP":
-            print(f"[SKIP] {src} (*.ans ファイルがない)")
+            print(f"[SKIP] {src} (*.files から参照される補助ソース)")
             skip_count += 1
         else:
             print(f"[{result}] {src}")
@@ -183,7 +233,19 @@ def main():
     print(f"  PASS: {pass_count}  FAIL: {fail_count}  SKIP: {skip_count}")
     print("=============================")
 
+    if not sources:
+        # 00_setup（.s だけ）とコマ15（統合先は final/tests）は実行対象の *.c を
+        # 持たない。これは意図した状態なので失敗にしない。
+        print(f"NOTE: {tests_dir} に実行対象の *.c がない。")
+        return
+
     if fail_count > 0:
+        raise SystemExit(1)
+
+    if pass_count == 0:
+        # テストはあるのに 1 本も通っていない。SKIP だけで終わった場合を
+        # 「異常なし」と読み違えないための歯止め。
+        print("FAILURE: テストはあるが PASS が 0 件である。", file=sys.stderr)
         raise SystemExit(1)
 
 
