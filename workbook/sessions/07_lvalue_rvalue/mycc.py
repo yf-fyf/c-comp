@@ -39,41 +39,15 @@ class Codegen07(prev.Codegen06):
         raise NotImplementedError("codegen_Deref を実装してください")
 
     def codegen(self, node: Node) -> None:
+        # コマ7で増えるのは Addr と Deref だけ。それ以外はコマ6までのディスパッチへ委譲する。
+        # （ここで全 case を並べ直すと、コマ4の Cond やコマ5の PreInc/PreDec が落ちる）
         match node.kind:
-            case 'Num':
-                self.codegen_Num(node)
-            case 'Neg':
-                self.codegen_Neg(node)
-            case 'Add':
-                self.codegen_Add(node)
-            case 'Sub':
-                self.codegen_Sub(node)
-            case 'Mul':
-                self.codegen_Mul(node)
-            case 'Div':
-                self.codegen_Div(node)
-            case 'Mod':
-                self.codegen_Mod(node)
-            case 'Var':
-                self.codegen_Var(node)
-            case 'Assign':
-                self.codegen_Assign(node)
-            case 'Eq':
-                self.codegen_Eq(node)
-            case 'Ne':
-                self.codegen_Ne(node)
-            case 'Lt':
-                self.codegen_Lt(node)
-            case 'Le':
-                self.codegen_Le(node)
-            case 'Call':
-                self.codegen_Call(node)
             case 'Addr':
                 self.codegen_Addr(node)
             case 'Deref':
                 self.codegen_Deref(node)
             case _:
-                raise RuntimeError(f'codegen: コマ7で未対応の式です (kind={node.kind!r})')
+                super().codegen(node)
 
 
 Codegen = Codegen07

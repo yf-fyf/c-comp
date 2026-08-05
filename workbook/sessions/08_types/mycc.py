@@ -123,13 +123,9 @@ class Codegen08(prev.Codegen07):
         # TODO: char/int/pointer のサイズに応じて sb/sw/sd を emit する。
         raise NotImplementedError("_store_ty を実装してください")
 
-    def _push_a0(self) -> None:
-        self.emit('  addi sp, sp, -8')
-        self.emit('  sd a0, 0(sp)')
-
-    def _pop_into(self, reg: str) -> None:
-        self.emit(f'  ld {reg}, 0(sp)')
-        self.emit('  addi sp, sp, 8')
+    # 一時値の退避・復元はコマ2の _push_a0 / _pop_into をそのまま継承して使う。
+    # （ここで同名のメソッドを定義し直すと self._depth が更新されなくなり、
+    #   コマ6の call 前アラインメント判定が黙って壊れる）
 
     def codegen_Var(self, node: Node) -> None:
         # TODO: 変数の型に応じたロードを使う。
@@ -143,42 +139,11 @@ class Codegen08(prev.Codegen07):
         # TODO: ポインタの指す型に応じたロードを使う。
         raise NotImplementedError("codegen_Deref を実装してください")
 
-    def codegen(self, node: Node) -> None:
-        match node.kind:
-            case 'Num':
-                self.codegen_Num(node)
-            case 'Neg':
-                self.codegen_Neg(node)
-            case 'Add':
-                self.codegen_Add(node)
-            case 'Sub':
-                self.codegen_Sub(node)
-            case 'Mul':
-                self.codegen_Mul(node)
-            case 'Div':
-                self.codegen_Div(node)
-            case 'Mod':
-                self.codegen_Mod(node)
-            case 'Var':
-                self.codegen_Var(node)
-            case 'Assign':
-                self.codegen_Assign(node)
-            case 'Eq':
-                self.codegen_Eq(node)
-            case 'Ne':
-                self.codegen_Ne(node)
-            case 'Lt':
-                self.codegen_Lt(node)
-            case 'Le':
-                self.codegen_Le(node)
-            case 'Call':
-                self.codegen_Call(node)
-            case 'Addr':
-                self.codegen_Addr(node)
-            case 'Deref':
-                self.codegen_Deref(node)
-            case _:
-                raise RuntimeError(f'codegen: コマ8で未対応の式です (kind={node.kind!r})')
+    # codegen() は上書きしない。コマ8で新しく増える式の種類は無く、
+    # 型対応が必要な Var / Assign / Deref は上のメソッド上書きだけで差し替わるため、
+    # ディスパッチはコマ7までのものをそのまま継承する。
+    # （ここで全 case を並べ直すと、コマ4の Cond やコマ5の PreInc/PreDec が落ちる。
+    #   _type_of_expr が Cond を扱えるのも、この継承したディスパッチが前提）
 
     def collect_decls_Decl(self, node: Node) -> None:
         # TODO: node.ty_str or 'int' を使って型付きで alloc_local する。
