@@ -483,7 +483,7 @@ def codegen_Cond(self, node):
 | `if_false.c` | if の条件が偽になる場合 | 手順7 | 対応する `.ans` を参照 |
 | `if_elseif.c` | else if の連なり | 手順7 | 対応する `.ans` を参照 |
 | `nested_if.c` | if の入れ子 | 手順7 | 対応する `.ans` を参照 |
-| `ternary.c` | 三項演算子 `a > b ? a : b` | 手順8 | 8 |
+| `ternary.c` | 三項演算子。選ばれなかった腕も評価してしまう誤実装を検出できるよう、両腕に副作用(代入)を持たせている | 手順8 | 16 |
 | `nested_block.c` | 関数先頭で宣言した変数を `if` の中で使う | 手順7 | 7 |
 | `nested_use.c` | 二重の入れ子ブロックの中での変数の使用 | 手順7 | 7 |
 | `early_return.c` | 複数の return 文（共通エピローグへのジャンプ） | 手順5 | 10 |

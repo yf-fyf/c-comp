@@ -1,7 +1,15 @@
 int main() {
     int a;
     int b;
+    int t;
+    int f;
+    int r;
     a = 3;
     b = 8;
-    return a > b ? a : b;
+    t = 0;
+    f = 0;
+    // 選ばれなかった腕(ここでは真の腕)も評価してしまう実装だと、
+    // t が 0 のままにならず 3 になる。r + t * 100 + f で見分ける。
+    r = a > b ? (t = a) : (f = b);
+    return r + t * 100 + f;
 }
