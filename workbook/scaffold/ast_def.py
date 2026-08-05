@@ -69,6 +69,10 @@ ND_DECL     = 'Decl'        # 変数宣言（初期化子なし）  name, ty_str
 # トップレベル
 ND_FUNCDEF   = 'FuncDef'    # 関数定義  name, ty_str, params, body
 ND_FUNCPROTO = 'FuncProto'  # 関数宣言  name, ty_str, params
+ND_STRUCTDEF = 'StructDef'  # struct 定義・前方宣言
+                            #   name = タグ名（'S'。'struct S' ではない）
+                            #   fields = フィールドの Decl リスト（宣言順）
+                            #   is_forward = True なら `struct S;`（フィールドなし）
 
 
 @dataclass
@@ -94,6 +98,7 @@ class Node:
     stmts:  List['Node'] = field(default_factory=list)   # Block の本体
     args:   List['Node'] = field(default_factory=list)   # 関数呼び出し引数
     params: List['Node'] = field(default_factory=list)   # 関数パラメータ (Decl)
+    fields: List['Node'] = field(default_factory=list)   # StructDef のフィールド (Decl)
 
     # 値・名前
     val:  int = 0    # ND_NUM
@@ -107,8 +112,27 @@ class Node:
     # Member: -> か . か
     is_arrow: bool = False
 
+    # StructDef: 前方宣言（`struct S;`）か
+    is_forward: bool = False
+
     # デバッグ用（字句トークンの行番号）
     line: int = 0
 
     def __repr__(self):
         return f"Node({self.kind!r}, name={self.name!r}, val={self.val})"
+
+
+class Program(list):
+    """
+    トップレベル宣言のリスト。
+
+    list そのものとして扱えるので、これまでどおり `for node in prog:` で
+    関数定義・グローバル変数宣言を走査できる。加えて属性 `struct_defs` に
+    struct 定義・前方宣言の Node（ND_STRUCTDEF）を宣言順で持つ。
+    struct を含まないプログラムでは空リストになる。
+    """
+
+    def __init__(self, nodes: Optional[List[Node]] = None,
+                 struct_defs: Optional[List[Node]] = None):
+        super().__init__(nodes or [])
+        self.struct_defs: List[Node] = list(struct_defs or [])

@@ -11,7 +11,6 @@
 """
 
 import importlib.util
-import re
 import sys
 from pathlib import Path
 
@@ -34,76 +33,43 @@ class Codegen12(prev.Codegen11):
         self._struct_defs = struct_defs
 
     @classmethod
-    def parse_struct_defs(cls, source: str) -> dict[str, dict]:
+    def parse_struct_defs(cls, prog_or_source) -> dict[str, dict]:
+        """
+        構文解析結果から struct のレイアウト表を作る。
+
+        入力は parse() が返した Program（推奨）か、前処理済みのソース文字列。
+        文字列を渡された場合はここで tokenize + parse する。どちらの経路でも
+        レイアウトの入力は Parser が受理した構文情報そのもの（Program.struct_defs
+        に入っている ND_STRUCTDEF ノード）であり、コメントや文字列リテラルの
+        中身は字句解析の時点で落ちているため影響しない。
+        """
+        if isinstance(prog_or_source, str):
+            prog = parse(tokenize(prog_or_source, '<struct-defs>'))
+        else:
+            prog = prog_or_source
+
         defs: dict[str, dict] = {}
-        pattern = re.compile(r'struct\s+([a-zA-Z_]\w*)\s*\{')
-        pos = 0
-        while True:
-            m = pattern.search(source, pos)
-            if not m:
-                break
-            tag = m.group(1)
-            body_start = m.end() - 1
-            brace = 0
-            body_end = body_start
-            i = body_start
-            while i < len(source):
-                if source[i] == '{':
-                    brace += 1
-                elif source[i] == '}':
-                    brace -= 1
-                    if brace == 0:
-                        body_end = i
-                        break
-                i += 1
-            if i >= len(source):
-                break
-            struct_name = f'struct {tag}'
-            fields = cls.parse_field_decls(source[body_start + 1:body_end])
-            if not fields:
-                pos = body_end + 1
-                continue
+        for sdef in getattr(prog, 'struct_defs', []):
+            if sdef.is_forward:
+                continue  # `struct S;` はレイアウトを持たない
             # 自然整列: 各フィールドは自身の整列へ切り上げ、
             # struct 全体のサイズは最大フィールド整列の倍数へ切り上げ
             field_map: dict[str, tuple[int, str]] = {}
             offset = 0
             struct_align = 1
-            for fname, fty in fields:
+            for fdecl in sdef.fields:
+                fty = fdecl.ty_str
                 fsz = cls.size_of_ty_str(fty, defs)
                 align = cls.align_of_ty_str(fty)
                 struct_align = max(struct_align, align)
                 offset = ((offset + align - 1) // align) * align
-                field_map[fname] = (offset, fty)
+                field_map[fdecl.name] = (offset, fty)
                 offset += fsz
             total_size = ((offset + struct_align - 1) // struct_align) * struct_align
-            defs[f'struct {tag}'] = {'size': total_size, 'align': struct_align, 'fields': field_map}
-            pos = body_end + 1
+            defs[f'struct {sdef.name}'] = {
+                'size': total_size, 'align': struct_align, 'fields': field_map,
+            }
         return defs
-
-    @staticmethod
-    def parse_field_decls(body: str) -> list[tuple[str, str]]:
-        fields: list[tuple[str, str]] = []
-        type_keywords = {'int', 'char', 'void', 'struct'}
-        for part in body.split(';'):
-            part = part.strip()
-            if not part:
-                continue
-            part = part.split('//')[0].strip()
-            if not part:
-                continue
-            tokens = re.findall(r'[a-zA-Z_]\w*|\*', part)
-            if len(tokens) < 2:
-                continue
-            name_idx = -1
-            for i in range(len(tokens) - 1, -1, -1):
-                tok = tokens[i]
-                if re.match(r'^[a-zA-Z_]', tok) and tok not in type_keywords:
-                    name_idx = i
-                    break
-            if name_idx < 0:
-                continue
-            fields.append((tokens[name_idx], ' '.join(tokens[:name_idx]).replace(' *', '*')))
-        return fields
 
     @classmethod
     def size_of_ty_str(cls, ty_str: str, struct_defs: dict[str, dict] | None = None) -> int:
@@ -394,9 +360,9 @@ def main() -> None:
     with open(filename, 'r', encoding='utf-8') as f:
         source = f.read()
     source = preprocess(source, filename)
-    struct_defs = Codegen12.parse_struct_defs(source)
     tokens = tokenize(source, filename)
     prog = parse(tokens)
+    struct_defs = Codegen12.parse_struct_defs(prog)
     cg = Codegen12(struct_defs)
     for node in prog:
         if node.kind == 'FuncDef':

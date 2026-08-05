@@ -27,6 +27,9 @@ class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
         self.pos = 0
+        # struct 定義・前方宣言（ND_STRUCTDEF）を宣言順に貯める。
+        # _parse_struct_decl が追記し、parse_program が Program へ渡す。
+        self.struct_defs: List[Node] = []
 
     # ---- トークン操作 ----
 
@@ -113,12 +116,13 @@ class Parser:
 
     # ---- トップレベル ----
 
-    def parse_program(self) -> List[Node]:
+    def parse_program(self) -> Program:
         nodes: List[Node] = []
         if self.cur.kind == TK_EOF:
             _parse_error("プログラムには 1 個以上の外部宣言が必要です")
         while self.cur.kind != TK_EOF:
-            # struct 定義・前方宣言（AST には出さない。scaffold はレイアウトを扱わない）
+            # struct 定義・前方宣言。関数やグローバル変数と同じ並びには置かず、
+            # Program.struct_defs に分けて持たせる（レイアウト計算はここでは行わない）。
             if self.cur.sval == 'struct' and self.peek(2).sval in ('{', ';'):
                 self._parse_struct_decl()
                 continue
@@ -139,27 +143,39 @@ class Parser:
                 self.expect(';')
                 nodes.append(Node(ND_DECL, name=name, ty_str=base + stars))
 
-        return nodes
+        return Program(nodes, self.struct_defs)
 
-    def _parse_struct_decl(self) -> None:
-        """`struct S { fields };`（定義）と `struct S;`（前方宣言）を処理する"""
+    def _parse_struct_decl(self) -> Node:
+        """`struct S { fields };`（定義）と `struct S;`（前方宣言）を処理する
+
+        作った ND_STRUCTDEF は self.struct_defs にも積む。parse_program を
+        差し替えた派生パーサ（発展トピック L5 など）でも同じ経路で集まる。
+        """
+        line = self.cur.line
         self.expect('struct')
-        self.expect_ident()  # タグ名
+        tag = self.expect_ident()
         if self.consume_if(';'):
-            return  # 前方宣言
+            node = Node(ND_STRUCTDEF, name=tag, is_forward=True, line=line)
+            self.struct_defs.append(node)
+            return node
         self.expect('{')
-        self._parse_field()  # フィールドは 1 個以上
+        fields: List[Node] = [self._parse_field()]  # フィールドは 1 個以上
         while not self.consume_if('}'):
             if self.cur.kind == TK_EOF:
                 _parse_error("'}' が見つかりません")
-            self._parse_field()
+            fields.append(self._parse_field())
         self.expect(';')
+        node = Node(ND_STRUCTDEF, name=tag, fields=fields, line=line)
+        self.struct_defs.append(node)
+        return node
 
-    def _parse_field(self) -> None:
+    def _parse_field(self) -> Node:
         """field_decl ::= scalar_type IDENT ';'"""
-        self.parse_scalar_type()
-        self.expect_ident()
+        line = self.cur.line
+        ty_str = self.parse_scalar_type()
+        name = self.expect_ident()
         self.expect(';')
+        return Node(ND_DECL, name=name, ty_str=ty_str, line=line)
 
     def _parse_func(self, ty_str: str, name: str) -> Node:
         self.expect('(')
@@ -450,8 +466,17 @@ class Parser:
 
 # ---- エントリポイント ----
 
-def parse(tokens: List[Token]) -> List[Node]:
+def parse(tokens: List[Token]) -> Program:
     """
     トークン列を受け取り、トップレベル宣言の Node リストを返す。
+
+    戻り値は list そのものとして扱える Program で、struct 定義・前方宣言は
+    属性 `struct_defs`（ND_STRUCTDEF の Node のリスト）に入っている。
     """
-    return Parser(tokens).parse_program()
+    p = Parser(tokens)
+    prog = p.parse_program()
+    # parse_program を差し替えた派生パーサが素の list を返してきても、
+    # struct 定義は p.struct_defs に集まっているので拾い直せる。
+    if isinstance(prog, Program):
+        return prog
+    return Program(prog, p.struct_defs)
