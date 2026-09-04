@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ2: 算術式コード生成</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ2: 算術式コード生成</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -98,6 +101,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <li><a href="#二項演算の生成パターン" id="toc-二項演算の生成パターン">二項演算の生成パターン</a></li>
       <li><a href="#コード生成器の枠組み" id="toc-コード生成器の枠組み">コード生成器の枠組み</a></li>
       <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
       <li><a href="#tests" id="toc-tests">tests/</a></li>
       <li><a href="#テスト" id="toc-テスト">テスト</a></li>
       <li><a href="#注意" id="toc-注意">注意</a></li>
@@ -585,18 +589,32 @@ primary_expr ::= INT_LITERAL
 <p><code>codegen(node)</code> 本体の <code>match</code> ディスパッチはスケルトンにあらかじめ書かれている。</p>
 <p>ここで埋めた TODO は、コマ3 以降に <code>importlib</code> の継承でそのまま引き継がれる。
 後のコマで書き直すことはないので、この回で全部埋めきること。</p>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li><code>codegen_Num</code> が実装例として埋まっていることを確認する（<code>li a0, &lt;val&gt;</code>）。<code>codegen()</code> / <code>gen_stmt()</code> の <code>match</code> ディスパッチ、一時値の退避に使う <code>_push_a0()</code> / <code>_pop_into(reg)</code>、<code>gen_func()</code> の呼び出し順もあらかじめ書かれている</li>
+<li><code>_emit_func_prologue(name, frame_size)</code> と <code>_emit_func_epilogue(frame_size)</code> を埋め、関数の枠（<code>.globl</code>・関数ラベル・<code>ra</code>/<code>s0</code> の退避と復元・<code>sp</code> の戻し・<code>ret</code>）を出せるようにする</li>
+<li><code>_emit_func_body(body)</code> と <code>gen_stmt_Return(node)</code> を埋め、<code>return &lt;式&gt;;</code> の値が <code>a0</code> に残るようにする（ここまでで <code>return 42;</code> 相当が動く。どのテストでも必要）</li>
+<li><code>_codegen_binary_value(node, op)</code> を埋める（左辺を <code>codegen</code> → <code>self._push_a0()</code> → 右辺を <code>codegen</code> → <code>self._pop_into('a1')</code> → <code>&lt;op&gt; a0, a1, a0</code>。<code>sp</code> を直接動かすと積んでいる一時値の個数 <code>self._depth</code> がずれ、コマ6 のアラインメント調整が狂う）</li>
+<li><code>codegen_Add</code> / <code>codegen_Sub</code> / <code>codegen_Mul</code> を <code>_codegen_binary_value</code> へ委譲する（<code>add</code> / <code>sub</code> / <code>mul</code>）</li>
+<li><code>codegen_Div</code> / <code>codegen_Mod</code> を同じ形で委譲する（<code>div</code> / <code>rem</code>）</li>
+<li><code>codegen_Neg(node)</code> を埋める（<code>node.operand</code> を <code>codegen</code> してから <code>neg a0, a0</code>）</li>
+</ol>
 <h2 id="tests">tests/</h2>
+<p>上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。</p>
 <div class="table-scroll">
 <table>
 <colgroup>
-<col style="width: 41%" />
-<col style="width: 25%" />
-<col style="width: 33%" />
+<col style="width: 29%" />
+<col style="width: 17%" />
+<col style="width: 29%" />
+<col style="width: 23%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
 <th>内容</th>
+<th>通る目安</th>
 <th>期待値</th>
 </tr>
 </thead>
@@ -604,66 +622,79 @@ primary_expr ::= INT_LITERAL
 <tr class="odd">
 <td><code>target.c</code></td>
 <td><code>1 + 2 * 3</code></td>
+<td>手順5</td>
 <td>7</td>
 </tr>
 <tr class="even">
 <td><code>prec_div.c</code></td>
 <td><code>(100 - 3 * 7) / 4 + 1</code></td>
+<td>手順6</td>
 <td>20</td>
 </tr>
 <tr class="odd">
 <td><code>mod_div.c</code></td>
 <td><code>100 / 4 + 1</code></td>
+<td>手順6</td>
 <td>26</td>
 </tr>
 <tr class="even">
 <td><code>nested.c</code></td>
 <td><code>(1 + 2) * (3 + 4)</code></td>
+<td>手順5</td>
 <td>21</td>
 </tr>
 <tr class="odd">
 <td><code>add.c</code></td>
 <td><code>1 + 2</code></td>
+<td>手順5</td>
 <td>3</td>
 </tr>
 <tr class="even">
 <td><code>sub.c</code></td>
 <td><code>100 - 79</code></td>
+<td>手順5</td>
 <td>21</td>
 </tr>
 <tr class="odd">
 <td><code>mul.c</code></td>
 <td>掛け算</td>
+<td>手順5</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>div.c</code></td>
 <td><code>17 / 5</code></td>
+<td>手順6</td>
 <td>3</td>
 </tr>
 <tr class="odd">
 <td><code>mod.c</code></td>
 <td><code>17 % 5</code></td>
+<td>手順6</td>
 <td>2</td>
 </tr>
 <tr class="even">
 <td><code>prec.c</code></td>
 <td><code>2 + 3 * 4</code></td>
+<td>手順5</td>
 <td>14</td>
 </tr>
 <tr class="odd">
 <td><code>paren.c</code></td>
 <td>カッコ付き算術式</td>
+<td>手順5</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>complex.c</code></td>
 <td><code>(100 - 3 * 7) / 4 + 1</code></td>
+<td>手順6</td>
 <td>20</td>
 </tr>
 <tr class="odd">
 <td><code>div_round.c</code></td>
 <td>負の数の <code>/</code> と <code>%</code>（<code>-7 / 2</code> は <code>-3</code>、<code>-7 % 2</code> は <code>-1</code>）</td>
+<td>手順7</td>
 <td>69</td>
 </tr>
 </tbody>
@@ -686,8 +717,10 @@ primary_expr ::= INT_LITERAL
 <p>終了コードが <code>7</code> になれば、基本形は成功である。</p>
 <h2 id="注意">注意</h2>
 <p>この回のテストでは、割り算・剰余の右辺は 0 にならない。</p>
-<p>また、この回では負数を含む割り算・剰余は扱わない。
-Python の <code>//</code> や <code>%</code> と同様に、言語や実行環境によって負数の扱いが混乱しやすいため、まずは非負整数の式に限定する。</p>
+<p>負数を含む割り算・剰余も扱う。RV64 の <code>div</code> / <code>rem</code> は 0 方向への切り捨て
+（C の仕様どおり）で動作するため、追加の分岐なしに <code>div_round.c</code> が通る。
+Python の <code>//</code> や <code>%</code> は負数に対して切り捨て方向が異なる（0 方向ではなく負の無限大方向）ので、
+Python で先に手計算して確かめるときは注意する。</p>
 <p>生成したアセンブリを1命令ずつ実行して確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
 <p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
 
@@ -702,7 +735,7 @@ Python の <code>//</code> や <code>%</code> と同様に、言語や実行環�
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

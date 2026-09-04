@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../docs/">仕様・参考文書</a></nav>
-    <h1 class="page-title">RV64 リファレンス</h1>
+    <div class="page-head">
+      <h1 class="page-title">RV64 リファレンス</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -168,8 +171,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <td>扱わない</td>
 </tr>
 <tr class="even">
-<td>可変長引数</td>
-<td><code>printf</code> のように引数個数が変わる関数</td>
+<td>可変長引数の<strong>定義</strong>（<code>...</code> を受け取る側）</td>
+<td><code>printf</code> のように引数個数が変わる関数を自分で定義する</td>
 <td>発展課題 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L3_variadic/README.md">L3</a></td>
 </tr>
 <tr class="odd">
@@ -180,7 +183,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <tr class="even">
 <td>外部関数呼び出し</td>
 <td>libc の <code>printf</code> や <code>malloc</code> を呼ぶ</td>
-<td>コマ10・コマ12</td>
+<td><code>printf</code> はコマ10、<code>malloc</code> はコマ9</td>
 </tr>
 <tr class="odd">
 <td>caller-saved / callee-saved</td>
@@ -325,7 +328,7 @@ qemu は 8 バイトのずれを黙って通してしまうことがあるので
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

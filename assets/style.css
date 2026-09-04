@@ -123,12 +123,30 @@ a:hover { text-decoration: none; }
 }
 .breadcrumb a { color: var(--gray-text); }
 
-.page-title {
+/* 見出しの枠。所属科目（.page-affil）があるときは左の罫を2行ぶんへ伸ばす */
+.page-head {
   margin: 0 0 1.6rem;
   padding: 0.3rem 0 0.3rem 0.9rem;
   border-left: 5px solid var(--accent-dark);
+}
+
+.page-title {
+  margin: 0;
   font-size: 1.85rem;
   line-height: 1.4;
+}
+
+/* トップページだけに出る所属科目。見出しと同じ枠の中へ収める。
+   大きさと色はパンくず・カード説明・フッタと同じ「補助情報」の登録に揃える */
+.page-affil {
+  margin: 0.15rem 0 0;
+  color: var(--gray-text);
+  font-size: 0.85rem;
+  /* 和文は文字境界でどこでも折れるので、狭い画面だと科目名が
+     「情報工/学実践」のように割れる。空白でだけ折らせて名前を保つ。
+     anywhere は、区切りひとつが画面幅を超えたときのはみ出し防止。 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .content h2 {

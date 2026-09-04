@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ5: while / for / break / continue</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ5: while / for / break / continue</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -99,6 +102,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <li><a href="#前置----ループの更新式の慣用形" id="toc-前置----ループの更新式の慣用形">前置 <code>++</code>/<code>--</code>: ループの更新式の慣用形</a></li>
       <li><a href="#gen_stmt-に追加する処理" id="toc-gen_stmt-に追加する処理">gen_stmt に追加する処理</a></li>
       <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
       <li><a href="#tests" id="toc-tests">tests/</a></li>
       <li><a href="#テスト" id="toc-テスト">テスト</a></li>
       <li><a href="#注意" id="toc-注意">注意</a></li>
@@ -613,13 +617,31 @@ C の慣用である。この回で実装する。</p>
 </tbody>
 </table>
 </div>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>スケルトンの <code>Codegen05</code> が <code>Codegen04</code> を <code>importlib</code> で継承していることを確認する。<code>self._break_stack</code> / <code>self._continue_stack</code> の初期化と、<code>codegen()</code> / <code>gen_stmt()</code> のディスパッチはあらかじめ書かれている</li>
+<li><code>_reset_func_state(node)</code> を実装する（関数ごとに <code>self._break_stack</code> と <code>self._continue_stack</code> を空にしてから、<code>super()._reset_func_state(node)</code> の frame_size を返す。どのテストでも必要）</li>
+<li><code>gen_stmt_While(node)</code> を実装する（<code>new_label()</code> で条件ラベルと終了ラベルを作り、<code>node.cond</code> を <code>codegen</code> して <code>beqz</code> で終了へ抜け、<code>node.body</code> の後に条件ラベルへ <code>j</code> する。break 用に終了ラベル、continue 用に条件ラベルをスタックへ push し、生成後に pop する）</li>
+<li><code>gen_stmt_For(node)</code> を実装する（<code>node.init</code> → 条件 → <code>node.body</code> → <code>node.step</code> の順に実行されるようラベルを置く。continue は step ラベル、break は終了ラベルへ飛ばす。<code>init</code> / <code>cond</code> / <code>step</code> は <code>None</code> になり得るので、<code>cond</code> が <code>None</code> なら <code>beqz</code> を出さない）</li>
+<li><code>gen_stmt_Break(node)</code> / <code>gen_stmt_Continue(node)</code> を実装する（<code>self._break_stack[-1]</code> / <code>self._continue_stack[-1]</code> の最内ループのラベルへ <code>j</code> する）</li>
+<li><code>codegen_PreInc(node)</code> / <code>codegen_PreDec(node)</code> を実装する（<code>codegen_lval</code> で左辺値のアドレスを1回だけ求め、<code>ld</code> → ±1 → <code>sd</code> で書き戻し、更新した後の値を <code>a0</code> に残す）</li>
+</ol>
 <h2 id="tests">tests/</h2>
+<p>上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。</p>
 <div class="table-scroll">
 <table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 17%" />
+<col style="width: 29%" />
+<col style="width: 23%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
 <th>内容</th>
+<th>通る目安</th>
 <th>期待値</th>
 </tr>
 </thead>
@@ -627,46 +649,55 @@ C の慣用である。この回で実装する。</p>
 <tr class="odd">
 <td><code>target.c</code></td>
 <td>while で 1..10 の総和</td>
+<td>手順3</td>
 <td>55</td>
 </tr>
 <tr class="even">
 <td><code>for_count.c</code></td>
 <td>for で 0..4 の総和</td>
+<td>手順4</td>
 <td>10</td>
 </tr>
 <tr class="odd">
 <td><code>nested_loop.c</code></td>
 <td>while の入れ子 (3×2)</td>
+<td>手順3</td>
 <td>6</td>
 </tr>
 <tr class="even">
 <td><code>break_early.c</code></td>
 <td>break で抜ける</td>
+<td>手順5</td>
 <td>15</td>
 </tr>
 <tr class="odd">
 <td><code>while_sum.c</code></td>
 <td>while による集計</td>
+<td>手順3</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>for_fib.c</code></td>
 <td>for によるフィボナッチ計算</td>
+<td>手順4</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
 <td><code>break_loop.c</code></td>
 <td>break を含むループ</td>
+<td>手順5</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>continue_odd.c</code></td>
 <td>continue を含むループ</td>
+<td>手順5</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
 <td><code>incr_loop.c</code></td>
 <td><code>++i</code> を更新式に使うループと <code>--s</code></td>
+<td>手順6</td>
 <td>44</td>
 </tr>
 </tbody>
@@ -700,7 +731,7 @@ C の慣用である。この回で実装する。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

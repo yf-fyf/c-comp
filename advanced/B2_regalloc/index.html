@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
-    <h1 class="page-title">レジスタ割り当て入門 — スタックマシンを卒業する</h1>
+    <div class="page-head">
+      <h1 class="page-title">レジスタ割り当て入門 — スタックマシンを卒業する</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -283,7 +286,7 @@ O1 → O4 の順に進んで「測ってから直す」流れを体験したほ�
 </div>
 <p>関数は <code>cg</code>（コード生成器のインスタンス）を受け取り、
 <code>cg.emit(行)</code> で命令を出し、<code>cg.depth</code> を読み書きする。</p>
-<h3 id="sp-の整列に注意">sp の整列に注意</h3>
+<h3 id="sp-のアラインメントに注意">sp のアラインメントに注意</h3>
 <p>メモリ退避に落ちたときは、<strong>8 バイトではなく 16 バイト</strong>単位で <code>sp</code> を動かす。
 8 バイト単位だと、退避が奇数段のときに <code>sp</code> が16バイト境界からずれ、
 その状態で <code>call</code> すると ABI 違反になる（コマ6 のアラインメント問題の再来）。
@@ -357,7 +360,7 @@ spill も同じ理由で、16 の倍数に切り上げて確保する。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

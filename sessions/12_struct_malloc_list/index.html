@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ12: 構造体とヒープ（struct / <code>.</code> / <code>-&gt;</code> / <code>sizeof</code> / <code>malloc</code> / 連結リスト）</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ12: 構造体とヒープ（struct / <code>.</code> / <code>-&gt;</code> / <code>sizeof</code> / <code>malloc</code> / 連結リスト）</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -552,8 +555,9 @@ struct 定義はファイルスコープのみで、タグ必須、フィール�
 </tbody>
 </table>
 </div>
-<p>情報を集めるのはクラスメソッド <code>parse_struct_defs(source)</code> で、これもスケルトンにある。
-対象は <code>struct タグ { フィールド; ... };</code> の形だけでよい（タグは必須）。</p>
+<p>情報を集めるのはクラスメソッド <code>parse_struct_defs(prog)</code> で、これもスケルトンにある。
+Parser が構文解析の結果として残す <code>struct</code> 定義（<code>prog.struct_defs</code>）から読み取るので、
+フィールド間のコメントや、文字列・コメント内の <code>struct タグ {</code> 風のテキストに惑わされない。</p>
 <h2 id="size_of_ty_str-に引数が増える">size_of_ty_str に引数が増える</h2>
 <p>コマ8 の <code>size_of_ty_str(ty)</code> は <code>int</code> / <code>char</code> / ポインタしか知らなかった。
 <code>struct Point</code> のサイズは定義を見ないと分からないので、この回で第2引数が増える。</p>
@@ -717,8 +721,8 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>parse_struct_defs(source)</code> / <code>parse_field_decls(body)</code></td>
-<td>ソースから構造体定義を集める</td>
+<td><code>parse_struct_defs(prog)</code></td>
+<td>Parser が残した構造体定義（<code>prog.struct_defs</code>）からレイアウトを集める</td>
 </tr>
 <tr class="even">
 <td><code>size_of_ty_str(ty, defs=None)</code> / <code>align_of_ty_str(ty)</code> / <code>is_struct_ty_str(ty, defs)</code></td>
@@ -823,7 +827,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 <h2 id="実装手順">実装手順</h2>
 <ol type="1">
 <li>スケルトンの <code>importlib</code> 継承によりコマ11の Codegen クラスを引き継ぐ（あらかじめ書かれている）</li>
-<li><code>parse_struct_defs(source)</code> で構造体定義をパースし、コンストラクタで <code>self._struct_defs</code> に渡す（あらかじめ書かれている）</li>
+<li><code>parse_struct_defs(prog)</code> で構造体定義のレイアウトを求め、コンストラクタで <code>self._struct_defs</code> に渡す（あらかじめ書かれている）</li>
 <li><code>alloc_local()</code> / <code>_scale_index()</code> / <code>_load_ty()</code> / <code>_store_ty()</code> の <code>size_of_ty_str</code> 呼び出しに <code>self._struct_defs</code> を渡す</li>
 <li><code>_load_ty()</code> は <code>struct</code> 型のときロードせず、アドレスのまま扱う（<code>is_struct_ty_str</code> で判定）</li>
 <li><code>_member_struct_type(node)</code> を実装する（<code>.</code> は <code>_type_of_lval</code>、<code>-&gt;</code> は <code>_type_of_expr</code> + <code>elem_ty_str</code>）</li>
@@ -838,10 +842,16 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 <li><code>malloc_struct.c</code> / <code>list_min.c</code> を通す<br>（<code>parse_struct_defs()</code> は自己参照フィールド <code>struct Node *next</code> をそのまま扱える。ポインタは中身を知らなくてもサイズ 8 で確定するからである。<code>malloc(sizeof(struct Node))</code> はコマ6 の関数呼び出しがそのまま働くので、追加の実装は要らない。）</li>
 <li><code>list_sum.c</code> まで通す</li>
 <li><code>void_ptr.c</code> を通す<br>（<code>void *</code> と任意の <code>T *</code> の相互変換。<code>void *</code> の変数・仮引数も書ける。ポインタ同士なのでサイズは常に 8 で、変換のための命令は要らない。）</li>
+<li><code>sizeof_void_ptr.c</code> を通す（<code>sizeof(void *)</code> も他のポインタ型と同じくサイズ 8 として求まる）</li>
 </ol>
 <h2 id="tests">tests/</h2>
 <div class="table-scroll">
 <table>
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 25%" />
+<col style="width: 33%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
@@ -884,6 +894,11 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 <td><code>void_ptr.c</code></td>
 <td><code>void *</code> と <code>T *</code> のキャストなしの相互変換</td>
 <td><code>47</code></td>
+</tr>
+<tr class="even">
+<td><code>sizeof_void_ptr.c</code></td>
+<td><code>sizeof(void *)</code> の翻訳時定数（<code>void *</code> はこの回で導入）</td>
+<td><code>8</code></td>
 </tr>
 </tbody>
 </table>
@@ -934,7 +949,7 @@ struct 値を入れ子にすることはできない（<code>struct Node *next</
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

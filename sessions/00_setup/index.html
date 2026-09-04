@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ0: 演習環境構築</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ0: 演習環境構築</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -196,13 +199,12 @@ Ubuntu なら次で入る。</p>
 </ul>
 <p>最初に <code>addi a0, zero, 0</code> を終了コード <code>42</code> を返す命令へ変更する。</p>
 <h2 id="tests">tests/</h2>
+<p>編集対象はトップレベルの <code>hello.s</code> であり、<code>check.py</code> はこれを直接検査する。
+<code>tests/hello.s</code> は <code>hello.s</code> の完成形の参照であり、<code>check.py</code> の検査対象には含まれない
+（同名だが別ファイルである点に注意）。</p>
+<p><code>tests/</code> 以下で <code>check.py</code> が実際に検査するのは次の2件で、どちらも完成済みの命令例であり編集対象ではない。</p>
 <div class="table-scroll">
 <table>
-<colgroup>
-<col style="width: 41%" />
-<col style="width: 25%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
@@ -212,16 +214,11 @@ Ubuntu なら次で入る。</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>hello.s</code></td>
-<td><code>addi a0, zero, 42</code> で戻り値 42 を返す（編集する <code>hello.s</code> の完成形）</td>
-<td>42</td>
-</tr>
-<tr class="even">
 <td><code>sub.s</code></td>
 <td><code>50 + (-8)</code> で減算相当</td>
 <td>42</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>three_numbers.s</code></td>
 <td><code>10 + 20 + 12</code> で 3 数の和</td>
 <td>42</td>
@@ -229,7 +226,6 @@ Ubuntu なら次で入る。</p>
 </tbody>
 </table>
 </div>
-<p><code>sub.s</code> と <code>three_numbers.s</code> は完成済みの命令例であり、編集対象ではない。</p>
 <h2 id="テスト">テスト</h2>
 <div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/00_setup/check.py</span></code></pre></div>
 <p>このコマンドは、編集した <code>hello.s</code> と完成済みの追加例2件をまとめて確認する。</p>
@@ -262,7 +258,7 @@ Ubuntu なら次で入る。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

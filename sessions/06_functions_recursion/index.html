@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ6: 関数呼び出し・再帰</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ6: 関数呼び出し・再帰</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -100,6 +103,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <li><a href="#関数プロトタイプ" id="toc-関数プロトタイプ">関数プロトタイプ</a></li>
       <li><a href="#gen_func-の変更点" id="toc-gen_func-の変更点">gen_func の変更点</a></li>
       <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
       <li><a href="#tests" id="toc-tests">tests/</a></li>
       <li><a href="#テスト" id="toc-テスト">テスト</a></li>
       <li><a href="#注意" id="toc-注意">注意</a></li>
@@ -547,8 +551,8 @@ self.emit(f&quot;  addi sp, sp, -{pad}&quot;)   ← 奇数のときだけ
 self.emit(f&quot;  call {name}&quot;)
 self.emit(f&quot;  addi sp, sp, {pad}&quot;)    ← 呼び出しから戻ったら元へ</code></pre>
 <figure>
-<img src="../../figures/06_call_alignment.svg" alt="一時値が1個のまま call を出すときに sp が16バイト境界からずれ、詰め物で戻るまでの4場面" />
-<figcaption aria-hidden="true">一時値が1個のまま <code>call</code> を出すときに sp が16バイト境界からずれ、詰め物で戻るまでの4場面</figcaption>
+<img src="../../figures/06_call_alignment.svg" alt="一時値が1個のまま call を出すときに sp が16バイト境界からずれ、調整で戻るまでの4場面" />
+<figcaption aria-hidden="true">一時値が1個のまま <code>call</code> を出すときに sp が16バイト境界からずれ、調整で戻るまでの4場面</figcaption>
 </figure>
 <p>引数の積み下ろし（前節の図）やフレームの積み重なり（「RV64の関数呼び出し規約」の図）とは別の場面で、
 ここで見ているのは <code>call</code> を出す瞬間に <code>sp</code> が16バイト境界のどこに居るかである。</p>
@@ -633,66 +637,115 @@ add a0, a1, a0       → a0 = fib(n-1) + fib(n-2)</code></pre>
 </tbody>
 </table>
 </div>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>スケルトンの <code>Codegen06</code> がコマ5 の <code>Codegen</code> を <code>importlib</code> で継承していることを確認する。コマ2〜5 で埋めた <code>codegen_Num</code> / <code>codegen_Var</code> / <code>codegen_Assign</code> / <code>codegen_Neg</code> / <code>_binary_value</code> / <code>codegen_Add</code>〜<code>codegen_Le</code> と、<code>codegen()</code> のディスパッチ・<code>_reset_func_state()</code>・<code>gen_func()</code> はコマ6 のスケルトンに完成形として書かれている。この回で書き直すものは無い</li>
+<li><code>_alloc_params(node)</code> を実装する（<code>node.params</code> の各パラメータ（<code>Decl</code> ノード）の <code>name</code> を <code>self.alloc_local()</code> に渡し、ローカル変数と同じスロットを確保する。<code>_reset_func_state()</code> が <code>self.collect_decls(node.body)</code> より先にこれを呼ぶ形はあらかじめ書かれている）</li>
+<li><code>_emit_func_prologue(name, frame_size)</code> の末尾を埋める（<code>_reset_func_state()</code> が置いた <code>self._current_params</code> を先頭から見て、i 番目のパラメータを <code>a{i}</code> から <code>self.lookup_var()</code> のオフセットへ <code>sd</code> する。フレーム確保と <code>ra</code>/<code>s0</code> の退避まではあらかじめ書かれている）</li>
+<li><code>codegen_Call(node)</code> を実装する（<code>self._gen_call(node.name, node.args)</code> に委譲するだけ）</li>
+<li><code>_gen_call(name, args)</code> の引数の並べ方を実装する（引数を左から順に <code>codegen</code> し、そのつど <code>self._push_a0()</code> で積む。先に評価した値をレジスタへ直接置くと後続の引数評価で壊れるためである。積み終えたら積んだ順の逆から <code>self._pop_into(f'a{i}')</code> で <code>a0</code>〜<code>a7</code> へ戻し、<code>call {name}</code> を emit する）</li>
+<li><code>_gen_call</code> の <code>call</code> の直前に 16 バイト境界へのそろえを入れる（ずれるかどうかは引数の個数ではなく、そのとき外側の式が積んでいる一時値の個数 <code>self._depth</code> の偶奇で決まる。<code>pad = 8 if self._depth % 2 else 0</code> とし、<code>pad</code> が 0 でなければ <code>call</code> の前に <code>addi sp, sp, -pad</code>、戻ってきたら <code>addi sp, sp, pad</code> を出す）</li>
+</ol>
 <h2 id="tests">tests/</h2>
+<p>上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。</p>
+<p><code>call_add.c</code> だけが通って他が落ちるときは、手順6 のアラインメントを疑う。
+<code>call_add.c</code> の <code>add(3, 4)</code> は <code>return</code> 直下にあり、<code>self._depth</code> が 0 なので
+padding を出さなくても偶然通ってしまうからである。</p>
 <div class="table-scroll">
 <table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 17%" />
+<col style="width: 29%" />
+<col style="width: 23%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
 <th>内容</th>
+<th>通る目安</th>
 <th>期待値</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>target.c</code></td>
-<td>フィボナッチ再帰 <code>fib(10)</code></td>
-<td>55</td>
-</tr>
-<tr class="even">
-<td><code>fact.c</code></td>
-<td>階乗再帰 <code>fact(5)</code></td>
-<td>120</td>
-</tr>
-<tr class="odd">
-<td><code>add_mul.c</code></td>
-<td>複合関数（add + mul）</td>
-<td>42</td>
-</tr>
-<tr class="even">
-<td><code>sum_rec.c</code></td>
-<td>再帰総和 <code>sum(10)</code></td>
-<td>55</td>
-</tr>
-<tr class="odd">
 <td><code>call_add.c</code></td>
 <td>単純な関数呼び出し</td>
+<td>手順5</td>
 <td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="even">
+<td><code>target.c</code></td>
+<td>フィボナッチ再帰 <code>fib(10)</code></td>
+<td>手順6</td>
+<td>55</td>
+</tr>
+<tr class="odd">
+<td><code>fact.c</code></td>
+<td>階乗再帰 <code>fact(5)</code></td>
+<td>手順6</td>
+<td>120</td>
+</tr>
+<tr class="even">
+<td><code>add_mul.c</code></td>
+<td>複合関数（add + mul）</td>
+<td>手順6</td>
+<td>42</td>
+</tr>
+<tr class="odd">
+<td><code>sum_rec.c</code></td>
+<td>再帰総和 <code>sum(10)</code></td>
+<td>手順6</td>
+<td>55</td>
 </tr>
 <tr class="even">
 <td><code>call_mul.c</code></td>
 <td>乗算関数の呼び出し</td>
+<td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
 <td><code>three_args.c</code></td>
 <td>3引数関数の呼び出し</td>
+<td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>fib_rec.c</code></td>
 <td>再帰フィボナッチ</td>
+<td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
 <td><code>fact_rec.c</code></td>
 <td>再帰階乗</td>
+<td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>mutual_rec.c</code></td>
 <td>相互再帰</td>
+<td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
+</tr>
+<tr class="odd">
+<td><code>call_nested_temp.c</code></td>
+<td>一時値を積んだ途中での呼び出し（padding の判定が <code>self._depth</code> 依存であること）</td>
+<td>手順6</td>
+<td>52</td>
+</tr>
+<tr class="even">
+<td><code>call_in_cond.c</code></td>
+<td>三項演算子の枝と条件の中での呼び出し</td>
+<td>手順6</td>
+<td>25</td>
+</tr>
+<tr class="odd">
+<td><code>call_preinc.c</code></td>
+<td>前置 <code>++</code>/<code>--</code> を引数に使う呼び出し</td>
+<td>手順6</td>
+<td>20</td>
 </tr>
 </tbody>
 </table>
@@ -736,7 +789,7 @@ add a0, a1, a0       → a0 = fib(n-1) + fib(n-2)</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

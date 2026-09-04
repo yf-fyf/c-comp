@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
-    <h1 class="page-title">短絡評価 — <code>&amp;&amp;</code> と <code>||</code> の本当の意味</h1>
+    <div class="page-head">
+      <h1 class="page-title">短絡評価 — <code>&amp;&amp;</code> と <code>||</code> の本当の意味</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -228,7 +231,7 @@ C のつもりで <code>p != 0 &amp;&amp; p-&gt;val</code> と書いた瞬間に
 これは <code>if</code> と同じ性質で、実は演算子の顔をした制御構文である。</p>
 <p>実は、この性質を持つ演算子はもう1つ実装済みである。三項演算子 <code>a ? b : c</code> は
 「条件によって片方しか評価しない」ため、lecture の <code>codegen_Cond</code> は最初から
-<code>beqz</code> で分岐してどちらか一方の腕しか評価しない形で生成している
+<code>beqz</code> で分岐してどちらか一方の枝しか評価しない形で生成している
 （<code>then</code> と <code>else_</code> の両方を評価してから選ぶ、という実装にはなっていない）。
 つまり <code>?:</code> は<strong>既に正しく分岐生成している兄弟</strong>であり、
 <code>&amp;&amp;</code> / <code>||</code> だけが両辺を評価する形のまま取り残されていた、ということになる。</p>
@@ -343,7 +346,7 @@ VB の <code>And</code> / <code>AndAlso</code>、Pascal の処理系オプショ
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

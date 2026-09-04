@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
-    <h1 class="page-title">構造体の代入 — レジスタに載らないものを運ぶ</h1>
+    <div class="page-head">
+      <h1 class="page-title">構造体の代入 — レジスタに載らないものを運ぶ</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -147,7 +150,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tr>
 <tr class="odd">
 <td>仕様との関係</td>
-<td><strong>仕様の内側</strong>。<code>language_spec.md</code> は「struct 変数は宣言できるが、struct 値の代入・実引数・戻り値は不可」と定めているのに、実装は <code>q = p;</code> をエラーにせず受理して誤った答えを返す。判定基準どおりの <strong>S 系</strong>である</td>
+<td><strong>仕様の内側</strong>（<code>language_spec.md</code> の対応表がこの構文に付ける「仕様外」区分は、標準トラックの実装対象外という別軸の区分）。<code>language_spec.md</code> は「struct 変数は宣言できるが、struct 値の代入・実引数・戻り値は不可」と定めているのに、実装は <code>q = p;</code> をエラーにせず受理して誤った答えを返す。判定基準どおりの <strong>S 系</strong>である</td>
 </tr>
 <tr class="even">
 <td>備考</td>
@@ -358,7 +361,7 @@ a0 から a1 へ、size バイト写す</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

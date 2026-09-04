@@ -230,7 +230,7 @@
    {
     "label": "ternary.c",
     "path": "sessions/04_if_else/tests/ternary.c",
-    "source": "int main() {\n    int a;\n    int b;\n    a = 3;\n    b = 8;\n    return a > b ? a : b;\n}\n"
+    "source": "int main() {\n    int a;\n    int b;\n    int t;\n    int f;\n    int r;\n    a = 3;\n    b = 8;\n    t = 0;\n    f = 0;\n    // 選ばれなかった枝(ここでは真の枝)も評価してしまう実装だと、\n    // t が 0 のままにならず 3 になる。r + t * 100 + f で見分ける。\n    r = a > b ? (t = a) : (f = b);\n    return r + t * 100 + f;\n}\n"
    }
   ]
  },
@@ -298,9 +298,24 @@
     "source": "int add(int a, int b) {\n    return a + b;\n}\n\nint main() {\n    return add(3, 4);\n}\n"
    },
    {
+    "label": "call_in_cond.c",
+    "path": "sessions/06_functions_recursion/tests/call_in_cond.c",
+    "source": "int fact(int n) {\n    return n <= 1 ? 1 : n * fact(n - 1);\n}\n\nint main() {\n    return fact(5) > 100 ? fact(4) + 1 : 0;\n}\n"
+   },
+   {
     "label": "call_mul.c",
     "path": "sessions/06_functions_recursion/tests/call_mul.c",
     "source": "int add(int a, int b) {\n    return a + b;\n}\n\nint mul(int a, int b) {\n    int i;\n    int result;\n    result = 0;\n    for (i = 0; i < b; i = i + 1) {\n        result = add(result, a);\n    }\n    return result;\n}\n\nint main() {\n    return mul(6, 7);\n}\n"
+   },
+   {
+    "label": "call_nested_temp.c",
+    "path": "sessions/06_functions_recursion/tests/call_nested_temp.c",
+    "source": "int add(int a, int b) {\n    return a + b;\n}\n\nint twice(int n) {\n    return n * 2;\n}\n\nint main() {\n    int a;\n    a = 3;\n    return a * (twice(4) + add(1, 2) * 2) + twice(add(2, 3));\n}\n"
+   },
+   {
+    "label": "call_preinc.c",
+    "path": "sessions/06_functions_recursion/tests/call_preinc.c",
+    "source": "int add(int a, int b) {\n    return a + b;\n}\n\nint count_up(int n) {\n    int i;\n    int total;\n    i = 0;\n    total = 0;\n    while (i < n) {\n        ++i;\n        total = add(total, i);\n    }\n    return total;\n}\n\nint main() {\n    int k;\n    k = 4;\n    return count_up(++k) + add(--k, 1);\n}\n"
    },
    {
     "label": "fact.c",
@@ -342,6 +357,11 @@
  {
   "group": "07_lvalue_rvalue",
   "items": [
+   {
+    "label": "cond_preinc_call.c",
+    "path": "sessions/07_lvalue_rvalue/tests/cond_preinc_call.c",
+    "source": "// コマ4〜6の機能（三項演算・前置増減・一時値を積んだ状態での関数呼び出し）が、\n// & と * を足したコマ7のコンパイラでもそのまま動くことを確かめる。\n// codegen() のディスパッチを Addr / Deref だけ足して委譲する形にしていないと、\n// Cond や PreInc/PreDec が「未対応の式」で落ちる。\nint add(int a, int b) {\n    return a + b;\n}\n\nint deref_add(int *p, int n) {\n    return *p + n;\n}\n\nint main() {\n    int x;\n    int y;\n    int *p;\n    x = 3;\n    p = &x;\n    ++x;\n    y = *p > 3 ? add(*p, 6) : 0;\n    --y;\n    // 左辺 y * 2 を一時値として積んだまま右辺で call するので、\n    // call 直前のスタックは 16 バイト境界からずれている。\n    return y * 2 + add(deref_add(p, 1), *p);\n}\n"
+   },
    {
     "label": "deref_read.c",
     "path": "sessions/07_lvalue_rvalue/tests/deref_read.c",
@@ -386,6 +406,11 @@
     "label": "char_var.c",
     "path": "sessions/08_types/tests/char_var.c",
     "source": "// char 変数 — 1 バイトの読み書き（lb / sb）、int への昇格、代入時の下位 8 ビットへの縮小\nint main() {\n    char c;\n    char d;\n    int n;\n    c = 'A';\n    d = c + 2;\n    n = d;\n    if (n != 67) {\n        return 1;\n    }\n    c = 321;\n    if (c != 65) {\n        return 2;\n    }\n    return n;\n}\n"
+   },
+   {
+    "label": "cond_preinc_call.c",
+    "path": "sessions/08_types/tests/cond_preinc_call.c",
+    "source": "// コマ4〜6の機能（三項演算・前置増減・一時値を積んだ状態での関数呼び出し）が、\n// 型を導入したコマ8のコンパイラでもそのまま動くことを確かめる。\n// codegen() を全 case 再列挙にすると Cond や PreInc/PreDec が落ち、\n// _push_a0 / _pop_into を定義し直すと call 直前の 16 バイトアラインメントが崩れる。\nint add(int a, int b) {\n    return a + b;\n}\n\nint pick(char c, int *p) {\n    return c > 60 ? *p + c : *p - c;\n}\n\nint main() {\n    char c;\n    char d;\n    int n;\n    int *p;\n    int r;\n    c = 'A';\n    d = 5;\n    n = 10;\n    p = &n;\n    ++n;\n    r = pick(c, p);\n    --r;\n    // 三項演算の型は _type_of_expr の Cond が決める。ここが char * にならないと\n    // 1 バイトのロード（lb）が選ばれず、読み出した値が壊れる。\n    if (*(n > 0 ? &d : &c) != 5) {\n        return 1;\n    }\n    // 左辺 r * 2 を一時値として積んだまま右辺で call するので、\n    // call 直前のスタックは 16 バイト境界からずれている。\n    return r * 2 + add(pick(c, p), n);\n}\n"
    },
    {
     "label": "load_store_ty.c",
@@ -435,7 +460,7 @@
    {
     "label": "sizeof_type.c",
     "path": "sessions/09_pointer_arith/tests/sizeof_type.c",
-    "source": "// sizeof(型名) 単体 — 翻訳時定数として正しいサイズが出るか。\n// ポインタ演算・添字・型付きロードには依存しない（実装手順 6 の直後に通る）。\nint main() {\n    if (sizeof(char) != 1) {\n        return 1;\n    }\n    if (sizeof(int) != 4) {\n        return 2;\n    }\n    if (sizeof(char *) != 8) {\n        return 3;\n    }\n    if (sizeof(int *) != 8) {\n        return 4;\n    }\n    if (sizeof(int **) != 8) {\n        return 5;\n    }\n    if (sizeof(void *) != 8) {\n        return 6;\n    }\n    return sizeof(int) * 10;\n}\n"
+    "source": "// sizeof(型名) 単体 — 翻訳時定数として正しいサイズが出るか。\n// ポインタ演算・添字・型付きロードには依存しない（実装手順 6 の直後に通る）。\nint main() {\n    if (sizeof(char) != 1) {\n        return 1;\n    }\n    if (sizeof(int) != 4) {\n        return 2;\n    }\n    if (sizeof(char *) != 8) {\n        return 3;\n    }\n    if (sizeof(int *) != 8) {\n        return 4;\n    }\n    if (sizeof(int **) != 8) {\n        return 5;\n    }\n    return sizeof(int) * 10;\n}\n"
    }
   ]
  },
@@ -488,6 +513,11 @@
     "source": "// 式の走査 — 添字・ポインタ加算・間接参照・比較の奥にある文字列リテラル。\n// printf を使わないので、文字列リテラルを式として評価する部分だけを確かめられる。\nint main() {\n    if (\"abc\"[1] != 'b') {\n        return 1;\n    }\n    if (*(\"abc\" + 2) != 'c') {\n        return 2;\n    }\n    if (\"abcde\"[0] < \"abcde\"[4]) {\n        return 42;\n    }\n    return 3;\n}\n"
    },
    {
+    "label": "str_in_ops.c",
+    "path": "sessions/11_expr_walk_libc/tests/str_in_ops.c",
+    "source": "// 式の走査（残りのノード種別）— 単項マイナス・アドレス・減算・乗算・除算・剰余・以下。\n// 各演算子の下に、その演算子でしか現れない文字列リテラルを置いてある。\n// 二項演算子は左右で別の文字列にしてあるので、片側しか降りない走査もここで落ちる。\n// 走査が枝を降りていないと、その文字列は .data に出ないままコンパイルが落ちる。\nint main() {\n    char *p;\n\n    // Neg: 単項マイナスの operand\n    if (-\"neg\"[0] != 0 - 'n') {\n        return 1;\n    }\n\n    // Addr: & の operand\n    p = &\"addr\"[1];\n    if (*p != 'd') {\n        return 2;\n    }\n\n    // Sub\n    if (\"sub_l\"[4] - \"sub_r\"[4] != 'l' - 'r') {\n        return 3;\n    }\n\n    // Mul\n    if (\"mul_l\"[4] * \"mul_r\"[4] != 'l' * 'r') {\n        return 4;\n    }\n\n    // Div\n    if (\"div_l\"[4] / \"div_r\"[4] != 'l' / 'r') {\n        return 5;\n    }\n\n    // Mod\n    if (\"mod_l\"[4] % \"mod_r\"[4] != 'l' % 'r') {\n        return 6;\n    }\n\n    // Le\n    if (\"le_l\"[3] <= \"le_r\"[3]) {\n        return 42;\n    }\n    return 7;\n}\n"
+   },
+   {
     "label": "strlen_literal.c",
     "path": "sessions/11_expr_walk_libc/tests/strlen_literal.c",
     "source": "// 文字列走査は自作する（strlen 相当は lib.h にない）\nint my_strlen(char *s) {\n    int n;\n    n = 0;\n    while (s[n] != '\\0') {\n        n = n + 1;\n    }\n    return n;\n}\n\nint main() {\n    return my_strlen(\"abc\");\n}\n"
@@ -501,6 +531,11 @@
     "label": "arrow_access.c",
     "path": "sessions/12_struct_malloc_list/tests/arrow_access.c",
     "source": "struct Point {\n    int x;\n    int y;\n};\n\nint distance_sq(struct Point *p) {\n    return p->x * p->x + p->y * p->y;\n}\n\nint main() {\n    struct Point p;\n    p.x = 3;\n    p.y = 4;\n    return distance_sq(&p);\n}\n"
+   },
+   {
+    "label": "comment_between_fields.c",
+    "path": "sessions/12_struct_malloc_list/tests/comment_between_fields.c",
+    "source": "// フィールド宣言の間に行コメントがあっても、構文解析の結果から\n// レイアウトを作るので、後続のフィールドが消えたりしない。\nstruct S {\n    int x;    // 先頭フィールド\n    // 独立行のコメント\n    int y;    // 2 番目のフィールド\n    char *p;  // ポインタフィールド\n};\n\nint main() {\n    struct S s;\n    s.x = 3;\n    s.y = 4;\n    s.p = 0;\n    // x@0 y@4 p@8 なのでサイズは 16（8 バイトアラインメント）\n    return s.x + s.y + sizeof(struct S);\n}\n"
    },
    {
     "label": "dot_access.c",
@@ -526,6 +561,16 @@
     "label": "sizeof_test.c",
     "path": "sessions/12_struct_malloc_list/tests/sizeof_test.c",
     "source": "int main() {\n    return sizeof(int) + sizeof(char);\n}\n"
+   },
+   {
+    "label": "sizeof_void_ptr.c",
+    "path": "sessions/12_struct_malloc_list/tests/sizeof_void_ptr.c",
+    "source": "// sizeof(void *) — void * の導入はコマ12（feature map）。翻訳時定数として正しいサイズが出るか確認する。\nint main() {\n    if (sizeof(void *) != 8) {\n        return 1;\n    }\n    return 8;\n}\n"
+   },
+   {
+    "label": "struct_text_in_comment_string.c",
+    "path": "sessions/12_struct_malloc_list/tests/struct_text_in_comment_string.c",
+    "source": "// コメントや文字列リテラルの中の struct 風テキストを定義と誤認しないこと。\nstruct T {\n    int a;\n    int b;\n};\n\n// 下の 2 つは「定義」ではない。誤認すると struct T のレイアウトが壊れる。\n// struct T { char c; };\n\nint main() {\n    char *msg;\n    struct T t;\n    msg = \"struct T { char c; };\";\n    t.a = 1;\n    t.b = 2;\n    // sizeof(struct T) は 8。msg[0] は 's'（115）。\n    return sizeof(struct T) + t.a + t.b + msg[0];\n}\n"
    },
    {
     "label": "void_ptr.c",

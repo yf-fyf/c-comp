@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../docs/">仕様・参考文書</a></nav>
-    <h1 class="page-title">Core プロファイル — 言語仕様</h1>
+    <div class="page-head">
+      <h1 class="page-title">Core プロファイル — 言語仕様</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -185,7 +188,7 @@ gcc 等の通常の C コンパイラでもコンパイルできる。</li>
 </tr>
 <tr class="odd">
 <td><a href="#semantics">実行時の意味</a></td>
-<td>サイズ・整列、評価順序、未定義動作</td>
+<td>サイズ・アラインメント、評価順序、未定義動作</td>
 </tr>
 <tr class="even">
 <td><a href="#grammar">形式文法（EBNF）</a></td>
@@ -227,7 +230,7 @@ int・char・ポインタに限り(struct 値の入れ子なし)、1 フィー�
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">{</span> <span class="dt">int</span> val<span class="op">;</span> <span class="kw">struct</span> Node <span class="op">*</span>next<span class="op">;</span> <span class="op">};</span></span></code></pre></div></li>
 <li><p><strong>struct 変数は宣言できるが、struct 値の代入・実引数・戻り値は不可</strong>
 (<code>.</code> によるフィールドアクセスと <code>&amp;s</code> は可)。struct の受け渡しはポインタで行う
-(代入は発展 S3 で、実引数・戻り値は発展 L5 で追加する)。</p></li>
+(代入は発展 S3 が本仕様の禁止行を改訂して追加し、実引数・戻り値は発展 L5 が仕様の外に新しく足す)。</p></li>
 <li><p>除外: <code>float</code> <code>double</code> <code>long</code> <code>short</code> <code>unsigned</code> <code>union</code> <code>enum</code>、配列、<code>typedef</code></p></li>
 </ul>
 <hr />
@@ -438,8 +441,12 @@ L2 を実装した場合にかぎり、自分のソースで複合代入を使�
 <li><strong>代表テスト</strong>のパスは <code>workbook/</code> からの相対パス。
 <code>python3 scaffold/test_runner.py sessions/NN_xxx</code> で回の分をまとめて実行できる。</li>
 <li><code>final/tests/</code> の 17 本(<code>fixed17</code>)はコマ15 の総合判定であり、
-個々の機能の代表テストとしては挙げない(型対応の前置 <code>++</code> だけは例外)。</li>
+個々の機能の代表テストとしては挙げない。</li>
 <li><strong>区分</strong>が「発展」の行は本仕様の外側であり、標準トラックの実装対象ではない。</li>
+<li>この表と区分列の「本仕様の外側」「仕様外」は、標準トラック(コマ1〜15)の実装対象かどうかを指す。
+発展課題の S/L の区分は別の軸(その回の出発点となる正解が仕様に書いてあるか)であり、
+S1・S3 のように「本仕様の外側」かつ S 系という組み合わせがある
+(判定基準は発展課題の索引の「S と L の判定基準」節)。</li>
 </ul>
 <h3 id="字句とリテラル">字句とリテラル</h3>
 <div class="table-scroll">
@@ -580,7 +587,7 @@ L2 を実装した場合にかぎり、自分のソースで複合代入を使�
 <td>—</td>
 <td>—</td>
 <td>仕様外</td>
-<td>本仕様が禁止。ポインタで受け渡す。代入は発展 S3、実引数・戻り値は発展 L5 が追加する</td>
+<td>本仕様が禁止。ポインタで受け渡す。代入は発展 S3 が本仕様の禁止行を改訂して追加し、実引数・戻り値は発展 L5 が仕様の外に新しく足す</td>
 </tr>
 </tbody>
 </table>
@@ -659,7 +666,7 @@ L2 を実装した場合にかぎり、自分のソースで複合代入を使�
 <td>コマ4</td>
 <td><code>sessions/04_if_else/tests/ternary.c</code></td>
 <td>標準</td>
-<td>選ばれた腕だけを評価する</td>
+<td>選ばれた枝だけを評価する</td>
 </tr>
 <tr class="odd">
 <td>代入 <code>=</code></td>
@@ -979,7 +986,7 @@ L2 を実装した場合にかぎり、自分のソースで複合代入を使�
 <tbody>
 <tr class="odd">
 <td><code>#include "..."</code></td>
-<td>コマ9(<code>lib.h</code>)・コマ14(自作ヘッダ・入れ子)</td>
+<td>コマ10(<code>lib.h</code>)・コマ14(自作ヘッダ・入れ子)</td>
 <td><code>sessions/14_preprocess_multifile/tests/multifile_math.c</code></td>
 <td>標準</td>
 <td>前処理はスキャフォールド提供</td>
@@ -1067,7 +1074,7 @@ L2 を実装した場合にかぎり、自分のソースで複合代入を使�
 <td><code>strcmp</code> / <code>strlen</code> 相当</td>
 <td>—</td>
 <td><code>sessions/11_expr_walk_libc/tests/strlen_literal.c</code></td>
-<td>標準</td>
+<td>対象外</td>
 <td>提供しない。必要なら自作する</td>
 </tr>
 </tbody>
@@ -1094,7 +1101,7 @@ L2 を実装した場合にかぎり、自分のソースで複合代入を使�
 </thead>
 <tbody>
 <tr class="odd">
-<td>型のサイズと整列・struct レイアウト</td>
+<td>型のサイズとアラインメント・struct レイアウト</td>
 <td>コマ12</td>
 <td><code>sessions/12_struct_malloc_list/tests/malloc_struct.c</code></td>
 <td>標準</td>
@@ -1161,7 +1168,7 @@ L2 を実装した場合にかぎり、自分のソースで複合代入を使�
 </tr>
 <tr class="even">
 <td>struct 値の代入・実引数・戻り値</td>
-<td>仕様が受理しない書き方であり、機能として存在しない(本仕様の外側で追加するのが発展 S3・L5 である)</td>
+<td>仕様が受理しない書き方であり、機能として存在しない(代入は発展 S3 が本仕様の禁止行を改訂して追加し、実引数・戻り値は発展 L5 が仕様の外に新しく足す)</td>
 </tr>
 </tbody>
 </table>
@@ -1220,7 +1227,7 @@ L2 を実装した場合にかぎり、自分のソースで複合代入を使�
 </tr>
 <tr class="even">
 <td>ビット演算・シフト</td>
-<td>整列は <code>/</code> と <code>*</code>、ハッシュは <code>%</code>、フラグは個別の int フィールド</td>
+<td>アラインメントは <code>/</code> と <code>*</code>、ハッシュは <code>%</code>、フラグは個別の int フィールド</td>
 </tr>
 <tr class="odd">
 <td><code>(type)expr</code> キャスト</td>
@@ -1296,14 +1303,14 @@ NULL 参照になる。この差を埋めるのが発展 S1 である。</p>
 <hr />
 <p><a id="semantics"></a></p>
 <h2 id="実行時の意味-1">実行時の意味</h2>
-<h3 id="サイズ整列レイアウト">サイズ・整列・レイアウト</h3>
+<h3 id="サイズアラインメントレイアウト">サイズ・アラインメント・レイアウト</h3>
 <div class="table-scroll">
 <table>
 <thead>
 <tr class="header">
 <th>型</th>
 <th>サイズ</th>
-<th>整列</th>
+<th>アラインメント</th>
 </tr>
 </thead>
 <tbody>
@@ -1325,13 +1332,13 @@ NULL 参照になる。この差を埋めるのが発展 S1 である。</p>
 <tr class="even">
 <td><code>struct</code></td>
 <td>下記</td>
-<td>最大フィールドの整列</td>
+<td>最大フィールドのアラインメント</td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>struct のフィールドは宣言順に配置し、各フィールドのオフセットはその整列へ
-切り上げる。struct 全体のサイズは struct の整列の倍数へ切り上げる。
+<p>struct のフィールドは宣言順に配置し、各フィールドのオフセットはそのアラインメントへ
+切り上げる。struct 全体のサイズは struct のアラインメントの倍数へ切り上げる。
 <code>sizeof</code> はこの規則で定まる値を返す。null ポインタの表現は全ビット 0。</p>
 <h3 id="初期化と記憶域">初期化と記憶域</h3>
 <ul>
@@ -1344,7 +1351,7 @@ NULL 参照になる。この差を埋めるのが発展 S1 である。</p>
 <li><code>&amp;&amp;</code> <code>||</code> は左から<strong>両辺を評価する（短絡しない）</strong>。左辺の値が結果を決める場合
 (<code>0 &amp;&amp; e</code>、<code>1 || e</code>)でも右辺 <code>e</code> は評価され、その副作用は起こる。
 ISO C との差異である(例外 E3)。短絡する版は発展 S1 で実装する。</li>
-<li><code>?:</code> は条件を評価してから選ばれた腕だけを評価する(こちらは ISO C と同じ)。</li>
+<li><code>?:</code> は条件を評価してから選ばれた枝だけを評価する(こちらは ISO C と同じ)。</li>
 <li>代入は右辺の評価と左辺の lvalue 決定の後に格納する。</li>
 <li>それ以外の二項演算のオペランド間、および実引数間の評価順序は未規定。</li>
 </ul>
@@ -1547,7 +1554,7 @@ NONZERO = [1-9]</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ11: 式の走査と libc 活用</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ11: 式の走査と libc 活用</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -345,7 +348,7 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <li>単項の3種（<code>Neg</code> / <code>Addr</code> / <code>Deref</code>）を書く</li>
 <li>二項の10種（算術5・比較4・<code>Index</code>）を書く</li>
 <li><code>Cond</code> を書く</li>
-<li><code>str_in_expr.c</code> を通す（添字・ポインタ加算・間接参照・比較の奥にある文字列）</li>
+<li><code>str_in_expr.c</code> と <code>str_in_ops.c</code> を通す（添字・ポインタ加算・間接参照・比較、および算術・単項・<code>&lt;=</code> の奥にある文字列）</li>
 <li><code>str_cond_select.c</code> を通す（三項演算子の両方の枝）</li>
 <li><code>strlen_literal.c</code> を通す（文字列リテラルを自作関数に渡し、<code>'\0'</code> まで読む）</li>
 <li>次節の <code>lib.h</code> の残りの関数に目を通し、<code>file_stream.c</code> と <code>lib_exit.c</code> を通す</li>
@@ -427,21 +430,26 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <td>終了コード <code>42</code></td>
 </tr>
 <tr class="even">
+<td><code>str_in_ops.c</code></td>
+<td>単項マイナス・アドレス・減算・乗算・除算・剰余・<code>&lt;=</code> の下にある文字列。二項は左右で別の文字列にしてあるので片側だけの走査も落ちる</td>
+<td>終了コード <code>42</code></td>
+</tr>
+<tr class="odd">
 <td><code>str_cond_select.c</code></td>
 <td>三項演算子の両方の枝にある文字列（<code>Cond</code> の走査）</td>
 <td><code>big</code> / <code>else side</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>strlen_literal.c</code></td>
 <td>文字列を自作の <code>my_strlen</code> に渡す</td>
 <td>終了コード <code>3</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>file_stream.c</code></td>
 <td><code>fdopen</code>/<code>fprintf</code>/<code>fopen</code>/<code>fread</code>/<code>fclose</code></td>
-<td><code>stream ok</code> / 終了コード <code>42</code></td>
+<td><code>stream ok</code> / <code>fdopen(2, "w")</code> への出力 / 終了コード <code>42</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>lib_exit.c</code></td>
 <td><code>exit</code> で終了コードを指定して打ち切る</td>
 <td><code>before exit</code> / 終了コード <code>7</code></td>
@@ -488,7 +496,7 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

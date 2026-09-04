@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../">ホーム</a> / 発展課題</nav>
-    <h1 class="page-title">発展課題</h1>
+    <div class="page-head">
+      <h1 class="page-title">発展課題</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -546,7 +549,7 @@ P1（自動採点なし）の5本がそれで、<code>check.py</code> だけで�
 <tr class="odd">
 <td><code>basecc.py</code></td>
 <td>土台の <code>final/mycc.py</code> が動くか確かめる健全性チェック</td>
-<td>B, O, S, L 系列</td>
+<td>B, O1, S, L 系列</td>
 </tr>
 </tbody>
 </table>
@@ -805,35 +808,39 @@ strops           243   173   28.8%    77108   50135   35.0%
 <div class="table-scroll">
 <table>
 <colgroup>
-<col style="width: 66%" />
-<col style="width: 11%" />
-<col style="width: 21%" />
+<col style="width: 28%" />
+<col style="width: 25%" />
+<col style="width: 46%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th><code>language_spec.md</code> はその構文・機能に意味を与えているか</th>
+<th>二段の問い</th>
 <th>ファミリ</th>
 <th>その回でやること</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>与えている（<strong>仕様の内側</strong>）</td>
+<td>仕様がその構文に何かを定めており、いまの実装がそれに違反している（<strong>仕様の内側</strong>）</td>
 <td><strong>S</strong></td>
 <td>仕様が定めた姿と実際の振る舞いのずれを埋める。正解は仕様の該当行に書いてある</td>
 </tr>
 <tr class="even">
-<td>「対象外」「除外」「不可」として与えていない（<strong>仕様の外側</strong>）</td>
+<td>仕様がその構文に何も定めていない（<strong>仕様の外側</strong>）</td>
 <td><strong>L</strong></td>
 <td>意味を自分で決めて足す。正解はこれから決めるもので、資料の「追加する仕様」節が定義する</td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>判定は「仕様の該当行を引用できるか、引用したその行が何を言っているか」で行う。
-<strong>その形について仕様が答えを持っているなら S、「扱わない」としか言っていないなら L</strong> である。</p>
-<p>S のずれは向きが2通りある。実装を仕様へ合わせる回（S2・S3）と、
-仕様の側を ISO C へ寄せる回（S1。仕様が例外 E3 として差分を自ら明記している）である。
+<p>判定は二段の問いで行う。<strong>①仕様はその構文について何か言っているか。②言っているとして、
+いまの実装はそれに違反しているか。</strong>「禁止」も仕様が言っていることに数える
+（S3 は仕様が「不可」と定めた形を実装が受理しており、違反である）。
+逆に L1 でポインタ差がバイト差になるのは仕様違反ではない——仕様がポインタ同士の減算に
+何も決めていないだけである。</p>
+<p>S のずれは向きが2通りある。実装を仕様へ合わせる回（S2）と、
+仕様の側を ISO C へ寄せる回（S1・S3。S1 は仕様が例外 E3 として差分を自ら明記し、
+S3 は仕様の禁止行がいずれ改訂される想定である）である。
 どちらも仕様の該当行から出発する点で共通で、L のように意味を新しく決めることはしない。</p>
 <p>この判定結果は、各トピックの位置づけ表の <strong><code>仕様との関係</code></strong> 欄に書いてある。</p>
 <h3 id="本の-id-を振り直した食い違いは解消済み">2本の ID を振り直した（食い違いは解消済み）</h3>
@@ -861,7 +868,7 @@ strops           243   173   28.8%    77108   50135   35.0%
 <tr class="even">
 <td><code>L1_struct/</code>（構造体の代入）</td>
 <td><strong><code>S3_struct/</code></strong></td>
-<td>仕様は「struct 値の代入・実引数・戻り値は不可」と定めているのに、実装は <code>q = p;</code> を黙って受理して誤った答えを返す。仕様と実装のずれが題材である</td>
+<td>仕様は「struct 値の代入・実引数・戻り値は不可」と定めているのに、実装は <code>q = p;</code> を黙って受理して誤った答えを返す。仕様と実装のずれが題材である（解消の向きは仕様の側の改訂である）</td>
 </tr>
 </tbody>
 </table>
@@ -899,7 +906,7 @@ strops           243   173   28.8%    77108   50135   35.0%
      (<a href="../LICENSE">code: MIT</a>) ·
      <a href="../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

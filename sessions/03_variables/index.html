@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ3: 変数・代入・シンボルテーブル</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ3: 変数・代入・シンボルテーブル</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -103,6 +106,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <li><a href="#代入の生成" id="toc-代入の生成">代入の生成</a></li>
       <li><a href="#gen_stmt-の役割" id="toc-gen_stmt-の役割">gen_stmt の役割</a></li>
       <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
       <li><a href="#tests" id="toc-tests">tests/</a></li>
       <li><a href="#テスト" id="toc-テスト">テスト</a></li>
       <li><a href="#注意" id="toc-注意">注意</a></li>
@@ -761,18 +765,33 @@ Cでは、代入式 <code>a = 3</code> 自体の値は <code>3</code> である�
 <li><code>codegen()</code> / <code>gen_stmt()</code> / <code>codegen_lval()</code> のディスパッチ</li>
 <li><code>collect_decls()</code> のディスパッチと <code>collect_decls_Block()</code>（関数本体の <code>Block</code> を 1 段開くだけの処理）</li>
 </ul>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>スケルトンの <code>Codegen03</code> が <code>Codegen02</code> を <code>importlib</code> で継承していることを確認する（あらかじめ書かれている）</li>
+<li><code>_reset_func_state(node)</code> を実装する（<code>self._locals</code> と <code>self._stack_offset</code> を初期化し、<code>self.collect_decls(node.body)</code> を呼び、<code>self.align_to(self._stack_offset, 16)</code> を返す。どのテストでも必要）</li>
+<li><code>collect_decls_Decl(node)</code> を実装する（提供済みの <code>self.alloc_local(node.name)</code> を呼ぶだけ）</li>
+<li><code>gen_stmt_Decl(node)</code> を実装する（領域確保は手順3 で済んでいるので何も出力しない）</li>
+<li><code>gen_stmt_ExprStmt(node)</code> を実装する（<code>node.operand</code> が <code>None</code> でなければ <code>self.codegen()</code> に渡す）</li>
+<li><code>codegen_lval_Var(node)</code> を実装する（<code>self.lookup_var(node.name, node.line)</code> で <code>s0</code> からのオフセットを引き、<code>addi a0, s0, &lt;offset&gt;</code> でアドレスを <code>a0</code> に作る）</li>
+<li><code>codegen_Var(node)</code> を実装する（<code>self.codegen_lval(node)</code> でアドレスを作ってから <code>ld a0, 0(a0)</code>）</li>
+<li><code>codegen_Assign(node)</code> を実装する（<code>node.lhs</code> を <code>codegen_lval</code> → <code>self._push_a0()</code> → <code>node.rhs</code> を <code>codegen</code> → <code>self._pop_into('a1')</code> → <code>sd a0, 0(a1)</code>。<code>sp</code> は直接動かさない）</li>
+</ol>
 <h2 id="tests">tests/</h2>
+<p>上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。</p>
 <div class="table-scroll">
 <table>
 <colgroup>
-<col style="width: 41%" />
-<col style="width: 25%" />
-<col style="width: 33%" />
+<col style="width: 29%" />
+<col style="width: 17%" />
+<col style="width: 29%" />
+<col style="width: 23%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
 <th>内容</th>
+<th>通る目安</th>
 <th>期待値</th>
 </tr>
 </thead>
@@ -780,56 +799,67 @@ Cでは、代入式 <code>a = 3</code> 自体の値は <code>3</code> である�
 <tr class="odd">
 <td><code>target.c</code></td>
 <td><code>a = 3; b = 5; c = a + b; return c;</code></td>
+<td>手順8</td>
 <td>8</td>
 </tr>
 <tr class="even">
 <td><code>reassign.c</code></td>
-<td><code>x = 10; y = x * 2 + 3; x = y - x; return x;</code></td>
-<td>13</td>
+<td><code>n = 5; n = n * n; n = n - 10; return n;</code></td>
+<td>手順8</td>
+<td>15</td>
 </tr>
 <tr class="odd">
 <td><code>init.c</code></td>
 <td><code>int a; int b; int c; a = 3; b = 5; c = a * b; return c;</code></td>
+<td>手順8</td>
 <td>15</td>
 </tr>
 <tr class="even">
 <td><code>chain_assign.c</code></td>
 <td><code>a = 5; b = a; a = b + 1; return a;</code></td>
+<td>手順8</td>
 <td>6</td>
 </tr>
 <tr class="odd">
 <td><code>single.c</code></td>
 <td>1変数への代入と参照</td>
+<td>手順8</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>add_vars.c</code></td>
 <td>複数変数の加算</td>
+<td>手順8</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
 <td><code>expr_chain.c</code></td>
 <td>変数を含む式の連鎖</td>
+<td>手順8</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>multi_expr.c</code></td>
 <td>複数変数と複数式</td>
+<td>手順8</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
 <td><code>many_locals.c</code></td>
 <td>6変数の総和</td>
+<td>手順8</td>
 <td>21</td>
 </tr>
 <tr class="even">
 <td><code>eight_locals.c</code></td>
-<td>8変数（アラインメント境界）</td>
+<td>8変数（アラインメント境界。落ちるときは手順2 のフレームサイズを疑う）</td>
+<td>手順8</td>
 <td>36</td>
 </tr>
 <tr class="odd">
 <td><code>minimal.c</code></td>
 <td>最小関数（ローカル変数なし）</td>
+<td>手順2</td>
 <td>42</td>
 </tr>
 </tbody>
@@ -866,7 +896,7 @@ Cでは、代入式 <code>a = 3</code> 自体の値は <code>3</code> である�
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

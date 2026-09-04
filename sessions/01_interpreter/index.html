@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ1: AST + インタープリター</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ1: AST + インタープリター</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -95,6 +98,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <li><a href="#node-の構造" id="toc-node-の構造">Node の構造</a></li>
       <li><a href="#実装方針" id="toc-実装方針">実装方針</a></li>
       <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
       <li><a href="#tests" id="toc-tests">tests/</a></li>
       <li><a href="#テスト" id="toc-テスト">テスト</a></li>
       <li><a href="#注意" id="toc-注意">注意</a></li>
@@ -470,13 +474,25 @@ primary_expr ::= INT_LITERAL
 <li><code>mycc.py</code></li>
 </ul>
 <p><code>eval_ast(node)</code> を実装する。</p>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>スケルトンの <code>eval_ast</code> に <code>case 'Num'</code> が実装例として書かれていることを確認する（<code>node.val</code> を返すだけ）</li>
+<li><code>case 'Add'</code> / <code>case 'Sub'</code> / <code>case 'Mul'</code> を埋める（<code>eval_ast(node.lhs)</code> と <code>eval_ast(node.rhs)</code> を再帰で求め、足す・引く・掛ける）</li>
+<li><code>case 'Neg'</code> を埋める（<code>eval_ast(node.operand)</code> の符号を反転する）</li>
+<li><code>case 'Div'</code> / <code>case 'Mod'</code> を埋める（提供済みの <code>c_div</code> / <code>c_mod</code> に左右の評価結果を渡す。Python の <code>//</code> と <code>%</code> は使わない）</li>
+</ol>
+<p><code>case _</code> で <code>RuntimeError</code> を上げる分岐と、<code>main</code> の <code>return</code> 式を <code>eval_ast</code> へ渡す
+<code>run_main(prog)</code> は、あらかじめスケルトンに書かれている。</p>
 <h2 id="tests">tests/</h2>
+<p>上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。</p>
 <div class="table-scroll">
 <table>
 <thead>
 <tr class="header">
 <th>ファイル</th>
 <th>内容</th>
+<th>通る目安</th>
 <th>期待値</th>
 </tr>
 </thead>
@@ -484,21 +500,37 @@ primary_expr ::= INT_LITERAL
 <tr class="odd">
 <td><code>add_mul.c</code></td>
 <td><code>1 + 2 * 3</code></td>
+<td>手順2</td>
 <td>7</td>
 </tr>
 <tr class="even">
 <td><code>div_mod.c</code></td>
 <td><code>100 / 4 + 17 % 5</code></td>
+<td>手順4</td>
 <td>27</td>
 </tr>
 <tr class="odd">
 <td><code>paren.c</code></td>
 <td><code>(10 - 3) * 2</code></td>
+<td>手順2</td>
 <td>14</td>
 </tr>
 <tr class="even">
 <td><code>neg.c</code></td>
 <td><code>-3 + 10</code></td>
+<td>手順3</td>
+<td>7</td>
+</tr>
+<tr class="odd">
+<td><code>all_ops.c</code></td>
+<td><code>1 + 2 * 3 - 8 / 2</code></td>
+<td>手順4</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td><code>expression.c</code></td>
+<td><code>1 + 2 * 3</code></td>
+<td>手順2</td>
 <td>7</td>
 </tr>
 </tbody>
@@ -530,7 +562,7 @@ Python の <code>//</code> や <code>%</code> は、負数を含む場合に C �
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

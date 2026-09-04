@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ7: lvalue / rvalue + ポインタ</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ7: lvalue / rvalue + ポインタ</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -180,7 +183,7 @@ codegen_lval(node) -&gt; lvalue のアドレスを計算し、アドレスを a0
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
 <pre class="ebnf" data-lang="ebnf"><code>stars       ::= &#39;*&#39;              /* 多段ポインタ int ** はコマ9 */
 
-scalar_type ::= &#39;int&#39;  [ stars ] /* char はコマ8、struct はコマ11、void * はコマ12 */
+scalar_type ::= &#39;int&#39;  [ stars ] /* char はコマ8、struct タグ * (不透明ポインタ) はコマ11、struct 定義・void * はコマ12 */
 obj_type    ::= scalar_type
 ret_type    ::= scalar_type
               | &#39;void&#39;
@@ -618,7 +621,7 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

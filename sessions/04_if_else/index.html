@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../sessions/">通常回</a></nav>
-    <h1 class="page-title">コマ4: if/else + 比較演算</h1>
+    <div class="page-head">
+      <h1 class="page-title">コマ4: if/else + 比較演算</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -103,6 +106,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <li><a href="#三項演算子-値を持つ分岐式と文の違い" id="toc-三項演算子-値を持つ分岐式と文の違い">三項演算子: 値を持つ分岐（式と文の違い）</a></li>
       <li><a href="#gen_stmt-に追加する処理" id="toc-gen_stmt-に追加する処理">gen_stmt に追加する処理</a></li>
       <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
       <li><a href="#tests" id="toc-tests">tests/</a></li>
       <li><a href="#テスト" id="toc-テスト">テスト</a></li>
       <li><a href="#注意" id="toc-注意">注意</a></li>
@@ -458,7 +462,10 @@ Lend:</code></pre>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>._label_counter <span class="op">+=</span> <span class="dv">1</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;.L</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_label_counter<span class="sc">}</span><span class="ss">&quot;</span></span></code></pre></div>
 <p>インスタンス変数 <code>self._label_counter</code> は <code>__init__</code> で <code>0</code> 初期化される。</p>
-<p><code>.L</code> で始まるラベルはローカルラベルと呼ばれ、アセンブラが自動的に一意性を保証する。</p>
+<p>ラベルの一意性は、この <code>self._label_counter</code> がプログラム全体で単調に増え続けることで保証される。
+<code>.L</code> で始まる名前は慣用的にローカルラベルと呼ばれ、シンボル表に残らない（アセンブラや
+リンカが外部から参照する対象にしない）扱いを受けるが、名前の一意性そのものはアセンブラが
+自動で保証してくれるわけではない。</p>
 <h2 id="if-の生成パターン">if の生成パターン</h2>
 <div class="sourceCode" id="cb11" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    文</span>
@@ -567,7 +574,7 @@ j Lreturn</code></pre>
 <tr class="even">
 <td>役割</td>
 <td>実行する<strong>文</strong>を選ぶ</td>
-<td>選ばれた腕の<strong>値</strong>が式の値になる</td>
+<td>選ばれた枝の<strong>値</strong>が式の値になる</td>
 </tr>
 <tr class="odd">
 <td>書ける場所</td>
@@ -577,7 +584,7 @@ j Lreturn</code></pre>
 </tbody>
 </table>
 </div>
-<p>コード生成はどちらも同じ分岐で書ける。違いは、<code>?:</code> では選ばれた腕の
+<p>コード生成はどちらも同じ分岐で書ける。違いは、<code>?:</code> では選ばれた枝の
 評価結果が <code>a0</code> に残ることだけである。</p>
 <div class="sourceCode" id="cb21" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_Cond(<span class="va">self</span>, node):</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    label_else <span class="op">=</span> <span class="va">self</span>.new_label()</span>
@@ -668,7 +675,7 @@ j Lreturn</code></pre>
 </tr>
 <tr class="odd">
 <td><code>codegen_Cond(node)</code></td>
-<td>三項演算子。分岐して選ばれた腕の値を <code>a0</code> に残す</td>
+<td>三項演算子。分岐して選ばれた枝の値を <code>a0</code> に残す</td>
 </tr>
 <tr class="even">
 <td>（dispatcher 対応）</td>
@@ -677,18 +684,33 @@ j Lreturn</code></pre>
 </tbody>
 </table>
 </div>
+<h2 id="実装手順">実装手順</h2>
+<ol type="1">
+<li>スケルトンの <code>Codegen04</code> が <code>Codegen03</code> を <code>importlib</code> で継承していることを確認する。ラベル採番の <code>new_label()</code> と、左右を評価して <code>a1</code>/<code>a0</code> に載せる <code>_binary(lhs, rhs)</code>、<code>codegen()</code> / <code>gen_stmt()</code> のディスパッチはあらかじめ書かれている</li>
+<li><code>_reset_func_state(node)</code> を実装する（<code>super()._reset_func_state(node)</code> で frame_size を受け、<code>self._ret_label = self.new_label()</code> でこの関数専用の return ラベルを作る。どのテストでも必要）</li>
+<li><code>_emit_func_epilogue(frame_size)</code> を実装する（エピローグ本体の前に <code>self._ret_label</code> のラベル行を出す。その後の <code>s0</code>/<code>ra</code> 復元は親クラスの hook を呼んでよい）</li>
+<li><code>gen_stmt_Return(node)</code> を上書きする（式を <code>codegen</code> した後、その場で <code>ret</code> せず <code>j &lt;self._ret_label&gt;</code> へ飛ばす）</li>
+<li><code>gen_stmt_Block(node)</code> を実装する（<code>node.stmts</code> を先頭から順に <code>self.gen_stmt()</code> する）</li>
+<li><code>codegen_Eq</code> / <code>codegen_Ne</code> / <code>codegen_Lt</code> / <code>codegen_Le</code> を実装する（いずれも <code>self._binary(node.lhs, node.rhs)</code> の後に <code>sub</code>+<code>seqz</code> / <code>sub</code>+<code>snez</code> / <code>slt a0, a1, a0</code> / <code>slt a0, a0, a1</code>+<code>xori a0, a0, 1</code>）</li>
+<li><code>gen_stmt_If(node)</code> を実装する（<code>node.cond</code> を <code>codegen</code> し、<code>beqz</code> と <code>new_label()</code> で then / else / end の制御フローを作る。<code>node.else_</code> が <code>None</code> のときは then を抜けた直後に else ラベルだけを置く）</li>
+<li><code>codegen_Cond(node)</code> を実装する（<code>if</code>/<code>else</code> と同じ分岐を作り、選ばれた枝の値を <code>a0</code> に残す。文ではなく式なので値が残るのがポイント）</li>
+</ol>
 <h2 id="tests">tests/</h2>
+<p>上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
+「通る目安」は実装手順の番号である。</p>
 <div class="table-scroll">
 <table>
 <colgroup>
-<col style="width: 41%" />
-<col style="width: 25%" />
-<col style="width: 33%" />
+<col style="width: 29%" />
+<col style="width: 17%" />
+<col style="width: 29%" />
+<col style="width: 23%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
 <th>内容</th>
+<th>通る目安</th>
 <th>期待値</th>
 </tr>
 </thead>
@@ -696,66 +718,79 @@ j Lreturn</code></pre>
 <tr class="odd">
 <td><code>target.c</code></td>
 <td><code>if (a &gt; b)</code> の else 分岐</td>
+<td>手順7</td>
 <td>7</td>
 </tr>
 <tr class="even">
 <td><code>if_only.c</code></td>
 <td>if のみ（else なし）</td>
+<td>手順7</td>
 <td>1</td>
 </tr>
 <tr class="odd">
 <td><code>compare.c</code></td>
 <td><code>==</code>, <code>&gt;=</code>, <code>&lt;</code> の組み合わせ</td>
+<td>手順6</td>
 <td>42</td>
 </tr>
 <tr class="even">
 <td><code>nested.c</code></td>
 <td>入れ子 if</td>
+<td>手順7</td>
 <td>8</td>
 </tr>
 <tr class="odd">
 <td><code>if_true.c</code></td>
 <td>if の条件が真になる場合</td>
+<td>手順7</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>if_false.c</code></td>
 <td>if の条件が偽になる場合</td>
+<td>手順7</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
 <td><code>if_elseif.c</code></td>
 <td>else if の連なり</td>
+<td>手順7</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="even">
 <td><code>nested_if.c</code></td>
 <td>if の入れ子</td>
+<td>手順7</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
 <td><code>ternary.c</code></td>
-<td>三項演算子 <code>a &gt; b ? a : b</code></td>
-<td>8</td>
+<td>三項演算子。選ばれなかった枝も評価してしまう誤実装を検出できるよう、両方の枝に副作用(代入)を持たせている</td>
+<td>手順8</td>
+<td>16</td>
 </tr>
 <tr class="even">
 <td><code>nested_block.c</code></td>
 <td>関数先頭で宣言した変数を <code>if</code> の中で使う</td>
+<td>手順7</td>
 <td>7</td>
 </tr>
 <tr class="odd">
 <td><code>nested_use.c</code></td>
 <td>二重の入れ子ブロックの中での変数の使用</td>
+<td>手順7</td>
 <td>7</td>
 </tr>
 <tr class="even">
 <td><code>early_return.c</code></td>
 <td>複数の return 文（共通エピローグへのジャンプ）</td>
+<td>手順5</td>
 <td>10</td>
 </tr>
 <tr class="odd">
 <td><code>rel_value.c</code></td>
 <td>比較・等値演算子の結果が int の <code>0</code> / <code>1</code> であること</td>
+<td>手順6</td>
 <td>41</td>
 </tr>
 </tbody>
@@ -808,7 +843,7 @@ Cでは、<code>0</code> が偽、<code>0</code> 以外が真である。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

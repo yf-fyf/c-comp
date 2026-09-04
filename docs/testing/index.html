@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../docs/">仕様・参考文書</a></nav>
-    <h1 class="page-title">テストとデバッグ</h1>
+    <div class="page-head">
+      <h1 class="page-title">テストとデバッグ</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -121,9 +124,12 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 =============================
   PASS: 7  FAIL: 1  SKIP: 0
 =============================</code></pre>
-<p><code>SKIP</code> は <code>.ans</code>（期待する終了コード）が無いファイルである。
-コマ14 の <code>math_util.c</code> / <code>stat_lib.c</code> のように、<strong>単体では実行せず他のテストと一緒に
-コンパイルする補助ソース</strong>がこれに当たるので、ここに出るのは正常である。</p>
+<p><code>SKIP</code> になるのは、コマ14 の <code>math_util.c</code> / <code>stat_lib.c</code> のように
+<strong>単体では実行せず他のテストと一緒にコンパイルする補助ソース</strong>だけである。
+補助ソースかどうかは、同じディレクトリのどれかの <code>.files</code> から参照されているかで判定する。</p>
+<p>それ以外の <code>.c</code> に <code>.ans</code> が無いときは <code>SKIP</code> ではなく <code>FAIL</code> になる。
+期待値の置き忘れを「実行されなかったので成功」と読み違えないための扱いである。
+同じ理由で、<strong>テストがあるのに PASS が 0 件のとき</strong>も終了コードは 0 にならない。</p>
 <p>一方、発展課題の <code>check.py</code> が出す <code>SKIP</code> は<strong>未実装</strong>を意味する。
 そちらは SKIP が残っている間は完了条件を満たさず、終了コードも 0 にならない。</p>
 <h2 id="コンパイラとテストを個別に指定する">コンパイラとテストを個別に指定する</h2>
@@ -136,6 +142,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <pre data-lang="text"><code>foo.c       # 入力ソース
 foo.ans     # 期待する exit code
 foo.stdout  # 期待する標準出力（必要な場合のみ）
+foo.stderr  # 期待する標準エラー出力（必要な場合のみ）
 foo.files   # 一緒にコンパイルする追加ソース（複数ファイル構成の場合のみ）</code></pre>
 <p>例:</p>
 <pre data-lang="text"><code>sessions/05_loops/tests/while_sum.c
@@ -145,14 +152,19 @@ final/tests/f01_arith.c
 final/tests/f01_arith.ans</code></pre>
 <p><code>.ans</code> は終了コードで結果を確認するため、値は 0〜255 に収める。
 テストケース側で未定義動作（UB）に踏み込まないようにする。</p>
+<p><code>.stdout</code> / <code>.stderr</code> は、置いたときだけ突き合わせる。
+<code>fdopen(2, "w")</code> で書いた出力のように、標準出力に出ないものを確認したいときは <code>.stderr</code> を置く
+（例: <code>sessions/11_expr_walk_libc/tests/file_stream.stderr</code>）。</p>
 <h3 id="files複数ファイルのテスト"><code>.files</code>（複数ファイルのテスト）</h3>
 <p><code>foo.files</code> があると、<code>foo.c</code> に加えてそこに列挙したファイルもコンパイル対象に含める。
 1行に1ファイル名で、パスは <code>foo.c</code> と同じディレクトリからの相対で書く。</p>
 <pre data-lang="text"><code>sessions/14_preprocess_multifile/tests/multifile_global.files:
 stat_lib.c</code></pre>
 <p><code>stat_lib.c</code> 自身には対応する <code>.ans</code> が無い。<strong>単体では実行せず他のテストと
-一緒にコンパイルされる補助ソース</strong>であり、テストランナーが直接 <code>stat_lib.c</code> を
-拾ったときは <code>.ans</code> が無いので <code>SKIP</code> になる（前述のとおり正常な挙動）。</p>
+一緒にコンパイルされる補助ソース</strong>だからである。テストランナーはこの <code>.files</code> の
+記述から <code>stat_lib.c</code> を補助ソースと判定し、直接拾ったときは <code>SKIP</code> にする
+（前述のとおり正常な挙動）。逆に言えば、どの <code>.files</code> からも参照されていない
+<code>.c</code> に <code>.ans</code> を置き忘れると <code>FAIL</code> になる。</p>
 <h2 id="finaltestsfixed17"><code>final/tests</code>（fixed17）</h2>
 <p>コマ1〜15 の機能をまとめて確認する17本のテスト。
 <strong>標準トラック完成の目安</strong>であり、発展課題では「意味を壊していないこと」の安全網として使う。</p>
@@ -312,7 +324,7 @@ stat_lib.c</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

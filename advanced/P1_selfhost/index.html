@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../advanced/">発展課題</a></nav>
-    <h1 class="page-title">C 移植・セルフホスト — Python 版を C で書き直す</h1>
+    <div class="page-head">
+      <h1 class="page-title">C 移植・セルフホスト — Python 版を C で書き直す</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -263,7 +266,7 @@ Stage 1 は RV64 の実行可能ファイルなので、ホスト環境では直
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./mycc_stage0</span> src/mycc.c <span class="op">&gt;</span> stage1.s</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> stage1.s <span class="at">-o</span> mycc_stage1</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 固定点の確認: Stage 1 にも同じソースをコンパイルさせ、Stage 0 の出力と突き合わせる</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 不動点の確認: Stage 1 にも同じソースをコンパイルさせ、Stage 0 の出力と突き合わせる</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./mycc_stage1 src/mycc.c <span class="op">&gt;</span> stage2.s</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cmp</span> stage1.s stage2.s <span class="kw">&amp;&amp;</span> <span class="bu">echo</span> <span class="st">&quot;fixpoint OK&quot;</span></span></code></pre></div>
 <p><code>test_runner.py</code> に Stage 1 を渡すときは、<code>qemu-riscv64 ./mycc_stage1 "$@"</code> を実行するだけの
@@ -272,17 +275,17 @@ Stage 1 は RV64 の実行可能ファイルなので、ホスト環境では直
 <div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> ./run_stage1.sh <span class="at">--tests</span> final/tests</span></code></pre></div>
 <p><strong>なぜ段階を踏むか</strong>: セルフホストは「動いた気がする」状態になりやすい。
 どの段階の成果物でテストを通したのかを自分で明示的に確認する必要がある。</p>
-<p><strong>本質的な判定は固定点比較である</strong>: 「Stage 1 が生成できた」「テストが通った」だけでは、
+<p><strong>本質的な判定は不動点比較である</strong>: 「Stage 1 が生成できた」「テストが通った」だけでは、
 自分自身を正しく翻訳できている証拠にならない。ブートストラップするコンパイラの検証では、
 <strong>Stage 0 と Stage 1 がそれぞれ同じソース（コンパイラ自身）に対して生成するアセンブリが
-バイト単位で完全に一致すること</strong>（固定点）を確認するのが本筋である。
+バイト単位で完全に一致すること</strong>（不動点）を確認するのが本筋である。
 これが成り立てば、Stage 1 が出力するコンパイラは Stage 1 自身と同じものになり、
-以降いくら段を重ねても変化しない。なお固定点の確認は出力が決定的であること
+以降いくら段を重ねても変化しない。なお不動点の確認は出力が決定的であること
 （実行のたびに同じアセンブリが出ること）を前提にするので、
 ラベル名やメモリアドレスに依存した出力を混ぜないよう気をつける。</p>
 <p>参考達成条件（必達目標ではない）: <code>mycc_stage1</code> の生成成功 + <code>final/tests</code>（<a href="../../advanced/#fixed17">fixed17</a>）全通 +
 前処理（<code>#include</code> / <code>#define</code>）の自前実装が動くこと。
-さらに固定点比較（Stage 0 と Stage 1 の出力アセンブリのバイト一致）まで確認できれば、
+さらに不動点比較（Stage 0 と Stage 1 の出力アセンブリのバイト一致）まで確認できれば、
 セルフホストが正しく達成できたことの証拠になる。</p>
 
     
@@ -296,7 +299,7 @@ Stage 1 は RV64 の実行可能ファイルなので、ホスト環境では直
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>

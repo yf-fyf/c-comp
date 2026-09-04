@@ -85,7 +85,10 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <div class="layout">
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="パンくず"><a href="../../">ホーム</a> / <a href="../../docs/">仕様・参考文書</a></nav>
-    <h1 class="page-title">コンパイル到達目標コード集</h1>
+    <div class="page-head">
+      <h1 class="page-title">コンパイル到達目標コード集</h1>
+      
+    </div>
         <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>
       <ul>
@@ -390,7 +393,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <blockquote>
 <p><strong>式と文の違い</strong>: <code>if</code> は「実行する文」を選ぶ文であり、それ自体は値を持たない。
 三項演算子 <code>?:</code> は「値」を選ぶ式であり、式の中に書ける。
-コード生成はどちらも同じ分岐（<code>beqz</code> + ラベル）だが、<code>?:</code> は選ばれた腕の値が
+コード生成はどちらも同じ分岐（<code>beqz</code> + ラベル）だが、<code>?:</code> は選ばれた枝の値が
 レジスタに残る点だけが異なる。</p>
 </blockquote>
 <hr />
@@ -948,7 +951,8 @@ OS がプログラム開始時に 0 埋めしてくれる仕組みをそのま�
 仕様の全機能を行に持つ表なので、この文書のコマ別の節と併せて使う
 （この文書は「各コマの終わりに何が動くか」を実例で示し、対応表は
 「仕様のどの項目がどこで埋まるか」を網羅する）。</p>
-<p>コマ15 のあとは選択制の発展課題（<code>../advanced/README.md</code>）に進む。
+<p>コマ15（<code>final/tests</code> 全通）で実装は完成する。学習経路の完了はコマ16（発表会）だが、
+発表会を待たずに選択制の発展課題（<code>../advanced/README.md</code>）へ進んでよい。
 C 移植・セルフホスト（P1）の進め方は <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/P1_selfhost/README.md"><code>../advanced/P1_selfhost/README.md</code></a> にある。</p>
 
     
@@ -962,7 +966,7 @@ C 移植・セルフホスト（P1）の進め方は <a href="https://github.com
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.1 / source e91296a16ca0e65626706021a66b400e111ae589 / 2026-08-04 13:49 UTC</p>
+  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
 </footer>
 </body>
 </html>
