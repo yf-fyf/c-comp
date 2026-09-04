@@ -24,7 +24,10 @@ $for(header-includes)$$header-includes$$endfor$
 <div class="layout">
   <main class="content" id="main">
     $if(breadcrumb)$<nav class="breadcrumb" aria-label="パンくず">$breadcrumb$</nav>$endif$
-    $if(title)$<h1 class="page-title">$title$</h1>$endif$
+    $if(title)$<div class="page-head">
+      <h1 class="page-title">$title$</h1>
+      $if(site-subtitle)$<p class="page-affil">$site-subtitle$</p>$endif$
+    </div>$endif$
     $if(toc)$
     <nav class="toc" aria-label="このページの目次">
       <p class="toc-head">このページの内容</p>

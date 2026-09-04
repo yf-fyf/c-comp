@@ -410,6 +410,9 @@ def render_home(nav: dict, pages: list[Page], output: Path,
             variables={
                 "base": "",
                 "site-title": nav["title"],
+                # 所属科目は見出しの枠内にだけ出す。render_page へは渡さないので
+                # 上部バー・<title>・フッタ・各コマのページには出ない。
+                "site-subtitle": nav.get("subtitle", ""),
                 "repo-url": nav["repo_url"],
                 "topnav": topnav_html(nav, ""),
                 "breadcrumb": "",

@@ -8,6 +8,8 @@
 # stem が README のものだけは <section slug>/index.html（セクションの入口）になる。
 
 title: 実践・C コンパイラ演習
+# subtitle はトップページの見出しの枠の中にだけ出す（上部バー・<title>・フッタ・各コマのページには出さない）。
+subtitle: 京都橘大学 工学部情報工学科 PBL科目「情報工学実践」
 description: C 言語サブセットのコンパイラを段階的に作る演習教材。RISC-V RV64 を qemu で動かす。
 base_url: https://yf-fyf.github.io/c-comp/
 repo_url: https://github.com/yf-fyf/c-comp
