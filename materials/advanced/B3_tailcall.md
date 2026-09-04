@@ -158,7 +158,7 @@ python3 golden.py    # 深い末尾再帰 + fixed17
 2. **末尾位置の拡張**: `if (c) return f(x); else return f(y);` の両方が
    末尾呼び出しであることは、いまの判定でも扱えている。
    では `return c ? f(x) : g(y);` は？三項演算子は Core にあるので実際に試せる。
-   `is_self_tail_call` を `Cond` の両腕に再帰させる拡張を設計する
+   `is_self_tail_call` を `Cond` の両方の枝に再帰させる拡張を設計する
 3. **fact を末尾再帰に書き換える**: `fact(n)` を累積引数つきの
    `fact_acc(n, acc)` に書き換え、深い階乗が動くことを確かめる
 4. **フレームサイズの計測**: 最適化あり／なしで `sp` がどこまで下がるかを

@@ -5,7 +5,7 @@
 
 (* ── 型 ──
    struct はタグ参照（TyStruct "Node"）で表す。フィールドレイアウトは
-   Struct_env が管理する（サイズ・整列の計算も Struct_env 側）。 *)
+   Struct_env が管理する（サイズ・アラインメントの計算も Struct_env 側）。 *)
 
 type ty =
   | TyInt

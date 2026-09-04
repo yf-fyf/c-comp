@@ -12,6 +12,6 @@ int main() {
     s.x = 3;
     s.y = 4;
     s.p = 0;
-    // x@0 y@4 p@8 なのでサイズは 16（8 バイト整列）
+    // x@0 y@4 p@8 なのでサイズは 16（8 バイトアラインメント）
     return s.x + s.y + sizeof(struct S);
 }

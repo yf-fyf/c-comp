@@ -55,7 +55,7 @@ class Codegen04(prev.Codegen03):
 
     def codegen_Cond(self, node: Node) -> None:
         # TODO: 三項演算子 a ? b : c。if/else と同じ分岐を作り、
-        #       選ばれた腕の値を a0 に残す（式なので値が残るのがポイント）。
+        #       選ばれた枝の値を a0 に残す（式なので値が残るのがポイント）。
         raise NotImplementedError("Cond（三項演算子）を実装してください")
 
     def codegen(self, node: Node) -> None:

@@ -1,4 +1,4 @@
-% コマ6: call 前の16バイト整列 — 一時値が奇数個のときだけ sp が8ずれる
+% コマ6: call 前の16バイトアラインメント — 一時値が奇数個のときだけ sp が8ずれる
 % return n * fact(n - 1); の生成中、sp が16バイト境界のどこに居るかを4場面で追う
 \documentclass[border=8pt]{standalone}
 \input{figure-preamble}
@@ -45,16 +45,16 @@
   % ---- ③ call の直前 ----
   \node[stepttl] at (92mm, 9mm) {③ {\ttfamily call fact} の直前};
   \node[scell, fill=TcAccentLight] (n3) at (92mm, -4mm) {n の値};
-  \node[padcell] (pad3) at (92mm, -12mm) {詰め物 8バイト};
+  \node[padcell] (pad3) at (92mm, -12mm) {調整の 8バイト};
   \node[spmark] (sp3) at (75mm, -16mm) {sp};
   \draw[regptr] (sp3.east) -- (77mm, -16mm);
-  \node[state] at (92mm, -19mm) {{\ttfamily depth = 1}\\詰め物で境界の上へ};
+  \node[state] at (92mm, -19mm) {{\ttfamily depth = 1}\\調整して境界の上へ};
   \node[insn] at (92mm, -31mm) {addi sp, sp, -8\\call fact};
 
   % ---- ④ 戻ってきたあと ----
   \node[stepttl] at (138mm, 9mm) {④ 戻ってきたあと};
   \node[scell, fill=TcAccentLight] (n4) at (138mm, -4mm) {n の値};
-  \node[freecell] (pad4) at (138mm, -12mm) {詰め物は返した};
+  \node[freecell] (pad4) at (138mm, -12mm) {調整分は返した};
   \node[spmark] (sp4) at (121mm, -8mm) {sp};
   \draw[regptr] (sp4.east) -- (123mm, -8mm);
   \node[state] at (138mm, -19mm) {{\ttfamily depth = 1}\\{\ttfamily a1} へ復元して {\ttfamily mul}};
@@ -69,7 +69,7 @@
   \node[gannot, anchor=north, align=center] at (69mm, -52mm)
       {引数の push は {\ttfamily call} の時点では戻し済みなので、ずれを決めるのは
        呼び出しを囲む式が積んだ一時値の個数だけである\\
-       詰め物を入れるのは {\ttfamily call} の前後だけで、同じ幅を戻すため
+       調整を入れるのは {\ttfamily call} の前後だけで、同じ幅を戻すため
        積んである一時値の位置は変わらない};
 \end{tikzpicture}
 \end{document}

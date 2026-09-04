@@ -408,10 +408,10 @@ int main() {
 | | if / else | `?:` |
 |--|-----------|------|
 | 種類 | 文 | 式 |
-| 役割 | 実行する**文**を選ぶ | 選ばれた腕の**値**が式の値になる |
+| 役割 | 実行する**文**を選ぶ | 選ばれた枝の**値**が式の値になる |
 | 書ける場所 | 文の位置 | 式の中（`return` の右、代入の右辺、関数の引数など） |
 
-コード生成はどちらも同じ分岐で書ける。違いは、`?:` では選ばれた腕の
+コード生成はどちらも同じ分岐で書ける。違いは、`?:` では選ばれた枝の
 評価結果が `a0` に残ることだけである。
 
 ```python
@@ -454,7 +454,7 @@ def codegen_Cond(self, node):
 | `gen_stmt_If(node)` | 条件分岐 (`beqz` / `j`) を生成。`else_` も処理する |
 | `gen_stmt_Block(node)` | `stmts` を順に `gen_stmt` する |
 | `codegen_Eq(node)` / `codegen_Ne(node)` / `codegen_Lt(node)` / `codegen_Le(node)` | 比較演算。handler を追加する |
-| `codegen_Cond(node)` | 三項演算子。分岐して選ばれた腕の値を `a0` に残す |
+| `codegen_Cond(node)` | 三項演算子。分岐して選ばれた枝の値を `a0` に残す |
 | （dispatcher 対応） | `codegen` に `'Eq'` `'Ne'` `'Lt'` `'Le'` `'Cond'` の case を追加する |
 
 ## 実装手順
@@ -466,7 +466,7 @@ def codegen_Cond(self, node):
 5. `gen_stmt_Block(node)` を実装する（`node.stmts` を先頭から順に `self.gen_stmt()` する）
 6. `codegen_Eq` / `codegen_Ne` / `codegen_Lt` / `codegen_Le` を実装する（いずれも `self._binary(node.lhs, node.rhs)` の後に `sub`+`seqz` / `sub`+`snez` / `slt a0, a1, a0` / `slt a0, a0, a1`+`xori a0, a0, 1`）
 7. `gen_stmt_If(node)` を実装する（`node.cond` を `codegen` し、`beqz` と `new_label()` で then / else / end の制御フローを作る。`node.else_` が `None` のときは then を抜けた直後に else ラベルだけを置く）
-8. `codegen_Cond(node)` を実装する（`if`/`else` と同じ分岐を作り、選ばれた腕の値を `a0` に残す。文ではなく式なので値が残るのがポイント）
+8. `codegen_Cond(node)` を実装する（`if`/`else` と同じ分岐を作り、選ばれた枝の値を `a0` に残す。文ではなく式なので値が残るのがポイント）
 
 ## tests/
 
@@ -483,7 +483,7 @@ def codegen_Cond(self, node):
 | `if_false.c` | if の条件が偽になる場合 | 手順7 | 対応する `.ans` を参照 |
 | `if_elseif.c` | else if の連なり | 手順7 | 対応する `.ans` を参照 |
 | `nested_if.c` | if の入れ子 | 手順7 | 対応する `.ans` を参照 |
-| `ternary.c` | 三項演算子。選ばれなかった腕も評価してしまう誤実装を検出できるよう、両腕に副作用(代入)を持たせている | 手順8 | 16 |
+| `ternary.c` | 三項演算子。選ばれなかった枝も評価してしまう誤実装を検出できるよう、両方の枝に副作用(代入)を持たせている | 手順8 | 16 |
 | `nested_block.c` | 関数先頭で宣言した変数を `if` の中で使う | 手順7 | 7 |
 | `nested_use.c` | 二重の入れ子ブロックの中での変数の使用 | 手順7 | 7 |
 | `early_return.c` | 複数の return 文（共通エピローグへのジャンプ） | 手順5 | 10 |

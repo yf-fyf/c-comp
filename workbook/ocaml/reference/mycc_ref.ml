@@ -5,7 +5,7 @@
    担保している）。違うのは実装の作りで、こちらは
 
      ast.ml / lexer.mll / parser.mly  構文木と、それを作る字句・構文解析
-     layout.ml   型の大きさ・整列と struct のレイアウト
+     layout.ml   型の大きさ・アラインメントと struct のレイアウト
      strings.ml  文字列リテラルの通し番号
      tast.ml     型と変数の置き場を決め終えた木
      typing.ml   構文木から型付き木を作る（型・変数解決・エラー検出）

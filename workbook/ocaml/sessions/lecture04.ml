@@ -72,7 +72,7 @@ let rec codegen = function
       | Le -> emit "  slt a0, a0, a1"; emit "  xori a0, a0, 1"
       | _ -> error "コマ4で未対応の二項演算です")
   | Cond { cond; then_; else_; _ } ->
-      (* 三項演算子: if/else と同じ分岐で、選ばれた腕の値を a0 に残す *)
+      (* 三項演算子: if/else と同じ分岐で、選ばれた枝の値を a0 に残す *)
       let label_else = new_label () in
       let label_end = new_label () in
       codegen cond;

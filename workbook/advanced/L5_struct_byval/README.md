@@ -5,7 +5,7 @@
 ## 今日のゴール
 
 `int sum(struct Point p)` のように構造体を**値で受け取り**、
-`struct Point make(int x, int y)` のように構造体を**値で返せる**ようにする。
+`struct Point make(int x, int y)` のように構造体を**値で返せる**ようにします。
 
 構造体の値渡し・値返しは `language_spec.md` が構文レベルで禁じている機能です。
 この回で追加する構文と意味論、そして**呼び出し規約そのもの**は

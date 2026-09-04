@@ -50,7 +50,7 @@ gcc -o mycc_stage0 src/mycc.c                          # Stage 0
 ./mycc_stage0 src/mycc.c > stage1.s                    # Stage 1 のアセンブリ
 riscv64-linux-gnu-gcc -x assembler -static stage1.s -o mycc_stage1
 
-qemu-riscv64 ./mycc_stage1 src/mycc.c > stage2.s       # 固定点の確認
+qemu-riscv64 ./mycc_stage1 src/mycc.c > stage2.s       # 不動点の確認
 cmp stage1.s stage2.s && echo "fixpoint OK"
 
 # test_runner には qemu 経由で Stage 1 を起動する短いラッパを渡す
@@ -58,8 +58,8 @@ python3 ../../scaffold/test_runner.py --compiler ./run_stage1.sh --tests ../../f
 ```
 
 セルフホストが正しく達成できたことを確かめる本筋は、**Stage 0 と Stage 1 が同じソース
-（コンパイラ自身）に対して生成するアセンブリのバイト一致（固定点）**を見ることである。
+（コンパイラ自身）に対して生成するアセンブリのバイト一致（不動点）**を見ることである。
 「Stage 1 が生成できた」だけでは証拠にならない。
 
 参考達成条件（必達目標ではない）: `mycc_stage1` の生成成功 + `final/tests`（fixed17）全通 +
-前処理の自前実装が動くこと（さらに固定点比較まで確認できるとよい）。
+前処理の自前実装が動くこと（さらに不動点比較まで確認できるとよい）。

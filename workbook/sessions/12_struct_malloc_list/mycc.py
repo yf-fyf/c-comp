@@ -52,8 +52,8 @@ class Codegen12(prev.Codegen11):
         for sdef in getattr(prog, 'struct_defs', []):
             if sdef.is_forward:
                 continue  # `struct S;` はレイアウトを持たない
-            # 自然整列: 各フィールドは自身の整列へ切り上げ、
-            # struct 全体のサイズは最大フィールド整列の倍数へ切り上げ
+            # 自然アラインメント: 各フィールドは自身のアラインメントへ切り上げ、
+            # struct 全体のサイズは最大フィールドアラインメントの倍数へ切り上げ
             field_map: dict[str, tuple[int, str]] = {}
             offset = 0
             struct_align = 1

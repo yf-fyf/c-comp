@@ -1,7 +1,7 @@
 // コマ4〜6の機能（三項演算・前置増減・一時値を積んだ状態での関数呼び出し）が、
 // 型を導入したコマ8のコンパイラでもそのまま動くことを確かめる。
 // codegen() を全 case 再列挙にすると Cond や PreInc/PreDec が落ち、
-// _push_a0 / _pop_into を定義し直すと call 直前の 16 バイト整列が崩れる。
+// _push_a0 / _pop_into を定義し直すと call 直前の 16 バイトアラインメントが崩れる。
 int add(int a, int b) {
     return a + b;
 }

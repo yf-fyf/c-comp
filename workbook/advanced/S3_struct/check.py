@@ -36,7 +36,7 @@ STRUCTS = {
     # 入れ子(旧: 'a': (0, 'struct Point') 等)はもう書けない。
     'struct Line': {'size': 16, 'align': 8,
                      'fields': {'a': (0, 'struct Point*'), 'b': (8, 'struct Point*')}},
-    # 'struct Small' は参照実装の自然整列では発生しないレイアウト(char の後に
+    # 'struct Small' は参照実装の自然アラインメントでは発生しないレイアウト(char の後に
     # int が続くと本来はパディングが入る)。ここでは端数バイトのコピー
     # (sw + sb)を検査するための合成フィクスチャとして size=5・align=1 のまま維持する。
     'struct Small': {'size': 5, 'align': 1,

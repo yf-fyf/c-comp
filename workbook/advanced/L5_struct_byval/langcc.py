@@ -241,7 +241,7 @@ def patch(cls, mycc, bv):
     def emit_call(self, name, nargs):
         """スタックに積んだ nargs 個の引数を a0〜 に配し、name を呼ぶ(完成済み)。
 
-        mycc の _gen_call の後半と同じ手順。sp の 16 バイト整列もここで面倒を見る。
+        mycc の _gen_call の後半と同じ手順。sp の 16 バイトアラインメントもここで面倒を見る。
         """
         if nargs > MAX_ARGS:
             raise RuntimeError(
