@@ -279,23 +279,39 @@ class Codegen02:
 `gen_func(node)` は関数定義ノードを受け取り、次の hook を順に呼んでアセンブリを出力する。
 
 ```text
-1. _reset_func_state(node)     → 関数状態の初期化（コマ2 では空）
-2. _emit_func_prologue(name)    → プロローグを出力する
-3. _emit_func_body(body)       → main の return 式を codegen() に渡す
-4. _emit_func_epilogue()       → エピローグを出力する
+1. _reset_func_state(node)                → 関数状態の初期化。frame_size を返す（コマ2 では 0）
+2. _emit_func_prologue(name, frame_size)   → プロローグを出力する
+3. _emit_func_body(body)                  → main の return 式を codegen() に渡す
+4. _emit_func_epilogue(frame_size)         → エピローグを出力する
 ```
 
 コマ2 では関数の枠組み（プロローグ・エピローグ）も学習者が実装する。
 後続回では一度作ったこの枠組みが `importlib` による継承で引き継がれる。
 
-この回のプロローグは、最低限のスタックフレームを作るためのものである。
+`frame_size` はローカル変数のために確保する領域のバイト数で、この回は常に `0` である。
+その領域に `ra`/`s0` の保存用16バイトを加えて、スタックフレームを作る。
+プロローグは次の形で出力する。以下の `frame_size` を含む式は説明用の表記であり、
+Pythonで計算した数値をアセンブリへ埋め込む。
 
 ```asm
-addi sp, sp, -16
-sd ra, 8(sp)
-sd s0, 0(sp)
-addi s0, sp, 16
+addi sp, sp, -(frame_size + 16)
+sd ra, frame_size + 8(sp)
+sd s0, frame_size(sp)
+addi s0, sp, frame_size + 16
 ```
+
+エピローグでは、同じ `frame_size` を使って保存した値を復元する。
+
+```asm
+ld s0, frame_size(sp)
+ld ra, frame_size + 8(sp)
+addi sp, sp, frame_size + 16
+ret
+```
+
+例えばプロローグの最初の行は `self.emit(f'  addi sp, sp, -{frame_size + 16}')` と書く。
+この回の出力は `addi sp, sp, -16` になるが、実装では `frame_size` を使う。
+コマ3で変数領域が増えても、プロローグ・エピローグを書き直さずに引き継げるためである。
 
 各レジスタの意味は次の通り。
 
