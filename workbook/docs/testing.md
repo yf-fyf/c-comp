@@ -170,7 +170,8 @@ qemu-riscv64 ./out; echo $?
 | 症状 | よくある原因 | 見るところ |
 |------|-------------|-----------|
 | `FAIL: compile — NotImplementedError: …` | その回の TODO が残っている | メッセージが指す関数を実装する。全文が要るなら `python3 sessions/NN_xxx/mycc.py <入力.c>` を直接実行する |
-| `FAIL: assemble — …` | 出力したアセンブリが構文として通らない | 生成結果をファイルに保存して該当行を見る（`python3 … > out.s`） |
+| `FAIL: assemble — …` | アセンブルまたはリンクの失敗 | 生成結果を保存し（`python3 … > out.s`）、`riscv64-linux-gnu-gcc -x assembler -static out.s -o out` を実行してエラー全文を見る |
+| `undefined reference to .LC…`（未定義の文字列ラベル） | 文字列収集の走査漏れ | `collect_strings_expr` の分岐とハンドラを見る。三項演算子や前置 `++`/`--` の内側も走査し、参照したラベルを `.data` に出しているか |
 | `Illegal instruction` / `Bus error` | スタックアラインメント違反（16バイト境界） | `align_to(n, 16)` を通しているか。`call` 直前の `sp` も対象で、そのとき積んでいる一時値が奇数個ならずれている（[`rv64_reference.md`](./rv64_reference.md)） |
 | 終了コードが 0 になる | `return` の値が `a0` に残っていない | 最後の `codegen()` のあとで `a0` を上書きしていないか |
 | 期待値と 256 ずれる | 終了コードは 0〜255 | テスト側の期待値を見直す |

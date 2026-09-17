@@ -314,8 +314,10 @@ class Codegen12(prev.Codegen11):
                 self.collect_strings_expr_Str(node)
             case 'Num' | 'Var' | 'SizeofType':
                 pass
-            case 'Neg':
+            case 'Neg' | 'PreInc' | 'PreDec':
                 self.collect_strings_expr_Neg(node)
+            case 'Cond':
+                self.collect_strings_expr_Cond(node)
             case 'Addr':
                 self.collect_strings_expr_Addr(node)
             case 'Deref':

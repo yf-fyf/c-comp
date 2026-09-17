@@ -31,3 +31,6 @@
 ```bash
 python3 scaffold/test_runner.py sessions/12_struct_malloc_list
 ```
+
+`str_cond_incdec.c` は、コマ11で実装した文字列収集がこの回でも働くことを確認します。
+三項演算子・前置 `++`/`--` の内側にある文字列も対象です。
