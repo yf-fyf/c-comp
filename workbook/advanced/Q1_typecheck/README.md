@@ -35,10 +35,13 @@ python3 checkcc.py ../../final/tests/f09_recur.c     # 検査してからコン�
 
 ```bash
 python3 check.py     # エラーコーパス(`tests/*.c` と `*.expected` の一致)
-python3 golden.py    # 正常系(講義のテスト入力101本で誤検出ゼロ)
+python3 golden.py    # 正常系(講義のテスト入力で誤検出ゼロ)
 ```
 
 `check.py` を全 PASS にしてから `golden.py` を回します。
+`golden.py` は検査件数と除外件数を表示します。複数ファイルの入力やscaffoldが受理しない入力は、
+理由を示して除外します。`typecheck.py` の検査中に例外が起きた場合や、検査できた入力が0件の
+場合はFAILです。未実装のSKIPも未達なので、原因を直してからもう一度実行します。
 
 土台のコンパイラを差し替えたいときは環境変数 `CHECKCC_COMPILER` を設定します
 （命名規則は [`../README.md`](../README.md) の「環境変数の名前」を参照）。
