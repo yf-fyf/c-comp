@@ -91,6 +91,17 @@ python3 scaffold/test_runner.py
 python3 scaffold/test_runner.py --compiler final/mycc.py --tests final/tests
 ```
 
+過去の回のテストで統合後の実装を確認するときも、コンパイラとテストを分けて指定する。
+例えば、コマ11の文字列収集・libcのテストを `final/mycc.py` に掛けるには次を使う。
+
+```bash
+python3 scaffold/test_runner.py \
+  --compiler final/mycc.py \
+  --tests sessions/11_expr_walk_libc/tests
+```
+
+`sessions/11_expr_walk_libc` だけを渡すと、統合前のコマ11の実装が選ばれる。
+
 ## final/tests の位置づけ
 
 `final/tests/` には、標準トラック到達の参考指標となる17本のテストが入っている。

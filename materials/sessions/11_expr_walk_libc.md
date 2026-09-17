@@ -286,8 +286,13 @@ python3 scaffold/test_runner.py sessions/11_expr_walk_libc
 `Codegen11` はコマ10 の実装を継承しているので、両方が通って初めて走査が完成したと言える。
 
 ```bash
-python3 scaffold/test_runner.py sessions/10_strings_data_section
+python3 scaffold/test_runner.py \
+  --compiler sessions/11_expr_walk_libc/mycc.py \
+  --tests sessions/10_strings_data_section/tests
 ```
+
+`--compiler` には確認したいコマ11の実装、`--tests` にはコマ10の入力を指定する。
+`sessions/10_strings_data_section` だけを渡すとコマ10の実装が選ばれ、コマ11の回帰確認にならない。
 
 個別に動かす場合は、次のようにする。
 
