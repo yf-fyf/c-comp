@@ -568,6 +568,11 @@
     "source": "// sizeof(void *) — void * の導入はコマ12（feature map）。翻訳時定数として正しいサイズが出るか確認する。\nint main() {\n    if (sizeof(void *) != 8) {\n        return 1;\n    }\n    return 8;\n}\n"
    },
    {
+    "label": "str_cond_incdec.c",
+    "path": "sessions/12_struct_malloc_list/tests/str_cond_incdec.c",
+    "source": "// コマ11からの回帰: 条件式と前置 ++/-- の内側にある文字列も収集する。\n#include \"lib.h\"\n\nint main() {\n    int n;\n    int *p;\n\n    n = 1;\n    p = &n;\n    printf(n < 2 ? \"then\\n\" : \"else\\n\");\n\n    ++p[\"x\"[0] - 'x'];\n    printf(n < 2 ? \"small\\n\" : \"big\\n\");\n    --p[\"y\"[0] - 'y'];\n    return n;\n}\n"
+   },
+   {
     "label": "struct_text_in_comment_string.c",
     "path": "sessions/12_struct_malloc_list/tests/struct_text_in_comment_string.c",
     "source": "// コメントや文字列リテラルの中の struct 風テキストを定義と誤認しないこと。\nstruct T {\n    int a;\n    int b;\n};\n\n// 下の 2 つは「定義」ではない。誤認すると struct T のレイアウトが壊れる。\n// struct T { char c; };\n\nint main() {\n    char *msg;\n    struct T t;\n    msg = \"struct T { char c; };\";\n    t.a = 1;\n    t.b = 2;\n    // sizeof(struct T) は 8。msg[0] は 's'（115）。\n    return sizeof(struct T) + t.a + t.b + msg[0];\n}\n"

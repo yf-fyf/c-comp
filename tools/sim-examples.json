@@ -872,6 +872,14 @@
   "gated": true
  },
  {
+  "label": "sessions/12_struct_malloc_list/tests/str_cond_incdec.c",
+  "group": "参照実装の出力（解答例）",
+  "description": "12_struct_malloc_list / str_cond_incdec.c",
+  "note": "",
+  "source": "# sessions/12_struct_malloc_list/tests/str_cond_incdec.c を参照実装（OCaml 版 lecture15）でコンパイルした結果\n  .data\n.LC5:\n  .byte 98\n  .byte 105\n  .byte 103\n  .byte 10\n  .byte 0\n.LC4:\n  .byte 115\n  .byte 109\n  .byte 97\n  .byte 108\n  .byte 108\n  .byte 10\n  .byte 0\n.LC2:\n  .byte 101\n  .byte 108\n  .byte 115\n  .byte 101\n  .byte 10\n  .byte 0\n.LC6:\n  .byte 121\n  .byte 0\n.LC3:\n  .byte 120\n  .byte 0\n.LC1:\n  .byte 116\n  .byte 104\n  .byte 101\n  .byte 110\n  .byte 10\n  .byte 0\n  .text\n  .globl main\nmain:\n  addi sp, sp, -32\n  sd ra, 24(sp)\n  sd s0, 16(sp)\n  addi s0, sp, 32\n  addi a0, s0, -24\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  li a0, 1\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  sw a0, 0(a1)\n  addi a0, s0, -32\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  addi a0, s0, -24\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  sd a0, 0(a1)\n  addi a0, s0, -24\n  lw a0, 0(a0)\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  li a0, 2\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  slt a0, a1, a0\n  beqz a0, .L2\n  la a0, .LC1\n  j .L3\n.L2:\n  la a0, .LC2\n.L3:\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  ld a0, 0(sp)\n  addi sp, sp, 8\n  call printf\n  addi a0, s0, -32\n  ld a0, 0(a0)\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  la a0, .LC3\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  li a0, 0\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  add a0, a1, a0\n  lb a0, 0(a0)\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  li a0, 120\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  sub a0, a1, a0\n  li a1, 4\n  mul a0, a0, a1\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  add a0, a1, a0\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  lw a0, 0(a0)\n  addi a0, a0, 1\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  sw a0, 0(a1)\n  addi a0, s0, -24\n  lw a0, 0(a0)\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  li a0, 2\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  slt a0, a1, a0\n  beqz a0, .L4\n  la a0, .LC4\n  j .L5\n.L4:\n  la a0, .LC5\n.L5:\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  ld a0, 0(sp)\n  addi sp, sp, 8\n  call printf\n  addi a0, s0, -32\n  ld a0, 0(a0)\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  la a0, .LC6\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  li a0, 0\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  add a0, a1, a0\n  lb a0, 0(a0)\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  li a0, 121\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  sub a0, a1, a0\n  li a1, 4\n  mul a0, a0, a1\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  add a0, a1, a0\n  addi sp, sp, -8\n  sd a0, 0(sp)\n  lw a0, 0(a0)\n  addi a0, a0, -1\n  ld a1, 0(sp)\n  addi sp, sp, 8\n  sw a0, 0(a1)\n  addi a0, s0, -24\n  lw a0, 0(a0)\n  j .L1\n.L1:\n  ld s0, 16(sp)\n  ld ra, 24(sp)\n  addi sp, sp, 32\n  ret\n",
+  "gated": true
+ },
+ {
   "label": "sessions/12_struct_malloc_list/tests/struct_text_in_comment_string.c",
   "group": "参照実装の出力（解答例）",
   "description": "12_struct_malloc_list / struct_text_in_comment_string.c",

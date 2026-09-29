@@ -226,65 +226,70 @@ stat_lib.c</code></pre>
 </tr>
 <tr class="even">
 <td><code>FAIL: assemble — …</code></td>
-<td>出力したアセンブリが構文として通らない</td>
-<td>生成結果をファイルに保存して該当行を見る（<code>python3 … &gt; out.s</code>）</td>
+<td>アセンブルまたはリンクの失敗</td>
+<td>生成結果を保存し（<code>python3 … &gt; out.s</code>）、<code>riscv64-linux-gnu-gcc -x assembler -static out.s -o out</code> を実行してエラー全文を見る</td>
 </tr>
 <tr class="odd">
+<td><code>undefined reference to .LC…</code>（未定義の文字列ラベル）</td>
+<td>文字列収集の走査漏れ</td>
+<td><code>collect_strings_expr</code> の分岐とハンドラを見る。三項演算子や前置 <code>++</code>/<code>--</code> の内側も走査し、参照したラベルを <code>.data</code> に出しているか</td>
+</tr>
+<tr class="even">
 <td><code>Illegal instruction</code> / <code>Bus error</code></td>
 <td>スタックアラインメント違反（16バイト境界）</td>
 <td><code>align_to(n, 16)</code> を通しているか。<code>call</code> 直前の <code>sp</code> も対象で、そのとき積んでいる一時値が奇数個ならずれている（<a href="../../docs/rv64_reference/"><code>rv64_reference.md</code></a>）</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>終了コードが 0 になる</td>
 <td><code>return</code> の値が <code>a0</code> に残っていない</td>
 <td>最後の <code>codegen()</code> のあとで <code>a0</code> を上書きしていないか</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>期待値と 256 ずれる</td>
 <td>終了コードは 0〜255</td>
 <td>テスト側の期待値を見直す</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>関数から戻ると壊れる</td>
 <td><code>ra</code> / <code>s0</code> の退避漏れ、フレームサイズの計算違い</td>
 <td>プロローグとエピローグが対称か</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>再帰の途中で壊れる</td>
 <td>引数の退避漏れ（<code>a0</code>–<code>a7</code> は caller-saved）</td>
 <td>再帰呼び出しの前後で引数を保存しているか</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>ポインタ経由の代入が効かない</td>
 <td><code>codegen()</code> と <code>codegen_lval()</code> の混同</td>
 <td><code>*p = v;</code> の左辺は <code>codegen_lval()</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>配列の添字がずれる</td>
 <td>ポインタ演算で要素サイズを掛けていない</td>
 <td><code>size_of_ty_str()</code> / <code>elem_ty_str()</code> を通しているか</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>未定義変数で黙って動く</td>
 <td>シンボルテーブルの探索順序</td>
 <td><code>_locals</code> → <code>_globals</code> の順に引いているか</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>AttributeError: … has no attribute '_continue_stack'</code> / <code>'_align_to'</code> / <code>'align_to'</code></td>
 <td>2026-08-01 より前に取得したファイルと後のファイルが混ざっている</td>
 <td>回ごとのスケルトンは前の回を継承するので、一部だけ差し替えると壊れる。取得時期の違うファイルを混ぜず、まとめて取り直す（移行手順は担当教員から受け取る）</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>最適化をかけたのに命令数が変わらない（発展課題）</td>
 <td>環境変数が旧名のままで黙って無視されている</td>
 <td><a href="../../advanced/#環境変数の名前">発展課題の「環境変数の名前」</a>の規則と突き合わせる</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>AST の構造が分からない（優先順位・結合の向き）</td>
 <td>目視では判断しづらい</td>
 <td><a href="../../tools/app.html?mode=build">AST ビジュアライザ</a> にソースを貼って構文木と S 式を確認する</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>生成されたアセンブリの動きを目で追いたい</td>
 <td>静的に読むだけでは1命令ごとのレジスタ・スタックの変化が分からない</td>
 <td><a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> にアセンブリを貼って1命令ずつ実行する</td>
@@ -324,7 +329,7 @@ stat_lib.c</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
+  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
 </footer>
 </body>
 </html>

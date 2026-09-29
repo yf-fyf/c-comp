@@ -330,7 +330,7 @@ EBNF の注釈「lvalue 制約は意味解析フェーズで検査」（F2 で�
 <ol type="1">
 <li><strong>エラーコーパス</strong>（<code>check.py</code>）: <code>tests/*.c</code> を検査し、報告内容が <code>tests/*.expected</code> と
 一致するか（行番号とメッセージまで一致させる）</li>
-<li><strong>正常系</strong>（<code>golden.py</code>）: 講義のテスト入力（101ファイル。<code>sessions/*/tests/*.c</code> と
+<li><strong>正常系</strong>（<code>golden.py</code>）: 講義のテスト入力（<code>sessions/*/tests/*.c</code> と
 <a href="../../advanced/#fixed17"><code>fixed17</code></a>）を検査し、<strong>1件も誤検出しない</strong>こと</li>
 </ol>
 <p>2番目が重要である。検査は厳しすぎても使えない。
@@ -338,6 +338,9 @@ EBNF の注釈「lvalue 制約は意味解析フェーズで検査」（F2 で�
 これは他のトピックの <code>golden.py</code> と同じ役割 — 自分の追加が
 既にあるものを壊していないことの確認 — なので、<code>golden.py</code> に置いてある。
 先に <code>check.py</code> を全 PASS にしてから <code>golden.py</code> を回すこと。</p>
+<p><code>golden.py</code> は検査件数と除外件数を表示する。複数ファイルの入力やscaffoldが受理しない入力は、
+理由を示して除外する。これとは別に、<code>typecheck.py</code> の検査中に起きた例外はFAILとする。
+検査できた入力が0件の場合もFAILであり、未実装によるSKIPも完了を意味しない。</p>
 <h2 id="発展課題">発展課題</h2>
 <ol type="1">
 <li><strong>型の不一致を見つける</strong>: <code>int</code> に <code>int *</code> を代入している箇所を報告する。
@@ -378,7 +381,7 @@ C の型検査は緩い（<code>int</code> と ポインタの混同を警告止
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.2 / source 88afc5e0a16dfd4847bc6a6366d89b7216676ef0 / 2026-09-04 09:29 UTC</p>
+  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
 </footer>
 </body>
 </html>
