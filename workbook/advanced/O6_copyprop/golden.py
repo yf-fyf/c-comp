@@ -138,7 +138,7 @@ def main():
     if with_ra >= ra_only:
         print()
         print("割り当て後に減っていない。copy_prop_block が伝播できているか確認する。")
-        print("  python3 ../optcc.py --regalloc --passes isel,copyprop "
+        print("  python3 ../optcc.py --regalloc --passes copyprop "
               "../O1_measure/bench/loop_sum.c | grep 'add a0'")
         return 1
     return 0
