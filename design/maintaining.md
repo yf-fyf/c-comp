@@ -31,7 +31,8 @@
 │   ├── style.css          # 配色は latex/figure-preamble.tex と揃える
 │   ├── lightbox.js        # 図の拡大表示
 │   ├── grammar.js         # 文法への直接リンク・印刷時の全文表示
-│   └── navigation.js      # 固定ヘッダーの高さに合わせたページ内移動
+│   ├── navigation.js      # 固定ヘッダーの高さに合わせたページ内移動
+│   └── overflow.js        # コード・表・文法の横スクロール案内とキーボードの移動先
 ├── latex/                 # 図の共通プリアンブル（figure-preamble.tex のみ）
 ├── tools/                 # サイト・図・公開物・ウェブアプリの生成スクリプト
 ├── web/                   # 補助ウェブアプリ（企画: design/webapps.md、構成: web/README.md）
@@ -184,7 +185,7 @@ CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make ch
 | 変えたもの | 作り直す範囲 |
 |------------|--------------|
 | 原稿 `.md` 1本 | そのページだけ。通常回01〜13では次の回の文法差分も更新（先頭 H1 を変えた場合は全ページ） |
-| `site/style.css`・`site/lightbox.js`・`site/grammar.js`・`site/navigation.js` | 静的ファイルのコピーのみ |
+| `site/style.css`・`site/lightbox.js`・`site/grammar.js`・`site/navigation.js`・`site/overflow.js` | 静的ファイルのコピーのみ |
 | `site/template.html`・`site/boxes.lua`・`site/nav.yaml` | 全ページ |
 
 通常回01〜14の文法欄は、原稿のEBNFを正として`tools/grammar_snapshots.py`で前回と比較する。
@@ -199,6 +200,10 @@ CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make ch
 動きを抑えるブラウザ設定ではスムーズスクロールを使わない。
 構文色は`site/style.css`で管理し、PandocのテーマCSSより後に読むことで上書きを揃える。
 本文・図で共有する紫の基調色は維持し、コードと補助文字の色を読みやすく整える。
+コードと表は内容を保ったスクロール容器に入れ、横に続く場合だけ案内とキーボードの移動先を有効にする。
+表の列幅は原稿の区切り線から推定された比率を使わず、セルの内容から決める。列の整列とセルの結合は保つ。
+画面ではコードの行と表内のコードを途中で折り返さず、印刷時だけ紙面内で折り返す。
+図の下の「図を拡大」はJSで追加し、図クリック・Enter/Spaceも使える。閉じると操作元へフォーカスを戻す。
 
 `web/app/dist/` があれば `/tools/` として一緒に配信するので、
 ヘッダの「補助ツール」からの導線もローカルで確認できる。無い場合は `make web` で作る。

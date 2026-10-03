@@ -4,6 +4,7 @@ from html.parser import HTMLParser
 import io
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -63,6 +64,43 @@ class NavigationProbe(HTMLParser):
             self.code.append(data)
 
 
+class ContentProbe(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.panes = []
+        self.programs = []
+        self.tables = []
+        self.in_pre = False
+        self.in_cell = False
+
+    def handle_starttag(self, tag, attributes):
+        attrs = dict(attributes)
+        if "scroll-pane" in attrs.get("class", "").split():
+            self.panes.append(attrs)
+        if tag == "pre":
+            self.programs.append("")
+            self.in_pre = True
+        if tag == "table":
+            self.tables.append([])
+        if tag == "tr":
+            self.tables[-1].append([])
+        if tag in {"th", "td"}:
+            self.tables[-1][-1].append({"tag": tag, "style": attrs.get("style"), "text": ""})
+            self.in_cell = True
+
+    def handle_endtag(self, tag):
+        if tag == "pre":
+            self.in_pre = False
+        if tag in {"th", "td"}:
+            self.in_cell = False
+
+    def handle_data(self, data):
+        if self.in_pre:
+            self.programs[-1] += data
+        if self.in_cell:
+            self.tables[-1][-1][-1]["text"] += data
+
+
 @unittest.skipUnless(shutil.which("pandoc"), "Pandoc is required for generated HTML checks")
 class SitePresentationTest(unittest.TestCase):
     def setUp(self):
@@ -114,6 +152,41 @@ class SitePresentationTest(unittest.TestCase):
         self.assertEqual(probe.links, ["#first", "#second"])
         self.assertLess(html.index("</style>"), html.index('href="assets/style.css"'))
         self.assertIn('src="assets/navigation.js"', html)
+
+    def test_scroll_panes_preserve_programs_cells_and_column_alignment(self):
+        source = self.output / "scrolling.md"
+        programs = ['print("literal < & >")\n  # keep indentation',
+                    '  add a0, a1, a2', 'quotes: "x" and \'y\'', '  unlabelled']
+        blocks = ["```" + lang + "\n" + code + "\n```"
+                  for lang, code in zip(["python", "asm", "text", ""], programs)]
+        source.write_text("# Scrolling\n\n" + "\n\n".join(blocks)
+                          + "\n\n| Number | Code | Description |\n"
+                          + "| ---: | :---: | :--- |\n"
+                          + '| 1 | `x < 2 && y > 3` | literal < & > |\n', encoding="utf-8")
+        destination = self.output / "scrolling.html"
+        build_site.run_pandoc(source, destination, variables={"base": ""}, metadata={})
+        actual = ContentProbe()
+        actual.feed(destination.read_text())
+        original = ContentProbe()
+        original.feed(subprocess.check_output(["pandoc", str(source), "-t", "html5"], text=True))
+        self.assertEqual(actual.programs, programs)
+        self.assertEqual(actual.tables, original.tables)
+        self.assertEqual(len(actual.panes), 5)
+        self.assertTrue(all(pane.get("tabindex") == "0" and pane.get("aria-label")
+                            for pane in actual.panes))
+        self.assertIn('src="assets/overflow.js"', destination.read_text())
+
+    def test_grammar_table_keeps_operator_text_and_change_labels_with_scroll_pane(self):
+        page = next(p for p in self.pages if p.slug == "13_globals_scope")
+        html, probe = self.render(page)
+        content = ContentProbe()
+        content.feed(html)
+        precedence = next(table for table in content.tables
+                          if table[0][0]["text"] == "優先順位")
+        self.assertEqual([c["text"] for c in precedence[-1]], ["6 追加", "||", "左"])
+        self.assertRegex(html, r'<tr\b[^>]*\bgrammar-added\b')
+        self.assertEqual(len(probe.ids), len(set(probe.ids)))
+        self.assertTrue(any("table-scroll" in p.get("class", "") for p in content.panes))
 
 
 if __name__ == "__main__":

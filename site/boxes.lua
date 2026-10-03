@@ -98,18 +98,23 @@ end
 
 function CodeBlock(el)
   local lang = el.classes[1]
-  if not lang then return nil end
-  if no_highlight[lang] then
+  if lang and no_highlight[lang] then
     el.attributes["data-lang"] = lang
     el.classes = pandoc.List({})
-    return el
-  end
-  el.attributes["data-lang"] = lang
-  local alias = lang_alias[lang]
-  if alias then
-    el.classes[1] = alias
+  elseif lang then
+    el.attributes["data-lang"] = lang
+    local alias = lang_alias[lang]
+    if alias then el.classes[1] = alias end
   end
   return el
+end
+
+local function scrollable_code(el)
+  local pane = pandoc.Div({el}, {
+    class = "code-scroll scroll-pane", tabindex = "0", role = "region",
+    ["aria-label"] = "コード（左右にスクロールできます）",
+  })
+  return pandoc.Div({pane}, {class = "code-example scroll-frame"})
 end
 
 function Image(el)
@@ -121,9 +126,16 @@ function Image(el)
 end
 
 function Table(el)
-  -- 狭い画面では列が潰れて読めなくなる。横スクロールできる容器で包む。
-  -- 包むだけでは table の width:100% が効いて縮むので、幅は CSS 側で与える。
-  return pandoc.Div({ el }, { class = "table-scroll" })
+  -- Markdownの区切り線の長さから推定された割合を外し、内容から列幅を決める。
+  -- セルの配置・結合・列の整列は保つ。
+  local columns = {}
+  for _, spec in ipairs(el.colspecs) do columns[#columns + 1] = {spec[1]} end
+  el.colspecs = columns
+  local pane = pandoc.Div({el}, {
+    class = "table-scroll scroll-pane", tabindex = "0", role = "region",
+    ["aria-label"] = "表（左右にスクロールできます）",
+  })
+  return pandoc.Div({pane}, {class = "table-example scroll-frame"})
 end
 
 function Link(el)
@@ -253,4 +265,5 @@ return {
   { Meta = Meta },
   { Div = Div, CodeBlock = CodeBlock, Image = Image, Link = Link, Table = Table },
   { Pandoc = Pandoc },
+  { CodeBlock = scrollable_code },
 }
