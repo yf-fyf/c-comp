@@ -74,14 +74,38 @@ Windows 側のファイルではなく、Ubuntu のホームディレクトリ�
 
 ## 2. 演習環境を用意する
 
+### 配布物と作業場所を確認する
+
+ここからは、入手・展開済みの配布物 `workbook/` を使う。
+まだ配布物が手元に無い場合は、教員から案内された入手先を確認する。
+ターミナルで配布物の親ディレクトリへ移動し、次を実行する
+（WindowsではWSLのUbuntu、macOS・Linuxではホストのターミナルを使う）。
+
+```bash
+cd workbook
+ls sessions/00_setup/hello.s docker/rv64/run.sh
+```
+
+2つのファイルが表示されれば作業場所は正しい。
+以降のコマンドは、この `workbook/` から実行する。
+Dockerコンテナ内では同じディレクトリが `/work` として見える。
+
 **推奨は Docker** である。RV64 クロスコンパイラと qemu が入った環境が用意してある
 （Ubuntu 22.04 ベースなので、コンテナ内の `python3` は 3.10 を満たす）。
 
 ### Docker 自体を入れる
 
-Docker がまだ無い場合、Ubuntu（WSL の中でも同じ）で次を実行する。
+macOSでは、[Docker公式のインストール手順](https://docs.docker.com/desktop/setup/install/mac-install/)
+から、Apple silicon／Intelのどちらか自分のMacに合うDocker Desktopを入れる。
+`Docker.dmg`を開いてDockerをApplicationsへ移し、ApplicationsからDockerを起動する。
+初回の案内に従って起動を完了したら、ホストのターミナルで `docker ps` を実行する。
+コンテナ一覧が表示されれば準備完了である（何も起動していなければ見出しだけでよい）。
+
+Ubuntu（WSL の中でも同じ）では、Docker がまだ無い場合に次を実行する。
 
 ```bash
+sudo apt update
+sudo apt install -y curl
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 ```
@@ -94,8 +118,9 @@ sudo usermod -aG docker $USER
 # コンテナ起動（初回はイメージをビルド）
 bash docker/rv64/run.sh
 
-# 1コマンドだけ実行する
-bash docker/rv64/run.sh python3 sessions/00_setup/check.py
+# 完成済みの命令例で実行環境だけを確認する（1回のコンテナ起動でコンパイルと実行）
+bash docker/rv64/run.sh sh -c 'riscv64-linux-gnu-gcc -static sessions/00_setup/tests/sub.s -o /tmp/rv64_smoke && qemu-riscv64 /tmp/rv64_smoke'
+echo $?   # → 42
 ```
 
 後の回でテストをまとめて走らせるときも、同じ形で使う。
@@ -118,7 +143,8 @@ sudo apt install gcc-riscv64-linux-gnu qemu-user python3
 
 ### Step 1: hello.s を書く
 
-配布される `hello.s` は終了コード `0` を返す未完成starterである。`0` を `42` に変更して、以下の内容にする。
+配布される `sessions/00_setup/hello.s` は終了コード `0` を返す未完成starterである。
+このファイルの `0` を `42` に変更して、以下の内容にする。
 
 ```asm
     .global main
@@ -129,8 +155,12 @@ main:
 
 ### Step 2: コンパイルして実行
 
+Dockerを使っている場合は、ホストの `workbook/` から
+`bash docker/rv64/run.sh` でコンテナのシェルを開く。
+次のコマンドはコンテナ内の `/work`、またはネイティブ環境の `workbook/` から実行する。
+
 ```bash
-riscv64-linux-gnu-gcc -static hello.s -o hello
+riscv64-linux-gnu-gcc -static sessions/00_setup/hello.s -o hello
 qemu-riscv64 ./hello
 echo $?   # → 42
 ```
@@ -144,9 +174,15 @@ echo $?   # → 42
 
 ### Step 3: 確認スクリプト
 
+Step 2と同じシェルで実行する。
+
 ```bash
 python3 sessions/00_setup/check.py
 ```
+
+`[PASS]` が3件表示され、`echo $?` が `0` になればコマ0は完了である。
+編集前のstarterでは `hello.s` だけが `[FAIL]` となり、終了コードは `1` になる。
+完成済みの追加例2件が通っていれば、これを環境故障と取り違えないこと。
 
 ### Step 4: もっと複雑な計算
 
@@ -155,13 +191,13 @@ python3 sessions/00_setup/check.py
 
 ## 編集するファイル
 
-- `hello.s`
+- `sessions/00_setup/hello.s`（`workbook/` からの相対パス）
 
 最初に `addi a0, zero, 0` を終了コード `42` を返す命令へ変更する。
 
 ## tests/
 
-編集対象はトップレベルの `hello.s` であり、`check.py` はこれを直接検査する。
+編集対象は `sessions/00_setup/hello.s` であり、`check.py` はこれを直接検査する。
 `tests/hello.s` は `hello.s` の完成形の参照であり、`check.py` の検査対象には含まれない
 （同名だが別ファイルである点に注意）。
 
@@ -190,6 +226,8 @@ echo $?
 ```
 
 終了コードが `42` になれば成功である。
+
+全3件の確認が済んだら、[コマ1: ASTの仕組みとインタープリーター](01_interpreter.md)へ進む。
 
 ## 注意
 

@@ -19,6 +19,10 @@ qemu 上で手書き RV64 アセンブリを実行して終了コード `42` を
 
 ## 必要なもの
 
+配布物の親ディレクトリから `cd workbook` で移動し、
+`ls sessions/00_setup/hello.s docker/rv64/run.sh` で作業場所を確認する。
+以降のコマンドは `workbook/` から実行する。
+
 - **Python 3.10 以降**（`match` 文、`str | None` のような合併型注釈を使う）。
   Docker 環境・ネイティブ実行のどちらでも必要になる基準である
 - RV64 クロスコンパイラ `riscv64-linux-gnu-gcc`
@@ -28,9 +32,15 @@ qemu 上で手書き RV64 アセンブリを実行して終了コード `42` を
 WSL の導入手順を含む詳しい説明は上記の資料サイトにある。
 
 推奨は Docker で、上の3つが入った環境が用意してある（`workbook/` から実行する）。
-Docker がまだ無い場合、Ubuntu（WSL の中でも同じ）で次を実行して入れる。
+macOSでは、[Docker公式の手順](https://docs.docker.com/desktop/setup/install/mac-install/)
+に従い自分のMacに合うDocker Desktopを入れて起動する。
+ホストのターミナルで `docker ps` がコンテナ一覧を表示すれば準備完了である。
+
+Ubuntu（WSL の中でも同じ）では、Docker がまだ無い場合に次を実行して入れる。
 
 ```bash
+sudo apt update
+sudo apt install -y curl
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 ```
@@ -41,8 +51,9 @@ sudo usermod -aG docker $USER
 # コンテナ起動（初回はイメージをビルド）
 bash docker/rv64/run.sh
 
-# 1コマンドだけ実行する
-bash docker/rv64/run.sh python3 sessions/00_setup/check.py
+# 完成済みの命令例で実行環境だけを確認する
+bash docker/rv64/run.sh sh -c 'riscv64-linux-gnu-gcc -static sessions/00_setup/tests/sub.s -o /tmp/rv64_smoke && qemu-riscv64 /tmp/rv64_smoke'
+echo $?   # → 42
 ```
 
 ネイティブ実行も許可する。Ubuntu なら次で入る。
@@ -71,9 +82,14 @@ sudo apt install gcc-riscv64-linux-gnu qemu-user python3
 python3 sessions/00_setup/check.py
 ```
 
-このコマンドは、編集した `hello.s` と完成済みの追加例2件をまとめて確認する。
+Dockerを使う場合は、上のコマンドを `bash docker/rv64/run.sh` で開いたシェルから実行するか、
+ホストから `bash docker/rv64/run.sh python3 sessions/00_setup/check.py` と指定する。
 
-手動で確認する場合:
+このコマンドは、編集した `hello.s` と完成済みの追加例2件をまとめて確認する。
+`[PASS]` が3件表示され、終了コードが `0` になればこの回は完了である。
+編集前のstarterでは `hello.s` だけが `[FAIL]` となり、終了コードは `1` になる。
+
+手動で確認する場合（Dockerではコンテナ内の `/work`、ネイティブでは `workbook/` から）:
 
 ```bash
 riscv64-linux-gnu-gcc -static sessions/00_setup/hello.s -o /tmp/hello_rv64
@@ -82,3 +98,5 @@ echo $?
 ```
 
 `42` が表示されれば成功。
+
+全3件の確認が済んだら、[コマ1のREADME](../01_interpreter/README.md)へ進む。
