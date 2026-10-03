@@ -2,6 +2,9 @@
 // スキーマを二重管理しない代わりに、代表入力でキーと型を全数チェックする。
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
+import { assemble } from "../src/sim/assembler";
+import { Machine, runToEnd } from "../src/sim/machine";
 import type { AstNode, CompileResult, ParseResult, TextResult, Token } from "../src/types";
 
 interface CoreApi {
@@ -94,6 +97,23 @@ int main() {
 `;
 
 describe("myccCore", () => {
+  it.each([
+    "09_pointer_arith/call_ptr_arith",
+    "10_strings_data_section/call_char_ptr",
+    "12_struct_malloc_list/call_struct_ptr",
+  ])("呼出し結果の型が実行結果まで伝わる: %s", (testCase) => {
+    const [session, name] = testCase.split("/");
+    const base = `../../../workbook/sessions/${session}/tests/${name}`;
+    const source = readFileSync(new URL(`${base}.c`, import.meta.url), "utf8");
+    const expected = Number(readFileSync(new URL(`${base}.ans`, import.meta.url), "utf8"));
+    const result = JSON.parse(core.compile(source, false)) as CompileResult;
+    expect(result.ok, JSON.stringify(result.errors)).toBe(true);
+    const machine = new Machine(assemble(result.text!));
+    runToEnd(machine, 5000);
+    expect(machine.halted).toBe(true);
+    expect(machine.exitCode).toBe(expected);
+    expect(machine.warnings).toEqual([]);
+  });
   it("構文エラーでも前処理後の行をソース行へ対応づけられる", () => {
     for (const prefix of ["", '#include "lib.h"\n']) {
       const source = prefix + "int main() {\n return 1 + ;\n}\n";

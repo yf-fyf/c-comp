@@ -260,6 +260,7 @@ class Codegen13(prev.Codegen12):
         raise NotImplementedError("emit_bss_section を実装してください")
 
     def gen_program(self, prog: list[Node]) -> None:
+        self.collect_function_returns(prog)
         # TODO: data/bss/text を順に出力し、FuncDef だけ gen_func() する。
         raise NotImplementedError("gen_program を実装してください")
 

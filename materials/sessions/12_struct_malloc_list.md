@@ -650,6 +650,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 |----------|------|--------|
 | `dot_access.c` | `p.x`, `p.y` の読み書き | `7` |
 | `arrow_access.c` | `struct Point *p` に対する `p->x` | `25` |
+| `call_struct_ptr.c` | 構造体ポインタを返す呼出しへの `->`、入れ子・三項式の型伝播 | `84` |
 | `sizeof_test.c` | `sizeof(int) + sizeof(char)` | `5` |
 | `malloc_struct.c` | `malloc(sizeof(struct Box))` と `->` | `17` |
 | `list_min.c` | `malloc` した1ノードを `->` で読む最小形 | `10` |

@@ -229,6 +229,8 @@ int printf(char *fmt, ...);
 - 引数なしは `()` と書く(`(void)` は受理しない)。`()` は「0 引数」の意味で、
   個数・型が合わない呼出しはコンパイルエラー。
 - 呼出しには事前の宣言(プロトタイプまたは定義)が必要。再帰可。
+- 呼出し式の型は、関数の宣言・定義に書かれた戻り値型である。
+  ポインタを返す呼出しの結果には、その型に従って `*`・添字・ポインタ演算・`->` を使える。
 - 引数型は int / char / ポインタ。戻り値型はそれに `void` を加えた 4 種
   (struct 値の引数・戻り値はない。発展 L5 で追加する)。
 - 可変長 `...` の定義は書けない(宣言のみ)。可変部の実引数はスカラー型に限り、
@@ -405,6 +407,7 @@ void exit(int code);
 | 機能 | 導入コマ | 代表テスト | 区分 | 備考 |
 |------|---------|-----------|------|------|
 | 関数定義・仮引数・戻り値 | コマ6 | `sessions/06_functions_recursion/tests/call_add.c` | 標準 | 引数なしは `()` |
+| 呼出し式への戻り値型の伝播 | コマ8 | `sessions/08_types/tests/call_ptr.c` | 標準 | 後続回の `call_ptr_arith.c` / `call_char_ptr.c` / `call_struct_ptr.c` / `multifile_return_ptr.c` でも検査 |
 | プロトタイプ宣言・相互再帰 | コマ6 | `sessions/06_functions_recursion/tests/mutual_rec.c` | 標準 | |
 | 再帰 | コマ6 | `sessions/06_functions_recursion/tests/fib_rec.c` | 標準 | |
 | 可変長引数の外部プロトタイプと呼出し | コマ10 | `sessions/10_strings_data_section/tests/printf_number.c` | 標準 | 定義は書けない |

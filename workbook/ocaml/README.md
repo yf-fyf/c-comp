@@ -11,6 +11,11 @@ Python 実装に詰まったときに、別言語での書き方と比較する�
 - `support/`: `sessions/` 全回で共通のフロントエンド（Lexer / Parser / AST 定義 / 前処理）。
   `reference/` が借りるのは前処理だけで、字句解析・構文解析・構文木は自前で持つ
 
+コマ8以降は、関数宣言・定義から戻り値型を集め、呼出し式の型に使う。
+`sessions/` では `function_returns`、`reference/typing.ml` では
+プログラム全体の環境にある同名の表で保持する。引数型・再宣言・宣言順の
+完全な検査は、[標準トラックの診断範囲](../docs/language_spec.md#diagnostics)の限定に従う。
+
 ### `reference/` の構成
 
 `sessions/` とは別に、自分専用のフロントエンド（字句解析・構文解析・構文木）を持つ。

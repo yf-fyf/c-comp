@@ -192,6 +192,7 @@ self._locals: dict[str, tuple[int, str]]     # name → (offset, ty_str)
 | `&n` | `n` の左辺値型に `*` を付ける |
 | `*p` | `p` の型から `*` を1つ剥がす（`elem_ty_str`） |
 | `n = 3` | 左辺値の型 |
+| `f(...)` | 関数の宣言・定義に書かれた戻り値型 |
 
 左辺値としての型（`_type_of_lval`）と、値としての型（`_type_of_expr`）を分けるのは、
 コマ7 で `codegen_lval` と `codegen` を分けたのと同じ理由である。
@@ -201,6 +202,30 @@ self._locals: dict[str, tuple[int, str]]     # name → (offset, ty_str)
 
 コマ1 の `eval_ast` が子の**値**を親へ返したのと同じ再帰で、ここでは子の**型**が親へ上がる。
 根まで上がった型が、次節で見るロード・ストア命令の幅を選ぶ。
+
+### 関数呼出しの型を引く
+
+関数呼出しも式なので、宣言・定義に書かれた戻り値型を使う。
+例えば `int *identity(int *p)` の呼出しは `int *` 型であり、
+`*identity(&n)` の値の型は、そこから `*` を1つ剥がした `int` になる。
+同じ仕組みで、`char *` を返す呼出しから値を読むときは `lb` を選べる。
+
+Parserは関数宣言・定義の戻り値型を `node.ty_str` に残している。
+提供済みの `collect_function_returns(prog)` が、コード生成の前に
+`self._function_returns`（関数名 → 戻り値の `ty_str`）へ集める。
+`main()` からの呼出しも用意してあるので、収集処理を実装し直す必要はない。
+受講者が実装するのは、呼出しノードの `node.name` を使って
+この表から型を取得する `type_of_expr_Call` である。
+変数の型を変数表から引く処理と同じ考え方でよい。
+
+この表は型の伝播に使う。引数の個数・型や再宣言の整合性を検査する表ではない。
+宣言がない名前の診断も標準トラックでは保証せず、表にない場合は従来どおり
+`int` として扱う。これは未宣言呼出しを許すという仕様変更ではなく、
+[標準トラックの診断範囲](../../workbook/docs/language_spec.md#diagnostics)の限定である。
+
+戻り値型の表は関数ごとのローカル変数表と異なり、次の関数を生成するときも保持する。
+コマ9以降のポインタ演算と、コマ12の `identity(&s)->field` も、
+この呼出し式の型をそのまま使う。
 
 ## `_load_ty` / `_store_ty`
 
@@ -273,6 +298,7 @@ def _store_ty(self, ty):
 | `is_ptr_ty_str(ty)` | ポインタ型かどうかを返す |
 | `alloc_local(name, ty_str)` | `size_of_ty_str` を使って型付きで領域を確保する |
 | `lookup_var(name, line)` / `lookup_local_ty(name, line)` | `self._locals` からオフセットと型を引く |
+| `collect_function_returns(prog)` | 関数宣言・定義から戻り値型の表を作る。`main()` から呼出し済み |
 | `_push_a0()` / `_pop_into(reg)` | 一時値の退避と復帰 |
 | `_type_of_expr` / `_type_of_lval` / `codegen` / `codegen_lval` の `match` | 各ハンドラへの振り分け |
 
@@ -280,7 +306,7 @@ def _store_ty(self, ty):
 
 | 実装対象 | 役割 |
 |----------|------|
-| `type_of_expr_*`（`Num` / `Var` / `Addr` / `Deref` / `Assign`） | 各ノードの値としての型を求める |
+| `type_of_expr_*`（`Num` / `Var` / `Addr` / `Deref` / `Assign` / `Call`） | 各ノードの値としての型を求める |
 | `type_of_lval_*`（`Var` / `Deref`） | 各ノードの左辺値としての型を求める |
 | `_load_ty(ty)` / `_store_ty(ty)` | 型サイズに応じて `lb`/`lw`/`ld` と `sb`/`sw`/`sd` を選ぶ |
 | `codegen_Var` / `codegen_Assign` / `codegen_Deref` | 型に応じたロード・ストアに置き換える |
@@ -291,7 +317,7 @@ def _store_ty(self, ty):
 
 1. スケルトンの `Codegen08` が `Codegen07` を `importlib` で継承していることを確認する
 2. `collect_decls_Decl` / `_alloc_params` / 関数プロローグの退避を型付きにする（どのテストでも必要）
-3. `type_of_expr_*` / `type_of_lval_*` を埋めて、式の型を引けるようにする
+3. `type_of_expr_*` / `type_of_lval_*` を埋めて、式の型を引けるようにする。`Call` は提供済みの戻り値型の表を参照する
 4. `_load_ty` / `_store_ty` を型サイズ対応にする（提供済みの `size_of_ty_str` を使う）
 5. `codegen_Var` / `codegen_Assign` / `codegen_Deref` を `_load_ty` / `_store_ty` 経由に書き換える
 6. `char` の境界（`char_narrow.c`）と `char` へのポインタ（`char_ptr.c`）で取りこぼしを検出する
@@ -308,6 +334,7 @@ def _store_ty(self, ty):
 | `char_var.c` | `char` 変数の読み書き（`lb`/`sb`）・int への昇格・代入時の縮小 | `char` の昇格と縮小 | 手順5 | `67` |
 | `char_narrow.c` | 縮小の境界（`127` / `128` / `255` / `-1` / `256` / `300`）と代入式の値 | `_store_ty` の縮小・符号拡張と `_load_ty` の `lb` | 手順6 | `45` |
 | `char_ptr.c` | `char *` 経由の読み書きが 1 バイト幅になること | `type_of_lval_Deref` / `codegen_Deref` | 手順6 | `50` |
+| `call_ptr.c` | プロトタイプから戻り値型を引き、関数が返した `int *` を参照する | `type_of_expr_Call` / `codegen_Deref` | 手順3〜5 | `42` |
 
 ## テスト
 

@@ -134,6 +134,7 @@ def main() -> None:
     tokens = tokenize(source, filename)
     prog = parse(tokens)
     cg = Codegen()
+    cg.collect_function_returns(prog)
     for node in prog:
         if node.kind == 'FuncDef':
             cg.collect_strings_stmt(node.body)

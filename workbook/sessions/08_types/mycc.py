@@ -40,6 +40,15 @@ class Codegen08(prev.Codegen07):
     def __init__(self) -> None:
         super().__init__()
         self._locals: dict[str, tuple[int, str]] = {}
+        self._function_returns: dict[str, str] = {}
+
+    def collect_function_returns(self, prog: list[Node]) -> None:
+        # 提供済み: 宣言・定義の戻り値型をコード生成前に集める。
+        # 引数型や再宣言の整合性、宣言の出現順を検査する処理ではない。
+        self._function_returns.clear()
+        for node in prog:
+            if node.kind in ('FuncProto', 'FuncDef'):
+                self._function_returns[node.name] = node.ty_str or 'int'
 
     def alloc_local(self, name: str, ty_str: str = 'int') -> None:
         sz = self.align_to(self.size_of_ty_str(ty_str), 8)
@@ -96,7 +105,9 @@ class Codegen08(prev.Codegen07):
         raise NotImplementedError("type_of_expr_Assign を実装してください")
 
     def type_of_expr_Call(self, node: Node) -> str:
-        return 'int'
+        # TODO: self._function_returns から node.name の戻り値型を取得する。
+        # 表にない名前は従来どおり int とする（未宣言関数の診断は保証範囲外）。
+        raise NotImplementedError("type_of_expr_Call を実装してください")
 
     def _type_of_lval(self, node: Node) -> str:
         match node.kind:
@@ -209,6 +220,7 @@ def main() -> None:
     tokens = tokenize(source, filename)
     prog = parse(tokens)
     cg = Codegen08()
+    cg.collect_function_returns(prog)
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

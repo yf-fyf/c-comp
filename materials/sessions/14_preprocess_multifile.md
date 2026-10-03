@@ -238,6 +238,11 @@ for node in prog:
 5. `.text` セクションでは `'FuncDef'` だけを処理する
 6. `define_constants.c`、`multifile_math.c`、`multifile_global.c` を通す
 
+統合した `prog` の関数宣言・定義は、`gen_program()` 冒頭の提供済み
+`collect_function_returns(prog)` で戻り値型の表へ集められる。
+ヘッダーにあるプロトタイプも表へ入るので、別ファイルの関数が返した
+ポインタを、単一ファイルの場合と同じ型で扱える。
+
 ## tests/
 
 | ファイル | 内容 | 期待値 |
@@ -247,6 +252,7 @@ for node in prog:
 | `define_literal_guard.c` | 文字列・文字リテラル・コメント内は置換しない | `71` |
 | `multifile_math.c` | 複数ファイル + `#include` + `#define` | `64` |
 | `multifile_global.c` | 複数ファイル + グローバル変数共有 | `63` |
+| `multifile_return_ptr.c` | ヘッダーのプロトタイプから戻り値型を引き、別ファイルの関数呼出しに `->` を使う | `42` |
 
 複数ファイルのテストは、一緒にコンパイルする `.c` を同名の `.files` に書いてある。
 
@@ -254,6 +260,7 @@ for node in prog:
 |----------|------|
 | `math_util.c` / `math_util.h` | `multifile_math.c` から使う関数と、そのプロトタイプ |
 | `stat_lib.c` / `stat_lib.h` | `multifile_global.c` から使う関数と、そのプロトタイプ（グローバル変数は `stat_lib.c` 側にある） |
+| `return_ptr_lib.c` / `return_ptr_lib.h` | `multifile_return_ptr.c` が使う関数の定義と、構造体ポインタを返す宣言 |
 
 ## テスト
 

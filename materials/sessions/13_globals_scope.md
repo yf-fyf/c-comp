@@ -494,7 +494,7 @@ int main() {
 5. `codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
 6. `emit_bss_section()` でグローバル変数を `.bss` に出力する（全て 0 初期化）
 7. `collect_all_strings()` と `_collect_strings_binary_expr()` を実装する（文字列収集の入口と、二項演算の走査）
-8. `gen_program()` で `.data` → `.bss` → `.text` の順に出力する（`.data` は継承した `emit_data_section()` を呼ぶだけでよい）
+8. `gen_program()` で `.data` → `.bss` → `.text` の順に出力する（`.data` は継承した `emit_data_section()` を呼ぶだけでよい）。冒頭の提供済み `collect_function_returns(prog)` は残し、コマ8から使う戻り値型の表を準備する
 9. `main()` から `parse_file()` → `collect_globals()` → `collect_all_strings()` → `gen_program()` を呼ぶ
 10. `codegen_Not()` / `codegen_And()` / `codegen_Or()` を実装する（`&&` `||` は短絡しない）
 11. `global_min.c`、`global_counter.c`、`global_init.c`、`shadow_min.c`、`global_local_shadow.c`、`global_struct.c`、`logical_ops.c` を通す

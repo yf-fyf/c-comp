@@ -430,6 +430,7 @@ Hello, World!
 |----------|------|--------|
 | `printf_hello.c` | 文字列だけを出力する | `Hello, World!` |
 | `printf_number.c` | `%d` に整数を渡す | `x=42` |
+| `call_char_ptr.c` | 関数が返した `char *` から1文字だけ読む（コマ8の型参照の回帰） | 終了コード `1`（標準出力なし） |
 | `str_control_flow.c` | `if` / `else` / `while` / `for` の中だけに置いた文字列を集める（文の走査） | `in if` / `in while`×2 / `in for`×2 |
 | `str_intern_dedup.c` | 同じ文字列は1ラベル・違う文字列は別ラベル（`_intern`） | `same` / `other` |
 

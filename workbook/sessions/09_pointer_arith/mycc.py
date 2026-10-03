@@ -177,6 +177,7 @@ def main() -> None:
     tokens = tokenize(source, filename)
     prog = parse(tokens)
     cg = Codegen09()
+    cg.collect_function_returns(prog)
     cg.emit('  .text')
     for node in prog:
         cg.gen_func(node)

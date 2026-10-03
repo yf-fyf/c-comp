@@ -18,6 +18,25 @@ let globals : (string, var_info) Hashtbl.t = Hashtbl.create 64
 let locals : (string, var_info) Hashtbl.t = Hashtbl.create 128
 let stack_offset = ref 0
 
+(* 関数宣言・定義の戻り値型を生成前に集める。
+   完全な引数型・再宣言・宣言順の検査は行わない。 *)
+let function_returns : (string, ty) Hashtbl.t = Hashtbl.create 32
+
+let collect_function_returns prog =
+  Hashtbl.clear function_returns;
+  List.iter
+    (function
+      | FuncDef { name; ty; _ } -> Hashtbl.replace function_returns name ty
+      | FuncProto { name; ty; _ } -> Hashtbl.replace function_returns name ty
+      | GlobalDecl _ -> ())
+    prog
+
+let function_return_ty name =
+  match Hashtbl.find_opt function_returns name with
+  | Some ty -> ty
+  | None -> TyInt (* 未宣言関数の診断は標準トラックの保証範囲外。 *)
+
+
 (* スタックに積んでいる一時値の個数（1 個 8 バイト）。
    call 直前に sp が 16 バイト境界にあるかどうかを判定するために数える。 *)
 let depth = ref 0
@@ -201,7 +220,7 @@ and type_of = function
   | Index _ as e -> type_of_lval e
   | Member _ as e -> type_of_lval e
   | Assign { lhs; _ } -> type_of_lval lhs
-  | Call _ -> TyInt
+  | Call { name; _ } -> function_return_ty name
   | SizeofType _ -> TyInt
   | Unary { op = Neg | Not; _ } -> TyInt
   | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
@@ -506,6 +525,7 @@ let parse_file filename =
   Frontend.parse_source ~already_preprocessed:true ~filename preprocessed
 
 let gen_program prog =
+  collect_function_returns prog;
   collect_global_decls prog;
   List.iter collect_strings_top prog;
   emit_data_section ();

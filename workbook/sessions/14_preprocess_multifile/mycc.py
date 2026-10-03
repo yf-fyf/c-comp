@@ -38,6 +38,7 @@ def main() -> None:
 
     # TODO: sys.argv[1:] の各ファイルを Codegen14.parse_file() で読み、
     #       prog と all_struct_defs に統合してから gen_program() する。
+    #       戻り値型の収集は gen_program() 冒頭の提供済み処理で行う。
     raise NotImplementedError("複数ファイル対応の main ループを実装してください")
 
 

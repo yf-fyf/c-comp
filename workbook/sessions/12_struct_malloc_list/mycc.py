@@ -368,6 +368,7 @@ def main() -> None:
     prog = parse(tokens)
     struct_defs = Codegen12.parse_struct_defs(prog)
     cg = Codegen12(struct_defs)
+    cg.collect_function_returns(prog)
     for node in prog:
         if node.kind == 'FuncDef':
             cg.collect_strings_stmt(node.body)

@@ -25,6 +25,25 @@ let error ?(line = 0) msg =
 let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
+(* 関数宣言・定義の戻り値型を生成前に集める。
+   完全な引数型・再宣言・宣言順の検査は行わない。 *)
+let function_returns : (string, ty) Hashtbl.t = Hashtbl.create 32
+
+let collect_function_returns prog =
+  Hashtbl.clear function_returns;
+  List.iter
+    (function
+      | FuncDef { name; ty; _ } -> Hashtbl.replace function_returns name ty
+      | FuncProto { name; ty; _ } -> Hashtbl.replace function_returns name ty
+      | GlobalDecl _ -> ())
+    prog
+
+let function_return_ty name =
+  match Hashtbl.find_opt function_returns name with
+  | Some ty -> ty
+  | None -> TyInt (* 未宣言関数の診断は標準トラックの保証範囲外。 *)
+
+
 (* スタックに積んでいる一時値の個数（1 個 8 バイト）。
    call 直前に sp が 16 バイト境界にあるかどうかを判定するために数える。 *)
 let depth = ref 0
@@ -104,6 +123,7 @@ and type_of_expr = function
   | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
       type_of_lval operand
   | Assign { lhs; _ } -> type_of_lval lhs
+  | Call { name; _ } -> function_return_ty name
   | Cond { then_; _ } -> type_of_expr then_
   (* 算術は常に int で行う。ポインタ + 整数がポインタ型になるのはコマ9 から。 *)
   | _ -> TyInt
@@ -302,4 +322,5 @@ let () =
   let source = Utils.read_file filename in
   let prog = Frontend.parse_source ~filename source in
   emit "  .text";
+  collect_function_returns prog;
   List.iter gen_func prog

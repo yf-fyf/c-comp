@@ -21,7 +21,12 @@
 module Env = Map.Make (String)
 
 type binding = { b_ref : Tast.var_ref; b_ty : Ctype.t }
-type genv = { layout : Layout.t; globals : binding Env.t; strings : Strings.t }
+type genv = {
+  layout : Layout.t;
+  globals : binding Env.t;
+  strings : Strings.t;
+  function_returns : Ctype.t Env.t;
+}
 type fenv = { locals : binding Env.t; in_loop : bool }
 
 let error (loc : Loc.t) fmt = Diag.error ~phase:Diag.Typing ~line:loc.line ~col:loc.col fmt
@@ -83,7 +88,12 @@ let rec type_expr g f (e : Ast.expr) : Tast.expr =
       if n > Layout.max_args then
         error e.e_loc "%s の呼び出し: 引数は %d 個までです（%d 個渡されています）" name
           Layout.max_args n;
-      mk (Tast.Call { name; args = List.map (type_expr g f) args }) Ctype.Int
+      let ret_ty =
+        match Env.find_opt name g.function_returns with
+        | Some ty -> ty
+        | None -> Ctype.Int (* 未宣言関数の診断は標準トラックの保証範囲外。 *)
+      in
+      mk (Tast.Call { name; args = List.map (type_expr g f) args }) ret_ty
   (* ポインタが絡む + と - はポインタ演算になる。ポインタ側を ptr に寄せるので、
      コード生成は左右を見比べずに「ptr を先に評価する」だけでよい *)
   | Ast.Binary { op = Ast.Add; lhs; rhs } -> (
@@ -246,6 +256,18 @@ let collect_globals programs =
   in
   List.map (fun name -> (name, Env.find name tys)) order
 
+(* 戻り値型のみを集める。引数型・再宣言・宣言順の完全な検査は別の課題。 *)
+let collect_function_returns programs =
+  List.fold_left
+    (fun env (p : Ast.program) ->
+      List.fold_left
+        (fun env -> function
+          | Ast.Func fn -> Env.add fn.fn_name fn.fn_ret env
+          | Ast.Proto pt -> Env.add pt.pt_name pt.pt_ret env
+          | Ast.Global _ -> env)
+        env p.tops)
+    Env.empty programs
+
 (* units は (前処理後ソース, そのファイルの構文木) の並び。
    struct の表・グローバル変数・文字列リテラルはプログラム全体で共有し、
    関数の生成だけをファイル単位に分けて持つ（見出しに元の C を出すため）。 *)
@@ -262,6 +284,7 @@ let type_program (units : (string * Ast.program) list) : Tast.program =
             Env.add name { b_ref = Tast.Global { name }; b_ty = ty } env)
           Env.empty globals;
       strings = Strings.collect programs;
+      function_returns = collect_function_returns programs;
     }
   in
   {

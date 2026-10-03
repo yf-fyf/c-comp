@@ -405,6 +405,7 @@ rvalue としての `p[i]` は、このアドレスから値を読む。読む�
 | `sizeof_type.c` | `sizeof(型名)` だけを単体で確かめる | `codegen_SizeofType` | 手順5 | `40` |
 | `ptr_sum.c` | malloc 領域を `a[i]` で合計 | 添字＋ループ | 手順6 | `15` |
 | `ptr_arith.c` | `*(p + 2)` と `*(p + 3)` | `codegen_Add` / `codegen_Sub` | 手順6 | `70` |
+| `call_ptr_arith.c` | 関数が返した `int *` の加減・添字と、`int **` の間接参照 | コマ8の `type_of_expr_Call` / スケーリング | 手順6 | `23` |
 | `ptr_incdec.c` | `++`/`--` が `int *` は4、`char *` は1、`int` は1だけ動くこと | `codegen_PreInc` / `codegen_PreDec` | 手順7 | `104` |
 | `ptr_to_ptr.c` | 多段ポインタ `int **`（`&`/`*` の重ね掛けと 8 バイト尺度） | 取りこぼし検出 | 手順8 | `20` |
 | `main_argv.c` | `int main(int argc, char **argv)` 形のエントリポイント | 取りこぼし検出 | 手順8 | `41` |
