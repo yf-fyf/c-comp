@@ -38,9 +38,15 @@ let with_parse source f =
   try
     Struct_env.reset ();
     let mapped = Preprocess.preprocess_with_map ~include_dirs source filename in
-    Struct_env.reset ();
-    let prog = Frontend.parse_source ~already_preprocessed:true ~filename mapped.text in
-    f mapped prog
+    (try
+       Struct_env.reset ();
+       let prog = Frontend.parse_source ~already_preprocessed:true ~filename mapped.text in
+       f mapped prog
+     with e ->
+       JObj
+         [ ("ok", JBool false);
+           ("errors", JList [ error_json e ]);
+           ("lineMap", line_map_json source include_dirs) ])
   with e -> JObj [ ("ok", JBool false); ("errors", JList [ error_json e ]) ]
 
 let parse_json source =

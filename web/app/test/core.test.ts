@@ -94,6 +94,16 @@ int main() {
 `;
 
 describe("myccCore", () => {
+  it("構文エラーでも前処理後の行をソース行へ対応づけられる", () => {
+    for (const prefix of ["", '#include "lib.h"\n']) {
+      const source = prefix + "int main() {\n return 1 + ;\n}\n";
+      const r = JSON.parse(core.parse(source)) as ParseResult;
+      expect(r.ok).toBe(false);
+      const errorLine = r.errors![0]!.line;
+      expect(errorLine).toBeGreaterThan(0);
+      expect(new Map(r.lineMap).get(errorLine!)).toBe(prefix ? 3 : 2);
+    }
+  });
   it("parse の JSON が型定義どおり", () => {
     const r = JSON.parse(core.parse(SAMPLE)) as ParseResult;
     expect(r.ok).toBe(true);
