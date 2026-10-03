@@ -28,7 +28,9 @@
 │   ├── nav.yaml           # サイト構成の単一の出典
 │   ├── template.html      # pandoc の HTML テンプレート
 │   ├── boxes.lua          # ::: の変換・図と .md リンクの書き換え
-│   └── style.css          # 配色は latex/figure-preamble.tex と揃える
+│   ├── style.css          # 配色は latex/figure-preamble.tex と揃える
+│   ├── lightbox.js        # 図の拡大表示
+│   └── grammar.js         # 文法への直接リンク・印刷時の全文表示
 ├── latex/                 # 図の共通プリアンブル（figure-preamble.tex のみ）
 ├── tools/                 # サイト・図・公開物・ウェブアプリの生成スクリプト
 ├── web/                   # 補助ウェブアプリ（企画: design/webapps.md、構成: web/README.md）
@@ -180,9 +182,16 @@ CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make ch
 
 | 変えたもの | 作り直す範囲 |
 |------------|--------------|
-| 原稿 `.md` 1本 | そのページだけ（先頭 H1 を変えた場合は全ページ） |
-| `site/style.css` | CSS のコピーのみ |
+| 原稿 `.md` 1本 | そのページだけ。通常回01〜13では次の回の文法差分も更新（先頭 H1 を変えた場合は全ページ） |
+| `site/style.css`・`site/lightbox.js`・`site/grammar.js` | 静的ファイルのコピーのみ |
 | `site/template.html`・`site/boxes.lua`・`site/nav.yaml` | 全ページ |
+
+通常回01〜14の文法欄は、原稿のEBNFを正として`tools/grammar_snapshots.py`で前回と比較する。
+この解析は文書の文法・優先順位検査と共有している。`tools/grammar_view.py`が追加と既存右辺の変更を
+区別して表示し、長い累積全文は開閉できる参照欄にする。コマ1と短い差分だけのコマ14は最初から開く。
+差分の色は手作業で原稿に埋め込まない。置換を伴う文法改訂は`GRAMMAR_REFINEMENTS`と最終仕様も
+整合させ、`make check-docs`で確認する。検査用の正規化を表示する原文へ適用しない。
+文法の直接リンクは全文を開き、印刷では全文を表示する。JavaScriptなしでも参照欄を開閉できる。
 
 `web/app/dist/` があれば `/tools/` として一緒に配信するので、
 ヘッダの「補助ツール」からの導線もローカルで確認できる。無い場合は `make web` で作る。

@@ -252,6 +252,77 @@ div.sourceCode[data-lang]::before {
   border-radius: 0 0.35rem 0 0.35rem;
 }
 
+/* ── 各回の文法差分 ── */
+
+.grammar-section { margin: 2rem 0; }
+.grammar-section, .grammar-section [id] { scroll-margin-top: 4.5rem; }
+.grammar-status, .grammar-overview {
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--accent-light);
+  border-radius: 0.35rem;
+  background: var(--accent-lighter);
+}
+.grammar-overview .grammar-overview-title { margin: 0 0 0.3rem; font-weight: 700; }
+.grammar-overview .grammar-legend { margin: 0; font-size: 0.9rem; }
+.grammar-overview .grammar-updates { margin: 0.65rem 0 0; padding: 0; list-style: none; }
+.grammar-update { padding: 0.3rem 0.5rem; border-left: 3px solid; }
+.grammar-update code { overflow-wrap: anywhere; }
+.grammar-added { --grammar-tone: #2C6035; --grammar-fill: #EEF7EF; }
+.grammar-changed { --grammar-tone: #583B66; --grammar-fill: #EEE6F2; }
+.grammar-update.grammar-added, .grammar-update.grammar-changed {
+  background: var(--grammar-fill); border-color: var(--grammar-tone);
+}
+.grammar-update.grammar-changed { border-left-style: double; border-left-width: 4px; }
+.grammar-badge, .grammar-legend > span {
+  display: inline-block;
+  padding: 0.03em 0.35em;
+  color: var(--grammar-tone, var(--accent-dark));
+  background: var(--grammar-fill, var(--accent-light));
+  border: 1px solid currentColor;
+  border-radius: 0.2em;
+  font-size: 0.85em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.grammar-before { display: block; color: #525252; font-size: 0.9rem; }
+.grammar-before code { background: transparent; }
+.grammar-rhs { background: transparent; padding-left: 0; }
+.grammar-full {
+  margin: 1rem 0;
+  border: 1px solid var(--code-frame);
+  border-radius: 0.35rem;
+  padding: 0 0.8rem 0.1rem;
+}
+.grammar-full > summary {
+  padding: 0.6rem 0;
+  color: var(--accent-dark);
+  font-weight: 700;
+  cursor: pointer;
+}
+.grammar-full > summary:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+.grammar-pre { padding-left: 4.4rem; }
+.grammar-code .grammar-line {
+  display: inline-block;
+  min-width: 100%;
+  position: relative;
+}
+.grammar-code .grammar-added, .grammar-code .grammar-changed {
+  background: var(--grammar-fill);
+  box-shadow: -3px 0 var(--grammar-tone);
+}
+.grammar-code .grammar-line[data-label]:not([data-label=""])::before {
+  content: attr(data-label);
+  position: absolute;
+  right: calc(100% + 0.5rem);
+  color: var(--grammar-tone);
+  font-size: 0.85em;
+  font-weight: 700;
+  white-space: nowrap;
+  user-select: none;
+}
+.grammar-token { color: inherit; background: transparent; text-decoration: underline double; }
+.grammar-section tr.grammar-added, .grammar-section tr.grammar-changed { background: var(--grammar-fill); }
+
 /* ── 表 ── */
 
 table {
@@ -505,4 +576,18 @@ figcaption {
   body { font-size: 10.5pt; line-height: 1.7; }
   pre, .adm, .goal, figure, table { break-inside: avoid; }
   a { color: var(--text); text-decoration: none; }
+  .grammar-overview, .grammar-status { display: none; }
+  .grammar-full { border: 0; padding: 0; }
+  .grammar-full > summary { display: none; }
+  .grammar-full::details-content { content-visibility: visible; }
+  .grammar-full > :not(summary) { display: block !important; }
+  .grammar-pre { overflow: visible; }
+  .grammar-code { white-space: pre-wrap; }
+  .grammar-code .grammar-line {
+    max-width: 100%;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .grammar-code .grammar-added { border-left: 2px solid #262626; }
+  .grammar-code .grammar-changed { border-left: 3px double #262626; }
 }

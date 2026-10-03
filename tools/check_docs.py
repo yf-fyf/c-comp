@@ -54,6 +54,15 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_site import ROOT, load_nav  # noqa: E402  (site/nav.yaml を共通で読む)
+from grammar_snapshots import (  # noqa: E402
+    GRAMMAR_HEADING, GRAMMAR_SPEC_HEADING, GRAMMAR_SPEC_SKIP_SUBHEADINGS,
+    GRAMMAR_LAST_SESSION, GRAMMAR_DIFF_SESSIONS, GRAMMAR_REFINEMENTS,
+    GRAMMAR_QUOTED_RE, PREC_TABLE, PREC_INTRO, PREC_LAST_SESSION,
+    parse_ebnf_block, extract_ebnf_after as _extract_ebnf_after,
+    nonterminals as _grammar_nonterminals,
+    expected_precedence as _prec_expected,
+    parse_precedence_table as _prec_parse_table, merge_alternatives, classify_transition,
+)
 
 ALLOWLIST_PATH = Path(__file__).resolve().parent / "doc_check_allowlist.yaml"
 
@@ -1022,7 +1031,7 @@ def check_identifiers() -> list[Violation]:
 # materials/sessions/01〜14 の「### この回までの言語仕様（EBNF）」節にある
 # ```ebnf ブロックは「その回までに書ける文法」の累積スナップショットである。
 # 回を追うごとに単調に増えるはずで、後の回で選択肢が消えるのは誤りである
-# （例外は下の GRAMMAR_REFINEMENTS に列挙した「右辺の置き換え」だけ）。
+# （例外は共有モジュールの GRAMMAR_REFINEMENTS に列挙した「右辺の置き換え」だけ）。
 # 次の3点を検査する:
 #   (a) 単調性     コマN の選択肢集合 ⊆ コマN+1 の選択肢集合
 #                  （消えてよいのは GRAMMAR_REFINEMENTS に記録した箇所のみ）
@@ -1039,86 +1048,6 @@ def check_identifiers() -> list[Violation]:
 # コマ14 は差分だけを載せる（前処理指令のみ）ため、コマ13 の集合に対して
 # コマ14 のブロックが定義する規則を差し替えたものを「コマ14 の集合」とする。
 
-GRAMMAR_HEADING = "### この回までの言語仕様（EBNF）"
-GRAMMAR_SPEC_HEADING = "## 形式文法（EBNF）"
-GRAMMAR_SPEC_SKIP_SUBHEADINGS = {"### 字句トークン"}
-GRAMMAR_LAST_SESSION = 14
-# コマ14 は差分掲載（下記コマの番号は「ブロックが全文ではない回」）
-GRAMMAR_DIFF_SESSIONS = {14}
-
-# 回をまたいで右辺が「置き換わる」箇所。素朴な部分集合判定では削除と
-# 誤検知されるため、(消える回, 規則名, 精密化前, 精密化後) を許可リストに置く。
-# 出典: 各回原稿の累積文法。初期回の末尾return制限はコマ4で解除する。
-GRAMMAR_REFINEMENTS: tuple[tuple[int, str, str, str], ...] = (
-    (2, "func_body", "'{' stmt '}'",
-     "'{' { var_decl } { expr_stmt } 'return' expr ';' '}'"),
-    (3, "func_body", "'{' { var_decl } { expr_stmt } 'return' expr ';' '}'",
-     "'{' { var_decl } { stmt } '}'"),
-    (2, "expr", "binary_expr", "assign_expr"),
-    (6, "stmt", "'return' expr ';'", "'return' [ expr ] ';'"),
-    (5, "func_def", "'int' 'main' '(' ')' func_body",
-     "ret_type IDENT '(' [ param_list ] ')' func_body"),
-    (4, "expr_stmt", "expr ';'", "[ expr ] ';'"),
-    (6, "scalar_type", "'int'", "'int' [ stars ]"),
-    (8, "stars", "'*'", "'*' { '*' }"),
-    (8, "unary_expr", "primary_expr", "postfix_expr"),
-    (3, "assign_expr", "binary_expr", "cond_expr"),
-    (5, "program", "func_def", "external_decl { external_decl }"),
-    (9, "func_proto", "ret_type IDENT '(' [ param_list ] ')' ';'",
-     "ret_type IDENT '(' [ param_list [ ',' '...' ] ] ')' ';'"),
-)
-
-GRAMMAR_COMMENT_RE = re.compile(r"/\*.*?\*/")
-GRAMMAR_QUOTED_RE = re.compile(r"'[^']*'|\"[^\"]*\"")
-GRAMMAR_WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
-
-
-def _grammar_normalize(text: str) -> str:
-    """コメントを落とし空白を正規化した右辺の文字列を返す。"""
-    return re.sub(r"\s+", " ", GRAMMAR_COMMENT_RE.sub(" ", text)).strip()
-
-
-def parse_ebnf_block(body: list[str], start_line: int) -> tuple[
-        list[tuple[str, str]], dict[str, int], list[str]]:
-    """```ebnf ブロックから (規則名, 選択肢) の並び・定義行番号・書式違反を返す。"""
-    alts: list[tuple[str, str]] = []
-    defined: dict[str, int] = {}
-    problems: list[str] = []
-    current: str | None = None
-    for offset, raw in enumerate(body):
-        line = _grammar_normalize(raw)
-        if not line:
-            continue
-        lineno = start_line + offset
-        if "::=" in line:
-            lhs, rhs = line.split("::=", 1)
-            current = lhs.strip()
-            if not current or " " in current:
-                problems.append(f"{lineno}: 規則名として解釈できない `{lhs.strip()}`")
-                current = None
-                continue
-            defined.setdefault(current, lineno)
-            rhs = rhs.strip()
-            if rhs:
-                alts.append((current, rhs))
-            continue
-        if line.startswith("|"):
-            if current is None:
-                problems.append(f"{lineno}: 規則名の無い選択肢行 `{line}`")
-                continue
-            rhs = line[1:].strip()
-            if rhs:
-                alts.append((current, rhs))
-            continue
-        problems.append(f"{lineno}: `::=` でも行頭 `|` でもない行 `{line}`")
-    return alts, defined, problems
-
-
-def _grammar_nonterminals(alt: str) -> set[str]:
-    """選択肢の右辺に現れる非終端記号（小文字始まり）を返す。"""
-    stripped = GRAMMAR_QUOTED_RE.sub(" ", alt)
-    return {w for w in GRAMMAR_WORD_RE.findall(stripped) if w[:1].islower()}
-
 
 def _grammar_session_paths() -> dict[int, Path]:
     paths: dict[int, Path] = {}
@@ -1133,23 +1062,6 @@ def _grammar_session_paths() -> dict[int, Path]:
             paths[n] = path
     return paths
 
-
-def _extract_ebnf_after(lines: list[str], heading_idx: int,
-                        stop_pred=None) -> tuple[list[str], int] | None:
-    """heading_idx の次から最初に現れる ```ebnf ブロックを返す（内容, 開始行番号）。"""
-    i = heading_idx + 1
-    while i < len(lines):
-        stripped = lines[i].strip()
-        if stop_pred is not None and stop_pred(stripped):
-            return None
-        if stripped == "```ebnf":
-            end = next((j for j in range(i + 1, len(lines))
-                        if lines[j].strip() == "```"), None)
-            if end is None:
-                return None
-            return lines[i + 1:end], i + 2
-        i += 1
-    return None
 
 
 def _grammar_spec_alternatives() -> tuple[list[tuple[str, str]], dict[str, int],
@@ -1234,8 +1146,7 @@ def check_grammar_snapshots() -> list[Violation]:
         alts, defined = blocks[n]
         own = {rule: (paths[n], lineno) for rule, lineno in defined.items()}
         if n in GRAMMAR_DIFF_SESSIONS and n - 1 in cumulative:
-            merged = {(r, a) for (r, a) in cumulative[n - 1] if r not in defined}
-            merged |= set(alts)
+            merged = merge_alternatives(cumulative[n - 1], set(alts), defined)
             merged_defined = dict(cum_defined[n - 1])
             merged_defined.update(own)
         else:
@@ -1266,10 +1177,9 @@ def check_grammar_snapshots() -> list[Violation]:
                    for (n, rule, before, after) in GRAMMAR_REFINEMENTS}
     used: set[tuple[int, str, str]] = set()
     for n in range(1, GRAMMAR_LAST_SESSION):
-        removed = sorted(cumulative[n] - cumulative[n + 1])
-        for rule, alt in removed:
-            key = (n, rule, alt)
-            after = refinements.get(key)
+        transition = classify_transition(cumulative[n], cumulative[n + 1], n)
+        used.update(transition.used)
+        for rule, alt, after in transition.invalid:
             path, lineno = where(n + 1, rule)
             if after is None:
                 violations.append(Violation(
@@ -1277,13 +1187,10 @@ def check_grammar_snapshots() -> list[Violation]:
                     f"単調性の違反: コマ{n} にある `{rule} ::= {alt}` が "
                     f"コマ{n + 1} で消えている（精密化許可リストに無い）"))
                 continue
-            if (rule, after) not in cumulative[n + 1]:
-                violations.append(Violation(
-                    path, lineno,
-                    f"精密化の違反: コマ{n} の `{rule} ::= {alt}` は "
-                    f"コマ{n + 1} で `{after}` に精密化されるはずだが見当たらない"))
-                continue
-            used.add(key)
+            violations.append(Violation(
+                path, lineno,
+                f"精密化の違反: コマ{n} の `{rule} ::= {alt}` は "
+                f"コマ{n + 1} で `{after}` に精密化されるはずだが見当たらない"))
     for key in sorted(set(refinements) - used):
         n, rule, before = key
         violations.append(Violation(
@@ -1339,49 +1246,8 @@ def check_grammar_snapshots() -> list[Violation]:
 # 既知の限界（チェック9 の精密化許可リストと同種）: 「導入コマ」の値そのものが
 # 正しいかは検証しない。T160 分割書の対応表と人手レビューの責任範囲である。
 
-# 正典。workbook/docs/language_spec.md の「演算子」節（<a id="operators"></a>）と
-# 目視で同期させること。行 = (演算子タプル, 結合, 導入コマ)。
-PREC_TABLE: tuple[tuple[tuple[str, ...], str, int], ...] = (
-    (("*", "/", "%"), "左", 2),
-    (("+", "-"), "左", 2),
-    (("<", ">", "<=", ">="), "左", 4),
-    (("==", "!="), "左", 4),
-    (("&&",), "左", 13),
-    (("||",), "左", 13),
-)
-PREC_INTRO = "この回までの二項演算子の優先順位（高い順）:"
-PREC_LAST_SESSION = 13  # コマ14 は差分掲載なので表を持たない
-PREC_CELL_CODE_RE = re.compile(r"`([^`]+)`")
-
-
-def _prec_expected(n: int) -> list[tuple[tuple[str, ...], str]]:
-    """コマ n の表に載るべき行を返す（コマ1 の範囲はコマ2 と同一）。"""
-    limit = max(n, 2)
-    return [(ops, assoc) for (ops, assoc, intro) in PREC_TABLE if intro <= limit]
-
-
-def _prec_parse_table(lines: list[str], start: int) -> tuple[
-        list[tuple[tuple[str, ...], str]], int] | None:
-    """PREC_INTRO 行 start の後ろの Markdown 表を (行, 表の開始行番号) で返す。"""
-    i = start + 1
-    while i < len(lines) and not lines[i].strip():
-        i += 1
-    if i >= len(lines) or not lines[i].strip().startswith("|"):
-        return None
-    header_lineno = i + 1
-    i += 2  # ヘッダ行と区切り行を読み飛ばす
-    rows: list[tuple[tuple[str, ...], str]] = []
-    while i < len(lines) and lines[i].strip().startswith("|"):
-        # `\|`（表中でパイプを書くための退避）では列を分割しない
-        cells = [c.strip() for c in
-                 re.split(r"(?<!\\)\|", lines[i].strip().strip("|"))]
-        if len(cells) >= 3:
-            ops = tuple(m.replace("\\|", "|")
-                        for m in PREC_CELL_CODE_RE.findall(cells[1]))
-            rows.append((ops, cells[2]))
-        i += 1
-    return rows, header_lineno
-
+# 正典の PREC_TABLE は grammar_snapshots.py に置く。
+# workbook/docs/language_spec.md の「演算子」節（<a id="operators"></a>）と同期させること。
 
 def _prec_bin_op_rows(alts: list[tuple[str, str]]) -> list[tuple[str, ...]]:
     """スナップショットの `bin_op` の各選択肢行の演算子タプルを返す。"""

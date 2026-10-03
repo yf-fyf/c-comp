@@ -39,6 +39,9 @@ from pathlib import Path
 
 import yaml
 
+from grammar_view import grammar_metadata
+from grammar_snapshots import GRAMMAR_LAST_SESSION
+
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
 NAV = SITE / "nav.yaml"
@@ -46,6 +49,7 @@ TEMPLATE = SITE / "template.html"
 FILTER = SITE / "boxes.lua"
 STYLE = SITE / "style.css"
 SCRIPT = SITE / "lightbox.js"
+GRAMMAR_SCRIPT = SITE / "grammar.js"
 FIGURES = ROOT / "materials" / "figures"
 
 PANDOC = "pandoc"
@@ -301,6 +305,13 @@ def render_page(nav: dict, pages: list[Page], page: Page, output: Path,
     if page.source is not None:
         variables["source-url"] = blob + page.source.relative_to(ROOT).as_posix()
         metadata["srcdir"] = page.source.parent.relative_to(ROOT).as_posix()
+        if (page.source.parent == ROOT / "materials" / "sessions"
+                and re.match(r"^\d\d_", page.source.name)
+                and 1 <= int(page.source.name[:2]) <= GRAMMAR_LAST_SESSION):
+            try:
+                metadata["grammar-view"] = grammar_metadata(page.source)
+            except ValueError as error:
+                raise SystemExit(f"[FAIL] {error}") from error
         run_pandoc(page.source, destination, variables=variables, metadata=metadata)
     else:
         # 生成したセクション入口。目次だけなので本文の目次は出さない
@@ -407,7 +418,7 @@ def render_home(nav: dict, pages: list[Page], output: Path,
 
 
 # assets/ へそのまま置く静的ファイル。template.html がこの名前で読み込む
-STATIC_ASSETS = (STYLE, SCRIPT)
+STATIC_ASSETS = (STYLE, SCRIPT, GRAMMAR_SCRIPT)
 
 
 def copy_static(output: Path) -> None:
@@ -544,7 +555,7 @@ def make_handler(output: Path, reloader: Reloader, inject: bool):
 
 
 def source_snapshot(pages: list[Page]) -> dict[Path, float]:
-    watched = [TEMPLATE, FILTER, STYLE, SCRIPT, NAV]
+    watched = [TEMPLATE, FILTER, NAV, *STATIC_ASSETS]
     watched += [p.source for p in pages if p.source is not None]
     snapshot = {}
     for path in watched:
@@ -606,6 +617,8 @@ def rebuild_changed(output: Path, state: dict) -> bool:
         print("[更新] " + "・".join(p.name for p in dirty if p in STATIC_ASSETS))
         changed = True
 
+    # The next session's decoration also depends on this session's grammar.
+    dirty = pages_with_grammar_dependents(dirty, state["pages"])
     for source in dirty:
         page = next((p for p in state["pages"] if p.source == source), None)
         if page is None:
@@ -619,6 +632,22 @@ def rebuild_changed(output: Path, state: dict) -> bool:
         changed = True
 
     return changed
+
+
+def pages_with_grammar_dependents(dirty: list[Path], pages: list[Page]) -> list[Path]:
+    result = list(dirty)
+    for source in dirty:
+        if source.parent != ROOT / "materials" / "sessions" or not re.match(r"^\d\d_", source.name):
+            continue
+        number = int(source.name[:2])
+        if not 1 <= number < GRAMMAR_LAST_SESSION:
+            continue
+        for page in pages:
+            if (page.source is not None and page.source.parent == source.parent
+                    and page.source.name.startswith(f"{number + 1:02}_")
+                    and page.source not in result):
+                result.append(page.source)
+    return result
 
 
 def tailscale_address() -> str | None:
