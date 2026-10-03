@@ -110,6 +110,8 @@ class Codegen02:
                 pass
 
     def gen_stmt_Return(self, node: Node) -> None:
+        # コマ2/3では、関数本体末尾の return 式; を1個だけ扱う。
+        # 途中returnで共通エピローグへ移る処理はコマ4で追加する。
         # TODO: return 式があれば codegen し、戻り値を a0 に残す。
         raise NotImplementedError("Return を実装してください")
 

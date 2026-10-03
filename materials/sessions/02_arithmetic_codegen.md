@@ -53,6 +53,9 @@ int main() {
 | カッコ | `(1 + 2) * 3` |
 
 変数、代入、if、while、関数呼び出しはまだ扱わない。
+関数本体には `return 式;` を1個だけ置く。
+共通の Parser は空本体や複数の `return` も受理するが、この回の実行対象は上の形に限定する。
+途中の `return` で関数を終了するコード生成はコマ4で実装する。
 
 ### この回までの言語仕様（EBNF）
 
@@ -64,7 +67,7 @@ int main() {
 program       ::= func_def        /* ユーザー定義関数はコマ6 */
 
 func_def    ::= 'int' 'main' '(' ')' func_body   /* 一般の関数定義はコマ6 */
-func_body   ::= '{' { stmt } '}'
+func_body   ::= '{' stmt '}'
 
 stmt        ::= 'return' expr ';'
 

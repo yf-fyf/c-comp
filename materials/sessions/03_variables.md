@@ -49,10 +49,15 @@ int main() {
 int main() {
     int 変数名;
     ...
-    文;
+    式;
     ...
+    return 式;
 }
 ```
+
+先頭の変数宣言と式文の後に、末尾の `return 式;` を1個だけ置く。
+共通の Parser は途中の `return` や空本体も受理するが、この回の実行対象は上の形に限定する。
+途中の `return` で共通エピローグへ移る処理はコマ4で実装する。
 
 扱う機能は以下の通り。
 
@@ -83,7 +88,7 @@ program       ::= func_def        /* ユーザー定義関数はコマ6 */
 var_decl      ::= obj_type IDENT ';'
 
 func_def    ::= 'int' 'main' '(' ')' func_body   /* 一般の関数定義はコマ6 */
-func_body   ::= '{' { var_decl } { stmt } '}'
+func_body   ::= '{' { var_decl } { expr_stmt } 'return' expr ';' '}'
 
 stmt        ::= expr_stmt
               | 'return' expr ';'

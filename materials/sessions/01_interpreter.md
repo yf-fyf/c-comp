@@ -135,7 +135,7 @@ int main() {
 program       ::= func_def        /* ユーザー定義関数はコマ6 */
 
 func_def    ::= 'int' 'main' '(' ')' func_body   /* 一般の関数定義はコマ6 */
-func_body   ::= '{' { stmt } '}'
+func_body   ::= '{' stmt '}'
 
 stmt        ::= 'return' expr ';'
 

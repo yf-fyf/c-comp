@@ -1022,10 +1022,10 @@ def check_identifiers() -> list[Violation]:
 # materials/sessions/01〜14 の「### この回までの言語仕様（EBNF）」節にある
 # ```ebnf ブロックは「その回までに書ける文法」の累積スナップショットである。
 # 回を追うごとに単調に増えるはずで、後の回で選択肢が消えるのは誤りである
-# （例外は下の GRAMMAR_REFINEMENTS に列挙した「右辺の精密化」だけ）。
+# （例外は下の GRAMMAR_REFINEMENTS に列挙した「右辺の置き換え」だけ）。
 # 次の3点を検査する:
 #   (a) 単調性     コマN の選択肢集合 ⊆ コマN+1 の選択肢集合
-#                  （消えてよいのは GRAMMAR_REFINEMENTS の 11 件のみ）
+#                  （消えてよいのは GRAMMAR_REFINEMENTS に記録した箇所のみ）
 #   (b) 最終形一致 コマ14 の集合が language_spec.md「## 形式文法（EBNF）」節と
 #                  一致する（字句トークン節は各コマが省略するため対象外）。
 #                  T156 分割書は前処理指令 include_dir / define_dir の差分を
@@ -1048,9 +1048,12 @@ GRAMMAR_DIFF_SESSIONS = {14}
 
 # 回をまたいで右辺が「置き換わる」箇所。素朴な部分集合判定では削除と
 # 誤検知されるため、(消える回, 規則名, 精密化前, 精密化後) を許可リストに置く。
-# 出典: c-comp-design/tasks/T156_ebnf_snapshot_breakdown.md「精密化許可リスト」。
+# 出典: 各回原稿の累積文法。初期回の末尾return制限はコマ4で解除する。
 GRAMMAR_REFINEMENTS: tuple[tuple[int, str, str, str], ...] = (
-    (2, "func_body", "'{' { stmt } '}'", "'{' { var_decl } { stmt } '}'"),
+    (2, "func_body", "'{' stmt '}'",
+     "'{' { var_decl } { expr_stmt } 'return' expr ';' '}'"),
+    (3, "func_body", "'{' { var_decl } { expr_stmt } 'return' expr ';' '}'",
+     "'{' { var_decl } { stmt } '}'"),
     (2, "expr", "binary_expr", "assign_expr"),
     (6, "stmt", "'return' expr ';'", "'return' [ expr ] ';'"),
     (5, "func_def", "'int' 'main' '(' ')' func_body",
