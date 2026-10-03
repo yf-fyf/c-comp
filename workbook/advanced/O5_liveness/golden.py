@@ -43,7 +43,7 @@ def compile_asm(csrc, regalloc):
     args = [sys.executable, str(OPTCC)]
     if regalloc:
         args.append("--regalloc")
-    args += ["--passes", "isel", str(csrc)]
+    args += ["--passes", "", str(csrc)]
     r = subprocess.run(args, capture_output=True, text=True, env=os.environ)
     if r.returncode != 0:
         raise RuntimeError(f"{csrc.name}: コンパイル失敗\n{r.stderr[-400:]}")
@@ -92,7 +92,7 @@ def main():
     if tot_after <= tot_before:
         print()
         print("割り当ての前後で差が出ていない。O4 が効いているか確認する。")
-        print("  python3 ../optcc.py --regalloc --passes isel "
+        print("  python3 ../optcc.py --regalloc --passes '' "
               "../O1_measure/bench/loop_sum.c | grep 'mv a0, s'")
         return 1
 

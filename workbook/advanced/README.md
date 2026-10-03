@@ -36,11 +36,11 @@
 | B3 | [`B3_tailcall/`](./B3_tailcall/README.md) | 末尾呼び出し最適化（再帰をループに変える） | 1 | コマ6（着手）+ コマ15（`golden.py`） | [サイト](https://yf-fyf.github.io/c-comp/advanced/B3_tailcall/) |
 | O1 | [`O1_measure/`](./O1_measure/README.md) | 最適化の測り方（静的/動的命令数、ベンチマーク集） | 1 | コマ15 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O1_measure/) |
 | O2 | [`O2_cfg/`](./O2_cfg/README.md) | 基本ブロックとフローグラフ | 1 | コマ15, O1 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O2_cfg/) |
-| O3 | [`O3_isel/`](./O3_isel/README.md) | 命令選択（複数命令を1命令に畳む） | 2 | O1 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O3_isel/) |
+| O3 | [`O3_isel/`](./O3_isel/README.md) | 命令選択（複数命令を1命令に畳む） | 2 | コマ15, O1 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O3_isel/) |
 | O4 | [`O4_regalloc/`](./O4_regalloc/README.md) | 局所変数を callee-saved レジスタへ | 2 | コマ15, O1 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O4_regalloc/) |
 | O5 | [`O5_liveness/`](./O5_liveness/README.md) | 生存変数解析 | 1 | O1, O2, O4 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O5_liveness/) |
-| O6 | [`O6_copyprop/`](./O6_copyprop/README.md) | コピー伝播と死コード除去 | 2 | O1, O2, O4, O5 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O6_copyprop/) |
-| O7 | [`O7_layout/`](./O7_layout/README.md) | ブロック整列とループ回転 | 1 | O1, O2 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O7_layout/) |
+| O6 | [`O6_copyprop/`](./O6_copyprop/README.md) | コピー伝播と死コード除去 | 2 | コマ15, O1, O2, O4, O5 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O6_copyprop/) |
+| O7 | [`O7_layout/`](./O7_layout/README.md) | ブロック整列とループ回転 | 1 | コマ15, O1, O2 | [サイト](https://yf-fyf.github.io/c-comp/advanced/O7_layout/) |
 | R1 | [`R1_nolibc/`](./R1_nolibc/README.md) | libc なしで動かす（システムコール直接発行） | 1 | コマ10（着手）+ コマ15（`check.py` の Step 2） | [サイト](https://yf-fyf.github.io/c-comp/advanced/R1_nolibc/) |
 | R2 | [`R2_printf/`](./R2_printf/README.md) | 自前 printf（整数→10進文字列の変換） | 1 | R1 + コマ15（`check.py`） | [サイト](https://yf-fyf.github.io/c-comp/advanced/R2_printf/) |
 | R3 | [`R3_malloc/`](./R3_malloc/README.md) | 自前 malloc（バンプ割り当て → フリーリスト） | 1 | コマ12 + コマ15（`check.py`） | [サイト](https://yf-fyf.github.io/c-comp/advanced/R3_malloc/) |

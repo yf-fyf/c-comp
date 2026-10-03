@@ -27,10 +27,10 @@ GCC = os.environ.get("GCC", "riscv64-linux-gnu-gcc")
 
 # (見出し, regalloc を使うか, パスの並び)
 CONFIGS = [
-    ("isel だけ(基準)",          False, "isel"),
-    ("isel,copyprop,dce",         False, "isel,copyprop,dce"),
-    ("regalloc + isel",           True,  "isel"),
-    ("regalloc + 全部",           True,  "isel,copyprop,dce"),
+    ("最適化なし(基準)",          False, ""),
+    ("copyprop,dce",         False, "copyprop,dce"),
+    ("regalloc だけ",           True,  ""),
+    ("regalloc + 全部",           True,  "copyprop,dce"),
 ]
 
 
@@ -92,7 +92,7 @@ def main():
             return 1
 
     print()
-    ok, out = run_tests(BENCH, True, "isel,copyprop,dce")
+    ok, out = run_tests(BENCH, True, "copyprop,dce")
     print("ベンチマーク:", out.strip().splitlines()[-2].strip())
     if not ok:
         return 1

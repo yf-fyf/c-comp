@@ -68,9 +68,9 @@ def build(csrc, regalloc, passes, workdir, tag):
 
 
 def main():
-    print("=== 1. 正しさの確認(fixed17 を regalloc + isel で実行)===")
+    print("=== 1. 正しさの確認(fixed17 を regalloc で実行)===")
     try:
-        ok, out = run_tests(WORKBOOK / "final" / "tests", True, "isel")
+        ok, out = run_tests(WORKBOOK / "final" / "tests", True, "")
     except Exception as e:                                  # noqa: BLE001
         print(f"実行できなかった: {e}")
         return 1
@@ -89,13 +89,13 @@ def main():
 
     print()
     print("=== 2. ベンチマークの正しさ ===")
-    ok, out = run_tests(BENCH, True, "isel")
+    ok, out = run_tests(BENCH, True, "")
     print("\n".join(out.strip().splitlines()[-3:]))
     if not ok:
         return 1
 
     print()
-    print("=== 3. 効果(isel だけ → isel + レジスタ割り当て)===")
+    print("=== 3. 効果(最適化なし → レジスタ割り当て)===")
     try:
         me.count_static("  ret\n")
     except NotImplementedError:
@@ -110,8 +110,8 @@ def main():
     worse = []
     with tempfile.TemporaryDirectory() as tmp:
         for csrc in sorted(BENCH.glob("*.c")):
-            asm0, exe0 = build(csrc, False, "isel", Path(tmp), "before")
-            asm1, exe1 = build(csrc, True, "isel", Path(tmp), "after")
+            asm0, exe0 = build(csrc, False, "", Path(tmp), "before")
+            asm1, exe1 = build(csrc, True, "", Path(tmp), "after")
             s0, s1 = me.count_static(asm0), me.count_static(asm1)
             d0 = me.count_dynamic(exe0, me.function_names(asm0))[0]
             d1 = me.count_dynamic(exe1, me.function_names(asm1))[0]

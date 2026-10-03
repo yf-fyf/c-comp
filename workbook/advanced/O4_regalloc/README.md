@@ -12,7 +12,7 @@
 | 項目 | 内容 |
 |------|------|
 | 必須の前提 | コマ15（完成した `final/mycc.py`）、O1（測定基盤。`golden.py` が `measure.py` と `O1_measure/bench/` を使う） |
-| 推奨の前提 | O3（命令選択）。実質必須に近い。資料の測定値は O1 の全構成の基準表の `+isel` 列を基準にしているので、O3 が無いと表と突き合わせられない |
+| 推奨の前提 | O3（命令選択。組み合わせの実験に使えるが、この回の検査には不要） |
 | 改変しない | `mycc.py`、`scaffold/`、`optcc.py` |
 | 編集する | `regalloc.py` |
 | 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が `fixed17` 全通と静的・動的の命令数削減を報告する |
@@ -42,8 +42,8 @@
 ## 動かし方
 
 ```bash
-python3 ../optcc.py --regalloc --passes isel ../O1_measure/bench/loop_sum.c
-python3 ../optcc.py            --passes isel ../O1_measure/bench/loop_sum.c  # 割り当てなし
+python3 ../optcc.py --regalloc --passes '' ../O1_measure/bench/loop_sum.c
+python3 ../optcc.py            --passes '' ../O1_measure/bench/loop_sum.c  # 割り当てなし
 ```
 
 ## テスト

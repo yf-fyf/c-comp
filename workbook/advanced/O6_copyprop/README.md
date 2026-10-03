@@ -11,8 +11,8 @@ O4 が残した `mv a0, s1` の連なりを消します。
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | O1（測定基盤）、O2（フローグラフ）、O4（これが無いと消す対象の `mv` が出てこない）、O5（生存解析） |
-| 推奨の前提 | O3（命令選択）。実質必須に近い。資料の「測ってみると」の比較表が「isel だけ」を基準にしているので、O3 が無いと表と突き合わせられない |
+| 必須の前提 | コマ15（完成した `final/mycc.py`）、O1（測定基盤）、O2（フローグラフ）、O4（これが無いと消す対象の `mv` が出てこない）、O5（生存解析） |
+| 推奨の前提 | O3（命令選択。組み合わせの実験に使えるが、この回の検査には不要） |
 | 改変しない | `mycc.py`、`scaffold/`、`optcc.py` |
 | 編集する | `copyprop.py`、`dce.py` |
 | 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が `fixed17` 全通と4構成の比較表を報告する |
@@ -38,9 +38,9 @@ O4 が残した `mv a0, s1` の連なりを消します。
 
 ```bash
 B=../O1_measure/bench/loop_sum.c
-python3 ../optcc.py --regalloc --passes isel,copyprop,dce $B
-python3 ../optcc.py --regalloc --passes isel              $B
-python3 ../optcc.py            --passes isel,copyprop,dce $B
+python3 ../optcc.py --regalloc --passes copyprop,dce $B
+python3 ../optcc.py --regalloc --passes ''              $B
+python3 ../optcc.py            --passes copyprop,dce $B
 ```
 
 3つ目（レジスタ割り当てなし）がほとんど何も減らないことを、自分で確かめてください。

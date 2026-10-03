@@ -11,8 +11,8 @@
 
 | 項目 | 内容 |
 |------|------|
-| 必須の前提 | O1（測定基盤。動的命令数の物差しが要る）、O2（`loop_headers` が `cfg.py` の後方辺を使う） |
-| 推奨の前提 | O3（命令選択）。実質必須に近い。「動かし方」も「測ってみると」も `--passes isel,layout` を O1 の全構成の基準表の `+isel` 列と比べるので、O3 が無いと基準がそろわない |
+| 必須の前提 | コマ15（完成した `final/mycc.py`）、O1（測定基盤。動的命令数の物差しが要る）、O2（`loop_headers` が `cfg.py` の後方辺を使う） |
+| 推奨の前提 | O3（命令選択。組み合わせの実験に使えるが、この回の検査には不要） |
 | 改変しない | `mycc.py`、`scaffold/`、`optcc.py` |
 | 編集する | `layout.py` |
 | 完了条件 | `check.py` の全 Step が PASS になり、`golden.py` が `fixed17` 全通と動的命令数の削減を報告する |
@@ -34,8 +34,8 @@ B1 を先にやっているなら `peephole.py` の実装をそのまま持ち�
 ## 動かし方
 
 ```bash
-python3 ../optcc.py --passes isel,layout ../O1_measure/bench/loop_sum.c
-python3 ../optcc.py --passes isel        ../O1_measure/bench/loop_sum.c   # 回転なし
+python3 ../optcc.py --passes layout ../O1_measure/bench/loop_sum.c
+python3 ../optcc.py --passes ''        ../O1_measure/bench/loop_sum.c   # 回転なし
 ```
 
 ## テスト

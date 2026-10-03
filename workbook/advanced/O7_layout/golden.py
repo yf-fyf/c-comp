@@ -67,8 +67,8 @@ def build(csrc, passes, workdir, tag):
 
 
 def main():
-    print("=== 1. 正しさの確認(fixed17 を isel,layout で実行)===")
-    ok, out = run_tests(WORKBOOK / "final" / "tests", "isel,layout")
+    print("=== 1. 正しさの確認(fixed17 を layout で実行)===")
+    ok, out = run_tests(WORKBOOK / "final" / "tests", "layout")
     print("\n".join(out.strip().splitlines()[-3:]))
     if not ok:
         if "NotImplementedError" in out:
@@ -79,7 +79,7 @@ def main():
 
     print()
     print("=== 2. ベンチマークの正しさ ===")
-    ok, out = run_tests(BENCH, "isel,layout")
+    ok, out = run_tests(BENCH, "layout")
     print("\n".join(out.strip().splitlines()[-3:]))
     if not ok:
         return 1
@@ -99,8 +99,8 @@ def main():
     tb = ta = db = da = 0
     with tempfile.TemporaryDirectory() as tmp:
         for csrc in sorted(BENCH.glob("*.c")):
-            asm0, exe0 = build(csrc, "isel", Path(tmp), "before")
-            asm1, exe1 = build(csrc, "isel,layout", Path(tmp), "after")
+            asm0, exe0 = build(csrc, "", Path(tmp), "before")
+            asm1, exe1 = build(csrc, "layout", Path(tmp), "after")
             s0, s1 = me.count_static(asm0), me.count_static(asm1)
             d0 = me.count_dynamic(exe0, me.function_names(asm0))[0]
             d1 = me.count_dynamic(exe1, me.function_names(asm1))[0]
@@ -116,7 +116,7 @@ def main():
 
     if da >= db:
         print("\n動的命令数が減っていない。ループが回転しているか確認する。")
-        print("  python3 ../optcc.py --passes isel,layout "
+        print("  python3 ../optcc.py --passes layout "
               "../O1_measure/bench/loop_sum.c | grep -n 'bnez\\|j \\.L'")
         return 1
 
