@@ -537,13 +537,13 @@ Cでは、代入式 `a = 3` 自体の値は `3` である。
 | `target.c` | `a = 3; b = 5; c = a + b; return c;` | 手順8 | 8 |
 | `reassign.c` | `n = 5; n = n * n; n = n - 10; return n;` | 手順8 | 15 |
 | `init.c` | `int a; int b; int c; a = 3; b = 5; c = a * b; return c;` | 手順8 | 15 |
-| `chain_assign.c` | `a = 5; b = a; a = b + 1; return a;` | 手順8 | 6 |
+| `chain_assign.c` | `a = b = 3; return a + b;`（右結合と代入式の値） | 手順8 | 6 |
 | `single.c` | 1変数への代入と参照 | 手順8 | 対応する `.ans` を参照 |
 | `add_vars.c` | 複数変数の加算 | 手順8 | 対応する `.ans` を参照 |
 | `expr_chain.c` | 変数を含む式の連鎖 | 手順8 | 対応する `.ans` を参照 |
 | `multi_expr.c` | 複数変数と複数式 | 手順8 | 対応する `.ans` を参照 |
 | `many_locals.c` | 6変数の総和 | 手順8 | 21 |
-| `eight_locals.c` | 8変数（アラインメント境界。落ちるときは手順2 のフレームサイズを疑う） | 手順8 | 36 |
+| `eight_locals.c` | 8変数の独立したスロットとフレーム確保 | 手順8 | 36 |
 | `minimal.c` | 最小関数（ローカル変数なし） | 手順2 | 42 |
 
 代入の前にローカル変数の宣言が必要である。宣言と同時に初期値を書くことはできず、初期値は代入文で設定する。
@@ -556,7 +556,18 @@ python3 scaffold/test_runner.py sessions/03_variables
 
 `tests/target.c` がコンパイルでき、終了コード `8` になれば基本形は成功。
 
-`eight_locals.c` はフレームサイズが 16 バイト境界に揃っているかを見るテストで、
+`eight_locals.c` は8変数のスロットが重ならず、必要なフレームを確保できるかを見る。
+局所領域は8変数×8バイトで元から16の倍数なので、アラインメント調整の検査にはならない。
+調整を確認するときは、1変数の `single.c` の生成アセンブリを読む。
+
+```bash
+python3 sessions/03_variables/mycc.py sessions/03_variables/tests/single.c > single.s
+```
+
+プロローグで `addi sp, sp, -32` が出ることを確認する。
+局所変数8バイトと退避領域16バイトの計24バイトを、16の倍数である32へ切り上げるためである。
+qemuで動くだけでは、呼び出し規約のアラインメントを証明できない。
+
 `minimal.c` はローカル変数が 0 個でも正しく動くかを見るテストである。
 
 個別に動かす場合は、次のようにする。

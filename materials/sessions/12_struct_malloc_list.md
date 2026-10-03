@@ -373,11 +373,11 @@ int main() {
 
 ## struct 定義を読む
 
-Parser は `struct Point { ... };` のフィールド一覧を AST には残さない。
-そのため、この回ではソース文字列を走査して構造体情報を集める。
+Parser は `struct Point { ... };` のフィールド一覧を構文解析結果の
+`prog.struct_defs` に残す。この回では、その情報から構造体のレイアウトを計算する。
 
 ```python
-# スケルトンがあらかじめ source から構造体情報を収集し、
+# スケルトンがあらかじめ prog.struct_defs から構造体情報を収集し、
 # self._struct_defs としてコンストラクタに渡す設計
 ```
 
@@ -542,8 +542,9 @@ Parser が見る時点ではすでに `0` になっているからである。
 意味の上では、`NULL` は「どのオブジェクトも指していない」ことを表すポインタ値である。
 アドレス 0 にはプログラムのデータが置かれないので、
 「有効なアドレスではない」印として 0 を使える。
-`p = NULL;` は「まだどこも指していない」、`p != NULL` は「有効なアドレスを持っている」
-という意味になる。`NULL` のポインタを間接参照してはいけない（実行時にクラッシュする）。
+`p = NULL;` は「まだどこも指していない」、`p != NULL` は「NULLではない」
+という意味になる。非NULLであることだけでは、参照先が有効であるとは保証できない。
+`NULL` のポインタを間接参照してはいけない（未定義動作であり、クラッシュし得る）。
 連結リストでは、この規則がそのまま「終端に着いたら止まる」という走査の条件になる。
 
 ## 連結リストの走査
@@ -562,7 +563,8 @@ int list_sum(struct Node *head) {
 }
 ```
 
-`head != NULL` は、まだ終端に着いていないこと、つまり `head` が指す先を読んでよいことを調べている
+各ノードが有効な次のノードまたはNULLを指すように構築された連結リストでは、
+`head != NULL` はまだ終端に着いていないことを調べる
 （前処理を通った後は `head != 0` になる）。
 `head->val` で現在のノードの値を読み、`head = head->next` で次のノードへ進む。
 
@@ -626,6 +628,7 @@ NULL の判定と中身の判定は、上の例のように分けて書くこと
 1. スケルトンの `importlib` 継承によりコマ11の Codegen クラスを引き継ぐ（あらかじめ書かれている）
 2. `parse_struct_defs(prog)` で構造体定義のレイアウトを求め、コンストラクタで `self._struct_defs` に渡す（あらかじめ書かれている）
 3. `alloc_local()` / `_scale_index()` / `_load_ty()` / `_store_ty()` の `size_of_ty_str` 呼び出しに `self._struct_defs` を渡す
+   （`_store_ty()` はコマ8の規則を保ち、`char` 格納後の `a0` も縮小・符号拡張する）
 4. `_load_ty()` は `struct` 型のときロードせず、アドレスのまま扱う（`is_struct_ty_str` で判定）
 5. `_member_struct_type(node)` を実装する（`.` は `_type_of_lval`、`->` は `_type_of_expr` + `elem_ty_str`）
 6. `type_of_lval_Member(node)` と `type_of_expr_Member(node)` を実装する（フィールドの型は `field_ty` で引く）
@@ -704,6 +707,11 @@ struct 値を入れ子にすることはできない（`struct Node *next` の�
 [S3](../../workbook/advanced/S3_struct/README.md)、型検査パスを足す
 [Q1](../../workbook/advanced/Q1_typecheck/README.md)、自前 `malloc`（バンプ割り当て →
 フリーリスト）を作る [R3](../../workbook/advanced/R3_malloc/README.md) に着手できる。
+
+ここでの「着手」は、概念を学び実装を検討し始めることである。
+S3・Q1の単体検査を進められるが、完成したコンパイラを使う実行検査は
+各READMEの前提を確認すること。R3の `check.py` は既定の経路で
+コマ15の完成した `final/mycc.py` を使うため、コマ12の時点では完走できない。
 
 生成したアセンブリでメンバの offset 計算や `malloc` が返すアドレスを1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/app.html?mode=run) に貼り付ける。
 

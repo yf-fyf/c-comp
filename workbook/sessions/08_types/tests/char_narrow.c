@@ -27,6 +27,23 @@ int main() {
     if (c != 44) {
         return 6;
     }
+    n = (c = 300);
+    if (n != 44) {
+        return 8;
+    }
+    n = (c = 128);
+    if (n != -128) {
+        return 9;
+    }
+    n = (c = 255);
+    if (n != -1) {
+        return 10;
+    }
+    n = (c = 256);
+    if (n != 0) {
+        return 11;
+    }
+    c = 300;
     n = c + 1;
     if (n != 45) {
         return 7;

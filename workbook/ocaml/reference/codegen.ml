@@ -168,7 +168,8 @@ let load g ty =
 
 let store g ty =
   with_note g (Printf.sprintf "store: a1 のアドレスへ%sを書く" (ty_note g ty)) (fun () ->
-      emit g Asm.(store (size_of g ty) a0 (at a1 0)))
+      emit g Asm.(store (size_of g ty) a0 (at a1 0));
+      if size_of g ty = 1 then emit g Asm.(load 1 a0 (at a1 0)))
 
 let scale_index g elem_size =
   if elem_size <> 1 then

@@ -61,7 +61,7 @@ let load ty =
 
 let store ty =
   match size_of_ty ty with
-  | 1 -> emit "  sb a0, 0(a1)"
+  | 1 -> emit "  sb a0, 0(a1)"; emit "  lb a0, 0(a1)"
   | 4 -> emit "  sw a0, 0(a1)"
   | _ -> emit "  sd a0, 0(a1)"
 

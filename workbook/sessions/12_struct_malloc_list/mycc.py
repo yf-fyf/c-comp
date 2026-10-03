@@ -154,6 +154,8 @@ class Codegen12(prev.Codegen11):
         #           sz = self.size_of_ty_str(ty_str)
         #           if sz == 1:
         #               self.emit('  sb a0, 0(a1)')
+        #               self.emit('  slli a0, a0, 56')
+        #               self.emit('  srai a0, a0, 56')
         #           elif sz == 4:
         #               self.emit('  sw a0, 0(a1)')
         #           else:

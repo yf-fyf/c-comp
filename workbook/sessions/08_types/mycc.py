@@ -120,6 +120,8 @@ class Codegen08(prev.Codegen07):
         raise NotImplementedError("_load_ty を実装してください")
 
     def _store_ty(self, ty_str: str) -> None:
+        # char は sb で格納した後、a0 の下位8ビットを符号拡張する。
+        # 代入式の結果にも縮小後の値を残す（例: c = 300 の値は44）。
         # TODO: char/int/pointer のサイズに応じて sb/sw/sd を emit する。
         raise NotImplementedError("_store_ty を実装してください")
 

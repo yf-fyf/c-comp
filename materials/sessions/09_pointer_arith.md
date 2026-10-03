@@ -446,6 +446,10 @@ echo $?
 
 ポインタ演算まで進んだので、ポインタ同士の引き算に意味を足す
 [L1](../../workbook/advanced/L1_ptrdiff/README.md) に着手できる。
+L1の概念の学習と `check.py` による単体検査は、この回から始められる。
+構造体・`malloc` を使う実行テストにはコマ12までの実装が必要で、
+`golden.py` の完走にはコマ15で完成させた `final/mycc.py` が必要になる。
+
 `sizeof` を式にも広げる [L4](../../workbook/advanced/L4_sizeof_expr/README.md) は、
 構造体まで進んだコマ12 以降に着手できる。
 

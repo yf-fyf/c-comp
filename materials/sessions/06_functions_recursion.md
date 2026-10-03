@@ -210,8 +210,9 @@ S式の全文は上の `parse_viewer.py` で確認できる。見どころは冒
 
 ![相互再帰の AST](figures/ast/06_mutual_rec_ast.svg)
 
-相互に呼び合う関数では、先に `funcproto` が出る。
-これは、宣言より前に関数定義を書く必要がある場合に、Parserが宣言を前方に移動するためである。
+この例では、ソースの先頭に書いた関数プロトタイプが先に `funcproto` として現れる。
+Parser は宣言を前方へ移動せず、ソースに書かれた外部宣言の順序を保存する。
+相互に呼び合う関数は、呼び出しより前に相手のプロトタイプを宣言しておく。
 
 ## RV64の関数呼び出し規約
 
@@ -305,8 +306,8 @@ sd a1, -32(s0)
 ```text
 1. 引数を左から順に self.codegen する
 2. 各引数の結果をスタックに積む（_push_a0）
-3. スタックから a0, a1, ... にロードする（積んだ逆順）
-4. 引数個数 * 8 でスタックを戻す
+3. 積んだ逆順に _pop_into で引数レジスタへ戻す（最後の引数から a0 まで）
+4. _pop_into が sp と _depth を戻すため、引数分の sp の調整は追加しない
 5. sp を16バイト境界へ揃える（次節。積んでいる一時値が奇数個なら 8 詰める）
 6. call 関数名 を出す
 7. 5 で詰めた分を戻す
@@ -320,13 +321,11 @@ sp + 8   arg1
 sp + 16  arg0
 ```
 
-そのため、レジスタへ戻すときは次のように読む。
-
-| レジスタ | 読む位置 |
-|----------|----------|
-| `a0` | `sp + (N - 1) * 8` |
-| `a1` | `sp + (N - 2) * 8` |
-| ... | ... |
+そのため、3引数なら `_pop_into('a2')`、`_pop_into('a1')`、
+`_pop_into('a0')` の順に戻す。各呼び出しは `0(sp)` の値を読み、
+`sp` を8バイト戻すと同時に `_depth` を1減らす。
+一般には `for i in reversed(range(len(node.args)))` の順に
+`self._pop_into(f'a{i}')` を呼ぶ。
 
 ![3引数の呼び出しで、push した引数をレジスタへ戻す対応](figures/06_arg_stack.svg)
 
@@ -535,6 +534,10 @@ echo $?
 [B1](../../workbook/advanced/B1_fold_peephole/README.md)・[B2](../../workbook/advanced/B2_regalloc/README.md)・
 [B3](../../workbook/advanced/B3_tailcall/README.md)と、`&&`/`||` の短絡評価を仕様へ寄せる
 [S1](../../workbook/advanced/S1_shortcircuit/README.md) に着手できる。
+
+S1の概念の学習と `check.py` による単体検査は、この回から始められる。
+構造体・`malloc` を使う実行テストにはコマ12までの実装が必要で、
+`golden.py` の完走にはコマ15で完成させた `final/mycc.py` が必要になる。
 
 関数呼び出し前後で `ra` や引数レジスタがどう退避されるかを1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/app.html?mode=run) に貼り付ける。
 
