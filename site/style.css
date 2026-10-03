@@ -2,7 +2,8 @@
  *
  * 配色は PDF 時代の latex/session-template.tex から移した。
  * 図（materials/figures/*.svg）も latex/figure-preamble.tex で同じ値を使っているので、
- * 本文と図の見た目が揃う。ここの値を変えるときは図のプリアンブルも合わせること。
+ * 本文と図の基調色が揃う。共有する紫・暖色を変えるときは図のプリアンブルも合わせること。
+ * サイトの補助文字・構文色はここで管理し、図の内部色とは分ける。
  *
  * 和文フォントは同梱しない。CJK のウェブフォントは数 MB になるので、
  * OS 標準の Noto Sans CJK / ヒラギノ / 游ゴシックへ順に落とす。
@@ -14,12 +15,20 @@
   --accent-lighter: #F7F3F9;
   --emph: #E64B17;
   --text: #262626;
-  --gray-text: #737373;
+  --gray-text: #595959;
   --gray-bg: #F2F2F2;
   --code-frame: #D6D6D6;
   --pre-bg: #FDFAFF;
   --link: #0065CC;
   --warning-bg: #FFF4EF;
+  --warning-tone: #9E360E;
+  --code-keyword: #583B66;
+  --code-name: #234F7D;
+  --code-string: #2C6035;
+  --code-operator: #74401A;
+  --code-error: #A32626;
+  --code-size: 1rem;
+  --anchor-offset: 4.5rem;
 
   --sans: "Noto Sans CJK JP", "Noto Sans JP", "Hiragino Sans",
           "Yu Gothic Medium", "Meiryo", system-ui, sans-serif;
@@ -32,6 +41,14 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
+#main, .content [id] { scroll-margin-top: var(--anchor-offset); }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+:where(a, summary, button):focus-visible {
+  outline: 2px solid var(--accent-dark);
+  outline-offset: 3px;
+}
 
 body {
   margin: 0;
@@ -182,20 +199,28 @@ hr { border: 0; border-top: 1px solid var(--accent-light); margin: 2.5rem 0; }
 
 /* ── ページ内目次 ── */
 
-/* 箱にすると本文の前を占領する（コマ6 は15項目）。罫線だけにして横に流す。 */
+/* ネイティブの開閉欄。閉じても文法へのショートカットは使える。 */
+.page-navigation { position: relative; margin: 0 0 1.6rem; }
 .toc {
-  margin: 0 0 2.2rem;
-  padding: 0.2rem 0 0.2rem 1rem;
-  border-left: 3px solid var(--accent-light);
-  font-size: 0.9rem;
+  border: 1px solid var(--accent-light);
+  border-radius: 0.35rem;
+  font-size: 0.95rem;
   line-height: 1.7;
 }
-.toc-head {
-  margin: 0 0 0.4rem;
+.toc > summary {
+  padding: 0.65rem 1rem;
   font-weight: 700;
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
-  color: var(--gray-text);
+  color: var(--accent-dark);
+  cursor: pointer;
+}
+.has-grammar .toc > summary { padding-right: 8rem; }
+.toc > nav { padding: 0 1rem 0.65rem; }
+.toc-grammar {
+  position: absolute;
+  top: 0.65rem;
+  right: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
 }
 .toc ul {
   list-style: none;
@@ -214,7 +239,7 @@ hr { border: 0; border-top: 1px solid var(--accent-light); margin: 2.5rem 0; }
 
 code {
   font-family: var(--mono);
-  font-size: 0.92em;
+  font-size: 0.95em;
   background: var(--gray-bg);
   padding: 0.1em 0.3em;
   border-radius: 0.2em;
@@ -228,17 +253,21 @@ pre {
   border: 1px solid var(--code-frame);
   border-radius: 0.35rem;
   overflow-x: auto;
-  line-height: 1.65;
+  font-size: var(--code-size);
+  line-height: 1.7;
 }
 pre code {
   background: none;
   padding: 0;
-  font-size: 0.88rem;
+  font-size: inherit;
   white-space: pre;
 }
+pre > code.sourceCode > span { line-height: inherit; }
 
 /* 言語ラベル。boxes.lua が原稿の綴りを data-lang に残す */
 div.sourceCode { position: relative; }
+/* 大きくした言語ラベルが長い先頭行と重ならないよう、上端に余白を取る。 */
+div.sourceCode[data-lang] pre { padding-top: 2.1rem; }
 div.sourceCode[data-lang]::before {
   content: attr(data-lang);
   position: absolute;
@@ -246,16 +275,30 @@ div.sourceCode[data-lang]::before {
   right: 0;
   padding: 0.05rem 0.5rem;
   font-family: var(--mono);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   color: var(--gray-text);
   background: var(--gray-bg);
   border-radius: 0 0.35rem 0 0.35rem;
 }
 
+/* Pandocの構文色を共通CSSで管理する。このCSSは生成されたテーマの後に読む。 */
+code span.kw, code span.cf, code span.dt, code span.pp, code span.at, code span.cn {
+  color: var(--code-keyword);
+}
+code span.fu, code span.bu, code span.dv, code span.bn, code span.fl {
+  color: var(--code-name);
+}
+code span.st, code span.ss, code span.vs, code span.ch { color: var(--code-string); }
+code span.op, code span.ot, code span.sc, code span.wa { color: var(--code-operator); }
+code span.co, code span.cv, code span.do, code span.an, code span.in {
+  color: var(--gray-text);
+}
+code span.al, code span.er { color: var(--code-error); }
+
 /* ── 各回の文法差分 ── */
 
 .grammar-section { margin: 2rem 0; }
-.grammar-section, .grammar-section [id] { scroll-margin-top: 4.5rem; }
+.grammar-section { scroll-margin-top: var(--anchor-offset); }
 .grammar-status, .grammar-overview {
   padding: 0.7rem 1rem;
   border: 1px solid var(--accent-light);
@@ -458,8 +501,8 @@ figcaption {
 .adm-important { background: var(--accent-light); border-color: var(--accent-dark); }
 .adm-important > .adm-title { background: var(--accent-dark); color: #fff; }
 
-.adm-warning { background: var(--warning-bg); border-color: var(--emph); }
-.adm-warning > .adm-title { background: var(--emph); color: #fff; }
+.adm-warning { background: var(--warning-bg); border-color: var(--warning-tone); }
+.adm-warning > .adm-title { background: var(--warning-tone); color: #fff; }
 
 .adm-exercise { background: var(--gray-bg); border-color: var(--accent-dark); }
 .adm-exercise > .adm-title { background: var(--accent-dark); color: #fff; }
@@ -569,7 +612,7 @@ figcaption {
 /* ── 印刷 ── */
 
 @media print {
-  .topbar, .pager, .sitefoot, .skiplink, .toc, .source, .lightbox { display: none; }
+  .topbar, .pager, .sitefoot, .skiplink, .page-navigation, .source, .lightbox { display: none; }
   .layout { max-width: none; padding: 0; }
   .content { padding: 0; }
   .table-scroll { overflow-x: visible; }

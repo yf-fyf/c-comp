@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>$if(title)$$pagetitle$ — $endif$$site-title$</title>
 $if(description)$<meta name="description" content="$description$">$endif$
-<link rel="stylesheet" href="$base$assets/style.css">
 <script defer src="$base$assets/lightbox.js"></script>
 <script defer src="$base$assets/grammar.js"></script>
+<script defer src="$base$assets/navigation.js"></script>
 $if(highlighting-css)$<style>
 $highlighting-css$
 </style>$endif$
+<link rel="stylesheet" href="$base$assets/style.css">
 $if(math)$$math$$endif$
 $for(header-includes)$$header-includes$$endfor$
 </head>
@@ -30,10 +31,13 @@ $for(header-includes)$$header-includes$$endfor$
       $if(site-subtitle)$<p class="page-affil">$site-subtitle$</p>$endif$
     </div>$endif$
     $if(toc)$
-    <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      $toc$
-    </nav>
+    <div class="page-navigation$if(grammar-anchor)$ has-grammar$endif$">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次">$toc$</nav>
+      </details>
+      $if(grammar-anchor)$<a class="toc-grammar" href="#$grammar-anchor$">文法を参照</a>$endif$
+    </div>
     $endif$
 
 $body$

@@ -228,6 +228,7 @@ function Pandoc(doc)
       blocks:insert(pandoc.Div(inner, { class = "goal" }))
     elseif grammar and block.t == "Header" and block.level == 3
        and pandoc.utils.stringify(block.content) == "この回までの言語仕様（EBNF）" then
+      doc.meta["grammar-anchor"] = pandoc.MetaString(block.identifier)
       local section = pandoc.List({block})
       i = i + 1
       while i <= n do

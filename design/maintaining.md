@@ -30,7 +30,8 @@
 │   ├── boxes.lua          # ::: の変換・図と .md リンクの書き換え
 │   ├── style.css          # 配色は latex/figure-preamble.tex と揃える
 │   ├── lightbox.js        # 図の拡大表示
-│   └── grammar.js         # 文法への直接リンク・印刷時の全文表示
+│   ├── grammar.js         # 文法への直接リンク・印刷時の全文表示
+│   └── navigation.js      # 固定ヘッダーの高さに合わせたページ内移動
 ├── latex/                 # 図の共通プリアンブル（figure-preamble.tex のみ）
 ├── tools/                 # サイト・図・公開物・ウェブアプリの生成スクリプト
 ├── web/                   # 補助ウェブアプリ（企画: design/webapps.md、構成: web/README.md）
@@ -183,7 +184,7 @@ CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make ch
 | 変えたもの | 作り直す範囲 |
 |------------|--------------|
 | 原稿 `.md` 1本 | そのページだけ。通常回01〜13では次の回の文法差分も更新（先頭 H1 を変えた場合は全ページ） |
-| `site/style.css`・`site/lightbox.js`・`site/grammar.js` | 静的ファイルのコピーのみ |
+| `site/style.css`・`site/lightbox.js`・`site/grammar.js`・`site/navigation.js` | 静的ファイルのコピーのみ |
 | `site/template.html`・`site/boxes.lua`・`site/nav.yaml` | 全ページ |
 
 通常回01〜14の文法欄は、原稿のEBNFを正として`tools/grammar_snapshots.py`で前回と比較する。
@@ -192,6 +193,12 @@ CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make ch
 差分の色は手作業で原稿に埋め込まない。置換を伴う文法改訂は`GRAMMAR_REFINEMENTS`と最終仕様も
 整合させ、`make check-docs`で確認する。検査用の正規化を表示する原文へ適用しない。
 文法の直接リンクは全文を開き、印刷では全文を表示する。JavaScriptなしでも参照欄を開閉できる。
+
+ページ内目次は標準の開閉欄にし、閉じても通常回の「文法を参照」を使える。
+見出し・コード行への移動には固定ヘッダー分の余白を取り、JavaScript有効時はヘッダーの実測高さに合わせる。
+動きを抑えるブラウザ設定ではスムーズスクロールを使わない。
+構文色は`site/style.css`で管理し、PandocのテーマCSSより後に読むことで上書きを揃える。
+本文・図で共有する紫の基調色は維持し、コードと補助文字の色を読みやすく整える。
 
 `web/app/dist/` があれば `/tools/` として一緒に配信するので、
 ヘッダの「補助ツール」からの導線もローカルで確認できる。無い場合は `make web` で作る。

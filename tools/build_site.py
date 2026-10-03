@@ -50,6 +50,7 @@ FILTER = SITE / "boxes.lua"
 STYLE = SITE / "style.css"
 SCRIPT = SITE / "lightbox.js"
 GRAMMAR_SCRIPT = SITE / "grammar.js"
+NAVIGATION_SCRIPT = SITE / "navigation.js"
 FIGURES = ROOT / "materials" / "figures"
 
 PANDOC = "pandoc"
@@ -418,7 +419,7 @@ def render_home(nav: dict, pages: list[Page], output: Path,
 
 
 # assets/ へそのまま置く静的ファイル。template.html がこの名前で読み込む
-STATIC_ASSETS = (STYLE, SCRIPT, GRAMMAR_SCRIPT)
+STATIC_ASSETS = (STYLE, SCRIPT, GRAMMAR_SCRIPT, NAVIGATION_SCRIPT)
 
 
 def copy_static(output: Path) -> None:

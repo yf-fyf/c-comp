@@ -32,8 +32,8 @@ jobs:
       - name: Show the pandoc version
         # ディストリの pandoc は手元より古いことがある。差分の切り分け用に出す
         run: pandoc --version | head -1
-      - name: Test the assembled link checker
-        run: python3 -m unittest discover -s tools/tests -p test_site_links.py -v
+      - name: Test site navigation, presentation, and assembled links
+        run: python3 -m unittest discover -s tools/tests -p 'test_site_*.py' -v
       - name: Test grammar deltas and literal source preservation
         run: python3 -m unittest discover -s tools/tests -p test_grammar.py -v
       - name: Build the site
