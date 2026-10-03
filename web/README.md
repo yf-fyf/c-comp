@@ -46,7 +46,7 @@ JSON / DOT の直列化と `astDot` API は内部処理・黄金テスト用に�
 | 対象 | 方法 | コマンド |
 |------|------|----------|
 | AST 表示 | Python 版 `scaffold/parse_viewer.py` とバイト一致（全テスト × sexp/dot × 行番号有無） | `make web-test` |
-| シミュレータ | qemu の実測値と終了コード・標準出力を突き合わせ（workbook 全テスト） | `make sim-test` |
+| シミュレータ | workbook のテストを qemu の実測値と照合。ストリームI/Oと補助ソースの除外理由を表示 | `make sim-test` |
 | 手書きサンプル | 期待する終了コード・出力・警告が出るか | `make web-test`（vitest に同梱） |
 
 ## 開発
@@ -79,9 +79,15 @@ make web
 - libc シム: `printf`（`%d %u %x %c %s %%`）/ `malloc` / `exit` / `strlen` / `strcmp` / `strchr`。
   **プログラム側が同名の関数を定義していればそちらが優先される**ので、
   発展課題 R2_printf・R3_malloc の自前実装もそのまま動く
+- `main` から開始するときは `argc=1`、`argv[0]="program"`、`argv[1]=NULL` を用意する。
+  引数配列と文字列は書き換え可能な領域に置く。QEMU照合では同じ実行ファイル名を `argv[0]` に指定する
 - `ecall` は `a7=64`（write）と `a7=93`（exit）のみ。発展課題 R1_nolibc 用
 
 未対応の記法は黙って無視せず、行番号を添えて拒否する。
+ストリームI/O（`fdopen` / `fprintf` / `fopen` / `fread` / `fclose`）は未対応である。
+`make sim-test` はこれらの外部呼び出しを使う入力と、エントリポイントのない補助ソースを
+理由つきで除外する。プログラム側で同名の関数を定義した場合は照合する。
+コンパイル・リンク・実行時の失敗と不一致は検査失敗として扱う。
 
 ## wasm への移行（未了）
 

@@ -75,7 +75,8 @@ export class Machine {
   private readonly checker!: Checker;
   readonly entryName: string;
 
-  constructor(readonly program: Program, readonly maxSteps = 1_000_000) {
+  constructor(readonly program: Program, readonly maxSteps = 1_000_000,
+              argv: readonly string[] = ["program"]) {
     // データ・bss の初期像を置く（この領域は初期化済みとして扱う）
     this.mem.set(program.dataImage, DATA_BASE - DATA_BASE);
     this.init.fill(1, 0, program.dataImage.length);
@@ -94,6 +95,21 @@ export class Machine {
     this.regs[REG.ra] = BigInt(RETURN_SENTINEL);
     this.checker = new Checker(this);
     this.checker.enterEntry(entry, STACK_TOP);
+    if (entry === "main") {
+      // main を直接呼ぶので、起動側が argc / argv と終端 NULL を用意する。
+      // ヒープに置き、main のフレームや式の一時値に上書きされないようにする。
+      const args = this.malloc((argv.length + 1) * 8);
+      for (let i = 0; i < argv.length; i++) {
+        const bytes = new TextEncoder().encode(argv[i]!);
+        const text = this.malloc(bytes.length + 1);
+        bytes.forEach((byte, offset) => this.store(text + offset, 1, BigInt(byte), 0));
+        this.store(text + bytes.length, 1, 0n, 0);
+        this.store(args + i * 8, 8, BigInt(text), 0);
+      }
+      this.store(args + argv.length * 8, 8, 0n, 0);
+      this.set(REG.a0, BigInt(argv.length));
+      this.set(REG.a1, BigInt(args));
+    }
   }
 
   // ── レジスタ ──

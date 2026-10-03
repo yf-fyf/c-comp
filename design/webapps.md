@@ -219,7 +219,11 @@ dev/web/
   ディレクティブは8種（`.text` `.globl` `.data` `.bss` `.byte` `.word` `.dword` `.zero`）
 - libc シムの範囲は [`workbook/docs/language_spec.md`](../workbook/docs/language_spec.md) の `lib.h` 宣言に合わせる。
   `printf` / `malloc` / `exit` / `strlen` / `strcmp` / `strchr` を実装し、
-  `fopen` / `fread` / `fclose` / `fprintf` はセルフホスト専用なので当面対象外とする
+  `fdopen` / `fprintf` / `fopen` / `fread` / `fclose` のストリームI/Oは当面対象外とする。
+  コマ11にもこれらの検査があるため、QEMU照合では外部呼び出しを含む入力の除外理由を表示する。
+  プログラム自身が同名の関数を定義した場合は照合する。
+  `main` を直接呼ぶときの `argc` / `argv` はシミュレータが用意する。
+  初期値と検査対象は [`../web/README.md`](../web/README.md) を参照
 
 ---
 

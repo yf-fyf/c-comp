@@ -7,13 +7,15 @@
 // 比べる相手は .ans ではなく qemu の実測値である。ここで試験したいのは
 // コンパイラではなくシミュレータだから。
 //
-// 使い方: node test/qemu-conformance.mjs [-v]
+// ストリームI/Oと main のない補助ソースは理由を表示して除外する。
+// 使い方: npm run test:qemu -- [-v]
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { conformanceExclusion } from "./qemu-scope";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const APP = join(HERE, "..");
@@ -26,7 +28,7 @@ const QEMU = process.env.QEMU ?? "qemu-riscv64";
 const verbose = process.argv.includes("-v");
 
 function have(cmd: string): boolean {
-  return spawnSync("sh", ["-c", `command -v ${cmd}`], { encoding: "utf8" }).status === 0;
+  return spawnSync(cmd, ["--version"], { encoding: "utf8" }).status === 0;
 }
 
 if (!existsSync(LECTURE15)) {
@@ -35,8 +37,8 @@ if (!existsSync(LECTURE15)) {
 }
 for (const tool of [GCC, QEMU]) {
   if (!have(tool)) {
-    console.log(`skip: ${tool} がない（docker/rv64 経由なら動く）`);
-    process.exit(0);
+    console.error(`必要なツールがない: ${tool}（docker/rv64 経由なら動く）`);
+    process.exit(2);
   }
 }
 
@@ -68,7 +70,7 @@ for (const src of sources) {
   // 追加ソース（コマ14 の複数ファイル）
   const filesList = src.replace(/\.c$/, ".files");
   const extra = existsSync(filesList)
-    ? execFileSync("cat", [filesList], { encoding: "utf8" })
+    ? readFileSync(filesList, "utf8")
         .split("\n").map((s) => s.trim()).filter(Boolean)
         .map((n) => join(dirname(src), n))
     : [];
@@ -80,7 +82,24 @@ for (const src of sources) {
       encoding: "utf8", timeout: 20000, cwd: WORKBOOK,
     });
   } catch {
-    skipped.push([rel, "参照コンパイラがコンパイルできない"]);
+    failures.push([rel, "参照コンパイラがコンパイルできない"]);
+    continue;
+  }
+
+  let program;
+  try {
+    program = assemble(asm);
+  } catch (e) {
+    failures.push([rel, `シミュレータのアセンブラが例外: ${(e as Error).message}`]);
+    continue;
+  }
+  if (!program.textLabels.has("main") && !program.textLabels.has("_start")) {
+    skipped.push([rel, "エントリポイントのない補助ソース"]);
+    continue;
+  }
+  const excluded = conformanceExclusion(program);
+  if (excluded !== null) {
+    skipped.push([rel, excluded]);
     continue;
   }
 
@@ -92,12 +111,12 @@ for (const src of sources) {
     encoding: "utf8",
   });
   if (build.status !== 0) {
-    skipped.push([rel, "アセンブルできない"]);
+    failures.push([rel, "アセンブル・リンクできない"]);
     continue;
   }
   const qemu = spawnSync(QEMU, [binPath], { encoding: "utf8", timeout: 15000 });
   if (qemu.error || qemu.signal) {
-    skipped.push([rel, `qemu が終わらない/異常終了（${qemu.signal ?? qemu.error}）`]);
+    failures.push([rel, `qemu が終わらない/異常終了（${qemu.signal ?? qemu.error}）`]);
     continue;
   }
 
@@ -105,7 +124,7 @@ for (const src of sources) {
   let simCode: number | null;
   let simOut: string;
   try {
-    const m = new Machine(assemble(asm), 20_000_000);
+    const m = new Machine(program, 20_000_000, [binPath]);
     while (!m.halted) m.step();
     simCode = m.exitCode;
     simOut = m.stdout;
@@ -128,12 +147,16 @@ for (const src of sources) {
 rmSync(tmp, { recursive: true, force: true });
 
 console.log(`\n一致 ${ok} / 不一致 ${failures.length} / skip ${skipped.length}（対象 ${sources.length}）`);
-if (skipped.length > 0 && verbose) {
+if (skipped.length > 0) {
   console.log("\nskip:");
   for (const [rel, why] of skipped) console.log(`  ${rel}  ${why}`);
 }
 if (failures.length > 0) {
   console.log("\n不一致:");
   for (const [rel, why] of failures) console.log(`  ${rel}\n    ${why}`);
+  process.exit(1);
+}
+if (ok === 0) {
+  console.error("照合できたテストがないため、成功として扱わない");
   process.exit(1);
 }

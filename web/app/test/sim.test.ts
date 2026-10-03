@@ -91,6 +91,50 @@ describe("命令の意味", () => {
 });
 
 describe("関数呼び出し", () => {
+  it("main に argc と書き換え可能な argv、終端 NULL を渡す", () => {
+    const m = new Machine(assemble(main(`
+  addi sp, sp, -16
+  sd a1, 0(sp)
+  li a0, 99
+  ld a1, 0(sp)
+  ld a2, 0(a1)
+  li a3, 80
+  sb a3, 0(a2)
+  addi sp, sp, 16
+  li a0, 41
+  ret`)));
+    const args = Number(m.get(11));
+    const name = Number(m.peek(args, 8));
+    expect(m.get(10)).toBe(1n);
+    expect(m.readCString(name)).toBe("program");
+    expect(m.peek(args + 8, 8)).toBe(0n);
+    while (!m.halted) m.step();
+    expect(m.exitCode).toBe(41);
+    expect(m.readCString(name)).toBe("Program");
+    expect(m.warnings).toEqual([]);
+    while (m.stepBack());
+    expect(m.get(10)).toBe(1n);
+    expect(m.get(11)).toBe(BigInt(args));
+    expect(m.readCString(name)).toBe("program");
+  });
+
+  it("照合側が指定した実行ファイル名と引数を渡す", () => {
+    const m = new Machine(assemble(main("  ret")), 100, ["p.bin", "arg"]);
+    const args = Number(m.get(11));
+    expect(m.get(10)).toBe(2n);
+    expect(m.readCString(Number(m.peek(args, 8)))).toBe("p.bin");
+    expect(m.readCString(Number(m.peek(args + 8, 8)))).toBe("arg");
+    expect(m.peek(args + 16, 8)).toBe(0n);
+  });
+
+  it("_start は引数レジスタを初期化せずに開始する", () => {
+    const m = new Machine(assemble(".text\n_start:\n li a7, 93\n ecall\n"));
+    expect(m.get(10)).toBe(0n);
+    expect(m.get(11)).toBe(0n);
+    while (!m.halted) m.step();
+    expect(m.exitCode).toBe(0);
+  });
+
   const RECURSIVE = `
   .text
   .globl fact
