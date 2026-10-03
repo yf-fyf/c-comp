@@ -7,7 +7,7 @@
   --ok: #1a7f37;
   --err: #cf222e;
   --hl: #fff3c2;
-  font-size: 15px;
+  font-size: 16px;
 }
 html[data-font="l"] { font-size: 18px; }
 html[data-font="xl"] { font-size: 22px; }
@@ -427,172 +427,96 @@ tr.below-sp { opacity: 0.45; }
 #warning-list li { margin-bottom: 0.5rem; cursor: pointer; }
 .warn-symptom { color: #7d4e00; font-size: 0.8rem; }
 
-/* ================= 統合ページ（app.html / T136） ================= */
-/* 旧3ページ（ast/compile/sim）と同じ規則を共有するため、
-   既存セレクタは変更せずここに追記だけする。 */
-
-/* body（flex 列）と #layout / #sim-layout（flex:1）の間に挟まるので、
-   ここで flex の連鎖を受け渡さないと中身の高さが決まらない */
-.mode {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-/* 上の display:flex は UA の [hidden] { display: none } に勝つので明示的に打ち消す
-   （#asm-editor[hidden] と同じ理由） */
-.mode[hidden] { display: none; }
-
-/* モード切替。#tabs / #font-buttons と同じ見た目にそろえる */
-#mode-tabs {
-  display: flex;
-  gap: 0.4rem;
-}
-#mode-tabs button {
-  font-size: 0.85rem;
-  padding: 0.15rem 0.9rem;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  border-radius: 4px;
-  cursor: pointer;
-}
-#mode-tabs button.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-/* プリセットはモードごとに別物なので、ヘッダではなく各モードの上端に置く */
-.mode-bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.35rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-}
-.example-label { font-size: 0.85rem; }
-.example-select { max-width: 18rem; font-size: 0.9rem; }
-
-/* モードの性格の違い（AST は自動更新・アセンブリと実行は明示操作）は
-   切替時ではなく各所に常掲する。目立たせすぎない注記として扱う */
-.mode-bar .pane-note { margin-left: auto; }
-
-/* --- 作るモード: AST ペインの中のサブタブ（木 / トークン / S 式） --- */
-/* 外側タブ（AST / アセンブリ）と名前空間を分けるため、
-   #tabs / .pane ではなく #ast-tabs / .ast-pane を使う。規則は同じ */
-#ast-tabs {
-  display: flex;
-  gap: 0.4rem;
-  align-items: center;
-  padding: 0.4rem 0.8rem;
-  border-bottom: 1px solid var(--border);
-  flex: none;
-}
-#ast-tabs button {
-  font-size: 0.85rem;
-  padding: 0.15rem 0.6rem;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  border-radius: 4px;
-  cursor: pointer;
-}
-#ast-tabs button.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
+/* 共通の作業画面: Cを残し、観察対象を切り替える。 */
+.workspace { font-size: 1rem; }
+.workspace #topbar { padding: .6rem 1rem; background: #eef4fb; }
+.workspace #font-buttons { margin-left: auto; white-space: nowrap; }
+#workspace-bar { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; padding: .6rem 1rem; border-bottom: 1px solid var(--border); }
+#workspace-bar .key-hint { font-size: .78rem; color: #57606a; }
+#workspace-bar #btn-edit { margin-left: auto; }
+#workspace-bar button, #compile-options summary, .editor-actions button { min-height: 2rem; }
+#workspace-bar #btn-edit { border: 1px solid var(--border); border-radius: 5px; background: var(--bg); padding: .3rem .7rem; font-size: .85rem; cursor: pointer; }
+#compile-options { position: relative; font-size: .85rem; }
+#compile-options label { display: block; position: absolute; z-index: 10; top: 2.1rem; right: 0; width: 16rem; padding: .7rem; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; box-shadow: 0 4px 12px #24292f22; }
+#asm-status { flex: none; padding: .45rem 1rem; font-size: .85rem; line-height: 1.5; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+#asm-status.ok { color: var(--ok); background: #f0fff4; }
+#asm-status.err { color: var(--err); background: #fff1ef; }
+#asm-status.pending { color: #57606a; background: var(--panel); }
+.workspace #layout { grid-template-columns: minmax(16rem, 3fr) minmax(0, 7fr); }
+.source-head { display: flex; align-items: center; gap: .6rem; padding: .5rem .8rem; border-bottom: 1px solid var(--border); background: var(--panel); flex: none; }
+.source-head h2 { font-size: .9rem; margin: 0; }
+.workspace .cm-editor { font-size: 1rem; }
+.workspace .cm-scroller { line-height: 1.65; }
+#source-context { margin: 0; padding: .5rem .8rem; font-size: .78rem; line-height: 1.5; color: #57606a; border-top: 1px solid var(--border); }
+.cm-execution { background: #dafbe1; box-shadow: inset 0 -2px 0 var(--ok); }
+.workspace #tabs { flex-wrap: wrap; flex: none; }
+.workspace #tabs button { padding: .35rem .7rem; min-height: 2rem; }
+.workspace #tabs button[aria-selected="true"] { background: var(--accent); color: white; border-color: var(--accent); }
+#ast-tabs { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; padding: .4rem .8rem; border-bottom: 1px solid var(--border); flex: none; }
+#ast-tabs button { font-size: .85rem; padding: .3rem .6rem; min-height: 2rem; border: 1px solid var(--border); background: var(--bg); border-radius: 4px; cursor: pointer; }
+#ast-tabs button.active, #ast-tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: white; }
 .ast-pane { flex: 1; min-height: 0; display: none; overflow: auto; }
 .ast-pane.active { display: flex; flex-direction: column; }
 #ast-pane-tree { position: relative; }
-
-/* --- 作るモード: AST ノード ↔ 命令の対応（A3） --- */
-/* 常時並置はしない。［命令と対応］で開いたときだけ AST の下に出す帯 */
-#ast-tabs button[aria-pressed="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-#ast-asm-strip {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  max-height: 45%;
-  min-height: 0;
-  border-top: 1px solid var(--border);
-  background: var(--panel);
-}
-/* 上の display:flex は UA の [hidden] { display: none } に勝つので打ち消す */
+.tree-controls { position: absolute; top: .5rem; right: .6rem; display: flex; gap: .3rem; z-index: 1; }
+.tree-controls button { min-height: 2rem; min-width: 2rem; border: 1px solid var(--border); background: var(--bg); border-radius: 4px; cursor: pointer; }
+#ast-error { margin: 0; padding: .6rem .8rem; color: var(--err); background: #fff1ef; font-size: .85rem; }
+#ast-asm-strip { flex: none; display: flex; flex-direction: column; max-height: 42%; min-height: 0; border-top: 1px solid var(--border); background: var(--panel); }
 #ast-asm-strip[hidden] { display: none; }
-#ast-asm-strip .strip-head {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.8rem;
-  font-size: 0.85rem;
-  border-bottom: 1px solid var(--border);
-}
+#ast-asm-strip .strip-head { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; padding: .3rem .8rem; font-size: .85rem; border-bottom: 1px solid var(--border); }
 #ast-asm-strip .strip-head > span:first-child { font-weight: bold; }
-#ast-asm-strip .strip-head button {
-  font-size: 0.8rem;
-  padding: 0.1rem 0.6rem;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  border-radius: 4px;
-  cursor: pointer;
+#ast-asm-strip .strip-head button { padding: .3rem .6rem; border: 1px solid var(--border); background: var(--bg); border-radius: 4px; cursor: pointer; }
+#ast-asm-status { flex: 1; min-width: 8rem; }
+#ast-asm-lines { min-height: 2rem; overflow: auto; overscroll-behavior: contain; padding: .2rem 0; font: 1rem/1.6 monospace; white-space: pre; }
+#ast-asm-lines .hit { background: #b6ddff; }
+#ast-asm-lines .asm-line { padding-left: .6rem; cursor: pointer; }
+#ast-asm-lines .asm-line:hover { background: #ddf4ff; }
+.workspace #pane-machine { overflow: hidden; }
+#run-context { padding: .4rem .8rem; margin: 0; flex: none; border-bottom: 1px solid var(--border); }
+#asm-view.stale { opacity: .5; }
+#asm-view .empty { padding: .7rem; color: #57606a; white-space: normal; }
+.workspace #sim-layout { min-height: 0; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-rows: 1fr; }
+.workspace #asm-view { font-size: 1rem; line-height: 1.65; }
+.workspace .asm-gutter { font: inherit; border: 0; border-right: 1px solid var(--border); border-radius: 0; background: var(--panel); }
+.workspace .asm-gutter[aria-pressed="true"] { background: var(--err); color: white; }
+.workspace .asm-text { cursor: pointer; }
+.workspace #toolbar { padding: .5rem .8rem; flex-wrap: wrap; flex: none; }
+.workspace #toolbar button { min-height: 2rem; }
+.workspace #toolbar button[hidden] { display: none; }
+.workspace #pane-machine[data-view="asm"] #toolbar,
+.workspace #pane-machine[data-view="asm"] #state-pane { display: none; }
+.workspace #pane-machine[data-view="asm"] #sim-layout { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.workspace #pane-machine[data-view="asm"] #asm-pane { border: 0; }
+.workspace #state-pane { padding: .6rem .8rem; }
+.workspace #asm-editor { width: min(52rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); margin: auto; padding: 1rem; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 12px 50px #24292f44; display: none; }
+.workspace #asm-editor[open] { display: flex; }
+#asm-editor::backdrop { background: #24292f66; }
+#import-title { margin: 0; font-size: 1.1rem; }
+.import-options { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .6rem; }
+.file-label { font-size: .85rem; }
+#asm-file { max-width: 16rem; }
+.workspace #asm-input { flex: 1; width: 100%; min-height: 10rem; height: 40vh; font: 1rem/1.6 monospace; }
+.workspace .editor-actions { justify-content: flex-end; }
+.workspace button:disabled { opacity: .45; cursor: default; }
+.workspace :is(button, summary, select, textarea, a):focus-visible { outline: 3px solid #54aeff; outline-offset: 2px; }
+@media (max-width: 80rem) {
+  .workspace #sim-layout { grid-template-columns: 1fr; grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
+  .workspace #asm-pane { border-right: 0; border-bottom: 1px solid var(--border); }
 }
-#ast-asm-strip .strip-head #btn-ast-asm-refresh { margin-left: auto; }
-#ast-asm-lines {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 0.2rem 0;
-  font-family: "Inconsolata", monospace;
-  font-size: 0.85rem;
-  white-space: pre;
+@media (max-width: 55rem) {
+  .workspace #layout { grid-template-columns: 1fr; grid-template-rows: minmax(8rem, 1fr) minmax(0, 3fr); }
+  .workspace #left { border-right: 0; border-bottom: 1px solid var(--border); }
+  .workspace #source-context { padding: .2rem .8rem; }
+  .workspace #status { padding: .2rem .8rem; min-height: 1.3rem; }
+  .source-head { padding: .25rem .8rem; }
+  .workspace #topbar { gap: .4rem .8rem; }
+  #workspace-bar { gap: .4rem; padding: .4rem .8rem; }
+  #workspace-bar .example-select { max-width: 12rem; }
+  #workspace-bar #btn-edit { margin-left: 0; }
+  #workspace-bar .key-hint { display: none; }
 }
-/* 表示中の命令が今のソースの出力ではない（#asm-output.stale と同じ扱い） */
-#ast-asm-lines.stale { opacity: 0.45; }
-#ast-asm-lines .asm-line { padding: 0 0.8rem; cursor: pointer; }
-#ast-asm-lines .asm-line:hover { background: var(--hl); }
-/* 選んだノードが出した命令。エディタ側の cm-ast-selected と同じ色で対応を示す */
-#ast-asm-lines .asm-line.hit {
-  background: #b6ddff;
-  box-shadow: inset 2px 0 0 var(--accent);
+@media (max-width: 30rem), (max-height: 35rem) {
+  .workspace { height: auto; min-height: 100dvh; }
+  .workspace #layout { flex: none; grid-template-rows: minmax(13rem, 30vh) minmax(28rem, 65vh); }
+  .workspace #topbar { position: sticky; top: 0; z-index: 10; }
 }
-
-/* --- 作るモード: アセンブリペイン --- */
-/* 状態表示は #status ではなく専用の #asm-status（#status は AST の解析結果が使う） */
-.asm-note {
-  flex: none;
-  margin: 0;
-  padding: 0.3rem 0.8rem;
-  border-bottom: 1px solid var(--border);
-}
-#asm-foot {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.3rem 0.8rem;
-  border-top: 1px solid var(--border);
-}
-#btn-send-run {
-  font-size: 0.85rem;
-  padding: 0.15rem 0.8rem;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  border-radius: 4px;
-  cursor: pointer;
-}
-#btn-send-run:disabled { opacity: 0.4; cursor: default; }
-#asm-status { font-size: 0.85rem; min-height: 1.2rem; }
-#asm-status.ok { color: var(--ok); }
-#asm-status.err { color: var(--err); }
-#asm-status.pending { color: #57606a; }
-
-/* --- 動かすモード --- */
-/* 旧 sim.html で #sim-head が受け持っていた「縮めない」を .mode 直下で引き取る */
-#mode-run > #toolbar { flex: none; }

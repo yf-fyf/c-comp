@@ -256,6 +256,17 @@ export function renderTree(svg: SVGSVGElement, ast: AstNode[], opts: TreeOptions
     h: Math.max(...ys) - Math.min(...ys) + 120,
     interacted: false,
   };
+  // 比較表示で高さが減っても、木全体を収めるために文字を極端に縮めない。
+  // はみ出す部分はパンと拡縮で確認できる。
+  const rect = svg.getBoundingClientRect();
+  const fontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 15;
+  const minScale = fontSize / 15;
+  if (rect.width > 0 && rect.height > 0 && Math.min(rect.width / fit.w, rect.height / fit.h) < minScale) {
+    const center = fit.x + fit.w / 2;
+    fit.w = rect.width / minScale;
+    fit.h = rect.height / minScale;
+    fit.x = center - fit.w / 2;
+  }
   let vs = viewStates.get(svg);
   if (!vs || opts.resetView || !vs.interacted) {
     vs = fit;
@@ -267,6 +278,22 @@ export function renderTree(svg: SVGSVGElement, ast: AstNode[], opts: TreeOptions
 
 function applyView(svg: SVGSVGElement, vs: ViewState): void {
   svg.setAttribute("viewBox", `${vs.x} ${vs.y} ${vs.w} ${vs.h}`);
+}
+
+/** キーボード・タッチでも使える拡縮操作。ホイールと同じ表示状態を使う。 */
+export function zoomTree(svg: SVGSVGElement, factor: number): void {
+  const vs = viewStates.get(svg);
+  if (!vs) return;
+  vs.x += vs.w * (1 - factor) / 2;
+  vs.y += vs.h * (1 - factor) / 2;
+  vs.w *= factor;
+  vs.h *= factor;
+  vs.interacted = true;
+  applyView(svg, vs);
+}
+
+export function resetTreeView(svg: SVGSVGElement): void {
+  viewStates.delete(svg);
 }
 
 const panZoomAttached = new WeakSet<SVGSVGElement>();

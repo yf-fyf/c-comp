@@ -1,13 +1,4 @@
-// 統合ページの「動かす」ビュー（T137）。移植元は削除済みの sim-main.ts（git 履歴を参照）。
-//
-// 移植元との違いは3点だけ。
-//  - 文書全体に付くハンドラ（キーボード・ドラッグ＆ドロップ）を「動かす」モードでゲートする。
-//    作るモードの CodeMirror で「n」を打つたびにステップ実行が走るのを防ぐため。
-//  - プリセット選択の URL 反映は app-main.ts に任せる（?mode= と組で意味が決まるため）
-//  - ［実行へ送る］で作るモードから受け取る入口（setAsmSource）を公開する
-//
-// この画面は T38 B6 の「明示的な操作でしか進めない」を全面的に採る。
-// 作るモードの AST が自動更新なのとは不揃いだが、モードの性格の違いとして注記に常掲する。
+// 共通画面の命令表示・実行。実行対象の準備とステップ実行を明示操作で行う。
 import { assemble, AssembleError, REG_NAMES, type Program } from "./sim/assembler";
 import { Machine, MachineError, STACK_TOP, DATA_BASE, REG } from "./sim/machine";
 import type { Warning } from "./sim/checks";
@@ -37,22 +28,26 @@ main:
 `;
 
 export interface RunView {
-  /** 作るモードの［実行へ送る］の受け口。プリセット選択は外れる */
-  setAsmSource(text: string): void;
+  /** 共通の生成命令または読み込んだ命令を実行の初期位置へ準備する */
+  setAsmSource(text: string): boolean;
+  /** 観察結果を残して停止し、再準備まで実行操作を無効にする */
+  invalidate(): void;
   /**
    * 表示に戻ったときの描画やり直し。
    * hidden の間は clientHeight / offsetTop が 0 なので、行のスクロール位置が決まらない。
    */
   setActive(): void;
   /** プリセットを読み込んで初期表示を決める */
-  start(wanted: string | null): Promise<void>;
+  start(wanted: string | null, loadInitial?: boolean): Promise<void>;
 }
 
 export interface RunViewOptions {
-  /** 「動かす」モードを表示中か（文書全体のハンドラをモードでゲートする） */
+  /** 実行表示を選択しているか（入力欄でのショートカットは別途除外する） */
   isActive(): boolean;
-  /** プリセットの選択が変わった。null は「どのプリセットでもない」（手貼り・受け取り） */
-  onExampleChanged(label: string | null): void;
+  /** 読み込みを確定した。null は手貼り・ファイルなどサンプル以外の入力 */
+  onImport(text: string, label: string | null): void;
+  onCurrentLine(line: number | null): void;
+  onLineSelected(line: number): void;
 }
 
 export function initRunView(opts: RunViewOptions): RunView {
@@ -63,12 +58,23 @@ export function initRunView(opts: RunViewOptions): RunView {
   let running = false;
   let lastRegs: bigint[] = [];
   let fatal: string | null = null;
+  let runnable = false;
+  let runGeneration = 0;
+
+  function stop(): void {
+    running = false;
+    ++runGeneration;
+    $("btn-stop").hidden = true;
+  }
 
   const hex = (n: number | bigint): string => `0x${n.toString(16)}`;
 
   // ── アセンブリの読み込み ──
 
-  function load(text: string): void {
+  function load(text: string): boolean {
+    stop();
+    runnable = false;
+    $("asm-view").classList.remove("stale");
     sourceLines = text.replace(/\n$/, "").split("\n");
     breakpoints.clear();
     fatal = null;
@@ -84,10 +90,17 @@ export function initRunView(opts: RunViewOptions): RunView {
         e instanceof AssembleError
           ? `${e.line} 行目: ${e.message}`
           : `読み込めない: ${String(e)}`;
-      renderAsm();
-      return;
+      $("run-context").textContent = "実行を準備できません。命令欄のエラーを確認してください。";
+      renderAll();
+      return false;
     }
     reset();
+    runnable = machine !== null;
+    $("run-context").textContent = runnable
+      ? "実行準備完了。1命令ずつ進めて、値の変化を確かめられます（F10：すすむ／F9：もどる）。"
+      : "実行を準備できません。命令欄のエラーを確認してください。";
+    renderAll();
+    return runnable;
   }
 
   function reset(): void {
@@ -106,7 +119,7 @@ export function initRunView(opts: RunViewOptions): RunView {
   // ── 実行 ──
 
   function stepOnce(): boolean {
-    if (!machine || machine.halted) return false;
+    if (!runnable || !machine || machine.halted) return false;
     lastRegs = [...machine.regs];
     try {
       machine.step();
@@ -118,7 +131,7 @@ export function initRunView(opts: RunViewOptions): RunView {
   }
 
   function stepBack(): void {
-    if (!machine) return;
+    if (!runnable || running || !machine) return;
     fatal = null;
     lastRegs = [...machine.regs];
     machine.stepBack();
@@ -127,10 +140,13 @@ export function initRunView(opts: RunViewOptions): RunView {
 
   /** 停止・ブレークポイント・上限まで走らせる。UI を固めないよう区切って回す */
   function run(): void {
-    if (!machine || running) return;
+    if (!runnable || !machine || machine.halted || running) return;
     running = true;
+    const generation = ++runGeneration;
     $("btn-stop").hidden = false;
+    renderAll();
     const tick = (): void => {
+      if (generation !== runGeneration) return;
       if (!machine || !running) return finishRun();
       for (let i = 0; i < 20000; i++) {
         if (!stepOnce()) return finishRun();
@@ -163,9 +179,11 @@ export function initRunView(opts: RunViewOptions): RunView {
     exitBox.hidden = machine?.exitCode == null;
     if (machine?.exitCode != null) $("exit-code").textContent = String(machine.exitCode);
 
-    $<HTMLButtonElement>("btn-back").disabled = !machine || machine.undoLog.length === 0;
-    $<HTMLButtonElement>("btn-step").disabled = !machine || machine.halted;
-    $<HTMLButtonElement>("btn-run").disabled = !machine || machine.halted;
+    $<HTMLButtonElement>("btn-reset").disabled = !runnable || running || !machine;
+    $<HTMLButtonElement>("btn-back").disabled = !runnable || running || !machine || machine.undoLog.length === 0;
+    $<HTMLButtonElement>("btn-step").disabled = !runnable || running || !machine || machine.halted;
+    $<HTMLButtonElement>("btn-run").disabled = !runnable || running || !machine || machine.halted;
+    opts.onCurrentLine(runnable ? machine?.currentInsn()?.line ?? null : null);
   }
 
   /**
@@ -194,7 +212,7 @@ export function initRunView(opts: RunViewOptions): RunView {
   function renderAsm(): void {
     const view = $("asm-view");
     view.textContent = "";
-    const currentLine = machine?.currentInsn()?.line ?? -1;
+    const currentLine = runnable ? machine?.currentInsn()?.line ?? -1 : -1;
 
     const frag = document.createDocumentFragment();
     sourceLines.forEach((text, i) => {
@@ -205,21 +223,38 @@ export function initRunView(opts: RunViewOptions): RunView {
       if (breakpoints.has(lineNo)) row.classList.add("breakpoint");
       if (fatal?.startsWith(`${lineNo} 行目`)) row.classList.add("faulted");
 
-      const gutter = document.createElement("span");
+      const gutter = document.createElement("button");
+      gutter.type = "button";
       gutter.className = "asm-gutter";
       gutter.textContent = String(lineNo);
+      gutter.setAttribute("aria-label", `${lineNo} 行目のブレークポイント`);
+      gutter.setAttribute("aria-pressed", String(breakpoints.has(lineNo)));
       gutter.addEventListener("click", () => {
         if (breakpoints.has(lineNo)) breakpoints.delete(lineNo);
         else breakpoints.add(lineNo);
         renderAsm();
+        (view.children[i]?.querySelector(".asm-gutter") as HTMLElement | null)?.focus();
       });
       const body = document.createElement("span");
       body.className = "asm-text";
       body.textContent = text || " ";
+      body.tabIndex = 0;
+      body.setAttribute("role", "button");
+      body.setAttribute("aria-label", `${lineNo} 行目：${text}`);
+      body.addEventListener("click", () => opts.onLineSelected(lineNo));
+      body.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.onLineSelected(lineNo); }
+      });
       row.append(gutter, body);
       frag.appendChild(row);
     });
     view.appendChild(frag);
+    if (sourceLines.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "［コンパイル］で命令を生成するか、［アセンブリを読み込む］から自分の出力を読み込めます。";
+      view.appendChild(empty);
+    }
 
     const active = view.querySelector(".asm-line.current");
     if (active instanceof HTMLElement) scrollLineIntoPane(active, "nearest");
@@ -367,46 +402,58 @@ export function initRunView(opts: RunViewOptions): RunView {
   $("btn-back").addEventListener("click", stepBack);
   $("btn-run").addEventListener("click", run);
   $("btn-stop").addEventListener("click", () => {
-    running = false;
+    stop();
+    renderAll();
   });
-  $("btn-reset").addEventListener("click", reset);
+  $("btn-reset").addEventListener("click", () => { if (runnable && !running) reset(); });
 
-  const asmEditor = $("asm-editor");
+  const asmEditor = $<HTMLDialogElement>("asm-editor");
   const input = $<HTMLTextAreaElement>("asm-input");
+  let pendingExample: string | null = null;
   $("btn-edit").addEventListener("click", () => {
+    stop();
+    renderAll();
     input.value = sourceLines.join("\n");
-    asmEditor.hidden = false;
+    pendingExample = null;
+    select.selectedIndex = -1;
+    asmEditor.showModal();
     input.focus();
   });
   $("btn-cancel").addEventListener("click", () => {
-    asmEditor.hidden = true;
+    asmEditor.close();
   });
   $("btn-load").addEventListener("click", () => {
-    asmEditor.hidden = true;
-    setAsmSource(input.value);
+    asmEditor.close();
+    opts.onImport(input.value, pendingExample);
+  });
+  input.addEventListener("input", () => { pendingExample = null; select.selectedIndex = -1; });
+  $("asm-file").addEventListener("change", () => {
+    const file = $<HTMLInputElement>("asm-file").files?.[0];
+    if (!file) return;
+    void file.text().then(text => { input.value = text; pendingExample = null; select.selectedIndex = -1; });
   });
 
   // ファイルのドロップでも読める。
-  // 作るモードでは C ソースの入力欄が主役なので、ここでは受けない
-  document.addEventListener("dragover", (e) => {
-    if (!opts.isActive()) return;
+  // Cの入力欄へ落としたファイルを、アセンブリとして扱わない。
+  $("asm-pane").addEventListener("dragover", (e) => {
     e.preventDefault();
   });
-  document.addEventListener("drop", (e) => {
-    if (!opts.isActive()) return;
+  $("asm-pane").addEventListener("drop", (e) => {
     e.preventDefault();
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
     void file.text().then((text) => {
-      asmEditor.hidden = true;
-      setAsmSource(text);
+      if (asmEditor.open) asmEditor.close();
+      opts.onImport(text, null);
     });
   });
 
-  // 「n」「p」は文字でもあるので、作るモードのエディタで打っている間は無効にする
+  // 「n」「p」は文字でもあるので、入力欄とダイアログでは実行操作にしない
   document.addEventListener("keydown", (e) => {
     if (!opts.isActive()) return;
-    if (e.target instanceof HTMLTextAreaElement) return;
+    if (running) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || asmEditor.open) return;
+    if (e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable=true]")) return;
     if (e.key === "F10" || (e.key === "n" && !e.ctrlKey)) {
       e.preventDefault();
       stepOnce();
@@ -450,19 +497,23 @@ export function initRunView(opts: RunViewOptions): RunView {
     label.after(btn);
   }
 
-  async function start(wanted: string | null): Promise<void> {
+  async function start(wanted: string | null, loadInitial = false): Promise<void> {
     let examples: SimExample[] = [];
     try {
       const res = await fetch("sim-examples.json");
       examples = (await res.json()) as SimExample[];
     } catch {
       select.disabled = true;
-      load(FALLBACK);
-      opts.onExampleChanged(null);
+      if (loadInitial) opts.onImport(FALLBACK, null);
+      else renderAll();
       return;
     }
 
     const byLabel = new Map<string, SimExample>();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "サンプルを選択";
+    select.appendChild(placeholder);
     const groups = new Map<string, HTMLOptGroupElement>();
     for (const ex of examples) {
       // 参照実装の出力は既定で隠す（design/webapps.md 5-2）
@@ -487,31 +538,30 @@ export function initRunView(opts: RunViewOptions): RunView {
     select.addEventListener("change", () => {
       const ex = byLabel.get(select.value);
       if (!ex) return;
-      load(ex.source);
-      opts.onExampleChanged(ex.label);
+      input.value = ex.source;
+      pendingExample = ex.label;
     });
 
-    const initial = (wanted && byLabel.get(wanted)) ?? [...byLabel.values()][0];
-    if (initial) {
-      select.value = initial.label;
-      load(initial.source);
-      opts.onExampleChanged(initial.label);
-    } else {
-      load(FALLBACK);
-      opts.onExampleChanged(null);
-    }
+    const initial = (wanted ? byLabel.get(wanted) : undefined) ?? [...byLabel.values()][0];
+    if (loadInitial) opts.onImport(initial?.source ?? FALLBACK, initial?.label ?? null);
+    else renderAll();
   }
 
-  function setAsmSource(text: string): void {
-    // 手貼りや作るモードからの受け取りは、もうどのプリセットの中身でもない。
-    // 選択を残すと ?example= が実際の内容と食い違う
+  function setAsmSource(text: string): boolean {
+    // 入力の出自とURLは統合シェルで管理する。読み込み欄には選択を残さない。
     select.selectedIndex = -1;
-    opts.onExampleChanged(null);
-    load(text);
+    return load(text);
   }
 
   return {
     setAsmSource,
+    invalidate() {
+      stop();
+      runnable = false;
+      $("asm-view").classList.add("stale");
+      $("run-context").textContent = "実行は停止中です。以前の観察結果を残しています。［コンパイル］または読み込みで実行を準備してください。";
+      renderAll();
+    },
     setActive() {
       renderAll();
     },

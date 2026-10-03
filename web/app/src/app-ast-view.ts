@@ -1,10 +1,4 @@
-// 統合ページの AST ビュー（T137）。移植元は削除済みの ast-main.ts（git 履歴を参照）。
-// 移植元との違いは、エディタを自前で作らず統合シェルから受け取る点と、
-// サブタブの id を #ast-tabs / .ast-pane にして外側タブ（AST / アセンブリ）と
-// 名前空間を分けた点だけ。
-//
-// 「作る」モードの AST は入力に追随して自動更新する（T38 B6 の水準は
-// モードごとに分ける、という T137 の決定。#pane-ast の注記に常掲してある）。
+// 共通画面のAST表示。入力に追随し、対応する命令は共通の生成結果から表示する。
 import { EditorView } from "codemirror";
 import { StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet } from "@codemirror/view";
@@ -14,10 +8,10 @@ import {
   spanForLine,
   spansForRanges,
 } from "./ast-highlight";
-import { parseSource, astSexp, compile } from "./core";
-import { renderTree, type TreeTarget } from "./tree";
+import { parseSource, astSexp } from "./core";
+import { renderTree, resetTreeView, zoomTree, type TreeTarget } from "./tree";
 import { el as $ } from "./shell";
-import type { ParseResult, SourceRange, SpanEntry } from "./types";
+import type { CompileResult, ParseResult, SourceRange, SpanEntry } from "./types";
 
 // ---- エディタ拡張: エラー行のハイライト ----
 // エディタ生成は app-main.ts なので、フィールドだけ作って渡す。
@@ -55,12 +49,15 @@ export interface AstView {
   setActive(): void;
   /** プリセットでソースを丸ごと入れ替えたときの表示リセット */
   reset(): void;
+  /** 共通の生成結果を表示する。null は入力変更・失敗・外部命令への切替 */
+  setCompiled(result: CompileResult | null): void;
 }
 
 export interface AstViewOptions {
   editor: EditorView;
   /** C ソースの変更を購読する（app-main.ts の docChangeListeners） */
   onSourceChange(f: () => void): void;
+  onCompile(): void;
 }
 
 export function initAstView(opts: AstViewOptions): AstView {
@@ -80,15 +77,20 @@ export function initAstView(opts: AstViewOptions): AstView {
   // ---- 解析と表示 ----
 
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let parseRequest = 0;
   function scheduleParse(): void {
     clearTimeout(timer);
     timer = setTimeout(runParse, 250);
   }
 
   async function runParse(): Promise<void> {
+    clearTimeout(timer);
+    const token = ++parseRequest;
     editor.dispatch({ effects: setHoverRanges.of([]) });
     const src = editor.state.doc.toString();
-    result = await parseSource(src);
+    const parsed = await parseSource(src);
+    if (token !== parseRequest || src !== editor.state.doc.toString()) return;
+    result = parsed;
     ppToSrc = new Map(result.lineMap ?? []);
     const status = $("status");
     if (result.ok) {
@@ -107,7 +109,14 @@ export function initAstView(opts: AstViewOptions): AstView {
         `✗ ${err?.message ?? "エラー"}` + (srcLine ? `（${srcLine} 行目）` : "");
       status.className = "err";
       editor.dispatch({ effects: setErrorLine.of(srcLine) });
+      // 以前の成功結果を、現在の入力の構造として残さない。
+      $("tree-svg").replaceChildren();
+      $("token-body").replaceChildren();
+      $("sexp-pre").textContent = "";
     }
+    $("ast-error").hidden = result.ok;
+    $("ast-error").textContent = result.ok ? "" : "構造を表示できません。Cのエラーを修正してください。";
+    for (const id of ["btn-tree-in", "btn-tree-out", "btn-tree-reset"]) $<HTMLButtonElement>(id).disabled = !result.ok;
     await renderActive();
   }
 
@@ -171,6 +180,7 @@ export function initAstView(opts: AstViewOptions): AstView {
       }
     } else if (activeTab === "sexp") {
       const r = await astSexp(src, showLine);
+      if (src !== editor.state.doc.toString() || activeTab !== "sexp") return;
       $("sexp-pre").textContent = r.ok ? (r.text ?? "") : (r.errors?.[0]?.message ?? "エラー");
     }
   }
@@ -206,7 +216,14 @@ export function initAstView(opts: AstViewOptions): AstView {
       div.className = "asm-line";
       div.dataset.line = String(i + 1);
       div.textContent = line === "" ? " " : line;
+      div.tabIndex = 0;
+      div.setAttribute("role", "button");
+      div.setAttribute("aria-label", `${i + 1} 行目：${line}`);
+      div.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); div.click(); }
+      });
       div.addEventListener("click", () => {
+        if (stripStale) return;
         const hit = spanForLine(stmtMap, exprMap, i + 1);
         editor.dispatch({
           effects: [
@@ -242,32 +259,25 @@ export function initAstView(opts: AstViewOptions): AstView {
       last = Math.max(last, e.toLine);
     }
     setStripStatus(`${target.label}: ${first}–${last} 行目（${last - first + 1} 行）`);
-    asmLineEls[first - 1]?.scrollIntoView({ block: "nearest" });
+    const row = asmLineEls[first - 1];
+    if (row) stripLines.scrollTop = row.offsetTop - stripLines.offsetTop;
   }
 
-  async function runStripCompile(): Promise<void> {
-    const comments = $<HTMLInputElement>("opt-comments").checked;
-    const result = await compile(editor.state.doc.toString(), comments);
-    if (!result.ok) {
-      stmtMap = [];
-      exprMap = [];
-      renderStripLines("");
-      stripStale = true;
-      setStripStatus(`✗ ${result.errors?.[0]?.message ?? "コンパイルエラー"}`);
-      return;
-    }
-    stmtMap = result.stmtMap ?? [];
-    exprMap = result.exprMap ?? [];
-    renderStripLines(result.text ?? "");
-    stripStale = false;
-    highlightStrip();
+  function setCompiled(compiled: CompileResult | null): void {
+    stmtMap = compiled?.stmtMap ?? [];
+    exprMap = compiled?.exprMap ?? [];
+    renderStripLines(compiled?.text ?? "");
+    stripStale = !compiled;
+    if (stripStale) setStripStatus("［コンパイル］で、このCに対応する命令を生成します。");
+    else highlightStrip();
+    void renderActive();
   }
 
   function openStrip(): void {
     stripOpen = true;
     strip.hidden = false;
     stripToggle.setAttribute("aria-pressed", "true");
-    if (stripStale) void runStripCompile();
+    if (stripStale) setStripStatus("［コンパイル］で、このCに対応する命令を生成します。");
     else highlightStrip();
   }
 
@@ -275,16 +285,12 @@ export function initAstView(opts: AstViewOptions): AstView {
     stripOpen = false;
     strip.hidden = true;
     stripToggle.setAttribute("aria-pressed", "false");
+    void renderActive();
   }
 
   stripToggle.addEventListener("click", () => (stripOpen ? closeStrip() : openStrip()));
-  $("btn-ast-asm-refresh").addEventListener("click", () => void runStripCompile());
+  $("btn-ast-asm-refresh").addEventListener("click", opts.onCompile);
   $("btn-ast-asm-close").addEventListener("click", closeStrip);
-  $("opt-comments").addEventListener("change", () => {
-    // 注記コメントの有無で行番号がずれるので、対応表ごと作り直しになる
-    stripStale = true;
-    if (stripOpen) void runStripCompile();
-  });
 
   // ---- サブタブ（AST 木 / トークン / S 式） ----
   // ［命令と対応］も #ast-tabs の中にあるので、サブタブは data-ast-tab を持つものだけを見る
@@ -303,22 +309,44 @@ export function initAstView(opts: AstViewOptions): AstView {
     });
   }
   $("opt-show-line").addEventListener("change", renderActive);
+  $("btn-tree-in").addEventListener("click", () => zoomTree($("tree-svg") as unknown as SVGSVGElement, 1 / 1.2));
+  $("btn-tree-out").addEventListener("click", () => zoomTree($("tree-svg") as unknown as SVGSVGElement, 1.2));
+  $("btn-tree-reset").addEventListener("click", () => {
+    resetTreeView($("tree-svg") as unknown as SVGSVGElement);
+    void renderActive();
+  });
+  // 比較帯や画面幅で木の表示領域が変わった後、確定したサイズで読みやすく配置する。
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => {
+      if (activeTab === "tree" && result?.ok && $("tree-svg").getClientRects().length) void renderActive();
+    }).observe($("ast-pane-tree"));
+  }
 
   // ---- 入力への追随（移植元の updateListener 相当） ----
 
   opts.onSourceChange(() => {
+    ++parseRequest;
+    result = null;
+    $("tree-svg").replaceChildren();
+    $("token-body").replaceChildren();
+    $("sexp-pre").textContent = "";
+    $("status").textContent = "解析中…";
+    $("status").className = "pending";
+    $("ast-error").hidden = true;
+    editor.dispatch({effects: setErrorLine.of(null)});
     selectedId = null;
     selectedTarget = null;
     // 命令列は明示操作でしか更新しない。古い出力だと分かるようにして［更新］を促す
     stripStale = true;
     for (const el of asmLineEls) el.classList.remove("hit");
     stripLines.classList.add("stale");
-    if (stripOpen) setStripStatus("● 変更あり — ［更新］で反映");
+    if (stripOpen) setStripStatus("● 変更未反映 — ［コンパイル］で更新");
     scheduleParse();
   });
 
   return {
     runParse,
+    setCompiled,
     setActive() {
       void renderActive();
     },

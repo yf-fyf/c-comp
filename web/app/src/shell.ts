@@ -1,4 +1,4 @@
-// 両アプリで共通の外枠。アプリ間のナビゲーションと文字サイズ切替。
+// 学習ツールと入口ページで共通の外枠。資料へのリンクと文字サイズ切替。
 // 文字サイズは授業中の教員デモ要件（design/webapps.md 1章）。
 
 const FONT_KEY = "mycc-font-size";
@@ -9,8 +9,8 @@ export interface AppLink {
 }
 
 export const APPS: AppLink[] = [
-  { href: "./index.html", label: "ツール一覧" },
-  { href: "./app.html", label: "コンパイラツール" },
+  { href: "../", label: "講義資料" },
+  { href: "../docs/testing/", label: "テストとデバッグ" },
 ];
 
 /** ヘッダの共通部分（ナビ・文字サイズ）を組み立てる */
@@ -23,6 +23,9 @@ export function mountShell(currentHref: string): void {
       const a = document.createElement("a");
       a.href = app.href;
       a.textContent = app.label;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.title = "新しいタブで開く（学習ツールの入力と実行状態を残す）";
       if (app.href.endsWith(currentHref)) a.className = "current";
       nav.appendChild(a);
     }

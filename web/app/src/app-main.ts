@@ -1,194 +1,209 @@
-// 統合ページ（T108 / T136・T137）。
-// 「作る」（C を書いて AST とアセンブリを見る）と「動かす」（アセンブリを実行する）の
-// 二部屋構成。作るモードの C ソースは1箇所だけで、AST とアセンブリが共有する。
-// 動かすモードのアセンブリは独立したバッファで、作るモードからは明示操作でしか渡らない。
-//
-// このファイルが持つのは外枠だけ——モード切替・URL 同期・エディタ生成・作るモードの
-// プリセット——で、3ビューの中身は app-ast-view.ts / app-asm-view.ts / app-run-view.ts にある。
-// ビュー同士は直接 import せず、ここがコールバックで橋渡しする（循環 import を避ける）。
+// C・構造・命令・実行を同じ作業画面につなぐ。入力が変わったら古い実行対象を停止する。
 import { EditorView, basicSetup } from "codemirror";
 import { keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 import { cpp } from "@codemirror/lang-cpp";
-import { hoverRangeField, selectedRangeField } from "./ast-highlight";
+import {
+  hoverRangeField, selectedRangeField, executionRangeField,
+  setHoverRanges, setSelectedRanges, setExecutionRanges, spanForLine,
+} from "./ast-highlight";
 import { errorField, initAstView } from "./app-ast-view";
-import { initAsmView, type AsmView } from "./app-asm-view";
 import { initRunView } from "./app-run-view";
+import { compile, coreReady } from "./core";
 import { loadCExamples } from "./examples";
 import { el as $, mountShell } from "./shell";
+import type { CompileResult } from "./types";
 import "./style.css";
 
 mountShell("app.html");
-
-type Mode = "build" | "run";
-
+type View = "ast" | "asm" | "run";
 const DEFAULT_C_SOURCE = "int main() {\n    return 1 + 2 * 3;\n}\n";
 const DEFAULT_C_EXAMPLE = "sessions/01_interpreter/tests/add_mul.c";
-
-// ---- モード ----
-
-// 切替は hidden のトグルだけ。DOM を作り直すとエディタが二重初期化になる
-let mode: Mode = "build";
-// モードごとに最後に選んだプリセット。切替時に ?example= を入れ直すために持つ
-const lastExample: Record<Mode, string | null> = { build: null, run: null };
-
-// ---- C ソース（作るモードで唯一の状態） ----
-
-// docChanged の購読先。AST の自動解析とアセンブリの「未反映」表示がここに載る
-const docChangeListeners: Array<() => void> = [];
-
-function onSourceChange(f: () => void): void {
-  docChangeListeners.push(f);
+const params = new URL(location.href).searchParams;
+const legacyRun = params.get("mode") === "run";
+let view: View = params.get("view") === "run" || legacyRun ? "run"
+  : params.get("view") === "asm" ? "asm" : "ast";
+let cExample: string | null = null;
+let asmExample: string | null = null;
+let origin: "empty" | "c" | "assembly" = "empty";
+let revision = 0;
+let request = 0;
+let artifact: CompileResult | null = null;
+let ready = false;
+const listeners: Array<() => void> = [];
+const button = $<HTMLButtonElement>("btn-compile");
+function status(cls: string, text: string): void {
+  $("asm-status").className = cls;
+  $("asm-status").textContent = text;
 }
-
-// エディタ生成時に keymap から参照したいが、ビューの初期化は
-// エディタが出来てからでないと出来ないので、後から差す
-let asmView: AsmView | null = null;
-
 const editor = new EditorView({
   parent: $("editor"),
   extensions: [
-    // basicSetup の defaultKeymap も Mod-Enter を使う（insertBlankLine）ので優先度で勝たせる
-    Prec.highest(
-      keymap.of([
-        {
-          key: "Mod-Enter",
-          run: () => {
-            asmView?.runCompile();
-            return true;
-          },
-        },
-      ]),
-    ),
-    basicSetup,
-    cpp(),
-    hoverRangeField,
-    selectedRangeField,
-    errorField,
-    EditorView.updateListener.of((u) => {
-      if (u.docChanged) for (const f of docChangeListeners) f();
-    }),
+    Prec.highest(keymap.of([{key: "Mod-Enter", run: () => { void runCompile(); return true; }}])),
+    basicSetup, cpp(), hoverRangeField, selectedRangeField, executionRangeField, errorField,
+    EditorView.updateListener.of(u => { if (u.docChanged) for (const f of listeners) f(); }),
   ],
 });
-
-// ---- ビュー ----
-
-const astView = initAstView({ editor, onSourceChange });
-
-const runView = initRunView({
-  isActive: () => mode === "run",
-  onExampleChanged(label) {
-    lastExample.run = label;
-    syncUrl();
-  },
-});
-
-asmView = initAsmView({
-  editor,
-  onSourceChange,
-  isActive: () => mode === "build",
-  // 明示操作でだけアセンブリを渡す。渡した先へ画面も移す（送った結果がすぐ見える）
-  sendToRun(text) {
-    runView.setAsmSource(text);
-    applyMode("run");
-    syncUrl();
-  },
-});
-
-// ---- モード切替 ----
-
-function applyMode(next: Mode): void {
-  mode = next;
-  $("mode-build").hidden = next !== "build";
-  $("mode-run").hidden = next !== "run";
-  for (const btn of document.querySelectorAll<HTMLButtonElement>("#mode-tabs button")) {
-    btn.classList.toggle("active", btn.dataset.mode === next);
-  }
-  // hidden の間は clientHeight / offsetTop が 0 で、幅も高さも決まっていない。
-  // 表示に戻った後に描き直さないと、実行中の行が枠外のままになる
-  if (next === "run") runView.setActive();
-  else astView.setActive();
+const onSourceChange = (f: () => void): void => { listeners.push(f); };
+const astView = initAstView({editor, onSourceChange, onCompile: () => void runCompile()});
+function highlightExecution(line: number | null): void {
+  const hit = origin === "c" && artifact && line !== null
+    ? spanForLine(artifact.stmtMap ?? [], artifact.exprMap ?? [], line) : null;
+  editor.dispatch({effects: setExecutionRanges.of(hit?.sourceRanges ?? [])});
 }
-
-// ?mode=build&example=… で直接開ける（教員デモ用）。
-// example はモードごとに意味が違う（作る=C のパス、動かす=サンプルのラベル）ので、
-// 必ず mode とセットで解釈する。mode 指定なしの ?example= は作るモードとして読む。
+const runView = initRunView({
+  isActive: () => view === "run",
+  onImport(text, label) {
+    ++request;
+    origin = "assembly";
+    artifact = null;
+    asmExample = label;
+    astView.setCompiled(null);
+    editor.dispatch({effects: [setHoverRanges.of([]), setSelectedRanges.of([]), setExecutionRanges.of([])]});
+    const ok = runView.setAsmSource(text);
+    $("asm-hint").textContent = "行番号でブレークポイント。このCとの対応はありません。";
+    $("source-context").textContent = "読み込んだ命令を観察中です。このCとの対応はありません。";
+    status(ok ? "ok" : "err", ok
+      ? "読み込んだアセンブリの実行準備ができました。このCから生成した命令ではありません。"
+      : "アセンブリを読み込めません。命令欄のエラーを確認してください。");
+    button.disabled = !ready;
+    applyView("run");
+    syncUrl();
+  },
+  onCurrentLine: highlightExecution,
+  onLineSelected(line) {
+    const hit = origin === "c" && artifact
+      ? spanForLine(artifact.stmtMap ?? [], artifact.exprMap ?? [], line) : null;
+    editor.dispatch({effects: [setHoverRanges.of([]), setSelectedRanges.of(hit?.sourceRanges ?? [])]});
+  },
+});
+function markDirty(): void {
+  ++revision;
+  ++request;
+  artifact = null;
+  astView.setCompiled(null);
+  button.classList.add("dirty");
+  button.disabled = !ready;
+  highlightExecution(null);
+  if (origin === "c") {
+    $("asm-hint").textContent = "変更未反映。Cとの対応は再コンパイル後に確認できます。";
+    runView.invalidate();
+    $("source-context").textContent = "変更未反映：表示中の命令・実行状態は編集前のCの結果です。";
+    status("pending", "変更未反映 — 実行を停止しました。［コンパイル］で命令と実行準備を更新します。");
+  } else if (origin === "empty" && ready) {
+    status("pending", "Cを編集し、［コンパイル］で命令生成と実行準備へ進めます。");
+  }
+}
+onSourceChange(markDirty);
+$("opt-comments").addEventListener("change", markDirty);
+async function runCompile(): Promise<void> {
+  if (!ready) return;
+  const token = ++request;
+  const sourceRevision = revision;
+  const src = editor.state.doc.toString();
+  artifact = null;
+  astView.setCompiled(null);
+  runView.invalidate();
+  highlightExecution(null);
+  button.disabled = true;
+  status("pending", "コンパイル中…");
+  const result = await compile(src, $<HTMLInputElement>("opt-comments").checked);
+  if (token !== request || sourceRevision !== revision) return;
+  button.disabled = false;
+  if (!result.ok) {
+    const err = result.errors?.[0];
+    status("err", `コンパイルできません：${err?.message ?? "エラー"}`);
+    $("source-context").textContent = "実行は停止中です。残っている命令・観察結果は以前の入力のものです。";
+    return;
+  }
+  origin = "c";
+  asmExample = null;
+  artifact = result;
+  astView.setCompiled(result);
+  const ok = runView.setAsmSource(result.text ?? "");
+  $("asm-hint").textContent = "行番号でブレークポイント／命令を選ぶとCの対応箇所";
+  button.classList.remove("dirty");
+  $("source-context").textContent = "このCから生成した命令です。実行時は次の命令に対応する箇所を緑で示します。";
+  status(ok ? "ok" : "err", ok
+    ? "参照実装でコンパイル成功・実行準備完了 — ［実行を追う］で1命令ずつ確かめられます。"
+    : "命令生成は成功しましたが、実行準備に失敗しました。命令欄のエラーを確認してください。");
+  syncUrl();
+}
+button.addEventListener("click", () => void runCompile());
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.defaultPrevented
+      && !$("asm-editor").contains(e.target as Node)) {
+    e.preventDefault(); void runCompile();
+  }
+});
+function applyView(next: View): void {
+  view = next;
+  $("pane-ast").classList.toggle("active", next === "ast");
+  $("pane-machine").classList.toggle("active", next !== "ast");
+  $("pane-machine").dataset.view = next;
+  $("pane-machine").setAttribute("aria-labelledby", next === "run" ? "tab-run" : "tab-asm");
+  for (const btn of document.querySelectorAll<HTMLButtonElement>("#tabs button")) {
+    const active = btn.dataset.tab === next;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", String(active));
+    btn.tabIndex = active ? 0 : -1;
+  }
+  if (next === "ast") astView.setActive(); else runView.setActive();
+}
 function syncUrl(): void {
   const url = new URL(location.href);
-  url.searchParams.set("mode", mode);
-  const ex = lastExample[mode];
-  if (ex) url.searchParams.set("example", ex);
-  else url.searchParams.delete("example");
+  url.searchParams.delete("mode"); url.searchParams.delete("example");
+  url.searchParams.set("view", view);
+  if (cExample) url.searchParams.set("c", cExample); else url.searchParams.delete("c");
+  if (origin === "assembly" && asmExample) url.searchParams.set("asm", asmExample);
+  else url.searchParams.delete("asm");
   history.replaceState(null, "", url);
 }
-
-for (const btn of document.querySelectorAll<HTMLButtonElement>("#mode-tabs button")) {
-  btn.addEventListener("click", () => {
-    applyMode(btn.dataset.mode === "run" ? "run" : "build");
-    syncUrl();
+const tabs = [...document.querySelectorAll<HTMLButtonElement>("#tabs button")];
+for (const btn of tabs) {
+  btn.addEventListener("click", () => { applyView(btn.dataset.tab as View); syncUrl(); });
+  btn.addEventListener("keydown", e => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+    e.preventDefault();
+    const index = tabs.indexOf(btn);
+    const next = e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1
+      : (index + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+    tabs[next]!.click(); tabs[next]!.focus();
   });
 }
-
-// ---- 作るモードのタブ（AST / アセンブリ） ----
-// AST の中のサブタブ（木・トークン・S 式）は app-ast-view.ts が #ast-tabs / .ast-pane で持つ。
-// ここは #right 直下だけを見て、サブペインを巻き込まないようにする。
-
-for (const btn of document.querySelectorAll<HTMLButtonElement>("#tabs button")) {
-  btn.addEventListener("click", () => {
-    const tab = btn.dataset.tab ?? "ast";
-    document
-      .querySelectorAll("#tabs button")
-      .forEach((b) => b.classList.toggle("active", b === btn));
-    document
-      .querySelectorAll<HTMLElement>("#right > .pane")
-      .forEach((p) => p.classList.toggle("active", p.id === `pane-${tab}`));
-    // 隠れている間は木の描画幅が取れないので、表に出してから描き直す
-    if (tab === "ast") astView.setActive();
-  });
-}
-
-// ---- 作るモードのプリセット ----
-
-function setSource(source: string): void {
-  astView.reset();
-  editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: source } });
-}
-
-async function setupBuildExamples(wanted: string | null): Promise<void> {
+async function setupExamples(): Promise<void> {
   const select = $<HTMLSelectElement>("build-example-select");
   const byPath = await loadCExamples(select);
-  select.addEventListener("change", () => {
-    const item = byPath.get(select.value);
+  function choose(path: string): void {
+    const item = byPath.get(path);
     if (!item) return;
-    lastExample.build = item.path;
-    setSource(item.source);
+    astView.reset();
+    editor.dispatch({changes: {from: 0, to: editor.state.doc.length, insert: item.source}});
+    cExample = item.path;
+    select.value = item.path;
     syncUrl();
-  });
-
-  const initial = (wanted && byPath.get(wanted)) ?? byPath.get(DEFAULT_C_EXAMPLE);
-  if (initial) {
-    select.value = initial.path;
-    lastExample.build = initial.path;
-    setSource(initial.source);
-  } else {
-    setSource(DEFAULT_C_SOURCE);
   }
+  select.addEventListener("change", () => choose(select.value));
+  // 編集済みのCを、教材の未変更サンプルとしてURLに記録しない。
+  onSourceChange(() => { cExample = null; select.selectedIndex = -1; syncUrl(); });
+  const wanted = params.get("c") ?? (!legacyRun ? params.get("example") : null);
+  const initial = (wanted && byPath.get(wanted)) || byPath.get(DEFAULT_C_EXAMPLE);
+  if (initial) choose(initial.path);
+  else editor.dispatch({changes: {from: 0, to: editor.state.doc.length, insert: DEFAULT_C_SOURCE}});
 }
-
-// ---- 起動 ----
-
-const params = new URL(location.href).searchParams;
-const initialMode: Mode = params.get("mode") === "run" ? "run" : "build";
-const initialExample = params.get("example");
-
-applyMode(initialMode);
-
+applyView(view);
+button.disabled = true;
+status("pending", "コアを読み込み中…");
 void Promise.all([
-  setupBuildExamples(initialMode === "build" ? initialExample : null),
-  runView.start(initialMode === "run" ? initialExample : null),
+  setupExamples(),
+  runView.start(params.get("asm") ?? (legacyRun ? params.get("example") : null), legacyRun || params.has("asm")),
+  coreReady(),
 ]).then(async () => {
+  ready = true;
+  button.disabled = false;
   syncUrl();
-  // ソースが確定してから初回の解析と、コア待ちを解く
   await astView.runParse();
-  await asmView!.start();
+  if (origin === "empty") status("pending", "Cを編集し、［コンパイル］で命令生成と実行準備へ進めます。");
+}).catch(e => {
+  status("err", `読み込めません：${String(e)}。ページを再読み込みしてください。`);
 });

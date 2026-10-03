@@ -454,6 +454,6 @@ L1の概念の学習と `check.py` による単体検査は、この回から始
 `sizeof` を式にも広げる [L4](../../workbook/advanced/L4_sizeof_expr/README.md) は、
 構造体まで進んだコマ12 以降に着手できる。
 
-生成したアセンブリでポインタ演算のアドレス計算を1命令ずつ確認したいときは、[RV64 シミュレータ](../../tools/app.html?mode=run) に貼り付ける。
+生成したアセンブリでポインタ演算のアドレス計算を1命令ずつ確認したいときは、[学習ツールの実行表示](../../tools/app.html?view=run) に貼り付ける。
 
 この回の完成形に相当する OCaml 版参考実装が [`../../workbook/ocaml/README.md`](../../workbook/ocaml/README.md) にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。

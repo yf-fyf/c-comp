@@ -383,10 +383,8 @@ def home_markdown(nav: dict, pages: list[Page], release: str | None = None) -> s
         "ブラウザで動く学習支援アプリです。環境構築の前でも触れます。",
         "",
         '<ul class="cards">',
-        '<li><a href="tools/app.html?mode=build"><span class="card-title">作る</span>'
-        '<span class="card-desc">C ソースから構文木・S 式・トークン列と RV64 アセンブリを表示する</span></a></li>',
-        '<li><a href="tools/app.html?mode=run"><span class="card-title">動かす</span>'
-        '<span class="card-desc">アセンブリを1命令ずつ実行してレジスタとスタックを見る</span></a></li>',
+        '<li><a href="tools/app.html"><span class="card-title">Cコンパイラ学習ツール</span>'
+        '<span class="card-desc">C・構文木・命令・実行状態を同じ画面で観察する。自分のアセンブリも読み込める</span></a></li>',
         "</ul>",
         "",
     ]

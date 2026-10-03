@@ -4,6 +4,7 @@ import type { SourceRange, SpanEntry, StmtSpan } from "./types";
 
 export const setHoverRanges = StateEffect.define<readonly SourceRange[]>();
 export const setSelectedRanges = StateEffect.define<readonly SourceRange[]>();
+export const setExecutionRanges = StateEffect.define<readonly SourceRange[]>();
 
 function rangeField(effect: typeof setHoverRanges, cls: string) {
   return StateField.define<DecorationSet>({
@@ -26,6 +27,7 @@ function rangeField(effect: typeof setHoverRanges, cls: string) {
 
 export const hoverRangeField = rangeField(setHoverRanges, "cm-ast-hover");
 export const selectedRangeField = rangeField(setSelectedRanges, "cm-ast-selected");
+export const executionRangeField = rangeField(setExecutionRanges, "cm-execution");
 
 // ---- A3: AST ノード ↔ 命令のクロスハイライト（対応の粒度は式） ----
 // 範囲は行またぎで複数に割れる（前処理の対応表が行ごとに切れるため）ので、
