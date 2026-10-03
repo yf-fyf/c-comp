@@ -17,7 +17,7 @@ jobs:
       - name: Check Python sources
         run: python3 -m compileall -q tools workbook/scaffold
       - name: Test Q1 golden failure reporting
-        run: python3 -m unittest discover -s tools/tests -v
+        run: python3 -m unittest discover -s tools/tests -p test_q1_golden.py -v
       - name: Parse a representative learner program
         run: python3 workbook/scaffold/parse_viewer.py workbook/sessions/01_interpreter/tests/add_mul.c >/dev/null
 
@@ -32,12 +32,22 @@ jobs:
       - name: Show the pandoc version
         # ディストリの pandoc は手元より古いことがある。差分の切り分け用に出す
         run: pandoc --version | head -1
+      - name: Test the assembled link checker
+        run: python3 -m unittest discover -s tools/tests -p test_site_links.py -v
       - name: Build the site
         run: make site
       - name: Check internal links
         run: make check-links
       - name: Check documentation consistency
         run: make check-docs
+      - name: Save the built site for assembled link checks
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-site
+          path: .site/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
 
   code-examples:
     # workbook/docs/code_example.md の C コードを実際に処理系へ通し、文書に書かれた
@@ -164,3 +174,32 @@ jobs:
         working-directory: web/app
       - name: Test web application
         run: opam exec -- make web-test
+      - name: Save the built web application for assembled link checks
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-web-app
+          path: web/app/dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  assembled-links:
+    needs: [site, web-app]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install PyYAML
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+      - name: Restore the built site
+        uses: actions/download-artifact@v4
+        with:
+          name: built-site
+          path: .site
+      - name: Add the built web application
+        uses: actions/download-artifact@v4
+        with:
+          name: built-web-app
+          path: .site/tools
+      - name: Check the assembled tree for broken links
+        run: python3 tools/build_site.py --check-links --assembled --output .site

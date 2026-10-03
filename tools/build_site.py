@@ -713,7 +713,7 @@ HREF_RE = re.compile(r'(?:href|src)="([^"#][^"]*)"')
 ASSEMBLED = {"tools", "downloads", "LICENSE", "LICENSE-MATERIALS", "THIRD_PARTY_NOTICES.md"}
 
 
-def check_links(output: Path) -> int:
+def check_links(output: Path, *, assembled: bool = False) -> int:
     """生成された HTML の内部リンクが実在するか調べる"""
     broken: list[str] = []
     root = output.resolve()
@@ -724,13 +724,16 @@ def check_links(output: Path) -> int:
             # resolve() はシンボリックリンクを辿るので使わない。
             # make serve が張る .site/tools は web/app/dist を指しており、
             # 辿るとサイト外に出て ASSEMBLED の除外が効かなくなる。
-            resolved = Path(os.path.normpath(page.parent / target.split("#")[0]))
+            local_path = target.split("#")[0].split("?")[0]
+            if not local_path:
+                continue
+            resolved = Path(os.path.normpath(page.parent / local_path))
             try:
                 relative = resolved.relative_to(root)
             except ValueError:
                 broken.append(f"{page.relative_to(root)} -> {target} (サイト外)")
                 continue
-            if relative.parts and relative.parts[0] in ASSEMBLED:
+            if not assembled and relative.parts and relative.parts[0] in ASSEMBLED:
                 continue
             if resolved.is_dir():
                 resolved = resolved / "index.html"
@@ -754,6 +757,8 @@ def main() -> int:
     parser.add_argument("--revision", help="--release と一緒に脚注へ出すリビジョン")
     parser.add_argument("--check-links", action="store_true",
                         help="生成せず、既存の出力の内部リンクだけ調べる")
+    parser.add_argument("--assembled", action="store_true",
+                        help="組み立て済みの出力として tools/・downloads/ 等もリンク検査する")
     parser.add_argument("--serve", action="store_true",
                         help="ビルドしたあと配信する（ローカル確認用）")
     parser.add_argument("--host", default="127.0.0.1",
@@ -773,7 +778,7 @@ def main() -> int:
         if not args.output.is_dir():
             print(f"出力がない: {args.output}", file=sys.stderr)
             return 2
-        return check_links(args.output)
+        return check_links(args.output, assembled=args.assembled)
 
     if shutil.which(PANDOC) is None:
         print("pandoc が見つからない", file=sys.stderr)

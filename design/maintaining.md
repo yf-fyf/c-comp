@@ -160,6 +160,9 @@ python3 tools/build_site.py --only 03_arith # 1ページだけ作り直す
 ```
 
 CI（`.github/workflows/ci.yml`）は push のたびに `make site` と `make check-links` を通す。
+さらに `site` と `web-app` のビルド成果物を受け渡し、`.site/tools/` にアプリを加えた状態で
+`python3 tools/build_site.py --check-links --assembled --output .site` を通す。
+この検査は資料とアプリの間のリンク、およびアプリ内のリンクも対象にする。
 **CI が入れる pandoc はディストリ版なので手元より古いことがある。**
 テンプレートやフィルタで新しい機能を使ったときは、CI の `pandoc --version` の出力と
 突き合わせて切り分ける。
