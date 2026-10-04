@@ -20,11 +20,14 @@
 
   var dialog = document.createElement('dialog');
   dialog.className = 'lightbox';
+  dialog.setAttribute('aria-label', '図の拡大表示');
   dialog.innerHTML =
     '<button class="lightbox-close" type="button" aria-label="閉じる">×</button>'
     + '<img alt="">';
   document.body.appendChild(dialog);
   var view = dialog.querySelector('img');
+  var returnFocus = null;
+  var previousOverflow = '';
 
   for (var i = 0; i < targets.length; i++) {
     var img = targets[i];
@@ -32,6 +35,7 @@
     img.tabIndex = 0;
     img.setAttribute('role', 'button');
     img.setAttribute('aria-label', (img.alt || '図') + ' を拡大表示');
+    img.setAttribute('aria-haspopup', 'dialog');
   }
 
   // padding は CSS 側（.lightbox img）と揃える。border-box にしてあるので
@@ -59,6 +63,7 @@
   }
 
   function open(img) {
+    returnFocus = img;
     view.classList.remove('actual');
     view.classList.remove('oversized');
     view.style.width = '';
@@ -66,6 +71,7 @@
     view.src = img.currentSrc || img.src;
     view.alt = img.alt;
     // ダイアログの裏で本文がスクロールするのを止める
+    previousOverflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = 'hidden';
     dialog.showModal();
     // 表示領域の寸法は showModal 後でないと取れない。画像が読み込み済みなら
@@ -98,10 +104,11 @@
   });
 
   dialog.addEventListener('close', function () {
-    document.documentElement.style.overflow = '';
+    document.documentElement.style.overflow = previousOverflow;
     view.removeAttribute('src');
     view.style.width = '';
     view.style.height = '';
+    if (returnFocus && returnFocus.isConnected) returnFocus.focus({preventScroll: true});
   });
 
   view.addEventListener('load', layout);

@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ポインタ同士の引き算 — 差は「要素いくつ分か」 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,19 +92,22 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">ポインタ同士の引き算 — 差は「要素いくつ分か」</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#コマ9-でやり残したこと" id="toc-コマ9-でやり残したこと">コマ9 でやり残したこと</a></li>
-      <li><a href="#なぜ要素数なのか" id="toc-なぜ要素数なのか">なぜ「要素数」なのか</a></li>
-      <li><a href="#どう直すか" id="toc-どう直すか">どう直すか</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#コマ9-でやり残したこと" id="toc-コマ9-でやり残したこと">コマ9 でやり残したこと</a></li>
+<li><a href="#なぜ要素数なのか" id="toc-なぜ要素数なのか">なぜ「要素数」なのか</a></li>
+<li><a href="#どう直すか" id="toc-どう直すか">どう直すか</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -109,12 +115,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 本物の C の慣習にならい、<strong>要素いくつ分離れているか</strong>を返す意味を与えて実装する。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -157,6 +160,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="なぜ-l-系なのか">なぜ L 系なのか</h3>
 <p>S 系と L 系は、<strong>その回で作る振る舞いの「正解」がどこに書いてあるか</strong>で分かれる。
 仕様が意味を決めている構文の、仕様と実装のずれを埋めるのが S 系。
@@ -177,15 +181,25 @@ S2 は「仕様が要求している 32 ビットの折り返しに実装のず�
 </blockquote>
 <h2 id="コマ9-でやり残したこと">コマ9 でやり残したこと</h2>
 <p>コマ9 では、ポインタと整数の演算に<strong>要素サイズを掛ける</strong>ことを学んだ。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>p <span class="op">+</span> <span class="dv">2</span><span class="op">;</span>      <span class="co">// 2 * sizeof(int) = 8 バイト進む</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>p <span class="op">-</span> <span class="dv">1</span><span class="op">;</span>      <span class="co">// 4 バイト戻る</span></span></code></pre></div>
+</div>
+</div>
 <p>いまの実装は、この「ポインタ ± 整数」を正しく処理している。
 しかし C には、もう1つのポインタ演算がある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>q<span class="op">;</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>q <span class="op">-</span> p<span class="op">;</span>      <span class="co">// ポインタ同士の引き算</span></span></code></pre></div>
+</div>
+</div>
 <p>これは<strong>アドレスの差ではなく、要素いくつ分離れているか</strong>を返す規則になっている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb3" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>a<span class="op">;</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>q<span class="op">;</span></span>
@@ -194,6 +208,8 @@ S2 は「仕様が要求している 32 ビットの折り返しに実装のず�
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> <span class="op">&amp;</span>a<span class="op">[</span><span class="dv">7</span><span class="op">];</span></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>q <span class="op">-</span> p<span class="op">;</span>      <span class="co">// C の答え: 7(要素7個分)</span></span></code></pre></div>
+</div>
+</div>
 <p>いまの実装は <code>sub</code> するだけなので、<strong>28</strong>（バイト差）を返してしまう。</p>
 <div class="adm adm-important">
 <div class="adm-title">
@@ -211,29 +227,42 @@ S2 は「仕様が要求している 32 ビットの折り返しに実装のず�
 </div>
 <h2 id="なぜ要素数なのか">なぜ「要素数」なのか</h2>
 <p>一貫性のためである。C のポインタ演算は、次の等式が成り立つように設計されている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>(p + n) - p  ==  n</code></pre>
+</div>
+</div>
 <p><code>p + n</code> が「n 要素進む」なら、その差は「n」でなければ辻褄が合わない。
 <code>p + 2</code> は 8 バイト進むが、<code>(p + 2) - p</code> は 2 になる。</p>
 <p>この規則のおかげで、次のような書き方が自然にできる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> my_strlen<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>s<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span> <span class="op">*</span>p<span class="op">;</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> s<span class="op">;</span></span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(*</span>p <span class="op">!=</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> p <span class="op">=</span> p <span class="op">+</span> <span class="dv">1</span><span class="op">;</span> <span class="op">}</span></span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> p <span class="op">-</span> s<span class="op">;</span>        <span class="co">// 進んだ「文字数」がそのまま長さ</span></span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p><code>char</code> は1バイトなので、この場合はバイト差と要素数が一致する
 （だから <code>char*</code> では誤りが表面化しない）。
 <code>int*</code> や構造体ポインタで初めてずれる。</p>
 <h2 id="どう直すか">どう直すか</h2>
 <p>引き算のあとに、要素サイズで割る。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>      左辺を評価して退避
       右辺を評価
       sub a0, a1, a0      ← アドレスの差(バイト数)
       li  a1, 4           ← 要素サイズ
       div a0, a0, a1      ← 要素数に直す</code></pre>
+</div>
+</div>
 <p>要素サイズが 1（<code>char*</code>）のときは、割り算を出す必要がない。</p>
 <p>判定も要る。<code>Sub</code> ノードは3種類が同居している。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -261,6 +290,7 @@ S2 は「仕様が要求している 32 ビットの折り返しに実装のず�
 </tbody>
 </table>
 </div>
+</div>
 <p>左右の型を <code>cg._type_of_expr()</code> で調べ、<strong>両方がポインタのときだけ</strong>新しい生成に回す。</p>
 <div class="adm adm-note">
 <div class="adm-title">
@@ -273,7 +303,8 @@ S2 は「仕様が要求している 32 ビットの折り返しに実装のず�
 本物の C では、この型に <code>ptrdiff_t</code> という名前が付いている。</p>
 </div>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -296,20 +327,26 @@ S2 は「仕様が要求している 32 ビットの折り返しに実装のず�
 </tbody>
 </table>
 </div>
+</div>
 <p>生成の骨格（退避 → 評価 → 復元 → 演算）は、コマ2 以来の二項演算パターンそのままである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/count.c</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/count.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A2</span> sub</span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 判定と生成命令列を確認(未実装は SKIP)</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 修正なしで落ち、修正ありで通ること + fixed17</span></span></code></pre></div>
+</div>
+</div>
 <p>最後に回す <a href="../../advanced/#fixed17"><code>fixed17</code></a> は、
 ポインタ以外の引き算まで巻き込んで壊していないことを確かめるためのものである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 47%" />
-<col style="width: 52%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>テスト</th>
@@ -331,6 +368,7 @@ S2 は「仕様が要求している 32 ビットの折り返しに実装のず�
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <h2 id="発展課題">発展課題</h2>
 <ol type="1">
@@ -372,7 +410,7 @@ B1 のピープホール最適化の練習問題として、
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

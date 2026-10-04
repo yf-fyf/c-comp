@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>再帰下降パーサ② — 文を解析する — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,23 +92,26 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">再帰下降パーサ② — 文を解析する</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#文は先頭のトークンで決まる" id="toc-文は先頭のトークンで決まる">文は先頭のトークンで決まる</a></li>
-      <li><a href="#単純な文-を食べ忘れない" id="toc-単純な文-を食べ忘れない">単純な文 — <code>;</code> を食べ忘れない</a></li>
-      <li><a href="#ブロック-文の再帰の輪" id="toc-ブロック-文の再帰の輪">ブロック — 文の再帰の輪</a></li>
-      <li><a href="#if-と-dangling-else" id="toc-if-と-dangling-else">if と dangling else</a></li>
-      <li><a href="#while-と-for-省略可能要素は-none" id="toc-while-と-for-省略可能要素は-none">while と for — 省略可能要素は None</a></li>
-      <li><a href="#node-の形" id="toc-node-の形">Node の形</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      <li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#文は先頭のトークンで決まる" id="toc-文は先頭のトークンで決まる">文は先頭のトークンで決まる</a></li>
+<li><a href="#単純な文-を食べ忘れない" id="toc-単純な文-を食べ忘れない">単純な文 — <code>;</code> を食べ忘れない</a></li>
+<li><a href="#ブロック-文の再帰の輪" id="toc-ブロック-文の再帰の輪">ブロック — 文の再帰の輪</a></li>
+<li><a href="#if-と-dangling-else" id="toc-if-と-dangling-else">if と dangling else</a></li>
+<li><a href="#while-と-for-省略可能要素は-none" id="toc-while-と-for-省略可能要素は-none">while と for — 省略可能要素は None</a></li>
+<li><a href="#node-の形" id="toc-node-の形">Node の形</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+<li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -114,12 +120,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 37本の文コーパスで、AST が スキャフォールド の Parser と<strong>完全一致</strong>することを golden test で確認する。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -158,13 +161,15 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p><code>StmtParser</code> は、<strong>自分が F2 で作った <code>ExprParser</code> を importlib で継承する</strong>。
 本編の <code>CodegenNN</code> と同じ「前回の自分を継承する」方式である。
 この回のブロックは「文だけを含むブロック」である。</p>
 <h2 id="文は先頭のトークンで決まる">文は先頭のトークンで決まる</h2>
 <p>式は10段の優先順位の階段が必要だった。文はずっと素直で、
 <strong>先頭のトークンを見るだけ</strong>で種類が確定する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -207,11 +212,18 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>スケルトンの <code>parse_stmt</code> は、この表のとおりのディスパッチとして完成済みである。
 迷う要素がないので、先読みは現在のトークン1つで足りる（LL(1)）。</p>
 <h2 id="単純な文-を食べ忘れない">単純な文 — <code>;</code> を食べ忘れない</h2>
 <p><code>return</code> / <code>break</code> / <code>continue</code> / 式文は、EBNF がそのままコードになる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>&#39;return&#39; [ expr ] &#39;;&#39;</code></pre>
+</div>
+</div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb2" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_return(<span class="va">self</span>):</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.pos <span class="op">+=</span> <span class="dv">1</span>              <span class="co"># &#39;return&#39;</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">self</span>.consume_if(<span class="st">&#39;;&#39;</span>):</span>
@@ -219,6 +231,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    expr <span class="op">=</span> <span class="va">self</span>.parse_expr()</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.expect(<span class="st">&#39;;&#39;</span>)</span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Node(ND_RETURN, operand<span class="op">=</span>expr)   <span class="co"># return expr;</span></span></code></pre></div>
+</div>
+</div>
 <p>ここで <strong><code>parse_expr</code> は F2 で自分が書いた関数</strong>である。
 文のパーサは、式の中身を一切知らずに「式を1個読んでくれ」と依頼するだけでよい。
 文と式で層が分かれているおかげである。</p>
@@ -226,7 +240,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <code>expect(';')</code> を忘れると、その <code>;</code> が次の文の先頭に残り、
 1つずれた場所で意味不明なエラーになる。</p>
 <h2 id="ブロック-文の再帰の輪">ブロック — 文の再帰の輪</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>block ::= &#39;{&#39; { stmt } &#39;}&#39;</code></pre>
+</div>
+</div>
 <p>ブロックは文の並びであり、ブロック自身も文である。
 つまり <code>parse_block</code> → <code>parse_stmt</code> → <code>parse_block</code> の再帰の輪ができる。
 式のときの <code>( expr )</code> とまったく同じ構図で、これが <code>{ { return 1; } }</code> のような
@@ -235,13 +253,21 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <code>Node(ND_BLOCK, stmts=...)</code> を作る。
 入力が尽きても <code>}</code> が来ない場合のエラーも忘れずに。</p>
 <h2 id="if-と-dangling-else">if と dangling else</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>if_stmt ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]</code></pre>
+</div>
+</div>
 <p><code>then</code> 側は <code>parse_stmt</code> で読む。ブロックとは限らず、単文でも入れ子の <code>if</code> でもよい。
 そして then を読んだ直後に、<strong><code>else</code> があれば取る</strong>。実装はこれだけである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb5" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>then <span class="op">=</span> <span class="va">self</span>.parse_stmt()</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>else_ <span class="op">=</span> <span class="va">None</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">self</span>.consume_if(<span class="st">&#39;else&#39;</span>):</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    else_ <span class="op">=</span> <span class="va">self</span>.parse_stmt()</span></code></pre></div>
+</div>
+</div>
 <p>ここで、コマ4 の資料にあった「<code>else</code> は最も内側の <code>if</code> に結合する（最近傍優先）」
 という規則の種明かしができる。</p>
 <figure>
@@ -258,9 +284,14 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <h2 id="while-と-for-省略可能要素は-none">while と for — 省略可能要素は None</h2>
 <p><code>while</code> は if から else を除いた形で、新しい要素はない。</p>
 <p><code>for</code> は3つの要素がそれぞれ省略できる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>for_stmt ::= &#39;for&#39; &#39;(&#39; [expr] &#39;;&#39; [expr] &#39;;&#39; [expr] &#39;)&#39; stmt</code></pre>
+</div>
+</div>
 <p>省略の判定は「次の区切り記号が来ていたら中身なし」で行う。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -288,16 +319,22 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>コマ5 の資料に「省略された部分は AST 上で <code>None</code> になる」とあった。
 その <code>None</code> を作っているのがこのコードである。
 <code>for (;;)</code> は3要素とも <code>None</code> の <code>ND_FOR</code> になり、
 コード生成側（コマ5）が「cond が <code>None</code> なら <code>beqz</code> を出さない」と対応していた。</p>
 <h2 id="node-の形">Node の形</h2>
 <p>S 式では、文は次のように表示される（<code>parse_viewer</code> と同じ）。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>(if (cond (var &quot;x&quot;)) (then (return (num 1))))
 (for (init none) (cond none) (step none) (body (break)))</code></pre>
+</div>
+</div>
 <p>この回で作るノードとフィールドの対応をまとめておく。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -345,14 +382,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 45%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>Step</th>
@@ -384,12 +418,21 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>ディスパッチ（<code>parse_stmt</code>）と入口（<code>parse_statement</code>）は完成済み。
 途中経過は目視でも確認できる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> myparser.py <span class="st">&#39;if (a &gt; b) return a; else return b;&#39;</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(期待値は S 式)</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 37本の文コーパスで scaffold と突き合わせ</span></span></code></pre></div>
+</div>
+</div>
 <p>golden のコーパスには、講義のテストに出てきた形
 （while の総和、連結リストの走査、continue でスキップする for など）を含めてある。
 <strong>全文 PASS がこの回の完了条件</strong>である。</p>
@@ -433,7 +476,7 @@ C の文法は、文の先頭に必ず「区別できる目印」（キーワー
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

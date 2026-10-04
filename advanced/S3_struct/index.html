@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>構造体の代入 — レジスタに載らないものを運ぶ — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,20 +92,23 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">構造体の代入 — レジスタに載らないものを運ぶ</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#いまはどうなっているか" id="toc-いまはどうなっているか">いまはどうなっているか</a></li>
-      <li><a href="#なぜ壊れるのか-レジスタに載らない" id="toc-なぜ壊れるのか-レジスタに載らない">なぜ壊れるのか — レジスタに載らない</a></li>
-      <li><a href="#どう直すか-アドレスからアドレスへ" id="toc-どう直すか-アドレスからアドレスへ">どう直すか — アドレスからアドレスへ</a></li>
-      <li><a href="#代入式の値は何か" id="toc-代入式の値は何か">代入式の値は何か</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#いまはどうなっているか" id="toc-いまはどうなっているか">いまはどうなっているか</a></li>
+<li><a href="#なぜ壊れるのか-レジスタに載らない" id="toc-なぜ壊れるのか-レジスタに載らない">なぜ壊れるのか — レジスタに載らない</a></li>
+<li><a href="#どう直すか-アドレスからアドレスへ" id="toc-どう直すか-アドレスからアドレスへ">どう直すか — アドレスからアドレスへ</a></li>
+<li><a href="#代入式の値は何か" id="toc-代入式の値は何か">代入式の値は何か</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -111,12 +117,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 （<code>*dst = *src</code>）も動くようにする。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -159,6 +162,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="なぜ-s-系なのか">なぜ S 系なのか</h3>
 <p><code>language_spec.md</code> は struct について、こう定めている。</p>
 <blockquote>
@@ -197,10 +201,14 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 （呼び出し規約を自分で決めるところから始める、L 系列で最も重い回である）。</p>
 </div>
 <h2 id="いまはどうなっているか">いまはどうなっているか</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Point p<span class="op">;</span> <span class="kw">struct</span> Point q<span class="op">;</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>p<span class="op">.</span>x <span class="op">=</span> <span class="dv">3</span><span class="op">;</span> p<span class="op">.</span>y <span class="op">=</span> <span class="dv">4</span><span class="op">;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> p<span class="op">;</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> q<span class="op">.</span>x <span class="op">+</span> q<span class="op">.</span>y<span class="op">;</span>     <span class="co">// 7 のはず</span></span></code></pre></div>
+</div>
+</div>
 <p>いまのコンパイラは、これを<strong>エラーにせず、間違った答えを返す</strong>。</p>
 <p>ポインタ・フィールド経由のメンバアクセス（<code>l.a-&gt;y</code>）は、実は既に正しく動く。
 <code>l.a</code> はただのポインタなので、<code>-&gt;</code> は「ポインタの指す先の <code>y</code> を読む」という、
@@ -208,9 +216,13 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <strong>壊れているのは代入（<code>m = l</code> で <code>l.a</code>・<code>l.b</code> という2本のポインタをコピーする部分）だけ</strong>である。</p>
 <h2 id="なぜ壊れるのか-レジスタに載らない">なぜ壊れるのか — レジスタに載らない</h2>
 <p>いままでの代入は、こういう形だった。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>左辺のアドレスを求める → 退避
 右辺の値を a0 に載せる
 a0 を左辺のアドレスへ書き込む</code></pre>
+</div>
+</div>
 <p>「右辺の<strong>値</strong>を a0 に載せる」——ここが構造体では成り立たない。
 <code>Point</code> は8バイト、<code>Line</code> は16バイト、もっと大きい構造体もある。
 <strong>レジスタ1本に載らないものは、この方式では運べない。</strong></p>
@@ -220,13 +232,19 @@ a0 を左辺のアドレスへ書き込む</code></pre>
 結果として <code>q.y</code> はゴミになる。</p>
 <h2 id="どう直すか-アドレスからアドレスへ">どう直すか — アドレスからアドレスへ</h2>
 <p>構造体の代入は、<strong>値の移動ではなくメモリのコピー</strong>である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>左辺の「アドレス」を求める   → a1
 右辺の「アドレス」を求める   → a0     ← 値ではない
 a0 から a1 へ、size バイト写す</code></pre>
+</div>
+</div>
 <p>右辺に <code>codegen()</code> ではなく <strong><code>codegen_lval()</code></strong> を使うのが要点である。
 コマ7 で学んだ「rvalue と lvalue」の区別が、ここで効いてくる。
 構造体の代入では、<strong>右辺も lvalue として扱う</strong>。</p>
 <p>コピーは大きい単位から行う。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb4" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span>      <span class="co">;; 8バイトずつ</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  sd a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">8</span><span class="op">(</span>a0<span class="op">)</span></span>
@@ -235,6 +253,8 @@ a0 から a1 へ、size バイト写す</code></pre>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  sw a2<span class="op">,</span> <span class="dv">16</span><span class="op">(</span>a1<span class="op">)</span></span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  lb a2<span class="op">,</span> <span class="dv">20</span><span class="op">(</span>a0<span class="op">)</span>     <span class="co">;; 最後の端数は1バイト</span></span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  sb a2<span class="op">,</span> <span class="dv">20</span><span class="op">(</span>a1<span class="op">)</span></span></code></pre></div>
+</div>
+</div>
 <div class="adm adm-note">
 <div class="adm-title">
 補足
@@ -252,7 +272,8 @@ a0 から a1 へ、size バイト写す</code></pre>
 <code>p = q = r;</code> のような連鎖でも、次の代入が <code>codegen_lval</code> でアドレスを求め直すので
 辻褄が合う。</p>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -275,19 +296,25 @@ a0 から a1 へ、size バイト写す</code></pre>
 </tbody>
 </table>
 </div>
+</div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/assign.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A6</span> <span class="st">&quot;ld a2&quot;</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/nested.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&quot;sd a2&quot;</span>    <span class="co"># 16バイト = 2回</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 判定と生成命令列を確認(未実装は SKIP)</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 構造体代入のテスト + fixed17</span></span></code></pre></div>
+</div>
+</div>
 <p><code>golden.py</code> の後半で回す <a href="../../advanced/#fixed17"><code>fixed17</code></a> が、
 構造体のコピーを足したせいで既存の代入を壊していないことの安全網になる。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 47%" />
-<col style="width: 52%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>テスト</th>
@@ -313,6 +340,7 @@ a0 から a1 へ、size バイト写す</code></pre>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><code>assign.c</code> の「コピー後に元を変えても影響しない」が本質的である。
 参照ではなく<strong>複製</strong>であることを、そこで確かめている。</p>
@@ -361,7 +389,7 @@ a0 から a1 へ、size バイト写す</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

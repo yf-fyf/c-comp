@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>sizeof 単項式 — 答えは合っているのに、間違っている — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,22 +92,25 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">sizeof 単項式 — 答えは合っているのに、間違っている</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#l4-が追加する仕様" id="toc-l4-が追加する仕様">L4 が追加する仕様</a></li>
-      <li><a href="#中心にある規則-評価しない" id="toc-中心にある規則-評価しない">中心にある規則: 評価しない</a></li>
-      <li><a href="#いまのコンパイラに食わせるとどうなるか" id="toc-いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</a></li>
-      <li><a href="#型を辿る-評価しない型付け" id="toc-型を辿る-評価しない型付け">型を辿る —— 評価しない型付け</a></li>
-      <li><a href="#コード生成-1-命令" id="toc-コード生成-1-命令">コード生成 —— 1 命令</a></li>
-      <li><a href="#不完全型を弾く" id="toc-不完全型を弾く">不完全型を弾く</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#l4-が追加する仕様" id="toc-l4-が追加する仕様">L4 が追加する仕様</a></li>
+<li><a href="#中心にある規則-評価しない" id="toc-中心にある規則-評価しない">中心にある規則: 評価しない</a></li>
+<li><a href="#いまのコンパイラに食わせるとどうなるか" id="toc-いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</a></li>
+<li><a href="#型を辿る-評価しない型付け" id="toc-型を辿る-評価しない型付け">型を辿る —— 評価しない型付け</a></li>
+<li><a href="#コード生成-1-命令" id="toc-コード生成-1-命令">コード生成 —— 1 命令</a></li>
+<li><a href="#不完全型を弾く" id="toc-不完全型を弾く">不完全型を弾く</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -112,12 +118,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 コマ9 で作った <code>sizeof(型名)</code> 形式はそのまま残し、1トークンの先読みで見分ける。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -160,6 +163,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p><code>sizeof</code> 式は <code>language_spec.md</code> の<strong>外側</strong>にある機能である
 （仕様の「除外機能の一覧」に載っており、代替表は <code>sizeof(型名)</code> で書けと指示している）。
 コマ9 の <code>sizeof(型名)</code> を<strong>一般化</strong>する回で、追加する構文と意味論は<strong>この資料が定義する</strong>（次節）。</p>
@@ -173,14 +177,19 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 判定はこの定義に従う。</p>
 <h3 id="構文">構文</h3>
 <p><code>language_spec.md</code> の EBNF の <code>unary_expr</code> に、次の 1 行を足す。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <pre class="ebnf" data-lang="ebnf"><code>unary_expr ::= …
              | &#39;sizeof&#39; &#39;(&#39; type_name &#39;)&#39;     /* 既存 */
              | &#39;sizeof&#39; unary_expr            /* L4 が追加 */</code></pre>
+</div>
+</div>
 <p>オペランドは <code>unary_expr</code> である（<code>cast_expr</code> の無いこの言語では ISO C の
 <code>sizeof unary-expression</code> と同じ位置になる）。したがって <code>sizeof</code> は<strong>単項演算子</strong>で、
 <code>sizeof x + 1</code> は <code>(sizeof x) + 1</code> と読まれる。</p>
 <p>2 つの形式は <code>'sizeof'</code> の<strong>次の 1 トークンだけ</strong>で見分けられる。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -199,6 +208,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><code>language_spec.md</code> が「<code>type_name</code> は型キーワードで始まるため構文衝突はない」と
 書いているのはこのことである。仕様は衝突が無いことを<strong>式形式を禁じる根拠</strong>に使ったが、
@@ -222,14 +232,22 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <h2 id="中心にある規則-評価しない">中心にある規則: 評価しない</h2>
 <p><code>sizeof</code> は「大きさを測る」演算子だから、まず値を作ってから測るのだと思いたくなる。
 しかし C の <code>sizeof</code> は逆である。<strong>型だけを見て、値は作らない。</strong></p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> calls<span class="op">;</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> bump<span class="op">()</span> <span class="op">{</span> calls <span class="op">=</span> calls <span class="op">+</span> <span class="dv">1</span><span class="op">;</span> <span class="cf">return</span> <span class="dv">7</span><span class="op">;</span> <span class="op">}</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>calls <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="kw">sizeof</span> bump<span class="op">();</span>      <span class="co">// n は 4。calls は 0 のまま</span></span></code></pre></div>
+</div>
+</div>
 <p>もしオペランドをコード生成してしまうと、どうなるか。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>  call bump          ← 呼ばれてしまう(calls が 1 になる)
   li a0, 4           ← 答えは 4 で「合っている」</code></pre>
+</div>
+</div>
 <p><code>n</code> は 4 になる。テストの戻り値だけを見ていると<strong>通ってしまう</strong>。
 それでも仕様違反である。前節で定めたとおり <code>e</code> の副作用は 1 つも起こってはならない。</p>
 <blockquote>
@@ -251,10 +269,15 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <h2 id="いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</h2>
 <p><code>tests/expr.c</code> を標準トラックのコンパイラに渡すと、構文解析で止まる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>構文解析エラー: [line 19] sizeof は sizeof(型名) 形式のみ使えます</code></pre>
+</div>
+</div>
 <p>スキャフォールドの <code>_parse_sizeof</code> が、<code>'('</code> + 型キーワードでなければ
 明示的にエラーにしている。この回はここに「そうでなければ式形式」を足す。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -292,32 +315,38 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="構文-1-トークンの先読み">構文 —— 1 トークンの先読み</h3>
 <p>ラッパーが用意する部分は次のとおりである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb5" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _parse_sizeof(<span class="va">self</span>):</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    line <span class="op">=</span> <span class="va">self</span>.cur.line</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.pos <span class="op">+=</span> <span class="dv">1</span>                       <span class="co"># &#39;sizeof&#39;</span></span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">self</span>.cur.sval <span class="op">==</span> <span class="st">&#39;(&#39;</span> <span class="kw">and</span> <span class="va">self</span>._peek_is_type():</span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        ...                             <span class="co"># 従来どおり SizeofType(ty_str=…)</span></span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Node(<span class="st">&#39;SizeofExpr&#39;</span>, operand<span class="op">=</span><span class="va">self</span>._parse_unary(), line<span class="op">=</span>line)</span></code></pre></div>
+</div>
+</div>
 <p><code>_peek_is_type()</code> は <code>'('</code> の<strong>次</strong>のトークンが型キーワードかを見る。
 <code>sizeof (a)</code> は <code>a</code> が識別子なので式形式、<code>sizeof (int)</code> は型形式になる。
 オペランドを <code>_parse_unary()</code> で読むので、<code>sizeof x + 1</code> は
 <code>(sizeof x) + 1</code> と読まれる（<code>+</code> は <code>_parse_unary</code> の外側の段にある）。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>sizeof c + 1     → Add(SizeofExpr(Var c), Num 1)     = 1 + 1 = 2
 sizeof (c + 1)   → SizeofExpr(Add(Var c, Num 1))     = 4</code></pre>
+</div>
+</div>
 <p><code>char</code> を使うとこの差が見える（<code>int</code> どうしだと両方 4 になって区別がつかない）。
 <code>tests/prec.c</code> はこの形で優先順位を確かめている。</p>
 <h2 id="型を辿る-評価しない型付け">型を辿る —— 評価しない型付け</h2>
 <p><code>sizeof</code> に必要なのはオペランドの<strong>静的な型</strong>である。
 土台の <code>mycc.py</code> はすでに <code>_type_of_expr</code> という同じ規則を持っている。
 違うのは、こちらは型を知るためだけに木を辿り、<strong>命令を 1 行も出さない</strong>という点だけである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 61%" />
-<col style="width: 38%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ノード</th>
@@ -364,6 +393,7 @@ sizeof (c + 1)   → SizeofExpr(Add(Var c, Num 1))     = 4</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p><code>Add</code> でポインタを左右どちらでも見るのは、<code>p + 1</code> と <code>1 + p</code> の両方が
 ポインタ型になるからである（コマ9 のスケーリングと同じ非対称性）。
 <code>Sub</code> は左だけ見ればよい —— ポインタ同士の引き算は仕様の外にある（発展課題 L1 の題材）。</p>
@@ -380,9 +410,17 @@ sizeof (c + 1)   → SizeofExpr(Add(Var c, Num 1))     = 4</code></pre>
 </div>
 <h2 id="コード生成-1-命令">コード生成 —— 1 命令</h2>
 <p>型が決まれば、あとは大きさを置くだけである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb7" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>cg.emit(<span class="ss">f&#39;  li a0, </span><span class="sc">{</span>cg<span class="sc">.</span>type_size(ty)<span class="sc">}</span><span class="ss">&#39;</span>)</span></code></pre></div>
+</div>
+</div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; sizeof *p   (p は int*)</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">4</span></span></code></pre></div>
+</div>
+</div>
 <p><code>codegen</code> はどこにも現れない。<strong>この「無い」ことがこの回の実装である。</strong>
 コード生成の関数が 1 行しかないのに、その 1 行に到達するまでに
 型を辿る仕事が要る——<code>sizeof</code> が「実行時ではなく翻訳時の演算子」であることが、
@@ -391,12 +429,9 @@ sizeof (c + 1)   → SizeofExpr(Add(Var c, Num 1))     = 4</code></pre>
 違いは <code>N</code> の求め方だけである。型名形式は文字列から直接、式形式は木を辿って求める。</p>
 <h2 id="不完全型を弾く">不完全型を弾く</h2>
 <p>大きさが決まらない型が 2 つある。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 19%" />
-<col style="width: 80%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>型</th>
@@ -415,14 +450,20 @@ sizeof (c + 1)   → SizeofExpr(Add(Var c, Num 1))     = 4</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>土台の <code>size_of_ty_str</code> は知らない型に既定値を返してしまうので、
 放っておくと<strong>黙って嘘の数</strong>が出る。コンパイルエラーで止めるほうが正しい。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>[line 12] 不完全型に sizeof は使えません: &#39;struct FILE&#39;(構造体の本体が見えていない)</code></pre>
+</div>
+</div>
 <p>ポインタは通す。<code>struct FILE *fp</code> の <code>sizeof fp</code> は 8 で確定する——
 指し先が不完全でも、アドレスの大きさは型に関係なく決まっているからである。
 この線引きは C の規則そのままである。</p>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -450,23 +491,33 @@ sizeof (c + 1)   → SizeofExpr(Add(Var c, Num 1))     = 4</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p><code>langcc.py</code> はこの 3 つを次の順に呼ぶ。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>ty <span class="op">=</span> static_type_of(cg, node.operand)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>reject_incomplete(cg, ty, node.line)</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>gen_sizeof_expr(cg, ty)</span></code></pre></div>
+</div>
+</div>
 <p>Step 1 は場合分けが多いが、1 つずつ <code>check.py</code> を回しながら足していけばよい。
 Step 2 は 1 行、Step 3 は 3 行で終わる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/noeval.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&quot;call bump&quot;</span>   <span class="co"># 1 のはず(sizeof の外の1回だけ)</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/prec.c <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;li a0, 1&quot;</span>         <span class="co"># sizeof c が 1 で出ている</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># sizeof 式のテスト + fixed17</span></span></code></pre></div>
-<div class="table-scroll">
+</div>
+</div>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 47%" />
-<col style="width: 52%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>テスト</th>
@@ -492,6 +543,7 @@ Step 2 は 1 行、Step 3 は 3 行で終わる。</p>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><code>noeval.c</code> が本質である。<code>check.py</code> の Step 2 も同じことを単体で確かめており、
 偽のコード生成器で <code>codegen</code> の呼出し回数が <strong>0 回</strong>であることを直接見ている。
@@ -539,7 +591,7 @@ ISO C にはあるが本仕様には無い。<code>_peek_is_type()</code> の先
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

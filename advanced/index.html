@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>発展課題 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../assets/style.css">
 <script defer src="../assets/lightbox.js"></script>
+<script defer src="../assets/grammar.js"></script>
+<script defer src="../assets/navigation.js"></script>
+<script defer src="../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../assets/style.css">
 
 
 </head>
@@ -89,25 +92,28 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">発展課題</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#全トピック一覧" id="toc-全トピック一覧">全トピック一覧</a></li>
-      <li><a href="#どこから始めるか" id="toc-どこから始めるか">どこから始めるか</a></li>
-      <li><a href="#共通のルール" id="toc-共通のルール">共通のルール</a></li>
-      <li><a href="#共有ツール" id="toc-共有ツール">共有ツール</a></li>
-      <li><a href="#ラッパーの名前" id="toc-ラッパーの名前">ラッパーの名前</a></li>
-      <li><a href="#f-フロントエンド" id="toc-f-フロントエンド">F: フロントエンド</a></li>
-      <li><a href="#b-最適化入門" id="toc-b-最適化入門">B: 最適化入門</a></li>
-      <li><a href="#o-最適化" id="toc-o-最適化">O: 最適化</a></li>
-      <li><a href="#r-ランタイム" id="toc-r-ランタイム">R: ランタイム</a></li>
-      <li><a href="#s-と-l-の判定基準-仕様の内側か外側か" id="toc-s-と-l-の判定基準-仕様の内側か外側か">S と L の判定基準 — 仕様の内側か、外側か</a></li>
-      <li><a href="#s-意味論" id="toc-s-意味論">S: 意味論</a></li>
-      <li><a href="#l-言語機能" id="toc-l-言語機能">L: 言語機能</a></li>
-      <li><a href="#q-品質" id="toc-q-品質">Q: 品質</a></li>
-      <li><a href="#p-移植セルフホスト" id="toc-p-移植セルフホスト">P: 移植・セルフホスト</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#全トピック一覧" id="toc-全トピック一覧">全トピック一覧</a></li>
+<li><a href="#どこから始めるか" id="toc-どこから始めるか">どこから始めるか</a></li>
+<li><a href="#共通のルール" id="toc-共通のルール">共通のルール</a></li>
+<li><a href="#共有ツール" id="toc-共有ツール">共有ツール</a></li>
+<li><a href="#ラッパーの名前" id="toc-ラッパーの名前">ラッパーの名前</a></li>
+<li><a href="#f-フロントエンド" id="toc-f-フロントエンド">F: フロントエンド</a></li>
+<li><a href="#b-最適化入門" id="toc-b-最適化入門">B: 最適化入門</a></li>
+<li><a href="#o-最適化" id="toc-o-最適化">O: 最適化</a></li>
+<li><a href="#r-ランタイム" id="toc-r-ランタイム">R: ランタイム</a></li>
+<li><a href="#s-と-l-の判定基準-仕様の内側か外側か" id="toc-s-と-l-の判定基準-仕様の内側か外側か">S と L の判定基準 — 仕様の内側か、外側か</a></li>
+<li><a href="#s-意味論" id="toc-s-意味論">S: 意味論</a></li>
+<li><a href="#l-言語機能" id="toc-l-言語機能">L: 言語機能</a></li>
+<li><a href="#q-品質" id="toc-q-品質">Q: 品質</a></li>
+<li><a href="#p-移植セルフホスト" id="toc-p-移植セルフホスト">P: 移植・セルフホスト</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <p>通常回（コマ1〜15）を終えた人向けの発展課題を置く。ここが発展教材の入口である。</p>
 <p>いずれも<strong>選択制</strong>で、1トピック = 1ディレクトリになっている。
@@ -115,13 +121,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 そのディレクトリの中に閉じている（P1 のみ例外: 自動採点なしの方針資料）。資料は
 <a href="https://yf-fyf.github.io/c-comp/advanced/">サイトの発展課題</a> にある。</p>
 <p>回 ID の頭文字がカテゴリを表す。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 41%" />
-<col style="width: 25%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>頭文字</th>
@@ -173,18 +175,12 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <hr />
 <h2 id="全トピック一覧">全トピック一覧</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 8%" />
-<col style="width: 29%" />
-<col style="width: 12%" />
-<col style="width: 12%" />
-<col style="width: 25%" />
-<col style="width: 12%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>回</th>
@@ -281,7 +277,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O3_isel/README.md"><code>O3_isel/</code></a></td>
 <td>命令選択（複数命令を1命令に畳む）</td>
 <td>2</td>
-<td>O1</td>
+<td>コマ15, O1</td>
 <td><a href="https://yf-fyf.github.io/c-comp/advanced/O3_isel/">サイト</a></td>
 </tr>
 <tr class="even">
@@ -305,7 +301,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O6_copyprop/README.md"><code>O6_copyprop/</code></a></td>
 <td>コピー伝播と死コード除去</td>
 <td>2</td>
-<td>O1, O2, O4, O5</td>
+<td>コマ15, O1, O2, O4, O5</td>
 <td><a href="https://yf-fyf.github.io/c-comp/advanced/O6_copyprop/">サイト</a></td>
 </tr>
 <tr class="odd">
@@ -313,7 +309,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <td><a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/O7_layout/README.md"><code>O7_layout/</code></a></td>
 <td>ブロック整列とループ回転</td>
 <td>1</td>
-<td>O1, O2</td>
+<td>コマ15, O1, O2</td>
 <td><a href="https://yf-fyf.github.io/c-comp/advanced/O7_layout/">サイト</a></td>
 </tr>
 <tr class="even">
@@ -423,13 +419,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="どこから始めるか">どこから始めるか</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 58%" />
-<col style="width: 41%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>やりたいこと</th>
@@ -468,6 +462,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="共通のルール">共通のルール</h2>
 <ul>
 <li><code>mycc.py</code> と <code>scaffold/</code> は書き換えない。機能はラッパー、独立したパス、またはパッチとして差し込む</li>
@@ -484,17 +479,17 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <p>発展課題では、これを<strong>安全網</strong>として使う。
 どのトピックも既存の機能を壊さずに何かを足す／直すので、
 「<code>fixed17</code> が全通したままか」が「意味を壊していないか」の判定になる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># workbook/ から。--compiler にそのトピックのラッパーを渡す</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> advanced/L1_ptrdiff/langcc.py <span class="at">--tests</span> final/tests</span></code></pre></div>
+</div>
+</div>
 <h3 id="check.py-と-golden.py"><code>check.py</code> と <code>golden.py</code></h3>
 <p>各トピックのテストは、目的の違う2本に分かれている。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 45%" />
-<col style="width: 27%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
@@ -516,18 +511,15 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>先に <code>check.py</code> を全 <code>PASS</code> にしてから <code>golden.py</code> を回す、という順で使う。</p>
 <p><code>golden.py</code> が無いトピックもある。F0（コンパイラ本編と独立）、
 R1・R2・R3（<code>mycc.py</code> の出力を変えないので回帰の対象が無い）、
 P1（自動採点なし）の5本がそれで、<code>check.py</code> だけで完結する。</p>
 <h2 id="共有ツール">共有ツール</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 20%" />
-<col style="width: 46%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
@@ -554,16 +546,13 @@ P1（自動採点なし）の5本がそれで、<code>check.py</code> だけで�
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="ラッパーの名前">ラッパーの名前</h2>
 <p><code>mycc.py</code> を書き換えないトピックでは、<strong>ラッパー</strong>が <code>mycc.py</code> を読み込んで
 必要な差し替えを施す。名前はファミリごとに決まっている。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ファミリ</th>
@@ -600,6 +589,7 @@ P1（自動採点なし）の5本がそれで、<code>check.py</code> だけで�
 </tbody>
 </table>
 </div>
+</div>
 <p>F・R・P はラッパーを使わない（F は <code>scaffold/</code> の部品を自作で置き換え、
 R は生成物のリンク方法を変え、P は移植そのものが課題であるため）。</p>
 <h3 id="環境変数の名前">環境変数の名前</h3>
@@ -609,13 +599,9 @@ R は生成物のリンク方法を変え、P は移植そのものが課題で�
 <p><strong>接頭辞 = ラッパーのファイル名から <code>.py</code> を取って大文字にしたもの。</strong>
 <code>langcc.py</code> なら <code>LANGCC_</code>、<code>optcc.py</code> なら <code>OPTCC_</code>。</p>
 </blockquote>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 23%" />
-<col style="width: 17%" />
-<col style="width: 58%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>接尾辞</th>
@@ -652,6 +638,7 @@ R は生成物のリンク方法を変え、P は移植そのものが課題で�
 </tbody>
 </table>
 </div>
+</div>
 <p>ラッパーを持たない R 系列だけは例外で、回 ID を接頭辞にする
 （<code>R1_COMPILER</code> / <code>R2_COMPILER</code> / <code>R3_COMPILER</code>）。</p>
 <blockquote>
@@ -663,7 +650,11 @@ R は生成物のリンク方法を変え、P は移植そのものが課題で�
 あれば読み替えること。</p>
 </blockquote>
 <p><code>workbook/advanced/</code> から実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../final/mycc.py foo.c <span class="kw">|</span> <span class="ex">python3</span> count_insns.py</span></code></pre></div>
+</div>
+</div>
 <hr />
 <h2 id="f-フロントエンド">F: フロントエンド</h2>
 <p>スキャフォールドでブラックボックスとして使ってきた Lexer / Parser を、自分の手で理解し、作り、置き換える。</p>
@@ -683,13 +674,9 @@ R は生成物のリンク方法を変え、P は移植そのものが課題で�
 それを測る物差しは O1 が作る。</p>
 <h3 id="o-系列との関係">O 系列との関係</h3>
 <p><strong>B は O の前哨である。</strong> 題材が一部重なるので、対応を先に示しておく。</p>
-<div class="table-scroll">
-<table style="width:100%;">
-<colgroup>
-<col style="width: 37%" />
-<col style="width: 40%" />
-<col style="width: 22%" />
-</colgroup>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
+<table>
 <thead>
 <tr class="header">
 <th>B の題材</th>
@@ -726,6 +713,7 @@ R は生成物のリンク方法を変え、P は移植そのものが課題で�
 </tbody>
 </table>
 </div>
+</div>
 <p><strong>どちらを先にやるか。</strong> コマ15 がまだなら B から。
 終わっているなら、O1（測る物差し）→ O3・O4 と進んだほうが、
 「減った」の意味がはっきりする。</p>
@@ -734,22 +722,22 @@ R は生成物のリンク方法を変え、P は移植そのものが課題で�
 全部で10コマだが、各回は独立して取り組める。O1 と O2 を先に済ませておけば、
 O3・O4・O7 はどれから始めてもよい。</p>
 <h3 id="依存関係">依存関係</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>O1(測定)             ─→ O2(フローグラフ), O3(命令選択), O4(レジスタ割り当て)
 O2(フローグラフ)     ─→ O5(生存解析), O7(ブロック整列)
 O4(レジスタ割り当て) ─→ O5(生存解析)
 O5(生存解析)         ─→ O6(コピー伝播 / 死コード除去)</code></pre>
+</div>
+</div>
 <p>各行は「左が、右の<strong>直接の</strong>前提である」ことを表す（矢印の向きは「前提 → そのトピック」）。
 O3・O6・O7 はここから先が無いので、左側には現れない。</p>
 <p>図にあるのは直接の前提だけで、上の一覧表の「必須の前提」は間接的なものも含めて書いてある。
 たとえば O6 の <code>O1, O2, O4</code> は O5 を経由した間接の前提であり、O7 の <code>O1</code> は O2 を経由する。</p>
 <h3 id="つの差し込み方">2つの差し込み方</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 50%" />
-<col style="width: 22%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>種別</th>
@@ -771,12 +759,17 @@ O3・O6・O7 はここから先が無いので、左側には現れない。</p>
 </tbody>
 </table>
 </div>
+</div>
 <p>O4 だけコード生成器を触るのは、「どの変数の <code>&amp;</code> が取られているか」が
 <strong>AST を見ないと分からない</strong>ためである。</p>
 <p>1ファイルだけ試すときは <code>workbook/advanced/</code> から実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> optcc.py <span class="at">--passes</span> isel file.c</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> optcc.py <span class="at">--regalloc</span> <span class="at">--passes</span> isel,copyprop,dce,layout file.c</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> optcc.py <span class="at">--passes</span> <span class="st">&#39;&#39;</span> file.c        <span class="co"># 最適化なし(基準値)</span></span></code></pre></div>
+</div>
+</div>
 <p><code>final/tests</code>（fixed17）全体に通したいときは <code>workbook/</code> から
 <code>scaffold/test_runner.py --compiler advanced/optcc.py --tests final/tests</code> を使う
 （<a href="../docs/testing/"><code>../docs/testing.md</code></a> 参照）。同じ <code>optcc.py</code> だが、
@@ -789,6 +782,8 @@ cwd が違うのでパスの書き方が変わる。</p>
 <h3 id="全部かけるとどうなるか">全部かけるとどうなるか</h3>
 <p>基準表の両端、つまり最適化なしと
 <code>--regalloc --passes isel,copyprop,dce,layout</code> の比較。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>ベンチマーク   静的:前   後    削減    動的:前      後      削減
 bubble           340   233   31.5%    24023   15952   33.6%
 fib_rec           77    70    9.1%    73993   68073    8.0%
@@ -796,6 +791,8 @@ loop_sum          70    43   38.6%     7840    4030   48.6%
 matmul           453   308   32.0%    27958   18563   33.6%
 strops           243   173   28.8%    77108   50135   35.0%
 合計            1183   827   30.1%   210922  156753   25.7%</code></pre>
+</div>
+</div>
 <p><code>loop_sum</code> は実行される命令が<strong>半分以下</strong>になる。
 <code>fib_rec</code> の伸びが小さいのは、ループが無く、
 局所変数をレジスタに置いても得をしない形だからである（O4 コマ2 で扱う）。</p>
@@ -805,13 +802,9 @@ strops           243   173   28.8%    77108   50135   35.0%
 <h2 id="s-と-l-の判定基準-仕様の内側か外側か">S と L の判定基準 — 仕様の内側か、外側か</h2>
 <p>S と L は難易度でも題材でも分かれていない。分かれ目は
 <strong>その回で作る振る舞いの「正解」がどこに書いてあるか</strong>である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 28%" />
-<col style="width: 25%" />
-<col style="width: 46%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>二段の問い</th>
@@ -833,6 +826,7 @@ strops           243   173   28.8%    77108   50135   35.0%
 </tbody>
 </table>
 </div>
+</div>
 <p>判定は二段の問いで行う。<strong>①仕様はその構文について何か言っているか。②言っているとして、
 いまの実装はそれに違反しているか。</strong>「禁止」も仕様が言っていることに数える
 （S3 は仕様が「不可」と定めた形を実装が受理しており、違反である）。
@@ -845,13 +839,9 @@ S3 は仕様の禁止行がいずれ改訂される想定である）である�
 <p>この判定結果は、各トピックの位置づけ表の <strong><code>仕様との関係</code></strong> 欄に書いてある。</p>
 <h3 id="本の-id-を振り直した食い違いは解消済み">2本の ID を振り直した（食い違いは解消済み）</h3>
 <p>以前は、判定基準と ID が食い違う回が2本あった。<strong>2026-08-01 に実際に移した。</strong></p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 39%" />
-<col style="width: 39%" />
-<col style="width: 21%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>旧ID・旧ディレクトリ</th>
@@ -872,6 +862,7 @@ S3 は仕様の禁止行がいずれ改訂される想定である）である�
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><strong>2本は番号を入れ替えた形になっている。</strong><code>S3</code> も <code>L1</code> も番号としては残っているが、
 指す中身が入れ替わっているので、以前のメモやブックマークをそのまま読むと取り違える。</p>
@@ -906,7 +897,7 @@ S3 は仕様の禁止行がいずれ改訂される想定である）である�
      (<a href="../LICENSE">code: MIT</a>) ·
      <a href="../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

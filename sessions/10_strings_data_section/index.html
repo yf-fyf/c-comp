@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コマ10: 文字列リテラルと .data セクション — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,40 +92,48 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">コマ10: 文字列リテラルと .data セクション</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
-      <li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
-      <li><a href="#文字列リテラルはどこに置くか" id="toc-文字列リテラルはどこに置くか">文字列リテラルはどこに置くか</a></li>
-      <li><a href="#data-と-.text" id="toc-data-と-.text"><code>.data</code> と <code>.text</code></a></li>
-      <li><a href="#文字列ラベル" id="toc-文字列ラベル">文字列ラベル</a></li>
-      <li><a href="#出力前に文字列を集める" id="toc-出力前に文字列を集める">出力前に文字列を集める</a></li>
-      <li><a href="#nd_str-のコード生成" id="toc-nd_str-のコード生成"><code>ND_STR</code> のコード生成</a></li>
-      <li><a href="#printf-呼び出し" id="toc-printf-呼び出し"><code>printf</code> 呼び出し</a></li>
-      <li><a href="#include-lib.h" id="toc-include-lib.h"><code>#include "lib.h"</code></a></li>
-      <li><a href="#標準出力テスト" id="toc-標準出力テスト">標準出力テスト</a></li>
-      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
-      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
-      <li><a href="#tests" id="toc-tests">tests/</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#注意" id="toc-注意">注意</a></li>
-      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation has-grammar">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+<li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
+<li><a href="#文字列リテラルはどこに置くか" id="toc-文字列リテラルはどこに置くか">文字列リテラルはどこに置くか</a></li>
+<li><a href="#data-と-.text" id="toc-data-と-.text"><code>.data</code> と <code>.text</code></a></li>
+<li><a href="#文字列ラベル" id="toc-文字列ラベル">文字列ラベル</a></li>
+<li><a href="#出力前に文字列を集める" id="toc-出力前に文字列を集める">出力前に文字列を集める</a></li>
+<li><a href="#nd_str-のコード生成" id="toc-nd_str-のコード生成"><code>ND_STR</code> のコード生成</a></li>
+<li><a href="#printf-呼び出し" id="toc-printf-呼び出し"><code>printf</code> 呼び出し</a></li>
+<li><a href="#include-lib.h" id="toc-include-lib.h"><code>#include "lib.h"</code></a></li>
+<li><a href="#標準出力テスト" id="toc-標準出力テスト">標準出力テスト</a></li>
+<li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+<li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+<li><a href="#tests" id="toc-tests">tests/</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#注意" id="toc-注意">注意</a></li>
+<li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+</ul></nav>
+      </details>
+      <a class="toc-grammar" href="#この回までの言語仕様ebnf">文法を参照</a>
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
 <p>文字列リテラルを <code>.data</code> セクションに出力し、<code>printf</code> 呼び出しを動かす。</p>
 <p>コマ9までに、ポインタ、ポインタ演算、関数呼び出し、型サイズを扱えるようになった。
 この回では、文字列リテラルをメモリ上に配置し、その先頭アドレスを <code>char *</code> として使う。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>printf<span class="op">(</span><span class="st">&quot;x=</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">);</span></span></code></pre></div>
+</div>
+</div>
 <p>上のコードでは、<code>"x=%d\n"</code> をプログラム中のデータ領域に置き、そのアドレスを第1引数として <code>printf</code> に渡す。</p>
 </section>
 <h2 id="この回で扱う範囲">この回で扱う範囲</h2>
 <p>対象にする機能は次の通り。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -150,81 +161,86 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>この回では、<code>printf</code> 自体は実装しない。
 コンパイル後のアセンブリを <code>riscv64-linux-gnu-gcc -static</code> でリンクすると、libc の <code>printf</code> が使われる。</p>
 <p>式の中に埋もれた文字列（<code>"abc"[1]</code> や三項演算子の枝）の走査と、<code>lib.h</code> の残りの関数は、
 次のコマ11 で扱う。</p>
-<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<section id="この回までの言語仕様ebnf" class="grammar-section" data-grammar-heading="この回までの言語仕様ebnf">
+<h3>この回までの言語仕様（EBNF）</h3>
 <p>この回までに書けるプログラムの文法を、累積の形でまとめる。
 記法と最終形の全体像は
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
 <p>この回で書ける <code>#include</code> は提供物の <code>lib.h</code> の取込みだけで、
 自作ヘッダと入れ子の取込み、<code>#define</code> はコマ14 で扱う。</p>
-<pre class="ebnf" data-lang="ebnf"><code>include_dir ::= &#39;#&#39; &#39;include&#39; &#39;&quot;&#39; FILENAME &#39;&quot;&#39; NEWLINE   /* #define はコマ14 */
-
-stars       ::= &#39;*&#39; { &#39;*&#39; }
-
-scalar_type ::= &#39;int&#39;  [ stars ]
-              | &#39;char&#39; [ stars ] /* struct はコマ11、void * はコマ12 */
-obj_type    ::= scalar_type      /* struct Tag はコマ12 */
-ret_type    ::= scalar_type
-              | &#39;void&#39;
-type_name   ::= obj_type
-
-program       ::= external_decl { external_decl }
-external_decl ::= func_proto
-                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
-var_decl      ::= obj_type IDENT &#39;;&#39;
-
-param       ::= scalar_type IDENT
-param_list  ::= param { &#39;,&#39; param }
-func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list [ &#39;,&#39; &#39;...&#39; ] ] &#39;)&#39; &#39;;&#39;
-func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
-func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
-
-stmt        ::= expr_stmt
-              | block
-              | if_stmt
-              | while_stmt
-              | for_stmt
-              | &#39;break&#39; &#39;;&#39;
-              | &#39;continue&#39; &#39;;&#39;
-              | &#39;return&#39; [ expr ] &#39;;&#39;
-expr_stmt   ::= [ expr ] &#39;;&#39;
-block       ::= &#39;{&#39; { stmt } &#39;}&#39;
-if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
-while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
-for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
-
-expr        ::= assign_expr
-assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
-              | cond_expr
-cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
-binary_expr ::= unary_expr { bin_op unary_expr }
-bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
-              | &#39;+&#39; | &#39;-&#39;
-              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
-              | &#39;==&#39; | &#39;!=&#39;
-unary_expr  ::= postfix_expr
-              | &#39;-&#39;  unary_expr
-              | &#39;*&#39;  unary_expr
-              | &#39;&amp;&#39;  unary_expr
-              | &#39;++&#39; unary_expr
-              | &#39;--&#39; unary_expr
-              | &#39;sizeof&#39; &#39;(&#39; type_name &#39;)&#39;
-
-postfix_expr   ::= primary_expr { postfix_suffix }
-postfix_suffix ::= &#39;[&#39; expr &#39;]&#39;  /* . と -&gt; はコマ12 */
-
-primary_expr ::= INT_LITERAL
-               | CHAR_LITERAL
-               | STRING_LITERAL
-               | IDENT &#39;(&#39; [ arg_list ] &#39;)&#39;
-               | IDENT
-               | &#39;(&#39; expr &#39;)&#39;
-arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+<p class="grammar-legend"><span class="grammar-added">追加</span>は新しい規則・選択肢、<span class="grammar-changed">変更</span>は前回の形の置き換えです。ラベルのない行は既存です。</p>
+<details class="grammar-full" open><summary>この回までの文法全文（63行）</summary>
+<pre class="grammar-pre"><code class="grammar-code"><span id="grammar-line-61" class="grammar-line grammar-existing" data-label="">include_dir ::= &#x27;#&#x27; &#x27;include&#x27; &#x27;&quot;&#x27; FILENAME &#x27;&quot;&#x27; NEWLINE   /* #define はコマ14 */</span>
+<span id="grammar-line-62" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-63" class="grammar-line grammar-existing" data-label="">stars       ::= &#x27;*&#x27; { &#x27;*&#x27; }</span>
+<span id="grammar-line-64" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-65" class="grammar-line grammar-existing" data-label="">scalar_type ::= &#x27;int&#x27;  [ stars ]</span>
+<span id="grammar-line-66" class="grammar-line grammar-existing" data-label="">              | &#x27;char&#x27; [ stars ] /* struct はコマ11、void * はコマ12 */</span>
+<span id="grammar-line-67" class="grammar-line grammar-existing" data-label="">obj_type    ::= scalar_type      /* struct Tag はコマ12 */</span>
+<span id="grammar-line-68" class="grammar-line grammar-existing" data-label="">ret_type    ::= scalar_type</span>
+<span id="grammar-line-69" class="grammar-line grammar-existing" data-label="">              | &#x27;void&#x27;</span>
+<span id="grammar-line-70" class="grammar-line grammar-existing" data-label="">type_name   ::= obj_type</span>
+<span id="grammar-line-71" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-72" class="grammar-line grammar-existing" data-label="">program       ::= external_decl { external_decl }</span>
+<span id="grammar-line-73" class="grammar-line grammar-existing" data-label="">external_decl ::= func_proto</span>
+<span id="grammar-line-74" class="grammar-line grammar-existing" data-label="">                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */</span>
+<span id="grammar-line-75" class="grammar-line grammar-existing" data-label="">var_decl      ::= obj_type IDENT &#x27;;&#x27;</span>
+<span id="grammar-line-76" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-77" class="grammar-line grammar-existing" data-label="">param       ::= scalar_type IDENT</span>
+<span id="grammar-line-78" class="grammar-line grammar-existing" data-label="">param_list  ::= param { &#x27;,&#x27; param }</span>
+<span id="grammar-line-79" class="grammar-line grammar-changed" data-label="変更">func_proto  ::= ret_type IDENT &#x27;(&#x27; [ param_list <mark class="grammar-token">[</mark> <mark class="grammar-token">&#x27;,&#x27;</mark> <mark class="grammar-token">&#x27;...&#x27;</mark> <mark class="grammar-token">]</mark> ] &#x27;)&#x27; &#x27;;&#x27;</span>
+<span id="grammar-line-80" class="grammar-line grammar-existing" data-label="">func_def    ::= ret_type IDENT &#x27;(&#x27; [ param_list ] &#x27;)&#x27; func_body</span>
+<span id="grammar-line-81" class="grammar-line grammar-existing" data-label="">func_body   ::= &#x27;{&#x27; { var_decl } { stmt } &#x27;}&#x27;</span>
+<span id="grammar-line-82" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-83" class="grammar-line grammar-existing" data-label="">stmt        ::= expr_stmt</span>
+<span id="grammar-line-84" class="grammar-line grammar-existing" data-label="">              | block</span>
+<span id="grammar-line-85" class="grammar-line grammar-existing" data-label="">              | if_stmt</span>
+<span id="grammar-line-86" class="grammar-line grammar-existing" data-label="">              | while_stmt</span>
+<span id="grammar-line-87" class="grammar-line grammar-existing" data-label="">              | for_stmt</span>
+<span id="grammar-line-88" class="grammar-line grammar-existing" data-label="">              | &#x27;break&#x27; &#x27;;&#x27;</span>
+<span id="grammar-line-89" class="grammar-line grammar-existing" data-label="">              | &#x27;continue&#x27; &#x27;;&#x27;</span>
+<span id="grammar-line-90" class="grammar-line grammar-existing" data-label="">              | &#x27;return&#x27; [ expr ] &#x27;;&#x27;</span>
+<span id="grammar-line-91" class="grammar-line grammar-existing" data-label="">expr_stmt   ::= [ expr ] &#x27;;&#x27;</span>
+<span id="grammar-line-92" class="grammar-line grammar-existing" data-label="">block       ::= &#x27;{&#x27; { stmt } &#x27;}&#x27;</span>
+<span id="grammar-line-93" class="grammar-line grammar-existing" data-label="">if_stmt     ::= &#x27;if&#x27; &#x27;(&#x27; expr &#x27;)&#x27; stmt [ &#x27;else&#x27; stmt ]</span>
+<span id="grammar-line-94" class="grammar-line grammar-existing" data-label="">while_stmt  ::= &#x27;while&#x27; &#x27;(&#x27; expr &#x27;)&#x27; stmt</span>
+<span id="grammar-line-95" class="grammar-line grammar-existing" data-label="">for_stmt    ::= &#x27;for&#x27; &#x27;(&#x27; [ expr ] &#x27;;&#x27; [ expr ] &#x27;;&#x27; [ expr ] &#x27;)&#x27; stmt</span>
+<span id="grammar-line-96" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-97" class="grammar-line grammar-existing" data-label="">expr        ::= assign_expr</span>
+<span id="grammar-line-98" class="grammar-line grammar-existing" data-label="">assign_expr ::= unary_expr &#x27;=&#x27; assign_expr   /* 右結合 */</span>
+<span id="grammar-line-99" class="grammar-line grammar-existing" data-label="">              | cond_expr</span>
+<span id="grammar-line-100" class="grammar-line grammar-existing" data-label="">cond_expr   ::= binary_expr [ &#x27;?&#x27; expr &#x27;:&#x27; cond_expr ]   /* 右結合 */</span>
+<span id="grammar-line-101" class="grammar-line grammar-existing" data-label="">binary_expr ::= unary_expr { bin_op unary_expr }</span>
+<span id="grammar-line-102" class="grammar-line grammar-existing" data-label="">bin_op      ::= &#x27;*&#x27; | &#x27;/&#x27; | &#x27;%&#x27;  /* 論理 &amp;&amp; || はコマ13 */</span>
+<span id="grammar-line-103" class="grammar-line grammar-existing" data-label="">              | &#x27;+&#x27; | &#x27;-&#x27;</span>
+<span id="grammar-line-104" class="grammar-line grammar-existing" data-label="">              | &#x27;&lt;&#x27; | &#x27;&gt;&#x27; | &#x27;&lt;=&#x27; | &#x27;&gt;=&#x27;</span>
+<span id="grammar-line-105" class="grammar-line grammar-existing" data-label="">              | &#x27;==&#x27; | &#x27;!=&#x27;</span>
+<span id="grammar-line-106" class="grammar-line grammar-existing" data-label="">unary_expr  ::= postfix_expr</span>
+<span id="grammar-line-107" class="grammar-line grammar-existing" data-label="">              | &#x27;-&#x27;  unary_expr</span>
+<span id="grammar-line-108" class="grammar-line grammar-existing" data-label="">              | &#x27;*&#x27;  unary_expr</span>
+<span id="grammar-line-109" class="grammar-line grammar-existing" data-label="">              | &#x27;&amp;&#x27;  unary_expr</span>
+<span id="grammar-line-110" class="grammar-line grammar-existing" data-label="">              | &#x27;++&#x27; unary_expr</span>
+<span id="grammar-line-111" class="grammar-line grammar-existing" data-label="">              | &#x27;--&#x27; unary_expr</span>
+<span id="grammar-line-112" class="grammar-line grammar-existing" data-label="">              | &#x27;sizeof&#x27; &#x27;(&#x27; type_name &#x27;)&#x27;</span>
+<span id="grammar-line-113" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-114" class="grammar-line grammar-existing" data-label="">postfix_expr   ::= primary_expr { postfix_suffix }</span>
+<span id="grammar-line-115" class="grammar-line grammar-existing" data-label="">postfix_suffix ::= &#x27;[&#x27; expr &#x27;]&#x27;  /* . と -&gt; はコマ12 */</span>
+<span id="grammar-line-116" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-117" class="grammar-line grammar-existing" data-label="">primary_expr ::= INT_LITERAL</span>
+<span id="grammar-line-118" class="grammar-line grammar-existing" data-label="">               | CHAR_LITERAL</span>
+<span id="grammar-line-119" class="grammar-line grammar-added" data-label="追加">               | STRING_LITERAL</span>
+<span id="grammar-line-120" class="grammar-line grammar-existing" data-label="">               | IDENT &#x27;(&#x27; [ arg_list ] &#x27;)&#x27;</span>
+<span id="grammar-line-121" class="grammar-line grammar-existing" data-label="">               | IDENT</span>
+<span id="grammar-line-122" class="grammar-line grammar-existing" data-label="">               | &#x27;(&#x27; expr &#x27;)&#x27;</span>
+<span id="grammar-line-123" class="grammar-line grammar-existing" data-label="">arg_list    ::= assign_expr { &#x27;,&#x27; assign_expr }</span></code></pre>
 <p>この回までの二項演算子の優先順位（高い順）:</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -234,28 +250,29 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr class="odd grammar-existing">
 <td>1（高）</td>
 <td><code>*</code> <code>/</code> <code>%</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
+<tr class="even grammar-existing">
 <td>2</td>
 <td><code>+</code> <code>-</code></td>
 <td>左</td>
 </tr>
-<tr class="odd">
+<tr class="odd grammar-existing">
 <td>3</td>
 <td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
+<tr class="even grammar-existing">
 <td>4</td>
 <td><code>==</code> <code>!=</code></td>
 <td>左</td>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p>表の読み方はコマ1の「木の形は規則で決まっている」と
 <a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
@@ -264,26 +281,40 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
 <code>STRING_LITERAL</code> とエスケープの定義は
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>にある。</p>
+</details>
+</section>
 <h2 id="ast-を確認する">AST を確認する</h2>
 <p>まず、<code>printf</code> と文字列リテラルを含むプログラムがどのような AST になるか確認する。</p>
-<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/10_strings_data_section/tests/printf_number.c</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/10_strings_data_section/tests/printf_number.c</span></code></pre></div>
+</div>
+</div>
 <p>このプログラムの内容は次の通り。</p>
-<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> printf<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">&quot;x=</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">);</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb3" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> printf<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">&quot;x=</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>実行すると、次のようなS式が表示される。</p>
-<div class="sourceCode" id="cb5" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(program</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (funcproto <span class="st">&quot;printf&quot;</span> <span class="bu">:type</span> int</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;fmt&quot;</span> <span class="bu">:type</span> (ptr <span class="kw">char</span>))))</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        (call <span class="st">&quot;printf&quot;</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>          (args (str <span class="st">&quot;x=%d</span><span class="sc">\n</span><span class="st">&quot;</span>) (num <span class="dv">42</span>))))</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (num <span class="dv">0</span>)))))</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb4" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (funcproto <span class="st">&quot;printf&quot;</span> <span class="bu">:type</span> int</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;fmt&quot;</span> <span class="bu">:type</span> (ptr <span class="kw">char</span>))))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        (call <span class="st">&quot;printf&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>          (args (str <span class="st">&quot;x=%d</span><span class="sc">\n</span><span class="st">&quot;</span>) (num <span class="dv">42</span>))))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span> (num <span class="dv">0</span>)))))</span></code></pre></div>
+</div>
+</div>
 <figure>
 <img src="../../figures/ast/10_printf_number_ast.svg" alt="printf_number.c の AST" />
 <figcaption aria-hidden="true"><code>printf_number.c</code> の AST</figcaption>
@@ -293,19 +324,24 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <h2 id="文字列リテラルはどこに置くか">文字列リテラルはどこに置くか</h2>
 <p>整数リテラル <code>42</code> は、命令中に即値として直接埋め込める。
 しかし文字列リテラルは複数バイトのデータなので、命令列の中ではなくデータ領域に置く。</p>
-<div class="sourceCode" id="cb6" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.data</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">.LC1:</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">120</span>    <span class="co"># &#39;x&#39;</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">61</span>     <span class="co"># &#39;=&#39;</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">37</span>     <span class="co"># &#39;%&#39;</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">100</span>    <span class="co"># &#39;d&#39;</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">10</span>     <span class="co"># &#39;\n&#39;</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">0</span>      <span class="co"># 終端NUL</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.data</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">.LC1:</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">120</span>    <span class="co"># &#39;x&#39;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">61</span>     <span class="co"># &#39;=&#39;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">37</span>     <span class="co"># &#39;%&#39;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">100</span>    <span class="co"># &#39;d&#39;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">10</span>     <span class="co"># &#39;\n&#39;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">0</span>      <span class="co"># 終端NUL</span></span></code></pre></div>
+</div>
+</div>
 <p>C の文字列は、最後に <code>0</code> が入る NUL 終端文字列である。
 そのため、文字列本体のバイト列を出した後に <code>.byte 0</code> を必ず出力する。</p>
 <h2 id="data-と-.text"><code>.data</code> と <code>.text</code></h2>
 <p>アセンブリでは、データと命令をセクションで分ける。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -325,16 +361,21 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>出力の形は次のようにする。</p>
-<div class="sourceCode" id="cb7" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.data</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">.LC1:</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> ...</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">0</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.text</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.globl</span> main</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="fu">main:</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  ...</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb6" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.data</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">.LC1:</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> ...</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.byte</span> <span class="dv">0</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.text</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">.globl</span> main</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="fu">main:</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  ...</span></code></pre></div>
+</div>
+</div>
 <p>文字列がないプログラムでも <code>.text</code> は必要である。</p>
 <figure>
 <img src="../../figures/10_sections.svg" alt=".data に置いた文字列と、.text からの参照" />
@@ -345,16 +386,24 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <p>各文字列リテラルには、一意なラベルを付ける。</p>
 <p>たとえば、<code>"hello"</code> に <code>.LC1</code>、<code>"x=%d\n"</code> に <code>.LC2</code> のようなラベルを割り当てる。</p>
 <p>Codegen クラスは instance 変数で文字列ラベルを管理する。</p>
-<div class="sourceCode" id="cb8" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># __init__ 内</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._strings: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">str</span>] <span class="op">=</span> {}</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._str_label_n <span class="op">=</span> <span class="dv">0</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb7" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># __init__ 内</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._strings: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">str</span>] <span class="op">=</span> {}</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._str_label_n <span class="op">=</span> <span class="dv">0</span></span></code></pre></div>
+</div>
+</div>
 <p>同じ文字列が複数回出てきた場合は、同じラベルを再利用する。
 実装を単純にするため、<code>node.sval</code> をキーにした辞書で管理する。</p>
-<div class="sourceCode" id="cb9" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _intern(<span class="va">self</span>, s: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> s <span class="kw">not</span> <span class="kw">in</span> <span class="va">self</span>._strings:</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._str_label_n <span class="op">+=</span> <span class="dv">1</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._strings[s] <span class="op">=</span> <span class="ss">f&quot;.LC</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_str_label_n<span class="sc">}</span><span class="ss">&quot;</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>._strings[s]</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb8" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _intern(<span class="va">self</span>, s: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> s <span class="kw">not</span> <span class="kw">in</span> <span class="va">self</span>._strings:</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._str_label_n <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>._strings[s] <span class="op">=</span> <span class="ss">f&quot;.LC</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_str_label_n<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>._strings[s]</span></code></pre></div>
+</div>
+</div>
 <h2 id="出力前に文字列を集める">出力前に文字列を集める</h2>
 <p><code>.data</code> セクションは <code>.text</code> より先に出す。
 つまり、関数本体のコード生成を始める前に、<strong>プログラム中の文字列リテラルを全部知っている必要がある</strong>。</p>
@@ -368,45 +417,62 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 出力は <code>parse</code> → <code>collect_strings_stmt</code> → <code>emit_data_section</code> → <code>.text</code> → <code>gen_func</code> の順に進む。</p>
 <p>集める処理は、コード生成の再帰と同じ形をしている。
 文なら子の文と式へ、式なら子の式へ降りていき、<code>ND_STR</code> に着いたら <code>_intern()</code> する。</p>
-<div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> collect_strings_stmt_If(<span class="va">self</span>, node: Node) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.collect_strings_expr(node.cond)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.collect_strings_stmt(node.then)</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> node.else_ <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.collect_strings_stmt(node.else_)</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb9" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> collect_strings_stmt_If(<span class="va">self</span>, node: Node) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.collect_strings_expr(node.cond)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.collect_strings_stmt(node.then)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> node.else_ <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.collect_strings_stmt(node.else_)</span></code></pre></div>
+</div>
+</div>
 <p>実行されない枝も走査する点に注意する。
 <code>else</code> 節が実行されなくても、そこに書かれた文字列のラベルは <code>.data</code> に無ければならない。
 無ければ <code>la</code> の参照先が未定義になり、リンクに失敗する。</p>
 <p>この回で書くのは、<strong>文のハンドラ7種</strong>（<code>Decl</code> / <code>ExprStmt</code> / <code>Return</code> / <code>Block</code> / <code>If</code> / <code>While</code> / <code>For</code>）と、
 式のうち文字列を直接抱える3種（<code>Str</code> / <code>Assign</code> / <code>Call</code>）である。
 スケルトンの <code>collect_strings_expr()</code> も、この3種だけを枝に持つ形になっている。</p>
-<div class="sourceCode" id="cb11" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> collect_strings_expr(<span class="va">self</span>, node: Node) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> node.kind:</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&#39;Str&#39;</span>:</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.collect_strings_expr_Str(node)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&#39;Num&#39;</span> <span class="op">|</span> <span class="st">&#39;Var&#39;</span>:</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">pass</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&#39;Assign&#39;</span>:</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.collect_strings_expr_Assign(node)</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&#39;Call&#39;</span>:</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.collect_strings_expr_Call(node)</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> _:</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">pass</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> collect_strings_expr(<span class="va">self</span>, node: Node) <span class="op">-&gt;</span> <span class="va">None</span>:</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">match</span> node.kind:</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&#39;Str&#39;</span>:</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.collect_strings_expr_Str(node)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&#39;Num&#39;</span> <span class="op">|</span> <span class="st">&#39;Var&#39;</span>:</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">pass</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&#39;Assign&#39;</span>:</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.collect_strings_expr_Assign(node)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="st">&#39;Call&#39;</span>:</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.collect_strings_expr_Call(node)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> _:</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">pass</span></span></code></pre></div>
+</div>
+</div>
 <p><code>case _: pass</code> に落ちる式（二項演算・単項演算・添字・三項演算子）の下にある文字列は、
 この回ではまだ拾えない。<code>"abc"[1]</code> のような書き方はコマ11 で扱えるようになる。</p>
 <h2 id="nd_str-のコード生成"><code>ND_STR</code> のコード生成</h2>
 <p>文字列リテラルを式として評価すると、その文字列の先頭アドレスが得られる。
 型は <code>char *</code> と考える。</p>
-<div class="sourceCode" id="cb12" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> node.kind <span class="op">==</span> ND_STR:</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    label <span class="op">=</span> <span class="va">self</span>._intern(node.sval)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&quot;  la a0, </span><span class="sc">{</span>label<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb11" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> node.kind <span class="op">==</span> ND_STR:</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    label <span class="op">=</span> <span class="va">self</span>._intern(node.sval)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&quot;  la a0, </span><span class="sc">{</span>label<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span></span></code></pre></div>
+</div>
+</div>
 <p><code>la</code> は疑似命令で、ラベルのアドレスをレジスタに入れる。
 この結果、<code>a0</code> に文字列先頭アドレスが入る。</p>
 <h2 id="printf-呼び出し"><code>printf</code> 呼び出し</h2>
 <p><code>printf</code> は普通の関数呼び出しと同じ ABI で呼び出せる。</p>
-<div class="sourceCode" id="cb13" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>printf<span class="op">(</span><span class="st">&quot;x=</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">);</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb12" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>printf<span class="op">(</span><span class="st">&quot;x=</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">);</span></span></code></pre></div>
+</div>
+</div>
 <p>この呼び出しでは、引数は次のように渡される。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -426,18 +492,27 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>コマ6で作った関数呼び出しのコード生成がそのまま使える（<code>self._gen_call()</code> または <code>ND_CALL</code> ハンドラメソッド）。
 新しく必要なのは、<code>ND_STR</code> を評価したときに文字列アドレスを <code>a0</code> に入れる処理である。</p>
 <h2 id="include-lib.h"><code>#include "lib.h"</code></h2>
 <p>実際のプログラムでは、<code>printf</code> の宣言を自分で書く代わりに <code>lib.h</code> を include できる。</p>
-<div class="sourceCode" id="cb14" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">&quot;Hello, World!</span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">);</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb13" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;lib.h&quot;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    printf<span class="op">(</span><span class="st">&quot;Hello, World!</span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">);</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p><code>scaffold/lib.h</code> には次の宣言が用意されている。</p>
-<div class="sourceCode" id="cb15" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> printf<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb14" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> printf<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span></span></code></pre></div>
+</div>
+</div>
 <p><code>...</code> は可変長引数を表す。
 この講義の Parser は外部関数宣言に限って <code>...</code> を読み飛ばす。
 呼び出し側では、通常の関数呼び出しと同じように引数を左から評価すればよい。</p>
@@ -445,29 +520,45 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <h2 id="標準出力テスト">標準出力テスト</h2>
 <p>これまでのテストは、主に終了コードを <code>.ans</code> で確認してきた。
 この回からは標準出力も確認する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>tests/printf_hello.c
 tests/printf_hello.ans
 tests/printf_hello.stdout</code></pre>
+</div>
+</div>
 <p><code>.ans</code> には終了コードを書く。
 <code>.stdout</code> には期待する標準出力をそのまま書く。</p>
 <p>たとえば、次のプログラムなら、</p>
-<div class="sourceCode" id="cb17" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>printf<span class="op">(</span><span class="st">&quot;Hello, World!</span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">);</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb16" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>printf<span class="op">(</span><span class="st">&quot;Hello, World!</span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">);</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span></code></pre></div>
+</div>
+</div>
 <p><code>.ans</code> は次の通り。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>0</code></pre>
+</div>
+</div>
 <p><code>.stdout</code> は次の通り。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>Hello, World!</code></pre>
+</div>
+</div>
+<p>可変長部のcharはintへ昇格する。固定部と違い、intの値をcharへ縮小しない。
+<code>printf</code>の書式文字列も1個に数え、可変長部を含む実引数の総数は最大8個である。
+<code>varargs_promotion.c</code>と<code>printf_eight_args.c</code>で確認する。</p>
 <h2 id="編集するファイル">編集するファイル</h2>
 <ul>
 <li><code>mycc.py</code></li>
 </ul>
 <p><code>importlib</code> でコマ9 の <code>Codegen09</code> を継承した <code>Codegen10</code> に、以下の機能を追加する（クラスの骨組みはスケルトンにあらかじめ書かれている）。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 62%" />
-<col style="width: 37%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>実装対象</th>
@@ -510,6 +601,7 @@ tests/printf_hello.stdout</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p><code>collect_strings_stmt()</code> の呼び出しと <code>emit_data_section()</code> の呼び出し自体は <code>main()</code> に書かれている。
 実装するのは、呼ばれる側のハンドラの中身である。</p>
 <h2 id="実装手順">実装手順</h2>
@@ -524,13 +616,9 @@ tests/printf_hello.stdout</code></pre>
 <li><code>printf_hello.c</code> と <code>printf_number.c</code> の stdout テストを通す</li>
 </ol>
 <h2 id="tests">tests/</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 41%" />
-<col style="width: 25%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
@@ -550,11 +638,16 @@ tests/printf_hello.stdout</code></pre>
 <td><code>x=42</code></td>
 </tr>
 <tr class="odd">
+<td><code>call_char_ptr.c</code></td>
+<td>関数が返した <code>char *</code> から1文字だけ読む（コマ8の型参照の回帰）</td>
+<td>終了コード <code>1</code>（標準出力なし）</td>
+</tr>
+<tr class="even">
 <td><code>str_control_flow.c</code></td>
 <td><code>if</code> / <code>else</code> / <code>while</code> / <code>for</code> の中だけに置いた文字列を集める（文の走査）</td>
 <td><code>in if</code> / <code>in while</code>×2 / <code>in for</code>×2</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>str_intern_dedup.c</code></td>
 <td>同じ文字列は1ラベル・違う文字列は別ラベル（<code>_intern</code>）</td>
 <td><code>same</code> / <code>other</code></td>
@@ -562,18 +655,27 @@ tests/printf_hello.stdout</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="テスト">テスト</h2>
-<div class="sourceCode" id="cb20" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/10_strings_data_section</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb19" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/10_strings_data_section</span></code></pre></div>
+</div>
+</div>
 <p><code>tests/printf_hello.c</code> が <code>Hello, World!</code> を出力すれば基本形は成功。</p>
 <p><code>str_</code> で始まる2件は途中経過を確かめる中間テストである。
 走査（<code>collect_strings_stmt_*</code>）とラベル管理（<code>_intern</code>）のどこが抜けているかを
 機能単位で切り分けられるので、<code>printf_hello.c</code> が通らないときはこちらから当たる。</p>
 <p>個別に動かす場合は、次のようにする。</p>
-<div class="sourceCode" id="cb21" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/10_strings_data_section/mycc.py sessions/10_strings_data_section/tests/printf_hello.c <span class="dt">\</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
+<div class="sourceCode" id="cb20" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/10_strings_data_section/mycc.py sessions/10_strings_data_section/tests/printf_hello.c <span class="dt">\</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
 <p>標準出力を伴う回なので、<code>echo $?</code> の前に出力そのものも目で確認する。</p>
 <h2 id="注意">注意</h2>
 <p><code>printf</code> はこの回でも実装しない。
@@ -593,7 +695,7 @@ tests/printf_hello.stdout</code></pre>
 <p><code>printf</code> の呼び出しと可変長引数の宣言まで学んだので、libc なしで動かす
 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/R1_nolibc/README.md">R1</a> と、可変長引数の定義に意味を足す
 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/L3_variadic/README.md">L3</a> に着手できる。</p>
-<p>生成したアセンブリで <code>printf</code> の呼び出しと標準出力を1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>生成したアセンブリで <code>printf</code> の呼び出しと標準出力を1命令ずつ確認したいときは、<a href="../../tools/app.html?view=run">学習ツールの実行表示</a> に貼り付ける。</p>
 <p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
 
     
@@ -607,7 +709,7 @@ tests/printf_hello.stdout</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

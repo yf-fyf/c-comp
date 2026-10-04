@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>字句解析と構文解析 — CYK 法で数式を解く — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,25 +92,28 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">字句解析と構文解析 — CYK 法で数式を解く</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#言語と文法" id="toc-言語と文法">言語と文法</a></li>
-      <li><a href="#字句解析とは" id="toc-字句解析とは">字句解析とは</a></li>
-      <li><a href="#構文解析の出力は木-曖昧性" id="toc-構文解析の出力は木-曖昧性">構文解析の出力は「木」— 曖昧性</a></li>
-      <li><a href="#cyk-法の考え方" id="toc-cyk-法の考え方">CYK 法の考え方</a></li>
-      <li><a href="#チョムスキー標準形" id="toc-チョムスキー標準形">チョムスキー標準形</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#優先順位は文法で表現できる" id="toc-優先順位は文法で表現できる">優先順位は文法で表現できる</a></li>
-      <li><a href="#動かし方" id="toc-動かし方">動かし方</a></li>
-      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      <li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#言語と文法" id="toc-言語と文法">言語と文法</a></li>
+<li><a href="#字句解析とは" id="toc-字句解析とは">字句解析とは</a></li>
+<li><a href="#構文解析の出力は木-曖昧性" id="toc-構文解析の出力は木-曖昧性">構文解析の出力は「木」— 曖昧性</a></li>
+<li><a href="#cyk-法の考え方" id="toc-cyk-法の考え方">CYK 法の考え方</a></li>
+<li><a href="#チョムスキー標準形" id="toc-チョムスキー標準形">チョムスキー標準形</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#優先順位は文法で表現できる" id="toc-優先順位は文法で表現できる">優先順位は文法で表現できる</a></li>
+<li><a href="#動かし方" id="toc-動かし方">動かし方</a></li>
+<li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+<li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -117,12 +123,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 この回では、そのブラックボックスが何をしているのかを、最も愚直で確実な方法で自分の手で作って理解する。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -161,19 +164,28 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>続きの F1〜F4（Lexer / Parser の自作、スキャフォールドの置き換え）は選択制の発展課題として用意する。</p>
 <h2 id="言語と文法">言語と文法</h2>
 <p>プログラミング言語を作るとき、まず決めるのは「どんな文字列を正しいプログラムと認めるか」である。
 この「正しい文字列の集合」を<strong>言語</strong>と呼び、言語を定義する規則を<strong>文法</strong>と呼ぶ。</p>
 <p>数式の文法は、たとえば次のように書ける。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>E → E + E
 E → E * E
 E → ( E )
 E → num</code></pre>
+</div>
+</div>
 <p><code>E</code> は「式」を表す記号である。
 この規則は「式とは、式 + 式 か、式 * 式 か、カッコで囲んだ式か、数である」と読む。</p>
 <p>規則を繰り返し適用して文字列を作ることを<strong>導出</strong>という。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>E ⇒ E + E ⇒ num + E ⇒ num + E * E ⇒ num + num * E ⇒ num + num * num</code></pre>
+</div>
+</div>
 <p><code>1 + 2 * 3</code> はこの文法から導出できるので、この言語の文である。
 <code>1 + * 2</code> はどう頑張っても導出できないので、この言語の文ではない。</p>
 <p>構文解析とは、この向きを逆にした問題である。</p>
@@ -207,7 +219,8 @@ E → num</code></pre>
 （正規言語と文脈自由言語の違い）。</p>
 </div>
 <p>この回では、トークンを Python のタプル <code>(kind, value)</code> で表す。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -226,6 +239,7 @@ E → num</code></pre>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <h2 id="構文解析の出力は木-曖昧性">構文解析の出力は「木」— 曖昧性</h2>
 <p><code>1 + 2 * 3</code> を先ほどの文法で導出する方法は、実は1通りではない。</p>
@@ -272,13 +286,23 @@ CYK 法は<strong>すべての構文木を同時に見つける</strong>方法�
 </div>
 <h2 id="チョムスキー標準形">チョムスキー標準形</h2>
 <p>CYK 法は「区間を2つに割る」ことを繰り返すので、文法の規則が次の2形だけである必要がある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>A → B C      （右辺は記号ちょうど2個）
 A → &#39;tok&#39;    （右辺はトークン1個）</code></pre>
+</div>
+</div>
 <p>この形の文法を<strong>チョムスキー標準形</strong>（CNF）という。
 どんな文法もこの形に機械的に変換できる（付録参照）。この回では変換済みの文法を配布する。</p>
 <p>たとえば <code>E → E + E</code> は、<code>+ E</code> の部分に <code>PLUS_REST</code> という補助記号を導入して2個ずつに割る。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>E → E PLUS_REST        PLUS_REST → PLUS E        PLUS → &#39;+&#39;</code></pre>
+</div>
+</div>
 <p><code>cyk.py</code> では、文法を Python の辞書で表す。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb5" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>GRAMMAR_AMBIG <span class="op">=</span> {</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;start&quot;</span>: <span class="st">&quot;E&quot;</span>,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;terminal_rules&quot;</span>: [        <span class="co"># A → &#39;tok&#39;</span></span>
@@ -294,11 +318,14 @@ A → &#39;tok&#39;    （右辺はトークン1個）</code></pre>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&quot;CLOSE_REST&quot;</span>, <span class="st">&quot;E&quot;</span>, <span class="st">&quot;CLOSE&quot;</span>),</span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    ],</span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+</div>
 <h2 id="実装">実装</h2>
 <p><code>cyk.py</code> のスケルトンには TODO が5つある。上から順に実装する。
 各 Step が終わるたびに <code>python3 check.py</code> で確認できる（未実装の Step は SKIP と表示される）。</p>
 <h3 id="step-1-tokenize-字句解析">Step 1: <code>tokenize</code> — 字句解析</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -326,13 +353,20 @@ A → &#39;tok&#39;    （右辺はトークン1個）</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="step-2-cyk_chart-表を埋める">Step 2: <code>cyk_chart</code> — 表を埋める</h3>
 <p>表は辞書で表す。<code>chart[(i, j)]</code> が区間 <code>tokens[i:j]</code> のマスである。
 マスの中身は「記号 → 作り方のリスト」の辞書とする。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb6" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>chart[(i, j)] <span class="op">=</span> {記号: [作り方, ...]}</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 作り方は (&#39;tok&#39;, トークン) または (k, B, C)</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># (k, B, C) は「tokens[i:k] が B、tokens[k:j] が C」という分割</span></span></code></pre></div>
+</div>
+</div>
 <p>埋める手順は2段階である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>1. 長さ1: 各 i について、tokens[i] の kind に一致する terminal_rules の
    記号 sym ごとに、(&#39;tok&#39;, tokens[i]) を cell[sym] に追加する
 
@@ -340,22 +374,33 @@ A → &#39;tok&#39;    （右辺はトークン1個）</code></pre>
    分割点 k（i &lt; k &lt; j）を全部試す。
    binary_rules の (sym, B, C) について、B が chart[(i, k)] にあり
    C が chart[(k, j)] にあれば、(k, B, C) を cell[sym] に追加する</code></pre>
+</div>
+</div>
 <p>受理判定 <code>accepts()</code> はスケルトンに完成済みで、
 <code>chart[(0, len(tokens))]</code> に開始記号があるかを見るだけである。</p>
 <h3 id="step-3-build_tree-木を1本復元する">Step 3: <code>build_tree</code> — 木を1本復元する</h3>
 <p>表には「作り方」が記録してあるので、それを逆にたどれば木になる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>chart[(i, j)][sym] の最初の作り方を見る
 - (&#39;tok&#39;, トークン) なら葉 (sym, トークン)
 - (k, B, C) なら、左 (i, k) の B と右 (k, j) の C を再帰的に復元して
   (sym, [左の木, 右の木])</code></pre>
+</div>
+</div>
 <p>復元されるのは補助記号（<code>PLUS_REST</code> など）を含んだ CNF の導出木である。
 これを見慣れた AST（<code>('add', 左, 右)</code> など）に直す <code>to_ast()</code> と、
 S 式にする <code>to_sexpr()</code> は完成済みである。
 S 式の形式は <code>parse_viewer.py</code> と同じにしてある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>(add (num 1) (mul (num 2) (num 3)))</code></pre>
+</div>
+</div>
 <h3 id="step-4-count_trees-木を数える">Step 4: <code>count_trees</code> — 木を数える</h3>
 <p>作り方ごとに本数を求めて合計する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -375,6 +420,7 @@ S 式の形式は <code>parse_viewer.py</code> と同じにしてある。</p>
 </tbody>
 </table>
 </div>
+</div>
 <p>曖昧文法 G1 では <code>1 + 2 * 3</code> が2本、<code>1 + 2 * 3 + 4</code> が5本になるはずである。</p>
 <h3 id="step-5-eval_ast-評価">Step 5: <code>eval_ast</code> — 評価</h3>
 <p>コマ1 で書いたものと同じ考え方である。
@@ -382,13 +428,18 @@ S 式の形式は <code>parse_viewer.py</code> と同じにしてある。</p>
 <h2 id="優先順位は文法で表現できる">優先順位は文法で表現できる</h2>
 <p>スケルトンには2つ目の文法 <code>GRAMMAR_PREC</code> が入っている。
 これは次の文法を CNF にしたものである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>E → E + T | T        （式 = 項を + でつないだもの）
 T → T * F | F        （項 = 因子を * でつないだもの）
 F → ( E ) | num      （因子 = カッコ式か数）</code></pre>
+</div>
+</div>
 <p><code>+</code> の材料は「項 T」まで、<code>*</code> の材料は「因子 F」までしか許さない。
 この制限によって「足し算を先にまとめる木」は文法的に作れなくなる。</p>
 <p>同じ入力を2つの文法で解析して、木の本数を比べてみる。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -411,15 +462,22 @@ F → ( E ) | num      （因子 = カッコ式か数）</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>G2 では木が常に1本に定まり、その木は「掛け算が先」になっている。
 <strong>演算子の優先順位とは、パーサーに埋め込まれた特別な仕組みではなく、文法の書き方そのもの</strong>である。
 コマ1 以降ずっと使ってきた Parser の優先順位処理の正体はこれである。
 なお <code>language_spec.md</code> の本文では、この階層を<strong>優先順位表</strong>の形に畳んで示している
 （表の1行が上の <code>E</code> / <code>T</code> のような1段に対応する）。</p>
 <h2 id="動かし方">動かし方</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> cyk.py <span class="st">&#39;1 + 2 * 3&#39;</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> cyk.py <span class="at">--table</span> <span class="st">&#39;1 + 2 * 3&#39;</span>   <span class="co"># CYK の表も表示する</span></span></code></pre></div>
+</div>
+</div>
 <p>すべて実装できると、次のように表示される。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>入力       : 1 + 2 * 3
 トークン列 : [(&#39;num&#39;, 1), (&#39;+&#39;, None), (&#39;num&#39;, 2), (&#39;*&#39;, None), (&#39;num&#39;, 3)]
 --- 曖昧な文法 G1 ---
@@ -430,11 +488,14 @@ F → ( E ) | num      （因子 = カッコ式か数）</code></pre>
 受理       : Yes（構文木は 1 本）
 最初の木   : (add (num 1) (mul (num 2) (num 3)))
 評価結果   : 7</code></pre>
+</div>
+</div>
 <h2 id="編集するファイル">編集するファイル</h2>
 <ul>
 <li><code>cyk.py</code></li>
 </ul>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -466,8 +527,13 @@ F → ( E ) | num      （因子 = カッコ式か数）</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py</span></code></pre></div>
+</div>
+</div>
 <p>Step ごとに PASS / FAIL / SKIP が表示される。
 途中の Step までしか終わっていなくても、そこまでが PASS していれば前進である。</p>
 <h2 id="発展課題">発展課題</h2>
@@ -511,7 +577,7 @@ F → ( E ) | num      （因子 = カッコ式か数）</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

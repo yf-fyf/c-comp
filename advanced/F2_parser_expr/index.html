@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>再帰下降パーサ① — 式を解析する — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,25 +92,28 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">再帰下降パーサ① — 式を解析する</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#再帰下降とは-規則-関数" id="toc-再帰下降とは-規則-関数">再帰下降とは — 規則 = 関数</a></li>
-      <li><a href="#左結合はループで書く" id="toc-左結合はループで書く">左結合はループで書く</a></li>
-      <li><a href="#回書いたら共通化する-parse_binary" id="toc-回書いたら共通化する-parse_binary">2回書いたら共通化する — parse_binary</a></li>
-      <li><a href="#例外が1つ-parse_rel-の-swap" id="toc-例外が1つ-parse_rel-の-swap">例外が1つ — parse_rel の swap</a></li>
-      <li><a href="#単項と代入は再帰で書く" id="toc-単項と代入は再帰で書く">単項と代入は「再帰」で書く</a></li>
-      <li><a href="#値を持つ-if-parse_cond三項演算子" id="toc-値を持つ-if-parse_cond三項演算子">値を持つ if — parse_cond（三項演算子）</a></li>
-      <li><a href="#後置はループで連なる-postfix" id="toc-後置はループで連なる-postfix">後置はループで連なる — postfix</a></li>
-      <li><a href="#primary-再帰の輪が閉じる" id="toc-primary-再帰の輪が閉じる">primary — 再帰の輪が閉じる</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      <li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#再帰下降とは-規則-関数" id="toc-再帰下降とは-規則-関数">再帰下降とは — 規則 = 関数</a></li>
+<li><a href="#左結合はループで書く" id="toc-左結合はループで書く">左結合はループで書く</a></li>
+<li><a href="#回書いたら共通化する-parse_binary" id="toc-回書いたら共通化する-parse_binary">2回書いたら共通化する — parse_binary</a></li>
+<li><a href="#例外が1つ-parse_rel-の-swap" id="toc-例外が1つ-parse_rel-の-swap">例外が1つ — parse_rel の swap</a></li>
+<li><a href="#単項と代入は再帰で書く" id="toc-単項と代入は再帰で書く">単項と代入は「再帰」で書く</a></li>
+<li><a href="#値を持つ-if-parse_cond三項演算子" id="toc-値を持つ-if-parse_cond三項演算子">値を持つ if — parse_cond（三項演算子）</a></li>
+<li><a href="#後置はループで連なる-postfix" id="toc-後置はループで連なる-postfix">後置はループで連なる — postfix</a></li>
+<li><a href="#primary-再帰の輪が閉じる" id="toc-primary-再帰の輪が閉じる">primary — 再帰の輪が閉じる</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+<li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -116,12 +122,9 @@ Core プロファイルの式パーサを自作する。
 85本の式コーパスで、AST が スキャフォールド の Parser と<strong>完全一致</strong>することを golden test で確認する。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -160,6 +163,7 @@ Core プロファイルの式パーサを自作する。
 </tbody>
 </table>
 </div>
+</div>
 <p>F1 で作ったトークン列を、今度は木にする。F2 は<strong>式</strong>、F3 で<strong>文</strong>、F4 で<strong>宣言・型</strong>を扱い、
 F4 の終わりで スキャフォールド の Parser を完全に置き換える。
 <strong>AST の形は既に決まっている。作るのは「組み立てる側」</strong>である。</p>
@@ -171,13 +175,21 @@ F4 の終わりで スキャフォールド の Parser を完全に置き換え�
 対応する部分木を返す。</strong></p>
 </blockquote>
 <p><code>language_spec.md</code> の式の EBNF は、均質な二項演算子をまとめて1つの規則で与えている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>binary_expr ::= unary_expr { bin_op unary_expr }</code></pre>
+</div>
+</div>
 <p>木の形を決めているのは、この規則ではなく併記された<strong>優先順位表</strong>である
 （高い順に <code>* / %</code>、<code>+ -</code>、<code>&lt; &gt; &lt;= &gt;=</code>、<code>== !=</code>、<code>&amp;&amp;</code>、<code>||</code> の6段。いずれも左結合）。
 再帰下降で書くときは、<strong>この表の1行を1つの関数に展開する</strong>。展開すると、たとえば
 表の上2行はこうなる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>add_expr ::= mul_expr { (&#39;+&#39; | &#39;-&#39;) mul_expr }
 mul_expr ::= unary_expr { (&#39;*&#39; | &#39;/&#39; | &#39;%&#39;) unary_expr }</code></pre>
+</div>
+</div>
 <p>この2行は、そのまま2つの関数 <code>parse_add</code> と <code>parse_mul</code> になる。
 「<code>add_expr</code> の中に <code>mul_expr</code> が出てくる」は「<code>parse_add</code> が <code>parse_mul</code> を呼ぶ」に対応する。
 表の6段を同じ要領で展開すると、優先順位の低い順に
@@ -194,6 +206,8 @@ F0 で「優先順位は文法の書き方そのもの」と学んだが、そ�
 <h2 id="左結合はループで書く">左結合はループで書く</h2>
 <p><code>a - b - c</code> は <code>(a - b) - c</code> でなければならない（左結合）。
 これはループで書ける。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_add(<span class="va">self</span>):</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;add_expr ::= mul_expr { (&#39;+&#39; | &#39;-&#39;) mul_expr }&quot;&quot;&quot;</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    node <span class="op">=</span> <span class="va">self</span>.parse_mul()</span>
@@ -202,6 +216,8 @@ F0 で「優先順位は文法の書き方そのもの」と学んだが、そ�
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.pos <span class="op">+=</span> <span class="dv">1</span></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        node <span class="op">=</span> Node(kind, lhs<span class="op">=</span>node, rhs<span class="op">=</span><span class="va">self</span>.parse_mul())</span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> node</span></code></pre></div>
+</div>
+</div>
 <p>EBNF の <code>{ ... }</code>（0回以上の繰り返し）が <code>while</code> に、そのまま対応している。</p>
 <figure>
 <img src="../../figures/F2_left_assoc.svg" alt="左結合ループが a - b - c を組み立てる様子" />
@@ -212,6 +228,8 @@ F0 で「優先順位は文法の書き方そのもの」と学んだが、そ�
 <h2 id="回書いたら共通化する-parse_binary">2回書いたら共通化する — parse_binary</h2>
 <p><code>parse_add</code> と <code>parse_mul</code> を書き終えると、違いが「演算子の表」と「1段下の関数」
 だけであることに気づくはずである。そこで共通部品にまとめる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_binary(<span class="va">self</span>, op_map, next_fn):</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    node <span class="op">=</span> next_fn()</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="va">self</span>.cur.sval <span class="kw">in</span> op_map:</span>
@@ -222,8 +240,11 @@ F0 で「優先順位は文法の書き方そのもの」と学んだが、そ�
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_land(<span class="va">self</span>):</span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.parse_binary({<span class="st">&#39;&amp;&amp;&#39;</span>: ND_AND}, <span class="va">self</span>.parse_eq)</span></code></pre></div>
+</div>
+</div>
 <p>残りの二項レベルは、この1行ずつで書ける。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -247,31 +268,44 @@ F0 で「優先順位は文法の書き方そのもの」と学んだが、そ�
 </tbody>
 </table>
 </div>
+</div>
 <p>実は スキャフォールド の <code>parser.py</code> もまったく同じ <code>_parse_binary</code> を持っている。
 ブラックボックスの中身は、いま自分が書いたものと同じである。</p>
 <h2 id="例外が1つ-parse_rel-の-swap">例外が1つ — parse_rel の swap</h2>
 <p>比較のレベルだけは <code>parse_binary</code> で書けない。
 コマ4 の資料に「<code>ND_GT</code> や <code>ND_GE</code> は AST に現れない」とあったのを覚えているだろうか。
 その正体がここにある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb5" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> op <span class="op">==</span> <span class="st">&#39;&gt;&#39;</span>:</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    node <span class="op">=</span> Node(ND_LT, lhs<span class="op">=</span>rhs, rhs<span class="op">=</span>node)   <span class="co"># a &gt; b は b &lt; a として作る</span></span></code></pre></div>
+</div>
+</div>
 <p><code>&gt;</code> と <code>&gt;=</code> は、<strong>左右の子を入れ替えて</strong> <code>Lt</code> / <code>Le</code> に正規化する。
 こうしておくと、コード生成側は <code>Lt</code> と <code>Le</code> の2種類だけ扱えばよくなる。
 「パーサで形を揃えて、後段を楽にする」という設計判断が AST に刻まれている例である。</p>
 <h2 id="単項と代入は再帰で書く">単項と代入は「再帰」で書く</h2>
 <p>前置演算子は自分自身を再帰する。<code>- - x</code> が <code>(neg (neg x))</code> になる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb6" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_unary(<span class="va">self</span>):</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">self</span>.consume_if(<span class="st">&#39;-&#39;</span>):</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> Node(ND_NEG, operand<span class="op">=</span><span class="va">self</span>.parse_unary())</span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    ...</span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.parse_postfix()</span></code></pre></div>
+</div>
+</div>
 <p>代入は<strong>右結合</strong>なので、ループではなく再帰で右へ伸ばす。
 <code>a = b = c</code> は <code>(assign a (assign b c))</code> である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb7" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_assign(<span class="va">self</span>):</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    node <span class="op">=</span> <span class="va">self</span>.parse_cond()</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">self</span>.consume_if(<span class="st">&#39;=&#39;</span>):</span>
 <span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> Node(ND_ASSIGN, lhs<span class="op">=</span>node, rhs<span class="op">=</span><span class="va">self</span>.parse_assign())  <span class="co"># 右結合</span></span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> node</span></code></pre></div>
+</div>
+</div>
 <div class="adm adm-note">
 <div class="adm-title">
 補足
@@ -287,6 +321,8 @@ EBNF の注釈「lvalue 制約は意味解析フェーズで検査」の実装�
 <p><code>cond_expr ::= binary_expr [ '?' expr ':' cond_expr ]</code> は、<code>assign</code> と、二項演算子表を
 展開した最上段（<code>lor</code>）の<strong>間</strong>に挟まる新しいレベルである。コマ4 で「文の <code>if</code> / 値を持つ式の <code>?:</code>」として
 導入した三項演算子は、ここで木になる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb8" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_cond(<span class="va">self</span>):</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    node <span class="op">=</span> <span class="va">self</span>.parse_lor()</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">self</span>.consume_if(<span class="st">&#39;?&#39;</span>):</span>
@@ -295,19 +331,26 @@ EBNF の注釈「lvalue 制約は意味解析フェーズで検査」の実装�
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        else_ <span class="op">=</span> <span class="va">self</span>.parse_cond()     <span class="co"># else 側だけ再帰 — 右結合</span></span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> Node(ND_COND, cond<span class="op">=</span>node, then<span class="op">=</span>then, else_<span class="op">=</span>else_)</span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> node</span></code></pre></div>
+</div>
+</div>
 <p><code>'?'</code> がなければ、いつもどおり1段下（<code>parse_lor</code>）の結果をそのまま返す
 ——これも「素通し」の一種である。<code>else_</code> 側だけ <code>parse_cond</code> を再帰しているのが
 ポイントで、<code>a ? b : c ? d : e</code> が <code>(ternary a b (ternary c d e))</code> という
 右結合の木になる（<code>then</code> 側は <code>parse_expr</code> で読むため、そちらは代入も許される）。</p>
 <h2 id="後置はループで連なる-postfix">後置はループで連なる — postfix</h2>
 <p><code>p-&gt;next-&gt;val</code> や <code>a[i][j]</code> は、primary の結果に後置が左から積み重なる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>(member &quot;-&gt;&quot; &quot;val&quot; (member &quot;-&gt;&quot; &quot;next&quot; (var &quot;p&quot;)))</code></pre>
+</div>
+</div>
 <p>後置がある限り回るループで、<code>[ expr ]</code> は <code>ND_INDEX</code>、
 <code>-&gt;</code> と <code>.</code> は <code>ND_MEMBER</code>（<code>is_arrow</code> で区別）を作る。
 いままでの結果を子に入れて新しい親を作る点は、左結合ループと同じ形である。</p>
 <h2 id="primary-再帰の輪が閉じる">primary — 再帰の輪が閉じる</h2>
 <p>最下段の <code>parse_primary</code> は、リテラル・変数・関数呼び出し・カッコを扱う。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -339,6 +382,7 @@ EBNF の注釈「lvalue 制約は意味解析フェーズで検査」の実装�
 </tbody>
 </table>
 </div>
+</div>
 <p><code>( expr )</code> で<strong>一番下の関数が一番上の関数を呼び戻す</strong>。
 図の再帰の輪がここで閉じ、<code>(a + b) * c</code> のような入れ子が自然に処理される。</p>
 <div class="adm adm-note">
@@ -357,13 +401,9 @@ Core プロファイルの文法は、意図的にこの形に設計されてい
 <p><code>myparser.py</code> のスケルトンは <code>ExprParser</code> クラスになっている。
 トークン操作（<code>cur</code> / <code>peek</code> / <code>advance</code> / <code>consume_if</code> / <code>expect</code> / <code>error</code>）は完成済み。
 各レベルの関数は<strong>最初は素通し</strong>（1段下を呼ぶだけ）になっており、上から順に肉付けする。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 45%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>Step</th>
@@ -405,18 +445,31 @@ Core プロファイルの文法は、意図的にこの形に設計されてい
 </tbody>
 </table>
 </div>
+</div>
 <p>素通しのため、まだ実装していない演算子を含む式は
 「式の後にトークンが余っています」というエラーになる。
 これは「その演算子を誰も食べずに残した」という意味で、実装が進むと消えていく。</p>
 <p>途中経過は目視でも確認できる。出力は <code>parse_viewer.py</code> と同じ S 式である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> myparser.py <span class="st">&#39;1 + 2 * 3&#39;</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
 <h3 id="単体テストstep-ごと">単体テスト（Step ごと）</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py</span></code></pre></div>
+</div>
+</div>
 <p>期待値は講義で見慣れた S 式で書いてある。
 <code>(lt (var "b") (var "a"))</code> が <code>a &gt; b</code> の正解である、という swap の確認も含む。</p>
 <h3 id="golden-testスキャフォールド-との突き合わせ">golden test（スキャフォールド との突き合わせ）</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py</span></code></pre></div>
+</div>
+</div>
 <p>全演算子・優先順位の組み合わせ・結合方向・postfix の連鎖を網羅した
 85本の式について、スキャフォールド の Parser と AST を構造比較する（<code>line</code> は比較しない）。
 <strong>全式 PASS がこの回の完了条件</strong>である。</p>
@@ -464,7 +517,7 @@ golden は対象外なので単体テストで確認する。発展課題 L2「�
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

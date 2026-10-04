@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>進め方ガイド — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,19 +92,22 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">進め方ガイド</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#読む順序" id="toc-読む順序">読む順序</a></li>
-      <li><a href="#到達目標" id="toc-到達目標">到達目標</a></li>
-      <li><a href="#環境を用意する" id="toc-環境を用意する">環境を用意する</a></li>
-      <li><a href="#各回の進め方" id="toc-各回の進め方">各回の進め方</a></li>
-      <li><a href="#フェーズ構成" id="toc-フェーズ構成">フェーズ構成</a></li>
-      <li><a href="#全体の流れ" id="toc-全体の流れ">全体の流れ</a></li>
-      <li><a href="#コマ15-のあと" id="toc-コマ15-のあと">コマ15 のあと</a></li>
-      <li><a href="#参考資料" id="toc-参考資料">参考資料</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#読む順序" id="toc-読む順序">読む順序</a></li>
+<li><a href="#到達目標" id="toc-到達目標">到達目標</a></li>
+<li><a href="#環境を用意する" id="toc-環境を用意する">環境を用意する</a></li>
+<li><a href="#各回の進め方" id="toc-各回の進め方">各回の進め方</a></li>
+<li><a href="#フェーズ構成" id="toc-フェーズ構成">フェーズ構成</a></li>
+<li><a href="#全体の流れ" id="toc-全体の流れ">全体の流れ</a></li>
+<li><a href="#コマ15-のあと" id="toc-コマ15-のあと">コマ15 のあと</a></li>
+<li><a href="#参考資料" id="toc-参考資料">参考資料</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <blockquote>
 <p>対象: C 言語既習・コンパイラ理論未習の学習者
@@ -126,12 +132,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <a href="../../docs/"><code>README.md</code>（逆引き索引）</a> を見る。</p>
 <hr />
 <h2 id="到達目標">到達目標</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 60%" />
-<col style="width: 40%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>トラック</th>
@@ -150,10 +153,14 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
-<p><strong>実装の完成 = コマ15 + <code>final/tests</code>（fixed17）全通、学習経路の完了 = コマ16（発表会）</strong>、
+</div>
+<p><strong>実装の完成 = コマ15 + fixed17全通 + 最終コンパイラでコマ2〜14の全テスト通過、
+学習経路の完了 = コマ16（発表会）</strong>、
 と用語を分けている。発展課題はこの区別のうち「実装の完成」を前提にするだけで、
 発表会（コマ16）を経ることを前提にしない（発表前に発展課題へ進んでよい）。
-発展課題は任意であり、完了条件は各トピックの <code>README.md</code> に個別に書いてある。</p>
+発展課題は任意であり、完了条件は各トピックの <code>README.md</code> に個別に書いてある。
+過去回テストの実行手順は <a href="../../docs/testing/#最終コンパイラで過去回の全テストを確認する"><code>testing.md</code></a>、
+不正入力の診断範囲は <a href="../../docs/language_spec/#diagnostics"><code>language_spec.md</code></a>を参照。</p>
 <hr />
 <h2 id="環境を用意する">環境を用意する</h2>
 <p>環境構築は <strong>コマ0（演習環境構築）</strong> で扱う。手順の実体はそちらにあるので、
@@ -177,7 +184,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <li><code>sessions/NN_xxx/mycc.py</code> を編集する</li>
 <li>テストを走らせる</li>
 </ol>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/02_arithmetic_codegen</span></code></pre></div>
+</div>
+</div>
 <p><strong>コマ3 以降は前の回の <code>mycc.py</code> を継承する。</strong> 各回の <code>Codegen&lt;NN&gt;</code> は
 <code>Codegen&lt;NN-1&gt;</code> を継承して差分だけを書く形になっているので、<strong>順番に進め、
 その回のテストを通してから次へ行く</strong>こと。前の回に未実装が残っていると、
@@ -195,7 +206,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p><strong>コマ0（準備）</strong> — 演習環境構築。初回授業の開始時点で終わっているのが目標。番号のある通常回には含めない。</p>
 </div>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -223,6 +235,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <div class="adm adm-note">
 <div class="adm-title">
 補足
@@ -239,13 +252,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p><strong>コマ0（準備）</strong> — 演習環境構築。初回授業の開始時点で終わっているのが目標。番号のある通常回には含めない。</p>
 </div>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 26%" />
-<col style="width: 34%" />
-<col style="width: 39%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>コマ</th>
@@ -327,10 +336,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <tr class="odd">
 <td>15</td>
 <td>Python 版総合演習・<code>mycc.py</code> 統合</td>
-<td>標準トラック完成（<code>final/mycc.py</code> に統合し、<code>final/tests</code>（fixed17）全通を目安とする）</td>
+<td><code>final/mycc.py</code> に統合し、fixed17とコマ2〜14の全テストを最終コンパイラで通す</td>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <div class="adm adm-note">
 <div class="adm-title">
@@ -353,12 +363,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p><strong>コマ16（発表会）</strong> — <a href="https://yf-fyf.github.io/c-comp/sessions/16_demo_review/">発表・振り返り</a>。自身の取り組みを発表する回。番号のある通常回には含めない。</p>
 </div>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 57%" />
-<col style="width: 42%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>行き先</th>
@@ -373,18 +380,15 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>どのトピックを選ぶかは
 <a href="../../advanced/#どこから始めるか"><code>../advanced/README.md</code> の「どこから始めるか」</a>を見て決める。
 発展課題に進まず、Python 版の補修・仕上げやテストの追加に時間を使うのも同じだけ正当な選択である。</p>
 <hr />
 <h2 id="参考資料">参考資料</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 37%" />
-<col style="width: 22%" />
-<col style="width: 40%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>リソース</th>
@@ -416,6 +420,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 
     
     <nav class="pager" aria-label="前後のページ"><a class="prev" href="../../docs/"><span class="label">前へ</span>学習者向けドキュメント — 索引</a><a class="index" href="../../docs/"><span class="label">一覧</span>仕様・参考文書</a><a class="next" href="../../docs/conventions/"><span class="label">次へ</span>実装の約束ごと</a></nav>
@@ -428,7 +433,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>レジスタ割り当て — 変数をメモリから追い出す — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,25 +92,28 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">レジスタ割り当て — 変数をメモリから追い出す</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#ここまでで分かっていること" id="toc-ここまでで分かっていること">ここまでで分かっていること</a></li>
-      <li><a href="#なぜアセンブリではなくコード生成器を触るのか" id="toc-なぜアセンブリではなくコード生成器を触るのか">なぜアセンブリではなくコード生成器を触るのか</a></li>
-      <li><a href="#レジスタに置ける変数" id="toc-レジスタに置ける変数">レジスタに置ける変数</a></li>
-      <li><a href="#なぜ-callee-saveds1s11なのか" id="toc-なぜ-callee-saveds1s11なのか">なぜ callee-saved（s1〜s11）なのか</a></li>
-      <li><a href="#int-の切り詰め-s2-との接続" id="toc-int-の切り詰め-s2-との接続"><code>int</code> の切り詰め — S2 との接続</a></li>
-      <li><a href="#実装コマ1" id="toc-実装コマ1">実装（コマ1）</a></li>
-      <li><a href="#測ってみるとコマ1-全部昇格" id="toc-測ってみるとコマ1-全部昇格">測ってみると（コマ1: 全部昇格）</a></li>
-      <li><a href="#なぜ-fib_rec-は遅くなったのか" id="toc-なぜ-fib_rec-は遅くなったのか">なぜ fib_rec は遅くなったのか</a></li>
-      <li><a href="#実装コマ2" id="toc-実装コマ2">実装（コマ2）</a></li>
-      <li><a href="#測ってみるとコマ2" id="toc-測ってみるとコマ2">測ってみると（コマ2）</a></li>
-      <li><a href="#まだ残っているもの" id="toc-まだ残っているもの">まだ残っているもの</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#ここまでで分かっていること" id="toc-ここまでで分かっていること">ここまでで分かっていること</a></li>
+<li><a href="#なぜアセンブリではなくコード生成器を触るのか" id="toc-なぜアセンブリではなくコード生成器を触るのか">なぜアセンブリではなくコード生成器を触るのか</a></li>
+<li><a href="#レジスタに置ける変数" id="toc-レジスタに置ける変数">レジスタに置ける変数</a></li>
+<li><a href="#なぜ-callee-saveds1s11なのか" id="toc-なぜ-callee-saveds1s11なのか">なぜ callee-saved（s1〜s11）なのか</a></li>
+<li><a href="#int-の切り詰め-s2-との接続" id="toc-int-の切り詰め-s2-との接続"><code>int</code> の切り詰め — S2 との接続</a></li>
+<li><a href="#実装コマ1" id="toc-実装コマ1">実装（コマ1）</a></li>
+<li><a href="#測ってみるとコマ1-全部昇格" id="toc-測ってみるとコマ1-全部昇格">測ってみると（コマ1: 全部昇格）</a></li>
+<li><a href="#o3を組み合わせるとなぜ-fib_rec-は遅くなるのか" id="toc-o3を組み合わせるとなぜ-fib_rec-は遅くなるのか">O3を組み合わせると、なぜ fib_rec は遅くなるのか</a></li>
+<li><a href="#実装コマ2" id="toc-実装コマ2">実装（コマ2）</a></li>
+<li><a href="#測ってみるとコマ2" id="toc-測ってみるとコマ2">測ってみると（コマ2）</a></li>
+<li><a href="#まだ残っているもの" id="toc-まだ残っているもの">まだ残っているもの</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -116,12 +122,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 そして「割に合わない昇格」があることを、測って発見する。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -135,7 +138,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tr>
 <tr class="even">
 <td>推奨の前提</td>
-<td>O3（命令選択）。実質必須に近い。資料の測定値は O1 の全構成の基準表の <code>+isel</code> 列を基準にしているので、O3 が無いと表と突き合わせられない</td>
+<td>O3（命令選択。組み合わせの実験に使えるが、この回の検査には不要）</td>
 </tr>
 <tr class="odd">
 <td>改変しない</td>
@@ -160,14 +163,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>2コマの区切りは次のとおりである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 25%" />
-<col style="width: 41%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>コマ</th>
@@ -189,10 +189,13 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="ここまでで分かっていること">ここまでで分かっていること</h2>
 <p>O1 の<a href="../../advanced/O1_measure/#baseline">全構成の基準表</a>で数えたとおり、
 素の出力 1,183命令のうち <strong>587命令（49.6%）が push/pop の往復</strong>である。
 なぜそんなに多いのか。変数を1つ読むだけで、こういうコードが出ているからである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span>      <span class="co"># s のアドレスを計算して</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span>       <span class="co"># スタックに積んで</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  sd   a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
@@ -200,6 +203,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  ld   a1<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>        <span class="co"># アドレスを取り出して</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  sw   a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span>        <span class="co"># ようやく書き込む</span></span></code></pre></div>
+</div>
+</div>
 <p><code>s</code> がレジスタに入っていれば、これは<strong>1命令</strong>で済む。</p>
 <figure>
 <img src="../../figures/O4_regalloc.svg" alt="変数をレジスタに置くと代入が5命令から1命令になる" />
@@ -208,9 +213,13 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <h2 id="なぜアセンブリではなくコード生成器を触るのか">なぜアセンブリではなくコード生成器を触るのか</h2>
 <p>O3・O7 は、出来上がったアセンブリを行単位で書き換えるパスだった。
 今回はそれができない。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> x<span class="op">;</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> <span class="op">&amp;</span>x<span class="op">;</span>        <span class="co">// x のアドレスが要る → x はメモリに実体が必要</span></span></code></pre></div>
+</div>
+</div>
 <p><code>&amp;x</code> が使われているかどうかは <strong>AST を見ないと分からない</strong>。
 アセンブリになった後では、<code>addi a0, s0, -24</code> が「アドレスを取ったから」なのか
 「値を読むついでに出ただけ」なのか区別できない。</p>
@@ -225,7 +234,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 差し替えは <code>patch()</code> の中で完結させる。</p>
 </div>
 <h2 id="レジスタに置ける変数">レジスタに置ける変数</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -249,6 +259,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p><code>char</code> を外しているのは、8ビットへの切り詰めを1命令で書けないためである
 （基本命令セットに <code>sext.b</code> が無い）。</p>
 <h2 id="なぜ-callee-saveds1s11なのか">なぜ callee-saved（s1〜s11）なのか</h2>
@@ -258,6 +269,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <p><code>s1</code>〜<code>s11</code> は<strong>呼ばれた側が元に戻す義務を負う</strong>（callee-saved）。
 だから呼び出しをまたいでも値が残る。</p>
 <p>代わりに、自分がその義務を負う。プロローグで退避し、エピローグで復帰する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb3" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">main:</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  ...</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  sd s1<span class="op">,</span> <span class="op">-</span><span class="dv">40</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># 呼び出し元の s1 を預かる</span></span>
@@ -266,6 +279,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  ld s1<span class="op">,</span> <span class="op">-</span><span class="dv">40</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># 返す前に元へ戻す</span></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  ...</span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ret</span></span></code></pre></div>
+</div>
+</div>
 <p><strong>これを忘れると静かに壊れる。</strong> 自分のテストは通るのに、
 呼び出し元の変数が書き換わる。原因を追うのが難しい種類のバグである。</p>
 <h2 id="int-の切り詰め-s2-との接続"><code>int</code> の切り詰め — S2 との接続</h2>
@@ -275,10 +290,15 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 S2 で見たとおり、この処理系の <code>int</code> 演算は64ビットで行われるので、
 切り詰めが消えると桁あふれの挙動が変わってしまう。</p>
 <p>そこで代入のたびに明示的に切り詰める。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb4" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  sext.w s2<span class="op">,</span> a0      <span class="co"># a0 の下位32ビットを符号拡張して s2 へ</span></span></code></pre></div>
+</div>
+</div>
 <p>ポインタは64ビットなので <code>mv</code> でよい。</p>
 <h2 id="実装コマ1">実装（コマ1）</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -311,6 +331,7 @@ S2 で見たとおり、この処理系の <code>int</code> 演算は64ビット
 </tbody>
 </table>
 </div>
+</div>
 <p><code>worth_promoting</code> は、コマ1では <code>return list(names)</code>（全部昇格）にしておく。</p>
 <div class="adm adm-important">
 <div class="adm-title">
@@ -318,7 +339,11 @@ S2 で見たとおり、この処理系の <code>int</code> 演算は64ビット
 </div>
 <p><code>emit_var_assign</code> では、右辺を <strong><code>cg.codegen(node.rhs)</code></strong> で生成する。
 元の <code>codegen</code> を直接呼ぶと、右辺の<strong>部分木にパッチが効かない</strong>。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>found <span class="op">=</span> i<span class="op">;</span>      <span class="co">// i がレジスタにあるのに、古いメモリから読まれる</span></span></code></pre></div>
+</div>
+</div>
 <p><a href="../../advanced/#fixed17"><code>fixed17</code></a> の <code>f06_break.c</code> がこれを検出する。</p>
 </div>
 <div class="adm adm-note">
@@ -329,44 +354,65 @@ S2 で見たとおり、この処理系の <code>int</code> 演算は64ビット
 実装 Step は増えない）。昇格した変数の実体はレジスタにしかないので、
 <code>mycc.py</code> の PreInc が使う「アドレスを取る → load → +1 → store」の経路を
 そのまま通すと、スタック上の<strong>古い値</strong>を読み書きして静かに壊れる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb6" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  addiw s1<span class="op">,</span> s1<span class="op">,</span> <span class="dv">1</span>     <span class="co"># int の ++ は sext.w と同じ「32ビットに切り詰める」慣例</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  addi  s2<span class="op">,</span> s2<span class="op">,</span> <span class="dv">4</span>     <span class="co"># ポインタの ++ は指す先のサイズだけ進む</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  mv    a0<span class="op">,</span> s1        <span class="co"># 前置 ++ の値は「新しい値」</span></span></code></pre></div>
+</div>
+</div>
 <p>lvalue への経路（今回は前置 <code>++</code>）が増えたら、昇格機構もその経路を
 追随する必要がある —— 上の <code>found = i;</code> の罠と同根の問題である。
 <code>fixed17</code> の <code>f17_incr.c</code> がこれを検出する。</p>
 </div>
 <h2 id="測ってみるとコマ1-全部昇格">測ってみると（コマ1: 全部昇格）</h2>
-<p>「前」は O1 の<a href="../../advanced/O1_measure/#baseline">全構成の基準表</a>の <code>+isel</code> 列である
-（この回の効果は isel をかけた状態を基準に測る）。</p>
+<p>「前」は完成したコンパイラの素の出力である。O3の命令選択は使わず、
+レジスタ割り当てだけの効果を測る。以下は同じ土台で測った教員実装の例である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>ベンチマーク    静的:前   後   削減   動的:前      後      削減
-bubble           301   264   12%    20566   18824    8.5%
-fib_rec           73    75   -3%    69061   73007   -5.7%   ← 遅くなった
-loop_sum          65    49   24%     7038    5032   28.5%
-matmul           411   344   16%    24606   21589   12.3%
-strops           225   192   14%    69066   59877   13.3%
-合計            1075   924   14%   190337  178329    6.3%</code></pre>
-<p><code>loop_sum</code> は <strong>28.5%</strong> 速くなった。ループの中の代入が2つとも1命令になったからである。</p>
+bubble          340   273  19.7%     24023    19618   18.3%
+fib_rec          77    75   2.6%     73993    73007    1.3%
+loop_sum         70    49  30.0%      7840     5032   35.8%
+matmul          453   351  22.5%     27958    22166   20.7%
+strops          243   192  21.0%     77108    59877   22.3%
+合計           1183   940  20.5%    210922   179700   14.8%</code></pre>
+</div>
+</div>
+<p><code>loop_sum</code> は <strong>35.8%</strong> 速くなった。ループの中の代入が2つとも1命令になったからである。</p>
 <p><code>bubble</code> と <code>matmul</code> の <code>a</code> は malloc 領域を指す<strong>ポインタ変数</strong>なので、これも昇格する。
 配列宣言の無いこの言語では、まとまったデータは常にポインタ経由で触るため、
 「レジスタに入りきらないデータ」であっても<strong>その入り口はレジスタに置ける</strong>。</p>
-<p>しかし <code>fib_rec</code> <strong>だけ遅くなっている</strong>。</p>
-<h2 id="なぜ-fib_rec-は遅くなったのか">なぜ fib_rec は遅くなったのか</h2>
+<p>この構成では <code>fib_rec</code> も少し速くなる。ただし、O3を組み合わせた場合は
+<strong>全部昇格すると <code>fib_rec</code> だけ遅くなる</strong>。次は、その費用と利得を考える。</p>
+<h2 id="o3を組み合わせるとなぜ-fib_rec-は遅くなるのか">O3を組み合わせると、なぜ fib_rec は遅くなるのか</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb8" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> fib<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">&lt;=</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> n<span class="op">;</span> <span class="op">}</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">)</span> <span class="op">+</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">2</span><span class="op">);</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p><code>n</code> は<strong>一度も代入されない</strong>。読まれるだけである。</p>
 <p>昇格の利得は「代入が安くなること」で稼いでいた。
-読み出しは、メモリからなら <code>lw a0, -24(s0)</code> の1命令、
+O3がアドレス計算とロードを畳んだ後の読み出しは、メモリからなら <code>lw a0, -24(s0)</code> の1命令、
 レジスタからなら <code>mv a0, s1</code> の1命令 —— <strong>同じ1命令</strong>である。得がない。</p>
 <p>一方、費用は確実にかかる。<code>fib</code> は再帰で何万回も呼ばれ、そのたびに
 <code>sd s1</code> と <code>ld s1</code> の2命令を実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>利得: 代入 0回 × 4命令 = 0
 費用: 呼び出しのたびに 2命令</code></pre>
+</div>
+</div>
 <p>割に合っていない。</p>
+<p>O3なしではアドレス計算とロードが2命令なので、レジスタへの昇格は読み出しも安くする。
+そのため、最適化を組み合わせる順序によって、同じ昇格の費用対効果が変わる。
+O3の実装はこの回の完了条件ではなく、完成後の組み合わせの実験に使える。</p>
 <h2 id="実装コマ2">実装（コマ2）</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -389,21 +435,36 @@ strops           225   192   14%    69066   59877   13.3%
 </tbody>
 </table>
 </div>
+</div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>呼び出しを含まない関数(葉関数) → 退避が要らない  → 全部昇格してよい
 呼び出しを含む関数             → 退避の費用がある → 代入される変数だけ昇格する</code></pre>
+</div>
+</div>
 <h2 id="測ってみるとコマ2">測ってみると（コマ2）</h2>
-<p>こちらの「後」が、基準表の <code>+regalloc</code> 列である。</p>
+<p>こちらの「後」は、代入される変数だけに昇格候補を絞った結果である。
+O1の全構成の基準表はO3も組み合わせた測定なので、この表とは構成が異なる。
+この選別はO3と組み合わせても悪化しない簡単な基準であり、O3なしで常に最良の結果を
+選ぶわけではない。<code>fib_rec</code> は昇格しないため、素の出力と同じ命令数になる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>ベンチマーク    静的:前   後   削減   動的:前      後      削減
-bubble           301   264   12%    20566   18824    8.5%
-fib_rec           73    73    0%    69061   69061    0.0%   ← 昇格しない
-loop_sum          65    49   24%     7038    5032   28.5%
-matmul           411   344   16%    24606   21589   12.3%
-strops           225   192   14%    69066   59877   13.3%
-合計            1075   922   14%   190337  174383    8.4%</code></pre>
-<p><code>fib_rec</code> の悪化が消えた。合計の削減も 6.3% から <strong>8.4%</strong> に増えている。
+bubble          340   273  19.7%     24023    19618   18.3%
+fib_rec          77    77   0.0%     73993    73993    0.0%
+loop_sum         70    49  30.0%      7840     5032   35.8%
+matmul          453   351  22.5%     27958    22166   20.7%
+strops          243   192  21.0%     77108    59877   22.3%
+合計           1183   942  20.4%    210922   180686   14.3%</code></pre>
+</div>
+</div>
+<p>O3なしのこの構成では、全部昇格する場合より合計の動的命令数が少し増える。
+O3との組み合わせでは、読み出しだけの変数を外すことが再帰関数での悪化を防ぐ。
 <strong>「やらない」という判断も最適化である。</strong></p>
 <h2 id="まだ残っているもの">まだ残っているもの</h2>
 <p>割り当て後の <code>s = s + i</code> はこうなっている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb12" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>  mv   a0<span class="op">,</span> s2        <span class="co"># s を読む</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  sd   a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span></span>
@@ -412,6 +473,8 @@ strops           225   192   14%    69066   59877   13.3%
 <span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span></span>
 <span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  add  a0<span class="op">,</span> a1<span class="op">,</span> a0</span>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  sext.w s2<span class="op">,</span> a0      <span class="co"># s へ書く</span></span></code></pre></div>
+</div>
+</div>
 <p><code>add</code> の入力は結局 <code>s2</code> と <code>s1</code> である。
 <code>add a0, s2, s1</code> と書ければ、前の <code>mv</code> 2つと push/pop が丸ごと要らなくなる。</p>
 <p>それが O6（コピー伝播と死コード除去）の仕事である。
@@ -454,7 +517,7 @@ strops           225   192   14%    69066   59877   13.3%
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

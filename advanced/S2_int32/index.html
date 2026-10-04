@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>int は32ビット — 桁あふれを正しく折り返す — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,20 +92,23 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title"><code>int</code> は32ビット — 桁あふれを正しく折り返す</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#いまのコンパイラは何をしているか" id="toc-いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</a></li>
-      <li><a href="#何が違うのか" id="toc-何が違うのか">何が違うのか</a></li>
-      <li><a href="#どう直すか-命令を書き換える" id="toc-どう直すか-命令を書き換える">どう直すか — 命令を書き換える</a></li>
-      <li><a href="#難しいのはどこを書き換えないか" id="toc-難しいのはどこを書き換えないか">難しいのは「どこを書き換えないか」</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#いまのコンパイラは何をしているか" id="toc-いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</a></li>
+<li><a href="#何が違うのか" id="toc-何が違うのか">何が違うのか</a></li>
+<li><a href="#どう直すか-命令を書き換える" id="toc-どう直すか-命令を書き換える">どう直すか — 命令を書き換える</a></li>
+<li><a href="#難しいのはどこを書き換えないか" id="toc-難しいのはどこを書き換えないか">難しいのは「どこを書き換えないか」</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -110,12 +116,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 桁あふれの振る舞いを「ホスト gcc と同じ 32bit 折り返し」に揃える。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -158,18 +161,19 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</h2>
 <p>コマ8 で「<code>int</code> は4バイト」と決め、<code>lw</code> / <code>sw</code> で読み書きするようにした。
 しかし<strong>計算</strong>のほうは、ずっと64bit命令のままである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  add a0<span class="op">,</span> a1<span class="op">,</span> a0      <span class="co"># 64bit で足している</span></span></code></pre></div>
+</div>
+</div>
 <p>RV64 には、同じ演算の32bit版がある。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 27%" />
-<col style="width: 44%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>64bit 版</th>
@@ -191,12 +195,17 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p><code>w</code> は word（RV64 では32bit）の意味である。
 <code>int</code> の計算には、本来こちらを使わなければならない。</p>
 <h2 id="何が違うのか">何が違うのか</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> x<span class="op">;</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="dv">2147483647</span><span class="op">;</span>   <span class="co">// int の最大値</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> x <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span></code></pre></div>
+</div>
+</div>
 <p>この言語の仕様（<code>language_spec.md</code>）は、符号付き整数のオーバーフローを
 <strong>未定義動作（UB）と明記している</strong>。規格上は「何が起きてもよい」ということだが、
 それでは実装の方針が立たない。そこでこの回では、
@@ -206,9 +215,13 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <strong>最小値 <code>-2147483647 - 1</code> に折り返す</strong>。</p>
 <p>いまの実装は64bitで計算するので、<code>2147483648</code> という
 <strong><code>int</code> に存在しないはずの値</strong>がそのまま残る。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb3" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> y<span class="op">;</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> <span class="dv">100000</span> <span class="op">*</span> <span class="dv">100000</span><span class="op">;</span>   <span class="co">// 折り返す方針では: 1410065408</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                        <span class="co">// いまの実装: 10000000000</span></span></code></pre></div>
+</div>
+</div>
 <div class="adm adm-important">
 <div class="adm-title">
 重要
@@ -222,16 +235,21 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <h2 id="どう直すか-命令を書き換える">どう直すか — 命令を書き換える</h2>
 <p>コード生成のあちこちに散らばった <code>add</code> / <code>sub</code> / <code>mul</code> … を
 すべて書き直すのは大変である。そこで、<strong>出力される命令行を通り道で書き換える</strong>。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>codegen が emit(&quot;  add a0, a1, a0&quot;) を呼ぶ
     ↓
 narrow(line, ty) が「型が int なら addw に」書き換える
     ↓
 実際に出力される</code></pre>
+</div>
+</div>
 <p><code>narrow</code> は<strong>純粋な文字列変換</strong>なので、テストが書きやすい。
 ラッパー <code>semcc.py</code> が <code>emit</code> を包んでこれを呼ぶ。</p>
 <h2 id="難しいのはどこを書き換えないか">難しいのは「どこを書き換えないか」</h2>
 <p>素朴に「<code>add</code> を全部 <code>addw</code> にする」と、<strong>コンパイラは壊れる</strong>。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -264,6 +282,7 @@ narrow(line, ty) が「型が int なら addw に」書き換える
 </tbody>
 </table>
 </div>
+</div>
 <p><strong>アドレスは64bit</strong>である。同じ <code>add</code> でも、
 「何を計算しているか」で扱いが変わる。</p>
 <p>そこで2つの仕掛けを使う。</p>
@@ -287,13 +306,9 @@ narrow(line, ty) が「型が int なら addw に」書き換える
 ——「型は式ごとに違う」ことを、身をもって確かめられる箇所である。</p>
 </div>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 45%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>Step</th>
@@ -310,19 +325,25 @@ narrow(line, ty) が「型が int なら addw に」書き換える
 </tbody>
 </table>
 </div>
+</div>
 <p>書くのは20行ほどの文字列処理である。難しいのはコードではなく、
 <strong>何を対象にして何を対象にしないか</strong>の判断である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/overflow.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-E</span> <span class="st">&quot;addw|subw|mulw&quot;</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/pointer_ok.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> addiw   <span class="co"># 0 でなければ危険</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># narrow の入出力を直接確認(未実装は SKIP)</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 折り返しのテスト + fixed17</span></span></code></pre></div>
-<div class="table-scroll">
+</div>
+</div>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 47%" />
-<col style="width: 52%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>テスト</th>
@@ -348,6 +369,7 @@ narrow(line, ty) が「型が int なら addw に」書き換える
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><code>pointer_ok.c</code> が安全網である。<a href="../../advanced/#fixed17"><code>fixed17</code></a> と合わせて、
 「直しすぎていないこと」を保証する。</p>
@@ -387,7 +409,7 @@ x86-64 も同じ理由で、32bit レジスタ名（<code>eax</code>）での演
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

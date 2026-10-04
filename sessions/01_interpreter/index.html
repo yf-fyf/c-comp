@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コマ1: AST + インタープリター — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,22 +92,25 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">コマ1: AST + インタープリター</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#スキャフォールドの動作確認-ast-を見てみる" id="toc-スキャフォールドの動作確認-ast-を見てみる">スキャフォールドの動作確認 — AST を見てみる</a></li>
-      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
-      <li><a href="#node-の構造" id="toc-node-の構造">Node の構造</a></li>
-      <li><a href="#実装方針" id="toc-実装方針">実装方針</a></li>
-      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
-      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
-      <li><a href="#tests" id="toc-tests">tests/</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#注意" id="toc-注意">注意</a></li>
-      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation has-grammar">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#スキャフォールドの動作確認-ast-を見てみる" id="toc-スキャフォールドの動作確認-ast-を見てみる">スキャフォールドの動作確認 — AST を見てみる</a></li>
+<li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+<li><a href="#node-の構造" id="toc-node-の構造">Node の構造</a></li>
+<li><a href="#実装方針" id="toc-実装方針">実装方針</a></li>
+<li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+<li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+<li><a href="#tests" id="toc-tests">tests/</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#注意" id="toc-注意">注意</a></li>
+<li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+</ul></nav>
+      </details>
+      <a class="toc-grammar" href="#この回までの言語仕様ebnf">文法を参照</a>
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -118,24 +124,37 @@ Cプログラム全体を実行するのではなく、<code>main</code> 関数�
 この回で初めて提供 Lexer/Parser を使うため、まずここで動作を確かめる。
 Lexer は <code>//</code> 行コメントを読み飛ばし、<code>if</code> <code>while</code> <code>return</code> などキーワード12語と
 それ以外の識別子を区別する。この字句解析はすでに提供されており、自分で書く対象ではない。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/01_interpreter/tests/add_mul.c</span></code></pre></div>
+</div>
+</div>
 <p>このプログラムの内容は次の通り。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">1</span> <span class="op">+</span> <span class="dv">2</span> <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>実行すると、次のようなS式が表示される。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb3" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(program</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        (add (num <span class="dv">1</span>)</span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>          (mul (num <span class="dv">2</span>) (num <span class="dv">3</span>)))))))</span></code></pre></div>
+</div>
+</div>
 <figure>
 <img src="../../figures/ast/01_add_mul_ast.svg" alt="add_mul.c の AST" />
 <figcaption aria-hidden="true"><code>add_mul.c</code> の AST</figcaption>
 </figure>
 <p>この出力は、<code>1 + 2 * 3</code> が次の構造として解析されたことを表している。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -175,14 +194,19 @@ Lexer は <code>//</code> 行コメントを読み飛ばし、<code>if</code> <c
 </tbody>
 </table>
 </div>
+</div>
 <p>つまり、<code>1 + 2 * 3</code> は次のような木として表されている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb4" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(add</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (num <span class="dv">1</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  (mul (num <span class="dv">2</span>) (num <span class="dv">3</span>)))</span></code></pre></div>
+</div>
+</div>
 <p><code>2 * 3</code> が <code>add</code> の右側の子になっている。
 掛け算が先にまとめられている（演算子の優先順位が正しく反映されている）ことを確認する。
 演算子の優先順位は Parser がすでに処理しているため、<code>eval_ast()</code> は渡された木をそのまま評価すればよい。</p>
-<p>S 式ではなく木の形で見たいときは、<a href="../../tools/app.html?mode=build">AST ビジュアライザ</a> に同じソースを貼るとブラウザ上に構文木が表示され、ノードとソース範囲の対応も確認できる。</p>
+<p>S 式ではなく木の形で見たいときは、<a href="../../tools/app.html?view=ast">学習ツールの構造表示</a> に同じソースを貼るとブラウザ上に構文木が表示され、ノードとソース範囲の対応も確認できる。</p>
 <h3 id="木の形は規則で決まっている">木の形は規則で決まっている</h3>
 <p>上の木の形は偶然ではない。Parser は次の規則で木を組み立てる。</p>
 <ul>
@@ -198,11 +222,16 @@ Lexer は <code>//</code> 行コメントを読み飛ばし、<code>if</code> <c
 式を入れて、規則どおりの木になることを確かめられる。</p>
 <h2 id="この回で扱う範囲">この回で扱う範囲</h2>
 <p>対象にするプログラムは、次の形に限定する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> 式<span class="op">;</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>扱う式は以下の通り。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -246,8 +275,10 @@ Lexer は <code>//</code> 行コメントを読み飛ばし、<code>if</code> <c
 </tbody>
 </table>
 </div>
+</div>
 <p>変数、代入、if、while、関数呼び出しはまだ扱わない。</p>
-<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<section id="この回までの言語仕様ebnf" class="grammar-section" data-grammar-heading="この回までの言語仕様ebnf">
+<h3>この回までの言語仕様（EBNF）</h3>
 <p>この回までに書けるプログラムの文法を、累積の形でまとめる。
 記法と最終形の全体像は
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
@@ -256,23 +287,26 @@ Lexer は <code>//</code> 行コメントを読み飛ばし、<code>if</code> <c
 <p>式の文法は「単項式を演算子でつないだ列」（<code>binary_expr</code>）として1つの規則で与え、
 どの演算子が先にまとまるかは直後の優先順位表と上の「木の形は規則で決まっている」の
 規則で定める。<code>bin_op</code> の行の並びは優先順位の高い順である。</p>
-<pre class="ebnf" data-lang="ebnf"><code>program       ::= func_def        /* ユーザー定義関数はコマ6 */
-
-func_def    ::= &#39;int&#39; &#39;main&#39; &#39;(&#39; &#39;)&#39; func_body   /* 一般の関数定義はコマ6 */
-func_body   ::= &#39;{&#39; { stmt } &#39;}&#39;
-
-stmt        ::= &#39;return&#39; expr &#39;;&#39;
-
-expr        ::= binary_expr      /* 代入はコマ3、条件はコマ4 */
-binary_expr ::= unary_expr { bin_op unary_expr }
-bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 優先順位・結合は下の表。関係・等値はコマ4、論理はコマ13 */
-              | &#39;+&#39; | &#39;-&#39;
-unary_expr  ::= primary_expr
-              | &#39;-&#39;  unary_expr
-primary_expr ::= INT_LITERAL
-               | &#39;(&#39; expr &#39;)&#39;</code></pre>
+<p class="grammar-legend">最初の文法です。以降の回では、全文中で追加・変更を示します。</p>
+<details class="grammar-full" open><summary>この回までの文法全文（15行）</summary>
+<pre class="grammar-pre"><code class="grammar-code"><span id="grammar-line-135" class="grammar-line grammar-existing" data-label="">program       ::= func_def        /* ユーザー定義関数はコマ6 */</span>
+<span id="grammar-line-136" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-137" class="grammar-line grammar-existing" data-label="">func_def    ::= &#x27;int&#x27; &#x27;main&#x27; &#x27;(&#x27; &#x27;)&#x27; func_body   /* 一般の関数定義はコマ6 */</span>
+<span id="grammar-line-138" class="grammar-line grammar-existing" data-label="">func_body   ::= &#x27;{&#x27; stmt &#x27;}&#x27;</span>
+<span id="grammar-line-139" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-140" class="grammar-line grammar-existing" data-label="">stmt        ::= &#x27;return&#x27; expr &#x27;;&#x27;</span>
+<span id="grammar-line-141" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-142" class="grammar-line grammar-existing" data-label="">expr        ::= binary_expr      /* 代入はコマ3、条件はコマ4 */</span>
+<span id="grammar-line-143" class="grammar-line grammar-existing" data-label="">binary_expr ::= unary_expr { bin_op unary_expr }</span>
+<span id="grammar-line-144" class="grammar-line grammar-existing" data-label="">bin_op      ::= &#x27;*&#x27; | &#x27;/&#x27; | &#x27;%&#x27;  /* 優先順位・結合は下の表。関係・等値はコマ4、論理はコマ13 */</span>
+<span id="grammar-line-145" class="grammar-line grammar-existing" data-label="">              | &#x27;+&#x27; | &#x27;-&#x27;</span>
+<span id="grammar-line-146" class="grammar-line grammar-existing" data-label="">unary_expr  ::= primary_expr</span>
+<span id="grammar-line-147" class="grammar-line grammar-existing" data-label="">              | &#x27;-&#x27;  unary_expr</span>
+<span id="grammar-line-148" class="grammar-line grammar-existing" data-label="">primary_expr ::= INT_LITERAL</span>
+<span id="grammar-line-149" class="grammar-line grammar-existing" data-label="">               | &#x27;(&#x27; expr &#x27;)&#x27;</span></code></pre>
 <p>この回までの二項演算子の優先順位（高い順）:</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -282,12 +316,12 @@ primary_expr ::= INT_LITERAL
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr class="odd grammar-initial">
 <td>1（高）</td>
 <td><code>*</code> <code>/</code> <code>%</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
+<tr class="even grammar-initial">
 <td>2</td>
 <td><code>+</code> <code>-</code></td>
 <td>左</td>
@@ -295,15 +329,19 @@ primary_expr ::= INT_LITERAL
 </tbody>
 </table>
 </div>
+</div>
 <p>字句トークン（<code>INT_LITERAL</code> など）の定義はどの回でも同じであるため、ここでは繰り返さない。
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+</details>
+</section>
 <h2 id="node-の構造">Node の構造</h2>
 <p><code>parse_viewer.py</code> のS式は表示用の形式である。
 <code>mycc.py</code> に渡される実体は、<code>scaffold/ast_def.py</code> で定義されている <code>Node</code> オブジェクトである。</p>
 <p><code>Node</code> は、AST の1つの節点を表す入れ物である。
 たとえば、数値、足し算、掛け算は、それぞれ別の種類の <code>Node</code> として表される。</p>
 <p>主に見るフィールドは次の通り。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -335,13 +373,11 @@ primary_expr ::= INT_LITERAL
 </tbody>
 </table>
 </div>
+</div>
 <p>ノードの種類は、<code>ast_def.py</code> で定義されている定数で判定する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 22%" />
-<col style="width: 77%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>S式</th>
@@ -380,10 +416,16 @@ primary_expr ::= INT_LITERAL
 </tbody>
 </table>
 </div>
+</div>
 <p>たとえば、次のS式を考える。</p>
-<div class="sourceCode" id="cb7" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(add (num <span class="dv">1</span>) (mul (num <span class="dv">2</span>) (num <span class="dv">3</span>)))</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
+<div class="sourceCode" id="cb6" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(add (num <span class="dv">1</span>) (mul (num <span class="dv">2</span>) (num <span class="dv">3</span>)))</span></code></pre></div>
+</div>
+</div>
 <p>これは <code>Node</code> では次のような関係になっている。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -415,12 +457,14 @@ primary_expr ::= INT_LITERAL
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="実装方針">実装方針</h2>
 <p><code>eval_ast(node)</code> は、<code>node.kind</code> を見て処理を分ける。
 <code>node.kind</code> は文字列（<code>'Num'</code>, <code>'Add'</code>, …）であり、<code>ast_def.py</code> で定数 <code>ND_NUM</code>, <code>ND_ADD</code> 等も定義されている。
 スケルトンでは <code>eval_ast</code> が TODO になっているため、以下の各ケースを実装する。</p>
 <p>方針は次の通り。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -460,6 +504,7 @@ primary_expr ::= INT_LITERAL
 </tbody>
 </table>
 </div>
+</div>
 <p>重要なのは、子ノードもまた <code>Node</code> であるという点である。
 そのため、子ノードの値を求めるときも同じ <code>eval_ast()</code> を使える。</p>
 <p>このように、自分自身を使って木をたどる関数を再帰関数という。</p>
@@ -486,7 +531,8 @@ primary_expr ::= INT_LITERAL
 <h2 id="tests">tests/</h2>
 <p>上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
 「通る目安」は実装手順の番号である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -536,13 +582,26 @@ primary_expr ::= INT_LITERAL
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="テスト">テスト</h2>
-<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/01_interpreter/check.py</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/01_interpreter/check.py</span></code></pre></div>
+</div>
+</div>
 <p><code>tests/*.c</code> の <code>main</code> 関数内の <code>return</code> 式を評価し、対応する <code>.ans</code> と比較する。</p>
 <p>個別に実行する場合は、次のようにする。</p>
-<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/01_interpreter/mycc.py sessions/01_interpreter/tests/add_mul.c</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/01_interpreter/mycc.py sessions/01_interpreter/tests/add_mul.c</span></code></pre></div>
+</div>
+</div>
 <p>成功すると、次のように表示される。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>評価結果: 7</code></pre>
+</div>
+</div>
 <h2 id="注意">注意</h2>
 <p>この回のテストでは、割り算・剰余の右辺は 0 にならない。</p>
 <p>また、この回では負数を含む割り算・剰余は扱わない。
@@ -562,7 +621,7 @@ Python の <code>//</code> や <code>%</code> は、負数を含む場合に C �
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

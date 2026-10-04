@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>C 移植・セルフホスト — Python 版を C で書き直す — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,17 +92,20 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">C 移植・セルフホスト — Python 版を C で書き直す</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#このトピックのゴール" id="toc-このトピックのゴール">このトピックのゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#基本方針-アルゴリズムを再発明しない" id="toc-基本方針-アルゴリズムを再発明しない">基本方針: アルゴリズムを再発明しない</a></li>
-      <li><a href="#大まかな進め方" id="toc-大まかな進め方">大まかな進め方</a></li>
-      <li><a href="#c-実装の規約" id="toc-c-実装の規約">C 実装の規約</a></li>
-      <li><a href="#セルフホストの検証" id="toc-セルフホストの検証">セルフホストの検証</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#このトピックのゴール" id="toc-このトピックのゴール">このトピックのゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#基本方針-アルゴリズムを再発明しない" id="toc-基本方針-アルゴリズムを再発明しない">基本方針: アルゴリズムを再発明しない</a></li>
+<li><a href="#大まかな進め方" id="toc-大まかな進め方">大まかな進め方</a></li>
+<li><a href="#c-実装の規約" id="toc-c-実装の規約">C 実装の規約</a></li>
+<li><a href="#セルフホストの検証" id="toc-セルフホストの検証">セルフホストの検証</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <h2 id="このトピックのゴール">このトピックのゴール</h2>
 <p><strong>Python 版コンパイラを C 言語で丸ごと書き直し、最終的に自分自身をコンパイルできる状態
@@ -108,12 +114,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 「これが通れば完了」という単一の判定は無く、
 自分のペースで進められるところまで進める自主課題として扱う。</p>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -152,6 +155,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>難易度は発展課題の中で最も高く、最も範囲が広い。
 この資料は<strong>手順の詳細やコード例ではなく、大まかな方針</strong>だけを示す。
 実装そのものは、コマ1〜15 で作った Python 版と、その中で読んできた
@@ -159,7 +163,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <h2 id="基本方針-アルゴリズムを再発明しない">基本方針: アルゴリズムを再発明しない</h2>
 <p>移植は「もう一度コンパイラを設計する」ことではなく、
 <strong>すでに動いている Python 版のデータ構造を C に写す</strong>作業である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -191,6 +196,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>コンパイラの論理（どの順で何をたどるか）は Python 版で完成させたものをそのまま流用する。
 ここで新しいアルゴリズムを考え出そうとすると、範囲が発散して終わらなくなる。</p>
 <h2 id="大まかな進め方">大まかな進め方</h2>
@@ -213,12 +219,9 @@ Stage 0（gcc で自分の C 版をビルド）→ Stage 1（Stage 0 ででき�
 一気に全部を移植しようとせず、Python 版のコマ順（コマ2〜15 の積み上げ）をそのまま
 移植の順番として使える。</p>
 <h2 id="c-実装の規約">C 実装の規約</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -249,6 +252,7 @@ Stage 0（gcc で自分の C 版をビルド）→ Stage 1（Stage 0 ででき�
 </tbody>
 </table>
 </div>
+</div>
 <p><strong>命名規約について</strong>: 本仕様は予約語を12語だけに絞っているため（<code>language_spec.md</code> の例外 E2）、
 C の他のキーワード（<code>typedef</code> や <code>switch</code> など）を識別子として使うことができる。
 しかし Stage 0 は gcc でビルドするので、その名前は通常の C コンパイラでもビルドできる
@@ -259,6 +263,8 @@ C の他のキーワード（<code>typedef</code> や <code>switch</code> など
 <p>このコンパイラは <code>-o</code> のような出力先オプションを持たず、
 <strong>ソース1本を受け取ってアセンブリを標準出力へ出す</strong>（<code>test_runner.py</code> が期待する駆動と同じ）。
 Stage 1 は RV64 の実行可能ファイルなので、ホスト環境では直接実行できず <code>qemu-riscv64</code> を経由する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Stage 0: gcc で自分の C 版をビルドする（ルートの .c を1本渡す）</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">gcc</span> <span class="at">-o</span> mycc_stage0 src/mycc.c</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -269,10 +275,16 @@ Stage 1 は RV64 の実行可能ファイルなので、ホスト環境では直
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 不動点の確認: Stage 1 にも同じソースをコンパイルさせ、Stage 0 の出力と突き合わせる</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./mycc_stage1 src/mycc.c <span class="op">&gt;</span> stage2.s</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cmp</span> stage1.s stage2.s <span class="kw">&amp;&amp;</span> <span class="bu">echo</span> <span class="st">&quot;fixpoint OK&quot;</span></span></code></pre></div>
+</div>
+</div>
 <p><code>test_runner.py</code> に Stage 1 を渡すときは、<code>qemu-riscv64 ./mycc_stage1 "$@"</code> を実行するだけの
 短いシェルスクリプトを用意し、それを <code>--compiler</code> に指定する
 （<code>test_runner.py</code> はコンパイラを直接実行するため、RV64 バイナリをそのままは渡せない）。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> ./run_stage1.sh <span class="at">--tests</span> final/tests</span></code></pre></div>
+</div>
+</div>
 <p><strong>なぜ段階を踏むか</strong>: セルフホストは「動いた気がする」状態になりやすい。
 どの段階の成果物でテストを通したのかを自分で明示的に確認する必要がある。</p>
 <p><strong>本質的な判定は不動点比較である</strong>: 「Stage 1 が生成できた」「テストが通った」だけでは、
@@ -299,7 +311,7 @@ Stage 1 は RV64 の実行可能ファイルなので、ホスト環境では直
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>テストとデバッグ — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,41 +92,53 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">テストとデバッグ</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#基本" id="toc-基本">基本</a></li>
-      <li><a href="#コンパイラとテストを個別に指定する" id="toc-コンパイラとテストを個別に指定する">コンパイラとテストを個別に指定する</a></li>
-      <li><a href="#テストケースの形式" id="toc-テストケースの形式">テストケースの形式</a></li>
-      <li><a href="#finaltestsfixed17" id="toc-finaltestsfixed17"><code>final/tests</code>（fixed17）</a></li>
-      <li><a href="#手で1本だけ確認する" id="toc-手で1本だけ確認する">手で1本だけ確認する</a></li>
-      <li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
-      <li><a href="#発展課題のテスト" id="toc-発展課題のテスト">発展課題のテスト</a></li>
-      <li><a href="#デバッグの基本手順" id="toc-デバッグの基本手順">デバッグの基本手順</a></li>
-      <li><a href="#症状から当たりをつける" id="toc-症状から当たりをつける">症状から当たりをつける</a></li>
-      <li><a href="#アセンブリを読むときの順序" id="toc-アセンブリを読むときの順序">アセンブリを読むときの順序</a></li>
-      <li><a href="#gdb-でステップ実行する" id="toc-gdb-でステップ実行する">gdb でステップ実行する</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#基本" id="toc-基本">基本</a></li>
+<li><a href="#コンパイラとテストを個別に指定する" id="toc-コンパイラとテストを個別に指定する">コンパイラとテストを個別に指定する</a></li>
+<li><a href="#テストケースの形式" id="toc-テストケースの形式">テストケースの形式</a></li>
+<li><a href="#finaltestsfixed17" id="toc-finaltestsfixed17"><code>final/tests</code>（fixed17）</a></li>
+<li><a href="#最終コンパイラで過去回の全テストを確認する" id="toc-最終コンパイラで過去回の全テストを確認する">最終コンパイラで過去回の全テストを確認する</a></li>
+<li><a href="#手で1本だけ確認する" id="toc-手で1本だけ確認する">手で1本だけ確認する</a></li>
+<li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
+<li><a href="#発展課題のテスト" id="toc-発展課題のテスト">発展課題のテスト</a></li>
+<li><a href="#デバッグの基本手順" id="toc-デバッグの基本手順">デバッグの基本手順</a></li>
+<li><a href="#症状から当たりをつける" id="toc-症状から当たりをつける">症状から当たりをつける</a></li>
+<li><a href="#アセンブリを読むときの順序" id="toc-アセンブリを読むときの順序">アセンブリを読むときの順序</a></li>
+<li><a href="#gdb-でステップ実行する" id="toc-gdb-でステップ実行する">gdb でステップ実行する</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <p><code>scaffold/test_runner.py</code> の使い方とテストケースの形式、
 そして落ちたときに原因を絞り込む手順。</p>
 <hr />
 <h2 id="基本">基本</h2>
 <p><code>workbook/</code> から実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 各回のテスト（その回の mycc.py と tests/ を使う）</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/02_arithmetic_codegen</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/05_loops</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 最終統合版（引数を省略すると final/mycc.py + final/tests/）</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py</span></code></pre></div>
+</div>
+</div>
 <p>出力例:</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>[PASS] sessions/05_loops/tests/for_count.c
 [FAIL: exit code expected=55 got=0] sessions/05_loops/tests/while_sum.c
 
 =============================
   PASS: 7  FAIL: 1  SKIP: 0
 =============================</code></pre>
+</div>
+</div>
 <p><code>SKIP</code> になるのは、コマ14 の <code>math_util.c</code> / <code>stat_lib.c</code> のように
 <strong>単体では実行せず他のテストと一緒にコンパイルする補助ソース</strong>だけである。
 補助ソースかどうかは、同じディレクトリのどれかの <code>.files</code> から参照されているかで判定する。</p>
@@ -133,23 +148,39 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <p>一方、発展課題の <code>check.py</code> が出す <code>SKIP</code> は<strong>未実装</strong>を意味する。
 そちらは SKIP が残っている間は完了条件を満たさず、終了コードも 0 にならない。</p>
 <h2 id="コンパイラとテストを個別に指定する">コンパイラとテストを個別に指定する</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> final/mycc.py <span class="at">--tests</span> final/tests</span></code></pre></div>
+</div>
+</div>
 <p>発展課題ではラッパー経由で走らせることが多い。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 最適化パスを差し込んだコンパイラで fixed17 を通す</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> advanced/optcc.py <span class="at">--tests</span> final/tests</span></code></pre></div>
+</div>
+</div>
 <h2 id="テストケースの形式">テストケースの形式</h2>
 <p>入力 C ファイルと期待結果ファイルの組で構成する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>foo.c       # 入力ソース
 foo.ans     # 期待する exit code
 foo.stdout  # 期待する標準出力（必要な場合のみ）
 foo.stderr  # 期待する標準エラー出力（必要な場合のみ）
 foo.files   # 一緒にコンパイルする追加ソース（複数ファイル構成の場合のみ）</code></pre>
+</div>
+</div>
 <p>例:</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>sessions/05_loops/tests/while_sum.c
 sessions/05_loops/tests/while_sum.ans
 sessions/10_strings_data_section/tests/printf_hello.stdout
 final/tests/f01_arith.c
 final/tests/f01_arith.ans</code></pre>
+</div>
+</div>
 <p><code>.ans</code> は終了コードで結果を確認するため、値は 0〜255 に収める。
 テストケース側で未定義動作（UB）に踏み込まないようにする。</p>
 <p><code>.stdout</code> / <code>.stderr</code> は、置いたときだけ突き合わせる。
@@ -158,37 +189,75 @@ final/tests/f01_arith.ans</code></pre>
 <h3 id="files複数ファイルのテスト"><code>.files</code>（複数ファイルのテスト）</h3>
 <p><code>foo.files</code> があると、<code>foo.c</code> に加えてそこに列挙したファイルもコンパイル対象に含める。
 1行に1ファイル名で、パスは <code>foo.c</code> と同じディレクトリからの相対で書く。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>sessions/14_preprocess_multifile/tests/multifile_global.files:
 stat_lib.c</code></pre>
+</div>
+</div>
 <p><code>stat_lib.c</code> 自身には対応する <code>.ans</code> が無い。<strong>単体では実行せず他のテストと
 一緒にコンパイルされる補助ソース</strong>だからである。テストランナーはこの <code>.files</code> の
 記述から <code>stat_lib.c</code> を補助ソースと判定し、直接拾ったときは <code>SKIP</code> にする
 （前述のとおり正常な挙動）。逆に言えば、どの <code>.files</code> からも参照されていない
 <code>.c</code> に <code>.ans</code> を置き忘れると <code>FAIL</code> になる。</p>
 <h2 id="finaltestsfixed17"><code>final/tests</code>（fixed17）</h2>
-<p>コマ1〜15 の機能をまとめて確認する17本のテスト。
-<strong>標準トラック完成の目安</strong>であり、発展課題では「意味を壊していないこと」の安全網として使う。</p>
-<p>発展課題に取り組むときは、変更を入れたあと毎回これを通すこと。</p>
+<p>主要な機能を組み合わせて確認する17本の総合テスト。
+論理演算・<code>char</code>・複数ファイル・ストリーム操作は含まれないため、
+<strong>標準トラックの実装完成には fixed17 と、最終コンパイラでのコマ2〜14の全テスト通過が必要</strong>である。</p>
+<p>発展課題でも、変更を入れたあと毎回 fixed17 を通し、変更が関わる機能の過去回テストも確認する。</p>
+<h2 id="最終コンパイラで過去回の全テストを確認する">最終コンパイラで過去回の全テストを確認する</h2>
+<p><code>workbook/</code> から、次を実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> tests <span class="kw">in</span> sessions/0<span class="pp">[</span><span class="ss">2</span><span class="pp">-</span><span class="ss">9</span><span class="pp">]</span>_<span class="pp">*</span>/tests sessions/1<span class="pp">[</span><span class="ss">0</span><span class="pp">-</span><span class="ss">4</span><span class="pp">]</span>_<span class="pp">*</span>/tests<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> final/mycc.py <span class="at">--tests</span> <span class="st">&quot;</span><span class="va">$tests</span><span class="st">&quot;</span> <span class="kw">||</span> <span class="bu">exit</span> 1</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+</div>
+</div>
+<p>すべての実行で <code>FAIL: 0</code> になればよい。コマ14の補助ソースの <code>SKIP</code> は正常である。
+ループは失敗した回で終了するので、修正後にもう一度全体を実行する。
+<code>sessions/NN_xxx</code> だけを渡すとその回のコンパイラが選ばれるため、
+統合後の回帰確認では <code>--compiler final/mycc.py</code> を省略しない。
+コマ1はインタープリター用の別のチェッカーを使うので、このループに含めない。</p>
+<p>総合テストと過去回のテストは、正しい入力の実行結果を確認する。
+不正な入力をすべて拒否できることの証明にはならない。
+診断の保証範囲は <a href="../../docs/language_spec/#diagnostics"><code>language_spec.md</code> の「標準トラックの診断範囲」</a>を参照。</p>
 <h2 id="手で1本だけ確認する">手で1本だけ確認する</h2>
 <p>テストランナーを使わず、生成アセンブリを目で見たいときの手順。</p>
-<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/02_arithmetic_codegen/mycc.py test.c <span class="op">&gt;</span> out.s</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> out.s <span class="at">-o</span> out</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
-<p>パイプでつなぐこともできる。</p>
-<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> final/mycc.py test.c <span class="dt">\</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/02_arithmetic_codegen/mycc.py test.c <span class="op">&gt;</span> out.s</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> out.s <span class="at">-o</span> out</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
+<p>パイプでつなぐこともできる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> final/mycc.py test.c <span class="dt">\</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
 <p>落ちたときの調べ方は、後半の<a href="#症状から当たりをつける">「症状から当たりをつける」</a>を参照。</p>
 <h2 id="ast-を確認する">AST を確認する</h2>
 <p>コンパイル結果ではなく、Parser が返した AST を見たいとき。</p>
-<div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/01_interpreter/tests/add_mul.c</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c <span class="at">--tokens</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c <span class="at">--format</span> tree</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c <span class="at">--format</span> dot <span class="op">&gt;</span> ast.dot</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/01_interpreter/tests/add_mul.c</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c <span class="at">--tokens</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c <span class="at">--format</span> tree</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/02_arithmetic_codegen/tests/add.c <span class="at">--format</span> dot <span class="op">&gt;</span> ast.dot</span></code></pre></div>
+</div>
+</div>
 <h2 id="発展課題のテスト">発展課題のテスト</h2>
 <p>各トピックのディレクトリから実行する。</p>
-<div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># ステップごとの確認</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 存在し、README で指定されている場合</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># ステップごとの確認</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 存在し、README で指定されている場合</span></span></code></pre></div>
+</div>
+</div>
 <p>トピックによって専用のコマンドがあるので、対象の <code>README.md</code> を確認すること。</p>
 <hr />
 <h2 id="デバッグの基本手順">デバッグの基本手順</h2>
@@ -200,17 +269,17 @@ stat_lib.c</code></pre>
 <li>関数呼び出しで壊れる場合は <code>ra</code>、<code>s0</code>、スタックアラインメントを見る</li>
 <li>ポインタで壊れる場合は <code>codegen()</code> と <code>codegen_lval()</code> の区別を見る</li>
 </ol>
-<div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/02_arithmetic_codegen/mycc.py sessions/02_arithmetic_codegen/tests/add.c <span class="op">&gt;</span> out.s</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> out.s <span class="at">-o</span> out</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/02_arithmetic_codegen/mycc.py sessions/02_arithmetic_codegen/tests/add.c <span class="op">&gt;</span> out.s</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> out.s <span class="at">-o</span> out</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out<span class="kw">;</span> <span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="症状から当たりをつける">症状から当たりをつける</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 43%" />
-<col style="width: 36%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>症状</th>
@@ -287,15 +356,16 @@ stat_lib.c</code></pre>
 <tr class="even">
 <td>AST の構造が分からない（優先順位・結合の向き）</td>
 <td>目視では判断しづらい</td>
-<td><a href="../../tools/app.html?mode=build">AST ビジュアライザ</a> にソースを貼って構文木と S 式を確認する</td>
+<td><a href="../../tools/app.html?view=ast">学習ツールの構造表示</a> にソースを貼って構文木と S 式を確認する</td>
 </tr>
 <tr class="odd">
 <td>生成されたアセンブリの動きを目で追いたい</td>
 <td>静的に読むだけでは1命令ごとのレジスタ・スタックの変化が分からない</td>
-<td><a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> にアセンブリを貼って1命令ずつ実行する</td>
+<td><a href="../../tools/app.html?view=run">学習ツールの実行表示</a> にアセンブリを貼って1命令ずつ実行する</td>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <h2 id="アセンブリを読むときの順序">アセンブリを読むときの順序</h2>
 <ol type="1">
@@ -306,15 +376,19 @@ stat_lib.c</code></pre>
 </ol>
 <h2 id="gdb-でステップ実行する">gdb でステップ実行する</h2>
 <p>終了コードだけでは原因が分からないときに使う。</p>
-<div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># qemu をデバッグサーバとして起動</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> <span class="at">-g</span> 1234 ./out</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 別のターミナルで gdb を繋ぐ</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdb-multiarch</span> ./out</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="fu">gdb</span><span class="kw">)</span> <span class="ex">target</span> remote :1234</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="fu">gdb</span><span class="kw">)</span> <span class="cf">break</span> <span class="ex">main</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="fu">gdb</span><span class="kw">)</span> <span class="ex">stepi</span></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="fu">gdb</span><span class="kw">)</span> <span class="ex">info</span> registers a0 sp s0 ra</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb14" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># qemu をデバッグサーバとして起動</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> <span class="at">-g</span> 1234 ./out</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 別のターミナルで gdb を繋ぐ</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdb-multiarch</span> ./out</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="fu">gdb</span><span class="kw">)</span> <span class="ex">target</span> remote :1234</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="fu">gdb</span><span class="kw">)</span> <span class="cf">break</span> <span class="ex">main</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="fu">gdb</span><span class="kw">)</span> <span class="ex">stepi</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="fu">gdb</span><span class="kw">)</span> <span class="ex">info</span> registers a0 sp s0 ra</span></code></pre></div>
+</div>
+</div>
 <p><code>Illegal instruction</code> の発生箇所を特定するときは、止まった時点の <code>sp</code> が
 16 の倍数になっているかを確認する。</p>
 
@@ -329,7 +403,7 @@ stat_lib.c</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

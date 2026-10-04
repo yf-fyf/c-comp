@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コマ0: 演習環境構築 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,22 +92,25 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">コマ0: 演習環境構築</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#ゴール" id="toc-ゴール">ゴール</a></li>
-      <li><a href="#必要なもの" id="toc-必要なもの">必要なもの</a></li>
-      <li><a href="#windows-の場合-wsl-上に-ubuntu-を入れる" id="toc-windows-の場合-wsl-上に-ubuntu-を入れる">1. Windows の場合: WSL 上に Ubuntu を入れる</a></li>
-      <li><a href="#演習環境を用意する" id="toc-演習環境を用意する">2. 演習環境を用意する</a></li>
-      <li><a href="#手書きアセンブリを動かす" id="toc-手書きアセンブリを動かす">3. 手書きアセンブリを動かす</a></li>
-      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
-      <li><a href="#tests" id="toc-tests">tests/</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#注意" id="toc-注意">注意</a></li>
-      <li><a href="#おまけ-opencode" id="toc-おまけ-opencode">おまけ: OpenCode</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#ゴール" id="toc-ゴール">ゴール</a></li>
+<li><a href="#必要なもの" id="toc-必要なもの">必要なもの</a></li>
+<li><a href="#windows-の場合-wsl-上に-ubuntu-を入れる" id="toc-windows-の場合-wsl-上に-ubuntu-を入れる">1. Windows の場合: WSL 上に Ubuntu を入れる</a></li>
+<li><a href="#演習環境を用意する" id="toc-演習環境を用意する">2. 演習環境を用意する</a></li>
+<li><a href="#手書きアセンブリを動かす" id="toc-手書きアセンブリを動かす">3. 手書きアセンブリを動かす</a></li>
+<li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+<li><a href="#tests" id="toc-tests">tests/</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#注意" id="toc-注意">注意</a></li>
+<li><a href="#おまけ-opencode" id="toc-おまけ-opencode">おまけ: OpenCode</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
 <p>番号のある通常回には含めない、授業開始前の準備回である。
@@ -133,54 +139,116 @@ Docker 環境・ネイティブ実行のどちらでも必要になる基準で�
 <ol type="1">
 <li><p>スタートメニューから <strong>PowerShell を「管理者として実行」</strong> で開く。</p></li>
 <li><p>Ubuntu 22.04 をインストールする。</p>
-<div class="sourceCode" id="cb1" data-lang="powershell"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>wsl <span class="op">--</span>install <span class="op">-</span>d Ubuntu<span class="op">-</span>22<span class="op">.</span><span class="fu">04</span></span></code></pre></div></li>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb1" data-lang="powershell"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>wsl <span class="op">--</span>install <span class="op">-</span>d Ubuntu<span class="op">-</span>22<span class="op">.</span><span class="fu">04</span></span></code></pre></div>
+</div>
+</div></li>
 <li><p>指示に従って PC を再起動する。</p></li>
 <li><p>再起動後に自動で開く Ubuntu のウィンドウで、<strong>ユーザー名とパスワード</strong>を設定する。
 このパスワードは Windows のものとは別で、<code>sudo</code> を使うときに聞かれる。</p></li>
 <li><p>パッケージを最新にする。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt upgrade <span class="at">-y</span></span></code></pre></div></li>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt upgrade <span class="at">-y</span></span></code></pre></div>
+</div>
+</div></li>
 </ol>
 <p>Ubuntu 22.04 を指定するのは、標準の <code>python3</code> が 3.10 で上の基準を満たすためである。</p>
 <h3 id="入ったことの確認">入ったことの確認</h3>
 <p>Ubuntu のウィンドウで次を実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">lsb_release</span> <span class="at">-d</span>      <span class="co"># → Description: Ubuntu 22.04...</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">--version</span>   <span class="co"># → Python 3.10 以降</span></span></code></pre></div>
+</div>
+</div>
 <p>以降の作業はすべて、この Ubuntu の中で行う。
 Windows 側のファイルではなく、Ubuntu のホームディレクトリに演習用のファイルを置くこと。</p>
 <h2 id="演習環境を用意する">2. 演習環境を用意する</h2>
+<h3 id="配布物と作業場所を確認する">配布物と作業場所を確認する</h3>
+<p>ここからは、入手・展開済みの配布物 <code>workbook/</code> を使う。
+まだ配布物が手元に無い場合は、教員から案内された入手先を確認する。
+ターミナルで配布物の親ディレクトリへ移動し、次を実行する
+（WindowsではWSLのUbuntu、macOS・Linuxではホストのターミナルを使う）。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> workbook</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> sessions/00_setup/hello.s docker/rv64/run.sh</span></code></pre></div>
+</div>
+</div>
+<p>2つのファイルが表示されれば作業場所は正しい。
+以降のコマンドは、この <code>workbook/</code> から実行する。
+Dockerコンテナ内では同じディレクトリが <code>/work</code> として見える。</p>
 <p><strong>推奨は Docker</strong> である。RV64 クロスコンパイラと qemu が入った環境が用意してある
 （Ubuntu 22.04 ベースなので、コンテナ内の <code>python3</code> は 3.10 を満たす）。</p>
 <h3 id="docker-自体を入れる">Docker 自体を入れる</h3>
-<p>Docker がまだ無い場合、Ubuntu（WSL の中でも同じ）で次を実行する。</p>
-<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fsSL</span> https://get.docker.com <span class="kw">|</span> <span class="fu">sh</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> usermod <span class="at">-aG</span> docker <span class="va">$USER</span></span></code></pre></div>
+<p>macOSでは、<a href="https://docs.docker.com/desktop/setup/install/mac-install/">Docker公式のインストール手順</a>
+から、Apple silicon／Intelのどちらか自分のMacに合うDocker Desktopを入れる。
+<code>Docker.dmg</code>を開いてDockerをApplicationsへ移し、ApplicationsからDockerを起動する。
+初回の案内に従って起動を完了したら、ホストのターミナルで <code>docker ps</code> を実行する。
+コンテナ一覧が表示されれば準備完了である（何も起動していなければ見出しだけでよい）。</p>
+<p>Ubuntu（WSL の中でも同じ）では、Docker がまだ無い場合に次を実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install <span class="at">-y</span> curl</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fsSL</span> https://get.docker.com <span class="kw">|</span> <span class="fu">sh</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> usermod <span class="at">-aG</span> docker <span class="va">$USER</span></span></code></pre></div>
+</div>
+</div>
 <p><code>usermod</code> の後は一度ログアウトして入り直す（WSL なら Ubuntu のウィンドウを閉じて開き直す）。
 <code>docker ps</code> が権限エラーにならずに実行できれば準備完了である。
 以下は <code>workbook/</code> から実行する。</p>
-<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># コンテナ起動（初回はイメージをビルド）</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> docker/rv64/run.sh</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 1コマンドだけ実行する</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> docker/rv64/run.sh python3 sessions/00_setup/check.py</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># コンテナ起動（初回はイメージをビルド）</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> docker/rv64/run.sh</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 完成済みの命令例で実行環境だけを確認する（1回のコンテナ起動でコンパイルと実行）</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> docker/rv64/run.sh sh <span class="at">-c</span> <span class="st">&#39;riscv64-linux-gnu-gcc -static sessions/00_setup/tests/sub.s -o /tmp/rv64_smoke &amp;&amp; qemu-riscv64 /tmp/rv64_smoke&#39;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span>   <span class="co"># → 42</span></span></code></pre></div>
+</div>
+</div>
 <p>後の回でテストをまとめて走らせるときも、同じ形で使う。</p>
-<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> docker/rv64/run.sh python3 scaffold/test_runner.py</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> docker/rv64/run.sh python3 scaffold/test_runner.py</span></code></pre></div>
+</div>
+</div>
 <p>ネイティブ実行も許可する。その場合は Python 3.10 以降に加えて
 <code>riscv64-linux-gnu-gcc</code> と <code>qemu-riscv64</code> がホストに必要になる。
 Ubuntu なら次で入る。</p>
-<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install gcc-riscv64-linux-gnu qemu-user python3</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install gcc-riscv64-linux-gnu qemu-user python3</span></code></pre></div>
+</div>
+</div>
 <p>イメージ名の変更やよくあるエラーは <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/docker/rv64/README.md"><code>docker/rv64/README.md</code></a> を参照。</p>
 <h2 id="手書きアセンブリを動かす">3. 手書きアセンブリを動かす</h2>
 <h3 id="step-1-hello.s-を書く">Step 1: hello.s を書く</h3>
-<p>配布される <code>hello.s</code> は終了コード <code>0</code> を返す未完成starterである。<code>0</code> を <code>42</code> に変更して、以下の内容にする。</p>
-<div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.global</span> main</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">main:</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    addi    a0<span class="op">,</span> zero<span class="op">,</span> <span class="dv">42</span>    <span class="co"># 戻り値 = 42</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">ret</span></span></code></pre></div>
+<p>配布される <code>sessions/00_setup/hello.s</code> は終了コード <code>0</code> を返す未完成starterである。
+このファイルの <code>0</code> を <code>42</code> に変更して、以下の内容にする。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb9" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">.global</span> main</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">main:</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    addi    a0<span class="op">,</span> zero<span class="op">,</span> <span class="dv">42</span>    <span class="co"># 戻り値 = 42</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">ret</span></span></code></pre></div>
+</div>
+</div>
 <h3 id="step-2-コンパイルして実行">Step 2: コンパイルして実行</h3>
-<div class="sourceCode" id="cb9" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-static</span> hello.s <span class="at">-o</span> hello</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./hello</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span>   <span class="co"># → 42</span></span></code></pre></div>
+<p>Dockerを使っている場合は、ホストの <code>workbook/</code> から
+<code>bash docker/rv64/run.sh</code> でコンテナのシェルを開く。
+次のコマンドはコンテナ内の <code>/work</code>、またはネイティブ環境の <code>workbook/</code> から実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-static</span> sessions/00_setup/hello.s <span class="at">-o</span> hello</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./hello</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span>   <span class="co"># → 42</span></span></code></pre></div>
+</div>
+</div>
 <p><code>42</code> が表示されれば成功。</p>
 <figure>
 <img src="../../figures/00_toolchain.svg" alt="hello.s が実行されて終了コードになるまでの流れ" />
@@ -189,21 +257,30 @@ Ubuntu なら次で入る。</p>
 <p>この演習で作るのは、図の hello.s にあたる「アセンブリを出力する部分」＝コンパイラ本体である。
 自作コンパイラ <code>mycc.py</code> がこの部分を出力するようになるのは、コード生成の回からである。</p>
 <h3 id="step-3-確認スクリプト">Step 3: 確認スクリプト</h3>
-<div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/00_setup/check.py</span></code></pre></div>
+<p>Step 2と同じシェルで実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/00_setup/check.py</span></code></pre></div>
+</div>
+</div>
+<p><code>[PASS]</code> が3件表示され、<code>echo $?</code> が <code>0</code> になればコマ0は完了である。
+編集前のstarterでは <code>hello.s</code> だけが <code>[FAIL]</code> となり、終了コードは <code>1</code> になる。
+完成済みの追加例2件が通っていれば、これを環境故障と取り違えないこと。</p>
 <h3 id="step-4-もっと複雑な計算">Step 4: もっと複雑な計算</h3>
 <p><code>tests/</code> には完成済みの命令例が置いてある（一覧は後の「tests/」節を参照）。
 編集対象ではないので、<code>addi</code> / <code>li</code> / <code>add</code> などの基本命令の組み合わせを読んで確認する。</p>
 <h2 id="編集するファイル">編集するファイル</h2>
 <ul>
-<li><code>hello.s</code></li>
+<li><code>sessions/00_setup/hello.s</code>（<code>workbook/</code> からの相対パス）</li>
 </ul>
 <p>最初に <code>addi a0, zero, 0</code> を終了コード <code>42</code> を返す命令へ変更する。</p>
 <h2 id="tests">tests/</h2>
-<p>編集対象はトップレベルの <code>hello.s</code> であり、<code>check.py</code> はこれを直接検査する。
+<p>編集対象は <code>sessions/00_setup/hello.s</code> であり、<code>check.py</code> はこれを直接検査する。
 <code>tests/hello.s</code> は <code>hello.s</code> の完成形の参照であり、<code>check.py</code> の検査対象には含まれない
 （同名だが別ファイルである点に注意）。</p>
 <p><code>tests/</code> 以下で <code>check.py</code> が実際に検査するのは次の2件で、どちらも完成済みの命令例であり編集対象ではない。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -226,15 +303,25 @@ Ubuntu なら次で入る。</p>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="テスト">テスト</h2>
-<div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/00_setup/check.py</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/00_setup/check.py</span></code></pre></div>
+</div>
+</div>
 <p>このコマンドは、編集した <code>hello.s</code> と完成済みの追加例2件をまとめて確認する。</p>
 <p>個別に動かす場合は、次のようにする。</p>
-<div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-static</span> sessions/00_setup/hello.s <span class="at">-o</span> out</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-static</span> sessions/00_setup/hello.s <span class="at">-o</span> out</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
 <p>終了コードが <code>42</code> になれば成功である。</p>
+<p>全3件の確認が済んだら、<a href="../../sessions/01_interpreter/">コマ1: ASTの仕組みとインタープリーター</a>へ進む。</p>
 <h2 id="注意">注意</h2>
 <p>終了コードは 0〜255 の範囲しか返せない。
 <code>echo $?</code> の値が合わないときは、<code>a0</code> に値を入れる命令が <code>ret</code> より前にあるか、
@@ -258,7 +345,7 @@ Ubuntu なら次で入る。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

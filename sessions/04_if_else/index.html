@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コマ4: if/else + 比較演算 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,35 +92,40 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">コマ4: if/else + 比較演算</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
-      <li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
-      <li><a href="#比較演算" id="toc-比較演算">比較演算</a></li>
-      <li><a href="#比較演算のコード生成" id="toc-比較演算のコード生成">比較演算のコード生成</a></li>
-      <li><a href="#条件分岐の考え方" id="toc-条件分岐の考え方">条件分岐の考え方</a></li>
-      <li><a href="#ラベル生成" id="toc-ラベル生成">ラベル生成</a></li>
-      <li><a href="#if-の生成パターン" id="toc-if-の生成パターン">if の生成パターン</a></li>
-      <li><a href="#ifelse-の生成パターン" id="toc-ifelse-の生成パターン">if/else の生成パターン</a></li>
-      <li><a href="#else-if-の扱い" id="toc-else-if-の扱い">else if の扱い</a></li>
-      <li><a href="#return-と共通エピローグ" id="toc-return-と共通エピローグ">return と共通エピローグ</a></li>
-      <li><a href="#三項演算子-値を持つ分岐式と文の違い" id="toc-三項演算子-値を持つ分岐式と文の違い">三項演算子: 値を持つ分岐（式と文の違い）</a></li>
-      <li><a href="#gen_stmt-に追加する処理" id="toc-gen_stmt-に追加する処理">gen_stmt に追加する処理</a></li>
-      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
-      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
-      <li><a href="#tests" id="toc-tests">tests/</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#注意" id="toc-注意">注意</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation has-grammar">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+<li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
+<li><a href="#比較演算" id="toc-比較演算">比較演算</a></li>
+<li><a href="#比較演算のコード生成" id="toc-比較演算のコード生成">比較演算のコード生成</a></li>
+<li><a href="#条件分岐の考え方" id="toc-条件分岐の考え方">条件分岐の考え方</a></li>
+<li><a href="#ラベル生成" id="toc-ラベル生成">ラベル生成</a></li>
+<li><a href="#if-の生成パターン" id="toc-if-の生成パターン">if の生成パターン</a></li>
+<li><a href="#ifelse-の生成パターン" id="toc-ifelse-の生成パターン">if/else の生成パターン</a></li>
+<li><a href="#else-if-の扱い" id="toc-else-if-の扱い">else if の扱い</a></li>
+<li><a href="#return-と共通エピローグ" id="toc-return-と共通エピローグ">return と共通エピローグ</a></li>
+<li><a href="#三項演算子-値を持つ分岐式と文の違い" id="toc-三項演算子-値を持つ分岐式と文の違い">三項演算子: 値を持つ分岐（式と文の違い）</a></li>
+<li><a href="#gen_stmt-に追加する処理" id="toc-gen_stmt-に追加する処理">gen_stmt に追加する処理</a></li>
+<li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+<li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+<li><a href="#tests" id="toc-tests">tests/</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#注意" id="toc-注意">注意</a></li>
+</ul></nav>
+      </details>
+      <a class="toc-grammar" href="#この回までの言語仕様ebnf">文法を参照</a>
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
 <p>条件分岐と比較演算、そして三項演算子を実装する。</p>
 <p>コマ3までは、関数内の文は常に先頭から順に実行された。
 この回では、条件によって実行する文を変える <code>if</code> / <code>else</code> を扱う。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
@@ -129,11 +137,14 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> b <span class="op">-</span> a<span class="op">;</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>目標は、条件式の結果に応じて、then側かelse側のどちらかの文だけを実行できるようにすることである。</p>
 </section>
 <h2 id="この回で扱う範囲">この回で扱う範囲</h2>
 <p>対象にするプログラムは、<code>main</code> 関数内に以下の要素を含むものに限定する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -181,44 +192,51 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
-<p>while、for、関数呼び出し、ポインタはまだ扱わない。</p>
-<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+</div>
+<p>while、for、関数呼び出し、ポインタはまだ扱わない。
+コマ3までは末尾の <code>return</code> を1個だけ扱った。
+この回から、途中や <code>if</code> の枝に置いた <code>return</code> でも、共通エピローグへ移って関数を終了できる。</p>
+<section id="この回までの言語仕様ebnf" class="grammar-section" data-grammar-heading="この回までの言語仕様ebnf">
+<h3>この回までの言語仕様（EBNF）</h3>
 <p>この回までに書けるプログラムの文法を、累積の形でまとめる。
 記法と最終形の全体像は
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
-<pre class="ebnf" data-lang="ebnf"><code>scalar_type ::= &#39;int&#39;            /* ポインタはコマ7、char はコマ8 */
-obj_type    ::= scalar_type
-
-program       ::= func_def        /* ユーザー定義関数はコマ6 */
-var_decl      ::= obj_type IDENT &#39;;&#39;
-
-func_def    ::= &#39;int&#39; &#39;main&#39; &#39;(&#39; &#39;)&#39; func_body   /* 一般の関数定義はコマ6 */
-func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
-
-stmt        ::= expr_stmt
-              | block
-              | if_stmt
-              | &#39;return&#39; expr &#39;;&#39;
-expr_stmt   ::= expr &#39;;&#39;         /* 空文 ; はコマ5 */
-block       ::= &#39;{&#39; { stmt } &#39;}&#39;
-if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
-
-expr        ::= assign_expr
-assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
-              | cond_expr
-cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
-binary_expr ::= unary_expr { bin_op unary_expr }
-bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
-              | &#39;+&#39; | &#39;-&#39;
-              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
-              | &#39;==&#39; | &#39;!=&#39;
-unary_expr  ::= primary_expr
-              | &#39;-&#39;  unary_expr
-primary_expr ::= INT_LITERAL
-               | IDENT
-               | &#39;(&#39; expr &#39;)&#39;</code></pre>
+<p class="grammar-legend"><span class="grammar-added">追加</span>は新しい規則・選択肢、<span class="grammar-changed">変更</span>は前回の形の置き換えです。ラベルのない行は既存です。</p>
+<details class="grammar-full" open><summary>この回までの文法全文（31行）</summary>
+<pre class="grammar-pre"><code class="grammar-code"><span id="grammar-line-72" class="grammar-line grammar-existing" data-label="">scalar_type ::= &#x27;int&#x27;            /* ポインタはコマ7、char はコマ8 */</span>
+<span id="grammar-line-73" class="grammar-line grammar-existing" data-label="">obj_type    ::= scalar_type</span>
+<span id="grammar-line-74" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-75" class="grammar-line grammar-existing" data-label="">program       ::= func_def        /* ユーザー定義関数はコマ6 */</span>
+<span id="grammar-line-76" class="grammar-line grammar-existing" data-label="">var_decl      ::= obj_type IDENT &#x27;;&#x27;</span>
+<span id="grammar-line-77" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-78" class="grammar-line grammar-existing" data-label="">func_def    ::= &#x27;int&#x27; &#x27;main&#x27; &#x27;(&#x27; &#x27;)&#x27; func_body   /* 一般の関数定義はコマ6 */</span>
+<span id="grammar-line-79" class="grammar-line grammar-changed" data-label="変更">func_body   ::= &#x27;{&#x27; { var_decl } { <mark class="grammar-token">stmt</mark> } &#x27;}&#x27;</span>
+<span id="grammar-line-80" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-81" class="grammar-line grammar-existing" data-label="">stmt        ::= expr_stmt</span>
+<span id="grammar-line-82" class="grammar-line grammar-added" data-label="追加">              | block</span>
+<span id="grammar-line-83" class="grammar-line grammar-added" data-label="追加">              | if_stmt</span>
+<span id="grammar-line-84" class="grammar-line grammar-existing" data-label="">              | &#x27;return&#x27; expr &#x27;;&#x27;</span>
+<span id="grammar-line-85" class="grammar-line grammar-existing" data-label="">expr_stmt   ::= expr &#x27;;&#x27;         /* 空文 ; はコマ5 */</span>
+<span id="grammar-line-86" class="grammar-line grammar-added" data-label="追加">block       ::= &#x27;{&#x27; { stmt } &#x27;}&#x27;</span>
+<span id="grammar-line-87" class="grammar-line grammar-added" data-label="追加">if_stmt     ::= &#x27;if&#x27; &#x27;(&#x27; expr &#x27;)&#x27; stmt [ &#x27;else&#x27; stmt ]</span>
+<span id="grammar-line-88" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-89" class="grammar-line grammar-existing" data-label="">expr        ::= assign_expr</span>
+<span id="grammar-line-90" class="grammar-line grammar-existing" data-label="">assign_expr ::= unary_expr &#x27;=&#x27; assign_expr   /* 右結合 */</span>
+<span id="grammar-line-91" class="grammar-line grammar-changed" data-label="変更">              | <mark class="grammar-token">cond_expr</mark></span>
+<span id="grammar-line-92" class="grammar-line grammar-added" data-label="追加">cond_expr   ::= binary_expr [ &#x27;?&#x27; expr &#x27;:&#x27; cond_expr ]   /* 右結合 */</span>
+<span id="grammar-line-93" class="grammar-line grammar-existing" data-label="">binary_expr ::= unary_expr { bin_op unary_expr }</span>
+<span id="grammar-line-94" class="grammar-line grammar-existing" data-label="">bin_op      ::= &#x27;*&#x27; | &#x27;/&#x27; | &#x27;%&#x27;  /* 論理 &amp;&amp; || はコマ13 */</span>
+<span id="grammar-line-95" class="grammar-line grammar-existing" data-label="">              | &#x27;+&#x27; | &#x27;-&#x27;</span>
+<span id="grammar-line-96" class="grammar-line grammar-added" data-label="追加">              | &#x27;&lt;&#x27; | &#x27;&gt;&#x27; | &#x27;&lt;=&#x27; | &#x27;&gt;=&#x27;</span>
+<span id="grammar-line-97" class="grammar-line grammar-added" data-label="追加">              | &#x27;==&#x27; | &#x27;!=&#x27;</span>
+<span id="grammar-line-98" class="grammar-line grammar-existing" data-label="">unary_expr  ::= primary_expr</span>
+<span id="grammar-line-99" class="grammar-line grammar-existing" data-label="">              | &#x27;-&#x27;  unary_expr</span>
+<span id="grammar-line-100" class="grammar-line grammar-existing" data-label="">primary_expr ::= INT_LITERAL</span>
+<span id="grammar-line-101" class="grammar-line grammar-existing" data-label="">               | IDENT</span>
+<span id="grammar-line-102" class="grammar-line grammar-existing" data-label="">               | &#x27;(&#x27; expr &#x27;)&#x27;</span></code></pre>
 <p>この回までの二項演算子の優先順位（高い順）:</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -228,68 +246,83 @@ primary_expr ::= INT_LITERAL
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr class="odd grammar-existing">
 <td>1（高）</td>
 <td><code>*</code> <code>/</code> <code>%</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
+<tr class="even grammar-existing">
 <td>2</td>
 <td><code>+</code> <code>-</code></td>
 <td>左</td>
 </tr>
-<tr class="odd">
-<td>3</td>
+<tr class="odd grammar-added">
+<td>3 <span class="grammar-badge">追加</span></td>
 <td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
-<td>4</td>
+<tr class="even grammar-added">
+<td>4 <span class="grammar-badge">追加</span></td>
 <td><code>==</code> <code>!=</code></td>
 <td>左</td>
 </tr>
 </tbody>
 </table>
 </div>
+</div>
 <p>表の読み方はコマ1の「木の形は規則で決まっている」と
 <a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
 <p><code>else</code> は最も内側の未対応 <code>if</code> へ結合する。
 字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+</details>
+</section>
 <h2 id="ast-を確認する">AST を確認する</h2>
 <p>まず、if/else を含むプログラムがどのような AST になるか確認する。</p>
-<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/04_if_else/tests/target.c</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/04_if_else/tests/target.c</span></code></pre></div>
+</div>
+</div>
 <p>このプログラムの内容は次の通り。</p>
-<div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> a <span class="op">-</span> b<span class="op">;</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> b <span class="op">-</span> a<span class="op">;</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb3" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> a <span class="op">-</span> b<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> b <span class="op">-</span> a<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>実行すると、次のようなS式が表示される。</p>
-<div class="sourceCode" id="cb5" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(program</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span> (decl <span class="st">&quot;a&quot;</span> <span class="bu">:type</span> int) (decl <span class="st">&quot;b&quot;</span> <span class="bu">:type</span> int)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;a&quot;</span>) (num <span class="dv">10</span>)))</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;b&quot;</span>) (num <span class="dv">3</span>)))</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">if</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">cond</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>          (lt (var <span class="st">&quot;b&quot;</span>) (var <span class="st">&quot;a&quot;</span>)))</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        (then</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">return</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;a&quot;</span>) (var <span class="st">&quot;b&quot;</span>)))))</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        (else</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">return</span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;b&quot;</span>) (var <span class="st">&quot;a&quot;</span>)))))))))</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb4" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span> (decl <span class="st">&quot;a&quot;</span> <span class="bu">:type</span> int) (decl <span class="st">&quot;b&quot;</span> <span class="bu">:type</span> int)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;a&quot;</span>) (num <span class="dv">10</span>)))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>      (exprstmt</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        (assign (var <span class="st">&quot;b&quot;</span>) (num <span class="dv">3</span>)))</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">if</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">cond</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>          (lt (var <span class="st">&quot;b&quot;</span>) (var <span class="st">&quot;a&quot;</span>)))</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        (then</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">return</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;a&quot;</span>) (var <span class="st">&quot;b&quot;</span>)))))</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        (else</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">return</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;b&quot;</span>) (var <span class="st">&quot;a&quot;</span>)))))))))</span></code></pre></div>
+</div>
+</div>
 <figure>
 <img src="../../figures/ast/04_if_else_ast.svg" alt="if/else を含むプログラムの AST" />
 <figcaption aria-hidden="true">if/else を含むプログラムの AST</figcaption>
@@ -299,12 +332,9 @@ primary_expr ::= INT_LITERAL
 Parser は <code>&gt;</code> を <code>&lt;</code> に、<code>&gt;=</code> を <code>&lt;=</code> に、それぞれ左右を入れ替えて変換する。
 そのため、AST上では <code>ND_GT</code> や <code>ND_GE</code> は決して現れない。</p>
 <p>2つ目。<code>if</code> ノードは次の3つのフィールドを持つ。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 66%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>フィールド</th>
@@ -327,11 +357,13 @@ Parser は <code>&gt;</code> を <code>&lt;</code> に、<code>&gt;=</code> を 
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="比較演算">比較演算</h2>
 <p>この回では、比較演算も式として扱う。
 比較演算の結果は、真なら <code>1</code>、偽なら <code>0</code> とする。</p>
 <p>Parser が返す比較演算ノードは次の通り。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -374,10 +406,12 @@ Parser は <code>&gt;</code> を <code>&lt;</code> に、<code>&gt;=</code> を 
 </tbody>
 </table>
 </div>
+</div>
 <p><code>ND_GT</code> や <code>ND_GE</code> は登場しないため、これらに対応するコードは不要である。</p>
 <h2 id="比較演算のコード生成">比較演算のコード生成</h2>
 <p>二項演算の共通パターンにより、比較命令を出す直前には次の状態になっている。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -397,14 +431,11 @@ Parser は <code>&gt;</code> を <code>&lt;</code> に、<code>&gt;=</code> を 
 </tbody>
 </table>
 </div>
+</div>
 <p>比較演算は次のように生成する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 28%" />
-<col style="width: 50%" />
-<col style="width: 21%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ノード</th>
@@ -436,53 +467,88 @@ Parser は <code>&gt;</code> を <code>&lt;</code> に、<code>&gt;=</code> を 
 </tbody>
 </table>
 </div>
+</div>
 <p><code>seqz</code> (set if equal to zero)、<code>snez</code> (set if not equal to zero)、<code>slt</code> (set if less than)、<code>xori</code> (xor immediate) はRV64の命令である。</p>
 <p>たとえば、<code>a &lt; b</code> のASTは <code>(lt (var "a") (var "b"))</code> であり、次のように生成される。</p>
-<div class="sourceCode" id="cb6" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># a1 = a, a0 = b の状態</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  slt a0<span class="op">,</span> a1<span class="op">,</span> a0</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># a1 = a, a0 = b の状態</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  slt a0<span class="op">,</span> a1<span class="op">,</span> a0</span></code></pre></div>
+</div>
+</div>
 <p><code>a1 &lt; a0</code> が成り立てば <code>a0 = 1</code>、成り立たなければ <code>a0 = 0</code> となる。</p>
 <h2 id="条件分岐の考え方">条件分岐の考え方</h2>
 <p>Cでは、<code>if</code> の条件式の値が <code>0</code> なら偽、<code>0</code> 以外なら真として扱う。</p>
-<div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    文</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb6" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    文</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>このコードは、次のような流れに変換できる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <pre data-lang="text"><code>cond を計算する
 もし cond の結果が 0 なら Lend に飛ぶ
 文を実行する
 Lend:</code></pre>
+</div>
+</div>
 <p>RV64では、<code>beqz a0, label</code> を使う。</p>
-<div class="sourceCode" id="cb9" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>beqz a0<span class="op">,</span> .L1</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>beqz a0<span class="op">,</span> .L1</span></code></pre></div>
+</div>
+</div>
 <p>これは、<code>a0</code> が <code>0</code> なら <code>.L1</code> にジャンプする、という意味である。
 <code>cond</code> の計算結果は <code>a0</code> に入っているため、<code>beqz a0, Lend</code> で「偽なら飛ばす」という動作になる。</p>
 <h2 id="ラベル生成">ラベル生成</h2>
 <p>分岐の飛び先には、一意なアセンブリラベルが必要になる。</p>
 <p><code>new_label()</code> は、呼ばれるたびに異なる名前のラベルを返すメソッドである。</p>
-<div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> new_label(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>._label_counter <span class="op">+=</span> <span class="dv">1</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;.L</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_label_counter<span class="sc">}</span><span class="ss">&quot;</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb9" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> new_label(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>._label_counter <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;.L</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>_label_counter<span class="sc">}</span><span class="ss">&quot;</span></span></code></pre></div>
+</div>
+</div>
 <p>インスタンス変数 <code>self._label_counter</code> は <code>__init__</code> で <code>0</code> 初期化される。</p>
 <p>ラベルの一意性は、この <code>self._label_counter</code> がプログラム全体で単調に増え続けることで保証される。
 <code>.L</code> で始まる名前は慣用的にローカルラベルと呼ばれ、シンボル表に残らない（アセンブラや
 リンカが外部から参照する対象にしない）扱いを受けるが、名前の一意性そのものはアセンブラが
 自動で保証してくれるわけではない。</p>
 <h2 id="if-の生成パターン">if の生成パターン</h2>
-<div class="sourceCode" id="cb11" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    文</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb10" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    文</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>これは、次のような命令の並びとして生成する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <pre data-lang="text"><code># cond を codegen
 beqz a0, Lend
 # 文
 Lend:</code></pre>
+</div>
+</div>
 <p>条件が偽なら <code>beqz</code> で <code>Lend</code> に飛び、文は実行されない。</p>
 <h2 id="ifelse-の生成パターン">if/else の生成パターン</h2>
-<div class="sourceCode" id="cb13" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    then文</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    else文</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb12" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    then文</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    else文</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>この場合は、then 側の実行後に else 側を飛ばす必要がある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <pre data-lang="text"><code># cond を codegen
 beqz a0, Lelse
 # then
@@ -490,6 +556,8 @@ j Lend
 Lelse:
 # else
 Lend:</code></pre>
+</div>
+</div>
 <p>こうしないと、then 側の実行後に else 側にも突入してしまう。</p>
 <figure>
 <img src="../../figures/04_if_cfg.svg" alt="if と if/else の制御フロー" />
@@ -501,41 +569,61 @@ if/else では、then 側の最後に <code>j Lend</code> を置いて else 側�
 <p><code>else if</code> という専用ノードはない。
 Parser は、<code>else</code> の中にさらに <code>if</code> が入っているものとして扱う。</p>
 <p>たとえば、次のコードを考える。</p>
-<div class="sourceCode" id="cb15" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">90</span><span class="op">)</span> <span class="op">{</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">4</span><span class="op">;</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">70</span><span class="op">)</span> <span class="op">{</span></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">3</span><span class="op">;</span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb14" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">90</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>score <span class="op">&gt;=</span> <span class="dv">70</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>ASTでは、<code>else</code> の中にもう一つの <code>if</code> が入る。</p>
-<div class="sourceCode" id="cb16" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">if</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">cond</span> ...)</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  (then ...)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  (else</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">cond</span> ...)</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>      (then ...)</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>      (else ...))))</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb15" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">if</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  (<span class="kw">cond</span> ...)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  (then ...)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  (else</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">if</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">cond</span> ...)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>      (then ...)</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>      (else ...))))</span></code></pre></div>
+</div>
+</div>
 <p><code>else_</code> が指すノードの <code>kind</code> が <code>ND_IF</code> であるかどうかにかかわらず、<code>gen_stmt(stmt.else_)</code> を再帰的に呼べば、<code>else if</code> も自然に処理できる。
 <code>else_</code> が <code>None</code> になるまで、再帰が続く。</p>
 <h2 id="return-と共通エピローグ">return と共通エピローグ</h2>
 <p>コマ3までは、<code>return</code> 文が関数の末尾にしか現れなかったため、<code>return</code> の後に直接エピローグを置けばよかった。</p>
 <p>しかし、コマ4からは <code>if</code> の中などに <code>return</code> が現れる。</p>
-<div class="sourceCode" id="cb17" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a<span class="op">;</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> b<span class="op">;</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb16" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>a <span class="op">&gt;</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a<span class="op">;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> b<span class="op">;</span></span></code></pre></div>
+</div>
+</div>
 <p>この場合、<code>if</code> の中の <code>return</code> で関数をその場で終了しなければならない。
 そのため、<code>return</code> 文では、戻り値を <code>a0</code> に入れた後、関数末尾のエピローグラベルヘジャンプする。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <pre data-lang="text"><code>return式を codegen する
 j Lreturn</code></pre>
+</div>
+</div>
 <p><code>gen_func()</code> では、関数ごとに <code>_ret_label</code> を作り、エピローグの直前に置く。</p>
-<div class="sourceCode" id="cb19" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">.Lreturn:</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  ld s0<span class="op">,</span> ...</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  ld ra<span class="op">,</span> ...</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> ...</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ret</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb18" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">.Lreturn:</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  ld s0<span class="op">,</span> ...</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  ld ra<span class="op">,</span> ...</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> ...</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ret</span></span></code></pre></div>
+</div>
+</div>
 <p>共通エピローグラベルを使うことで、関数内のどこに <code>return</code> があっても正しく関数を抜けられるようになる。</p>
 <figure>
 <img src="../../figures/04_ret_label.svg" alt="複数の return が共通エピローグに合流する" />
@@ -543,21 +631,21 @@ j Lreturn</code></pre>
 </figure>
 <h2 id="三項演算子-値を持つ分岐式と文の違い">三項演算子: 値を持つ分岐（式と文の違い）</h2>
 <p>if/else と同じ回で、三項演算子 <code>?:</code> も実装する。</p>
-<div class="sourceCode" id="cb20" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">8</span><span class="op">;</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">&gt;</span> b <span class="op">?</span> a <span class="op">:</span> b<span class="op">;</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb19" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> a<span class="op">;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b<span class="op">;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> <span class="dv">8</span><span class="op">;</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">&gt;</span> b <span class="op">?</span> a <span class="op">:</span> b<span class="op">;</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>ここで「式と文の違い」がはっきり見える。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 57%" />
-<col style="width: 31%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th></th>
@@ -584,30 +672,31 @@ j Lreturn</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>コード生成はどちらも同じ分岐で書ける。違いは、<code>?:</code> では選ばれた枝の
 評価結果が <code>a0</code> に残ることだけである。</p>
-<div class="sourceCode" id="cb21" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_Cond(<span class="va">self</span>, node):</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    label_else <span class="op">=</span> <span class="va">self</span>.new_label()</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    label_end <span class="op">=</span> <span class="va">self</span>.new_label()</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.cond)</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;  beqz a0, </span><span class="sc">{</span>label_else<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.then)      <span class="co"># 値が a0 に残る</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;  j </span><span class="sc">{</span>label_end<span class="sc">}</span><span class="ss">&#39;</span>)</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;</span><span class="sc">{</span>label_else<span class="sc">}</span><span class="ss">:&#39;</span>)</span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.else_)     <span class="co"># 値が a0 に残る</span></span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;</span><span class="sc">{</span>label_end<span class="sc">}</span><span class="ss">:&#39;</span>)</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb20" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> codegen_Cond(<span class="va">self</span>, node):</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    label_else <span class="op">=</span> <span class="va">self</span>.new_label()</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    label_end <span class="op">=</span> <span class="va">self</span>.new_label()</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.cond)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;  beqz a0, </span><span class="sc">{</span>label_else<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.then)      <span class="co"># 値が a0 に残る</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;  j </span><span class="sc">{</span>label_end<span class="sc">}</span><span class="ss">&#39;</span>)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;</span><span class="sc">{</span>label_else<span class="sc">}</span><span class="ss">:&#39;</span>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.codegen(node.else_)     <span class="co"># 値が a0 に残る</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.emit(<span class="ss">f&#39;</span><span class="sc">{</span>label_end<span class="sc">}</span><span class="ss">:&#39;</span>)</span></code></pre></div>
+</div>
+</div>
 <p><code>gen_stmt_If</code> とほぼ同じ形だが、<code>gen_stmt</code> ではなく <code>codegen</code>
 （式のコード生成）の一員である点に注意する。AST 上は
 <code>(ternary cond then else)</code> というノードになる。</p>
 <h2 id="gen_stmt-に追加する処理">gen_stmt に追加する処理</h2>
 <p>コマ3 で実装した <code>gen_stmt()</code> に、さらに文の種類を追加する。</p>
-<div class="table-scroll">
-<table style="width:100%;">
-<colgroup>
-<col style="width: 36%" />
-<col style="width: 47%" />
-<col style="width: 16%" />
-</colgroup>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
+<table>
 <thead>
 <tr class="header">
 <th><code>node.kind</code></th>
@@ -639,17 +728,15 @@ j Lreturn</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="編集するファイル">編集するファイル</h2>
 <ul>
 <li><code>mycc.py</code></li>
 </ul>
 <p><code>importlib</code> でコマ3 の <code>Codegen03</code> を継承した <code>Codegen04</code> に、以下の機能を追加する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 62%" />
-<col style="width: 37%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>実装対象</th>
@@ -684,6 +771,7 @@ j Lreturn</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="実装手順">実装手順</h2>
 <ol type="1">
 <li>スケルトンの <code>Codegen04</code> が <code>Codegen03</code> を <code>importlib</code> で継承していることを確認する。ラベル採番の <code>new_label()</code> と、左右を評価して <code>a1</code>/<code>a0</code> に載せる <code>_binary(lhs, rhs)</code>、<code>codegen()</code> / <code>gen_stmt()</code> のディスパッチはあらかじめ書かれている</li>
@@ -698,14 +786,9 @@ j Lreturn</code></pre>
 <h2 id="tests">tests/</h2>
 <p>上から順に通していくと、どこで詰まっているかが1機能ぶんに絞られる。
 「通る目安」は実装手順の番号である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 29%" />
-<col style="width: 17%" />
-<col style="width: 29%" />
-<col style="width: 23%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
@@ -796,15 +879,24 @@ j Lreturn</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="テスト">テスト</h2>
-<div class="sourceCode" id="cb22" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/04_if_else</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb21" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/04_if_else</span></code></pre></div>
+</div>
+</div>
 <p><code>tests/target.c</code> がコンパイルでき、終了コード <code>7</code> になれば基本形は成功。</p>
 <p>個別に動かす場合は、次のようにする。</p>
-<div class="sourceCode" id="cb23" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/04_if_else/mycc.py sessions/04_if_else/tests/target.c <span class="dt">\</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb22" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/04_if_else/mycc.py sessions/04_if_else/tests/target.c <span class="dt">\</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="注意">注意</h2>
 <p>Parser は <code>&gt;</code> と <code>&gt;=</code> を正規化するため、<code>ND_GT</code> や <code>ND_GE</code> は AST上に現れない。
 これらのノードに対応するコードは不要である。</p>
@@ -829,7 +921,7 @@ Cでは、<code>0</code> が偽、<code>0</code> 以外が真である。</p>
 <code>&amp;&amp;</code> / <code>||</code> / <code>!</code> のコード生成を実装するのはコマ13 で、この回では扱わない。
 短絡評価の実装は発展課題 S1 で扱う。</p>
 </div>
-<p>生成したアセンブリの分岐が期待どおりに飛ぶか確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>生成したアセンブリの分岐が期待どおりに飛ぶか確認したいときは、<a href="../../tools/app.html?view=run">学習ツールの実行表示</a> に貼り付ける。</p>
 <p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
 
     
@@ -843,7 +935,7 @@ Cでは、<code>0</code> が偽、<code>0</code> 以外が真である。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

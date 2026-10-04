@@ -115,7 +115,7 @@
    {
     "label": "chain_assign.c",
     "path": "sessions/03_variables/tests/chain_assign.c",
-    "source": "int main() {\n    int a;\n    int b;\n    a = 5;\n    b = a;\n    a = b + 1;\n    return a;\n}\n"
+    "source": "int main() {\n    int a;\n    int b;\n    a = b = 3;\n    return a + b;\n}\n"
    },
    {
     "label": "eight_locals.c",
@@ -318,6 +318,11 @@
     "source": "int add(int a, int b) {\n    return a + b;\n}\n\nint count_up(int n) {\n    int i;\n    int total;\n    i = 0;\n    total = 0;\n    while (i < n) {\n        ++i;\n        total = add(total, i);\n    }\n    return total;\n}\n\nint main() {\n    int k;\n    k = 4;\n    return count_up(++k) + add(--k, 1);\n}\n"
    },
    {
+    "label": "eight_args.c",
+    "path": "sessions/06_functions_recursion/tests/eight_args.c",
+    "source": "int sum(int a,int b,int c,int d,int e,int f,int g,int h) { return a+b+c+d+e+f+g+h; }\nint main() { return sum(1,2,3,4,5,6,7,8); }\n"
+   },
+   {
     "label": "fact.c",
     "path": "sessions/06_functions_recursion/tests/fact.c",
     "source": "int fact(int n) {\n    if (n <= 1) {\n        return 1;\n    }\n    return n * fact(n - 1);\n}\n\nint main() {\n    return fact(5);\n}\n"
@@ -393,9 +398,19 @@
   "group": "08_types",
   "items": [
    {
+    "label": "call_ptr.c",
+    "path": "sessions/08_types/tests/call_ptr.c",
+    "source": "// プロトタイプから、関数呼出しが int * を返すと分かる。\nint *identity(int *p);\n\nint main() {\n    int x;\n    x = 42;\n    return *identity(&x);\n}\n\nint *identity(int *p) {\n    return p;\n}\n"
+   },
+   {
+    "label": "char_argument.c",
+    "path": "sessions/08_types/tests/char_argument.c",
+    "source": "int fixed(char c, int n) { return (c==-1) + (n==300); }\nchar forward(char c) { return c; }\nint main() { return fixed(255,300) + (forward(300)==44); }\n"
+   },
+   {
     "label": "char_narrow.c",
     "path": "sessions/08_types/tests/char_narrow.c",
-    "source": "// char の境界 — 代入で下位 8 ビットへ縮小され（sb）、読み出しで符号拡張される（lb）ことを\n// 127 / 128 / 255 / -1 / 256 の境界で確かめる。ポインタも添字も使わない。\nint main() {\n    char c;\n    int n;\n    c = 127;\n    if (c != 127) {\n        return 1;\n    }\n    c = 128;\n    if (c != -128) {\n        return 2;\n    }\n    c = 255;\n    if (c != -1) {\n        return 3;\n    }\n    c = -1;\n    if (c != -1) {\n        return 4;\n    }\n    c = 256;\n    if (c != 0) {\n        return 5;\n    }\n    c = 300;\n    if (c != 44) {\n        return 6;\n    }\n    n = c + 1;\n    if (n != 45) {\n        return 7;\n    }\n    c = n;\n    return c;\n}\n"
+    "source": "// char の境界 — 代入で下位 8 ビットへ縮小され（sb）、読み出しで符号拡張される（lb）ことを\n// 127 / 128 / 255 / -1 / 256 の境界で確かめる。ポインタも添字も使わない。\nint main() {\n    char c;\n    int n;\n    c = 127;\n    if (c != 127) {\n        return 1;\n    }\n    c = 128;\n    if (c != -128) {\n        return 2;\n    }\n    c = 255;\n    if (c != -1) {\n        return 3;\n    }\n    c = -1;\n    if (c != -1) {\n        return 4;\n    }\n    c = 256;\n    if (c != 0) {\n        return 5;\n    }\n    c = 300;\n    if (c != 44) {\n        return 6;\n    }\n    n = (c = 300);\n    if (n != 44) {\n        return 8;\n    }\n    n = (c = 128);\n    if (n != -128) {\n        return 9;\n    }\n    n = (c = 255);\n    if (n != -1) {\n        return 10;\n    }\n    n = (c = 256);\n    if (n != 0) {\n        return 11;\n    }\n    c = 300;\n    n = c + 1;\n    if (n != 45) {\n        return 7;\n    }\n    c = n;\n    return c;\n}\n"
    },
    {
     "label": "char_ptr.c",
@@ -403,14 +418,29 @@
     "source": "// char へのポインタ — *p の読み書きが 1 バイト幅（lb/sb）になり、int * の 4 バイト幅と\n// 取り違えられていないことを確かめる。ポインタ演算も添字も使わない。\nint main() {\n    char c;\n    char d;\n    char *p;\n    int n;\n    int *q;\n    c = 65;\n    d = 0;\n    p = &c;\n    if (*p != 65) {\n        return 1;\n    }\n    *p = 200;\n    if (c != -56) {\n        return 2;\n    }\n    p = &d;\n    *p = c + 100;\n    if (d != 44) {\n        return 3;\n    }\n    n = 1000;\n    q = &n;\n    *q = *q + 1;\n    if (n != 1001) {\n        return 4;\n    }\n    if (*q != 1001) {\n        return 5;\n    }\n    return d + 6;\n}\n"
    },
    {
+    "label": "char_return.c",
+    "path": "sessions/08_types/tests/char_return.c",
+    "source": "char narrow(int n) { return n; }\nchar add_one(int n) { return n+1; }\nint main() { return (narrow(300)==44) + (narrow(255)==-1) + (narrow(-129)==127) + (add_one(127)==-128); }\n"
+   },
+   {
     "label": "char_var.c",
     "path": "sessions/08_types/tests/char_var.c",
     "source": "// char 変数 — 1 バイトの読み書き（lb / sb）、int への昇格、代入時の下位 8 ビットへの縮小\nint main() {\n    char c;\n    char d;\n    int n;\n    c = 'A';\n    d = c + 2;\n    n = d;\n    if (n != 67) {\n        return 1;\n    }\n    c = 321;\n    if (c != 65) {\n        return 2;\n    }\n    return n;\n}\n"
    },
    {
+    "label": "cond_char_pointer.c",
+    "path": "sessions/08_types/tests/cond_char_pointer.c",
+    "source": "int main() { char c; char *p; c=-1; p=&c; return (*(0 ? 0 : p)==-1) + (*(1 ? p : 0)==-1); }\n"
+   },
+   {
     "label": "cond_preinc_call.c",
     "path": "sessions/08_types/tests/cond_preinc_call.c",
     "source": "// コマ4〜6の機能（三項演算・前置増減・一時値を積んだ状態での関数呼び出し）が、\n// 型を導入したコマ8のコンパイラでもそのまま動くことを確かめる。\n// codegen() を全 case 再列挙にすると Cond や PreInc/PreDec が落ち、\n// _push_a0 / _pop_into を定義し直すと call 直前の 16 バイトアラインメントが崩れる。\nint add(int a, int b) {\n    return a + b;\n}\n\nint pick(char c, int *p) {\n    return c > 60 ? *p + c : *p - c;\n}\n\nint main() {\n    char c;\n    char d;\n    int n;\n    int *p;\n    int r;\n    c = 'A';\n    d = 5;\n    n = 10;\n    p = &n;\n    ++n;\n    r = pick(c, p);\n    --r;\n    // 三項演算の型は _type_of_expr の Cond が決める。ここが char * にならないと\n    // 1 バイトのロード（lb）が選ばれず、読み出した値が壊れる。\n    if (*(n > 0 ? &d : &c) != 5) {\n        return 1;\n    }\n    // 左辺 r * 2 を一時値として積んだまま右辺で call するので、\n    // call 直前のスタックは 16 バイト境界からずれている。\n    return r * 2 + add(pick(c, p), n);\n}\n"
+   },
+   {
+    "label": "cond_single_arm.c",
+    "path": "sessions/08_types/tests/cond_single_arm.c",
+    "source": "int main() { int n; n=0; 1 ? ++n : ++n; return n; }\n"
    },
    {
     "label": "load_store_ty.c",
@@ -427,6 +457,26 @@
  {
   "group": "09_pointer_arith",
   "items": [
+   {
+    "label": "call_ptr_arith.c",
+    "path": "sessions/09_pointer_arith/tests/call_ptr_arith.c",
+    "source": "#include \"lib.h\"\n\nint *identity(int *p) {\n    return p;\n}\n\nint **identity_ptr(int **p) {\n    return p;\n}\n\nint main() {\n    int *p;\n    p = malloc(sizeof(int) * 3);\n    p[0] = 0;\n    p[1] = 19;\n    p[2] = 23;\n    // 呼出し結果も int *。+1/-1 は4バイトぶん移動する。\n    if (*(identity(p) + 1) != 19) return 1;\n    if (*(identity(p + 2) - 1) != 19) return 2;\n    // 多段ポインタを返す呼出しでは、内側の * は8バイトで読む。\n    if (**identity_ptr(&p) != 0) return 3;\n    return identity(p)[2];\n}\n"
+   },
+   {
+    "label": "cond_pointer_pointer.c",
+    "path": "sessions/09_pointer_arith/tests/cond_pointer_pointer.c",
+    "source": "int main() { int n; int *p; int **pp; n=42; p=&n; pp=&p; return **(0 ? 0 : pp); }\n"
+   },
+   {
+    "label": "cond_pointer_scale.c",
+    "path": "sessions/09_pointer_arith/tests/cond_pointer_scale.c",
+    "source": "#include \"lib.h\"\nint main() { int *p; p=malloc(12); p[0]=10; p[1]=20; p[2]=30; return *((0 ? 0 : p)+1) + *((1 ? p : 0)+2); }\n"
+   },
+   {
+    "label": "cond_void_pointer.c",
+    "path": "sessions/09_pointer_arith/tests/cond_void_pointer.c",
+    "source": "int main() { int n; int *p; void *v; int *q; n=42; p=&n; v=p; q=0 ? v : p; return *q; }\n"
+   },
    {
     "label": "index_scale.c",
     "path": "sessions/09_pointer_arith/tests/index_scale.c",
@@ -468,6 +518,16 @@
   "group": "10_strings_data_section",
   "items": [
    {
+    "label": "call_char_ptr.c",
+    "path": "sessions/10_strings_data_section/tests/call_char_ptr.c",
+    "source": "char *identity(char *p) {\n    return p;\n}\n\nint main() {\n    char *p;\n    p = identity(\"ab\");\n    // char * を返す呼出しを直接参照すると、lb で1文字だけ読む。\n    return *identity(p) == 'a';\n}\n"
+   },
+   {
+    "label": "printf_eight_args.c",
+    "path": "sessions/10_strings_data_section/tests/printf_eight_args.c",
+    "source": "#include \"lib.h\"\nint main() { printf(\"%d %d %d %d %d %d %d\\n\",1,2,3,4,5,6,7); return 0; }\n"
+   },
+   {
     "label": "printf_hello.c",
     "path": "sessions/10_strings_data_section/tests/printf_hello.c",
     "source": "#include \"lib.h\"\n\nint main() {\n    printf(\"Hello, World!\\n\");\n    return 0;\n}\n"
@@ -486,6 +546,11 @@
     "label": "str_intern_dedup.c",
     "path": "sessions/10_strings_data_section/tests/str_intern_dedup.c",
     "source": "// _intern の重複排除 — 同じ内容の文字列リテラルは1つのラベルにまとめ、\n// 内容が違う文字列には別のラベルを割り当てる。アドレスの一致・不一致で確かめる。\n#include \"lib.h\"\n\nint main() {\n    char *a;\n    char *b;\n    char *c;\n\n    a = \"same\";\n    b = \"same\";\n    c = \"other\";\n\n    if (a != b) {\n        return 1;\n    }\n    if (a == c) {\n        return 2;\n    }\n\n    printf(\"%s\\t%s\\n\", a, c);\n    return 0;\n}\n"
+   },
+   {
+    "label": "varargs_promotion.c",
+    "path": "sessions/10_strings_data_section/tests/varargs_promotion.c",
+    "source": "#include \"lib.h\"\nint main() { char c; c=255; printf(\"%d %d\\n\", c, 300); return 0; }\n"
    }
   ]
  },
@@ -533,9 +598,24 @@
     "source": "struct Point {\n    int x;\n    int y;\n};\n\nint distance_sq(struct Point *p) {\n    return p->x * p->x + p->y * p->y;\n}\n\nint main() {\n    struct Point p;\n    p.x = 3;\n    p.y = 4;\n    return distance_sq(&p);\n}\n"
    },
    {
+    "label": "call_struct_ptr.c",
+    "path": "sessions/12_struct_malloc_list/tests/call_struct_ptr.c",
+    "source": "struct Box {\n    int value;\n};\n\nstruct Box *identity(struct Box *p) {\n    return p;\n}\n\nint main() {\n    struct Box a;\n    struct Box b;\n    a.value = 7;\n    b.value = 9;\n    identity(&a)->value = 42;\n    // 入れ子の呼出しと三項演算子を経由しても struct Box * が伝わる。\n    return identity(identity(&a))->value + (1 ? identity(&a) : &b)->value;\n}\n"
+   },
+   {
+    "label": "char_assign_value.c",
+    "path": "sessions/12_struct_malloc_list/tests/char_assign_value.c",
+    "source": "struct Byte { char c; };\nint main() { struct Byte s; return (s.c=255)==-1; }\n"
+   },
+   {
     "label": "comment_between_fields.c",
     "path": "sessions/12_struct_malloc_list/tests/comment_between_fields.c",
     "source": "// フィールド宣言の間に行コメントがあっても、構文解析の結果から\n// レイアウトを作るので、後続のフィールドが消えたりしない。\nstruct S {\n    int x;    // 先頭フィールド\n    // 独立行のコメント\n    int y;    // 2 番目のフィールド\n    char *p;  // ポインタフィールド\n};\n\nint main() {\n    struct S s;\n    s.x = 3;\n    s.y = 4;\n    s.p = 0;\n    // x@0 y@4 p@8 なのでサイズは 16（8 バイトアラインメント）\n    return s.x + s.y + sizeof(struct S);\n}\n"
+   },
+   {
+    "label": "cond_struct_pointer.c",
+    "path": "sessions/12_struct_malloc_list/tests/cond_struct_pointer.c",
+    "source": "struct Pair { char c; int n; };\nint main() { struct Pair s; s.c=1; s.n=42; return (0 ? 0 : &s)->n; }\n"
    },
    {
     "label": "dot_access.c",
@@ -608,9 +688,34 @@
     "source": "int total;\n\nint add(int x) {\n    total = total + x;\n    return total;\n}\n\nint main() {\n    total = 0;\n    add(10);\n    add(20);\n    return total;\n}\n"
    },
    {
+    "label": "global_mixed_types.c",
+    "path": "sessions/13_globals_scope/tests/global_mixed_types.c",
+    "source": "struct Mixed { char c; int n; int *p; };\nchar gc; int gi; int *gp; struct Mixed gs;\nint main() { if (gc || gi || gp || gs.c || gs.n || gs.p) return 1; gi=42; gp=&gi; gs.p=gp; return *gs.p; }\n"
+   },
+   {
     "label": "global_struct.c",
     "path": "sessions/13_globals_scope/tests/global_struct.c",
     "source": "struct Pair {\n    int a;\n    int b;\n};\n\nstruct Pair gp;\n\nint sum_pair(struct Pair *p) {\n    return p->a + p->b;\n}\n\nint main() {\n    gp.a = 10;\n    gp.b = 20;\n    return sum_pair(&gp);\n}\n"
+   },
+   {
+    "label": "logic_string_and.c",
+    "path": "sessions/13_globals_scope/tests/logic_string_and.c",
+    "source": "int main() { return \"left\" != 0 && \"right\" != 0; }\n"
+   },
+   {
+    "label": "logic_string_call_and.c",
+    "path": "sessions/13_globals_scope/tests/logic_string_call_and.c",
+    "source": "int yes(char *s) { return *s != 0; }\nint main() { return yes(\"left\") && yes(\"right\"); }\n"
+   },
+   {
+    "label": "logic_string_call_or.c",
+    "path": "sessions/13_globals_scope/tests/logic_string_call_or.c",
+    "source": "int yes(char *s) { return *s != 0; }\nint main() { return yes(\"left\") || yes(\"right\"); }\n"
+   },
+   {
+    "label": "logic_string_or.c",
+    "path": "sessions/13_globals_scope/tests/logic_string_or.c",
+    "source": "int main() { return \"left\" != 0 || \"right\" != 0; }\n"
    },
    {
     "label": "logical_ops.c",
@@ -656,6 +761,16 @@
     "label": "multifile_math.c",
     "path": "sessions/14_preprocess_multifile/tests/multifile_math.c",
     "source": "#include \"math_util.h\"\n#define BASE 2\n#define EXP 6\n\nint main() {\n    int a;\n    int b;\n    a = my_abs(-7);\n    b = my_pow(BASE, EXP);\n    return my_max(a, b);\n}\n"
+   },
+   {
+    "label": "multifile_return_ptr.c",
+    "path": "sessions/14_preprocess_multifile/tests/multifile_return_ptr.c",
+    "source": "#include \"return_ptr_lib.h\"\n\nint main() {\n    struct Box a;\n    a.value = 42;\n    return identity(&a)->value;\n}\n"
+   },
+   {
+    "label": "return_ptr_lib.c",
+    "path": "sessions/14_preprocess_multifile/tests/return_ptr_lib.c",
+    "source": "// main側のヘッダーと同じ構造体レイアウトを使う。\nstruct Box {\n    int value;\n};\n\nstruct Box *identity(struct Box *p) {\n    return p;\n}\n"
    },
    {
     "label": "stat_lib.c",

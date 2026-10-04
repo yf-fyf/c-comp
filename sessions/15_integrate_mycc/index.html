@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コマ15: Python 版総合演習・mycc.py 統合 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,35 +92,43 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">コマ15: Python 版総合演習・mycc.py 統合</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回で行うこと" id="toc-この回で行うこと">この回で行うこと</a></li>
-      <li><a href="#コマ1からコマ14までの到達点" id="toc-コマ1からコマ14までの到達点">コマ1からコマ14までの到達点</a></li>
-      <li><a href="#finalmycc.py-への統合" id="toc-finalmycc.py-への統合">final/mycc.py への統合</a></li>
-      <li><a href="#finaltests-の位置づけ" id="toc-finaltests-の位置づけ">final/tests の位置づけ</a></li>
-      <li><a href="#テストが落ちたときの切り分け" id="toc-テストが落ちたときの切り分け">テストが落ちたときの切り分け</a></li>
-      <li><a href="#コードレビュー観点" id="toc-コードレビュー観点">コードレビュー観点</a></li>
-      <li><a href="#完成チェックリスト" id="toc-完成チェックリスト">完成チェックリスト</a></li>
-      <li><a href="#このあと" id="toc-このあと">このあと</a></li>
-      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
-      <li><a href="#tests" id="toc-tests">tests/</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#注意" id="toc-注意">注意</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回で行うこと" id="toc-この回で行うこと">この回で行うこと</a></li>
+<li><a href="#コマ1からコマ14までの到達点" id="toc-コマ1からコマ14までの到達点">コマ1からコマ14までの到達点</a></li>
+<li><a href="#finalmycc.py-への統合" id="toc-finalmycc.py-への統合">final/mycc.py への統合</a></li>
+<li><a href="#finaltests-の位置づけ" id="toc-finaltests-の位置づけ">final/tests の位置づけ</a></li>
+<li><a href="#テストが落ちたときの切り分け" id="toc-テストが落ちたときの切り分け">テストが落ちたときの切り分け</a></li>
+<li><a href="#コードレビュー観点" id="toc-コードレビュー観点">コードレビュー観点</a></li>
+<li><a href="#完成チェックリスト" id="toc-完成チェックリスト">完成チェックリスト</a></li>
+<li><a href="#このあと" id="toc-このあと">このあと</a></li>
+<li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+<li><a href="#tests" id="toc-tests">tests/</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#注意" id="toc-注意">注意</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
 <p>コマ14までに作った Python 版 C サブセットコンパイラを <code>final/mycc.py</code> に統合し、標準トラックの成果物として完成させる。</p>
 <p>この回では新しい構文は追加しない。
 目的は、これまでの実装を1つにまとめ、テストし、読めるコードに整えることである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py</span></code></pre></div>
+</div>
+</div>
 <p>このコマンドで <code>final/mycc.py</code> と <code>final/tests/</code> を使った最終確認を行う。</p>
 </section>
 <h2 id="この回で行うこと">この回で行うこと</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -135,28 +146,30 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <td><code>final/tests/</code> の17本を実行する</td>
 </tr>
 <tr class="odd">
+<td>回帰テスト</td>
+<td>同じ <code>final/mycc.py</code> でコマ2〜14の全テストを実行する</td>
+</tr>
+<tr class="even">
 <td>バグ修正</td>
 <td>落ちたテストを小さい入力に分解して直す</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>コードレビュー</td>
 <td>関数の責務、変数名、コメント、重複を確認する</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>仕上げ</td>
 <td>動作確認方法と実装上の工夫を説明できる状態にする</td>
 </tr>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="コマ1からコマ14までの到達点">コマ1からコマ14までの到達点</h2>
 <p>ここまでで扱った主な機能は次の通りである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>範囲</th>
@@ -199,10 +212,13 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
-<p>これで <code>language_spec.md</code> の全機能を実装したことになる。
+</div>
+<p>これで <code>language_spec.md</code> の正しい入力を扱うための主な機能を実装したことになる。
 機能ごとの導入回と代表テストは <code>language_spec.md</code> の
 「到達範囲: 機能 → 導入コマ → 検証テスト」の表で引ける。
-標準トラックの範囲は仕様そのままであり、仕様にあって実装しない機能は無い。
+不正入力の全診断は標準トラックの完成条件に含めず、発展として扱う。
+提供コードと標準実装が検出する項目、診断を保証しない項目は
+<a href="../../docs/language_spec/#diagnostics"><code>language_spec.md</code> の「標準トラックの診断範囲」</a>で確認する。
 <code>&amp;&amp;</code> / <code>||</code> が<strong>短絡しない</strong>のも、複合代入 <code>+=</code> などが<strong>無い</strong>のも、
 仕様がそう決めているためである（前者は仕様の例外 E3、後者は「除外機能の一覧」）。
 本物の C へ寄せたい人は、発展課題 S1（短絡評価）と L2（複合代入）で扱う。</p>
@@ -210,9 +226,13 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <h2 id="finalmycc.py-への統合">final/mycc.py への統合</h2>
 <p>通常回では <code>sessions/NN_xxx/mycc.py</code> を編集してきた。
 最終成果物は <code>final/mycc.py</code> に置く。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <pre data-lang="text"><code>workbook/
 ├── sessions/14_preprocess_multifile/mycc.py  # 直前回までの作業ファイル
 └── final/mycc.py                             # 最終成果物の統合先</code></pre>
+</div>
+</div>
 <figure>
 <img src="../../figures/15_inheritance_chain.svg" alt="各回の Codegen クラスの継承の連鎖と、final/mycc.py への畳み込み" />
 <figcaption aria-hidden="true">各回の <code>Codegen</code> クラスの継承の連鎖と、<code>final/mycc.py</code> への畳み込み</figcaption>
@@ -221,19 +241,42 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 統合はファイルのコピーではなく、この連鎖をたどって全ハンドラを 1 つのクラスへ展開する作業である。</p>
 <p>まず、コマ14までの完成版を <code>final/mycc.py</code> に反映する。
 その後、次のコマンドを実行する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py</span></code></pre></div>
+</div>
+</div>
 <p>省略形の <code>test_runner.py</code> は、デフォルトで <code>final/mycc.py</code> と <code>final/tests/</code> を使う。</p>
 <p>明示的に指定する場合は次の通り。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> final/mycc.py <span class="at">--tests</span> final/tests</span></code></pre></div>
+</div>
+</div>
 <p>過去の回のテストで統合後の実装を確認するときも、コンパイラとテストを分けて指定する。
 例えば、コマ11の文字列収集・libcのテストを <code>final/mycc.py</code> に掛けるには次を使う。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
 <div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py <span class="dt">\</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--compiler</span> final/mycc.py <span class="dt">\</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--tests</span> sessions/11_expr_walk_libc/tests</span></code></pre></div>
+</div>
+</div>
 <p><code>sessions/11_expr_walk_libc</code> だけを渡すと、統合前のコマ11の実装が選ばれる。</p>
+<p>完成確認では、コマ2〜14をすべてこの最終コンパイラに掛ける。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> tests <span class="kw">in</span> sessions/0<span class="pp">[</span><span class="ss">2</span><span class="pp">-</span><span class="ss">9</span><span class="pp">]</span>_<span class="pp">*</span>/tests sessions/1<span class="pp">[</span><span class="ss">0</span><span class="pp">-</span><span class="ss">4</span><span class="pp">]</span>_<span class="pp">*</span>/tests<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">python3</span> scaffold/test_runner.py <span class="at">--compiler</span> final/mycc.py <span class="at">--tests</span> <span class="st">&quot;</span><span class="va">$tests</span><span class="st">&quot;</span> <span class="kw">||</span> <span class="bu">exit</span> 1</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+</div>
+</div>
+<p>全回 <code>FAIL: 0</code> を確認する。コマ14の補助ソースの <code>SKIP</code> は正常である。
+コマ1はインタープリター用の別チェッカーなので含めない。</p>
 <h2 id="finaltests-の位置づけ">final/tests の位置づけ</h2>
 <p><code>final/tests/</code> には、標準トラック到達の参考指標となる17本のテストが入っている。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -331,7 +374,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
-<p>この17本（fixed17）が全通することを標準トラック完成の強い目安とする。</p>
+</div>
+<p>この17本（fixed17）と、最終コンパイラでのコマ2〜14の全テスト通過を実装の完成条件とする。
+fixed17に含まれない論理演算・<code>char</code>・複数ファイル・ストリーム操作は過去回のテストで確認する。</p>
 <h2 id="テストが落ちたときの切り分け">テストが落ちたときの切り分け</h2>
 <p>総合テストで落ちた場合、いきなり大きな入力を読むのではなく、原因を小さく分ける。</p>
 <ol type="1">
@@ -348,12 +393,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <h2 id="コードレビュー観点">コードレビュー観点</h2>
 <p>動くだけでなく、読めるコンパイラにする。
 仕上げとして次の点を確認する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" aria-label="表（左右にスクロールできます）" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 30%" />
-<col style="width: 70%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>観点</th>
@@ -396,9 +438,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="完成チェックリスト">完成チェックリスト</h2>
 <ul>
 <li><code>python3 scaffold/test_runner.py</code> が通る</li>
+<li>同じ <code>final/mycc.py</code> でコマ2〜14の全テストが通る（補助ソースの <code>SKIP</code> は可）</li>
 <li>生成アセンブリを1つ以上読んで、どこで何をしているか説明できる</li>
 <li><code>self.codegen()</code>、<code>self.codegen_lval()</code>、<code>self._type_of_expr()</code>、<code>self.gen_func()</code> の役割を説明できる</li>
 <li>自分が苦労したバグと、その直し方を説明できる</li>
@@ -420,20 +464,30 @@ Python の <code>dict</code> を C の連結リストへ、Python のクラス�
 コマ14までの完成版をここに反映し、以後の修正もこのファイルに対して行う。</p>
 <h2 id="tests">tests/</h2>
 <p>この回は専用のテストを持たない（<code>sessions/15_integrate_mycc/tests/</code> は空である）。
-使うのは <code>final/tests/</code> の17本で、内訳は前の「final/tests の位置づけ」節の表の通りである。
+使うのは <code>final/tests/</code> の17本と、回帰確認用のコマ2〜14のテストである。
+総合テストの内訳は前の「final/tests の位置づけ」節の表の通りである。
 テストごとに <code>.ans</code>（期待する終了コード）があり、<code>f14_string.c</code> には <code>.stdout</code> も付く。</p>
 <h2 id="テスト">テスト</h2>
-<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py</span></code></pre></div>
+</div>
+</div>
 <p>省略形の <code>test_runner.py</code> は、デフォルトで <code>final/mycc.py</code> と <code>final/tests/</code> を使う。</p>
 <p>個別に動かす場合は、次のようにする。</p>
-<div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> final/mycc.py final/tests/f01_arith.c <span class="dt">\</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" aria-label="コード（左右にスクロールできます）" tabindex="0">
+<div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> final/mycc.py final/tests/f01_arith.c <span class="dt">\</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="注意">注意</h2>
 <p>この回では新しい構文を追加しない。
-<code>language_spec.md</code> の全機能はコマ14までで実装済みで、仕様にあって実装しない機能は無い。
+正しい入力の主な機能はコマ14までに実装する。
+不正入力に対する完全な型・宣言検査は発展として扱い、診断範囲は仕様の対応節に従う。
 <code>&amp;&amp;</code> / <code>||</code> が短絡しないことも、複合代入 <code>+=</code> が無いことも、仕様どおりの状態である。</p>
 <p><code>final/mycc.py</code> のスケルトンは、通常回と違って <code>importlib</code> による継承を持たない。
 コマ14までの実装は前の回のクラスを継承した差分の積み重ねなので、
@@ -442,7 +496,7 @@ Python の <code>dict</code> を C の連結リストへ、Python のクラス�
 対応するコマの小さいテストへ降りて切り分ける（「テストが落ちたときの切り分け」節）。</p>
 <p><code>final/tests/</code> の17本は標準トラック到達の参考指標であって、
 言語仕様の全機能を網羅した検査ではない。</p>
-<p>統合した <code>mycc.py</code> が出す最終的なアセンブリを1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>統合した <code>mycc.py</code> が出す最終的なアセンブリを1命令ずつ確認したいときは、<a href="../../tools/app.html?view=run">学習ツールの実行表示</a> に貼り付ける。</p>
 <p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
 
     
@@ -456,7 +510,7 @@ Python の <code>dict</code> を C の連結リストへ、Python のクラス�
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

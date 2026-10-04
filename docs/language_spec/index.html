@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Core プロファイル — 言語仕様 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,30 +92,36 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">Core プロファイル — 言語仕様</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#目次知りたいこと-節" id="toc-目次知りたいこと-節">目次（知りたいこと → 節）</a></li>
-      <li><a href="#字句" id="toc-字句">字句</a></li>
-      <li><a href="#型" id="toc-型">型</a></li>
-      <li><a href="#リテラル" id="toc-リテラル">リテラル</a></li>
-      <li><a href="#演算子" id="toc-演算子">演算子</a></li>
-      <li><a href="#宣言" id="toc-宣言">宣言</a></li>
-      <li><a href="#文制御構造" id="toc-文制御構造">文・制御構造</a></li>
-      <li><a href="#関数" id="toc-関数">関数</a></li>
-      <li><a href="#プリプロセッサ" id="toc-プリプロセッサ">プリプロセッサ</a></li>
-      <li><a href="#標準ライブラリlib.h" id="toc-標準ライブラリlib.h">標準ライブラリ（<code>lib.h</code>）</a></li>
-      <li><a href="#到達範囲-機能-導入コマ-検証テスト" id="toc-到達範囲-機能-導入コマ-検証テスト">到達範囲: 機能 → 導入コマ → 検証テスト</a></li>
-      <li><a href="#除外機能の一覧" id="toc-除外機能の一覧">除外機能の一覧</a></li>
-      <li><a href="#iso-c-との関係と移行上の注意" id="toc-iso-c-との関係と移行上の注意">ISO C との関係と移行上の注意</a></li>
-      <li><a href="#実行時の意味-1" id="toc-実行時の意味-1">実行時の意味</a></li>
-      <li><a href="#形式文法ebnf" id="toc-形式文法ebnf">形式文法（EBNF）</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#目次知りたいこと-節" id="toc-目次知りたいこと-節">目次（知りたいこと → 節）</a></li>
+<li><a href="#字句" id="toc-字句">字句</a></li>
+<li><a href="#型" id="toc-型">型</a></li>
+<li><a href="#リテラル" id="toc-リテラル">リテラル</a></li>
+<li><a href="#演算子" id="toc-演算子">演算子</a></li>
+<li><a href="#宣言" id="toc-宣言">宣言</a></li>
+<li><a href="#文制御構造" id="toc-文制御構造">文・制御構造</a></li>
+<li><a href="#関数" id="toc-関数">関数</a></li>
+<li><a href="#プリプロセッサ" id="toc-プリプロセッサ">プリプロセッサ</a></li>
+<li><a href="#標準ライブラリlib.h" id="toc-標準ライブラリlib.h">標準ライブラリ（<code>lib.h</code>）</a></li>
+<li><a href="#到達範囲-機能-導入コマ-検証テスト" id="toc-到達範囲-機能-導入コマ-検証テスト">到達範囲: 機能 → 導入コマ → 検証テスト</a></li>
+<li><a href="#除外機能の一覧" id="toc-除外機能の一覧">除外機能の一覧</a></li>
+<li><a href="#iso-c-との関係と移行上の注意" id="toc-iso-c-との関係と移行上の注意">ISO C との関係と移行上の注意</a></li>
+<li><a href="#実行時の意味-1" id="toc-実行時の意味-1">実行時の意味</a></li>
+<li><a href="#形式文法ebnf" id="toc-形式文法ebnf">形式文法（EBNF）</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <p><strong>第 2 版(2026 年改訂)</strong>。C サブセットコンパイラが対象とする言語仕様であり、
 この教材では凍結された仕様として扱う。この文書がこの言語の唯一の規範で、
-教材・雛形・テスト・発展課題はすべてこの版に従う。</p>
+教材・雛形・テスト・発展課題はすべてこの版に従う。
+ただし、標準トラックの実装完成は不正入力の全診断を保証しない。
+規範としての診断要件と、教材で実装する診断範囲の区別は
+<a href="#diagnostics">「標準トラックの診断範囲」</a>に示す。</p>
 <p>設計原則:</p>
 <ul>
 <li><strong>ISO C11(N1570)の真部分集合。</strong> この仕様で受理されるプログラムは、
@@ -125,12 +134,9 @@ gcc 等の通常の C コンパイラでもコンパイルできる。</li>
 </ul>
 <h2 id="目次知りたいこと-節">目次（知りたいこと → 節）</h2>
 <p>この文書は通読用ではなく引くための文書である。左の列で当たりをつけて飛ぶ。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 23%" />
-<col style="width: 76%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>節</th>
@@ -179,23 +185,28 @@ gcc 等の通常の C コンパイラでもコンパイルできる。</li>
 <td>「この機能はどのコマで書けるようになるか」「どのテストで確かめるか」</td>
 </tr>
 <tr class="odd">
+<td><a href="#diagnostics">標準トラックの診断範囲</a></td>
+<td>不正入力をどこまで検出するか、テスト全通で何が保証されるか</td>
+</tr>
+<tr class="even">
 <td><a href="#excluded">除外機能の一覧</a></td>
 <td>「なぜこれが通らないのか」「配列・<code>switch</code> は書けるのか」</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#isoc">ISO C との関係と移行上の注意</a></td>
 <td>gcc で通るのか、本物の C と違うのはどこか</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#semantics">実行時の意味</a></td>
 <td>サイズ・アラインメント、評価順序、未定義動作</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#grammar">形式文法（EBNF）</a></td>
 <td>パーサを自作するとき、構文エラーの原因を突き止めるとき</td>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p>コンパイルが通らない理由を探しているなら、まず <a href="#excluded">除外機能の一覧</a> を見る。
 実装が動かない理由を探しているなら <a href="../../docs/testing/"><code>testing.md</code></a> の症状表を見る。</p>
@@ -206,7 +217,11 @@ gcc 等の通常の C コンパイラでもコンパイルできる。</li>
 <li><p>文字集合は ASCII、行終端は LF。空白(スペース・タブ・改行)はトークンの区切り。</p></li>
 <li><p>コメントは <code>//</code> から行末まで。<strong>ブロックコメント <code>/* */</code> はない。</strong></p></li>
 <li><p>キーワードは次の <strong>12 語のみ</strong>:</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre><code>int  char  void  struct  if  else  while  for  break  continue  return  sizeof</code></pre>
+</div>
+</div>
 <p>これ以外の C のキーワード(<code>typedef</code>、<code>switch</code>、<code>unsigned</code> など)は予約されず、
 識別子として使える(例外 E2。ただし「移行上の注意」の命名規約を参照)。</p></li>
 <li><p>識別子: <code>(英字 | _)(英字 | 数字 | _)*</code>。先頭 <code>_</code> 可。キーワード 12 語を除く。</p></li>
@@ -216,18 +231,26 @@ gcc 等の通常の C コンパイラでもコンパイルできる。</li>
 <hr />
 <p><a id="types"></a></p>
 <h2 id="型">型</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre><code>int          4 バイト符号付き整数（32 ビット 2 の補数）
 char         1 バイト文字 / 整数（signed）
 T *          ポインタ（多段可: int **pp）。サイズ = 8 バイト
 void *       汎用ポインタ。任意の T * と相互に暗黙変換（キャスト不要）
 void         関数の戻り値型としてのみ使用
 struct Tag   複合型（タグ必須）</code></pre>
+</div>
+</div>
 <ul>
 <li><p>struct の定義・前方宣言は<strong>ファイルスコープのみ</strong>。フィールドは
 int・char・ポインタに限り(struct 値の入れ子なし)、1 フィールド 1 宣言子。</p></li>
 <li><p>自己参照・相互参照は前方宣言+ポインタで書ける:</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb3" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node<span class="op">;</span>                      <span class="co">// 前方宣言（なくてもよい: 定義中の自己参照は可）</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">{</span> <span class="dt">int</span> val<span class="op">;</span> <span class="kw">struct</span> Node <span class="op">*</span>next<span class="op">;</span> <span class="op">};</span></span></code></pre></div></li>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">{</span> <span class="dt">int</span> val<span class="op">;</span> <span class="kw">struct</span> Node <span class="op">*</span>next<span class="op">;</span> <span class="op">};</span></span></code></pre></div>
+</div>
+</div></li>
 <li><p><strong>struct 変数は宣言できるが、struct 値の代入・実引数・戻り値は不可</strong>
 (<code>.</code> によるフィールドアクセスと <code>&amp;s</code> は可)。struct の受け渡しはポインタで行う
 (代入は発展 S3 が本仕様の禁止行を改訂して追加し、実引数・戻り値は発展 L5 が仕様の外に新しく足す)。</p></li>
@@ -236,9 +259,13 @@ int・char・ポインタに限り(struct 値の入れ子なし)、1 フィー�
 <hr />
 <p><a id="literals"></a></p>
 <h2 id="リテラル">リテラル</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre><code>42           整数リテラル（10 進のみ。上限 2147483647、超過はコンパイルエラー）
 &#39;a&#39;          文字リテラル（int として扱う。1 文字ちょうど）
 &quot;hello&quot;     文字列リテラル（静的領域に配置、char * として参照。内容の変更は未定義）</code></pre>
+</div>
+</div>
 <ul>
 <li>整数リテラルは <code>0</code> または先頭が非 0 の数字列。8 進・16 進・2 進表記、接尾辞はない。</li>
 <li>エスケープは 6 種のみ: <code>\n</code> <code>\t</code> <code>\\</code> <code>\'</code> <code>\"</code> <code>\0</code></li>
@@ -247,6 +274,8 @@ int・char・ポインタに限り(struct 値の入れ子なし)、1 フィー�
 <p><a id="operators"></a></p>
 <h2 id="演算子">演算子</h2>
 <p>優先順位が高い順に示す。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre><code>一次:   リテラル  識別子  ( 式 )
 後置:   p[i]  s.field  p-&gt;field  f(args)
 単項:   - （負号）  ! （論理否定）  * （間接参照）  &amp; （アドレス取得）
@@ -259,9 +288,12 @@ int・char・ポインタに限り(struct 値の入れ子なし)、1 フィー�
 論理和: ||   （両辺を必ず評価する。短絡しない）
 条件:   a ? b : c   （右結合）
 代入:   =   （右結合。左辺は単項式で lvalue）</code></pre>
+</div>
+</div>
 <ul>
 <li>算術は int で行われ、char は int へ昇格される(値保存)。int から char への
-縮小は代入時のみ(下位 8 ビット)。</li>
+縮小は代入、固定仮引数への受け渡し、<code>return</code> で行う。下位8ビットをsigned charの値として扱う。
+例えば <code>char f() { return 300; }</code> の呼出し値は <code>44</code>、<code>255</code> を固定char引数へ渡すと <code>-1</code> になる。</li>
 <li>整数除算 <code>/</code> と剰余 <code>%</code> は<strong>0 方向へ切り捨てる</strong>(商の絶対値を切り捨てる。
 C99 以降の ISO C、および RV64 の <code>div</code>/<code>rem</code> 命令と一致する)。剰余の符号は
 被除数と同じになる(例: <code>-7 / 2</code> は <code>-3</code>、<code>-7 % 2</code> は <code>-1</code>)。</li>
@@ -275,6 +307,9 @@ C99 以降の ISO C、および RV64 の <code>div</code>/<code>rem</code> 命�
 ISO C との重要な差異であり、<code>p != 0 &amp;&amp; p-&gt;val &gt; 0</code> のように
 「左辺が偽なら右辺は評価されない」ことに頼った書き方は本仕様ではできない
 (条件は 2 つの <code>if</code> に分ける)。短絡する <code>&amp;&amp;</code> / <code>||</code> の実装は発展 S1 で扱う。</li>
+<li>条件演算子の型は両腕から決める。int/char同士はint、同型ポインタ同士はその型、
+ポインタとリテラル<code>0</code>はポインタ型、<code>T *</code>と<code>void *</code>は<code>void *</code>になる。
+<code>void</code>同士は<code>void</code>。実行時には選ばれた腕だけを評価する。</li>
 <li>前置 <code>++</code>/<code>--</code> の左辺は 1 回だけ評価される。</li>
 <li>除外: 複合代入(<code>+=</code> <code>-=</code> <code>*=</code> <code>/=</code> <code>%=</code>。発展 L2 で追加する)、
 ビット演算・シフト(<code>~</code> <code>&amp;</code> <code>^</code> <code>|</code> <code>&lt;&lt;</code> <code>&gt;&gt;</code>)、後置 <code>++</code>/<code>--</code>、
@@ -284,11 +319,15 @@ ISO C との重要な差異であり、<code>p != 0 &amp;&amp; p-&gt;val &gt; 0<
 <hr />
 <p><a id="declarations"></a></p>
 <h2 id="宣言">宣言</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb6" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> x<span class="op">;</span>              <span class="co">// 局所変数。初期化子は書けない（値は不定）</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> <span class="op">*</span>p<span class="op">;</span>             <span class="co">// ポインタ変数</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">*</span>q<span class="op">;</span>     <span class="co">// struct へのポインタ</span></span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Point pt<span class="op">;</span>    <span class="co">// struct 変数</span></span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> g<span class="op">;</span>              <span class="co">// グローバル変数（0 に初期化される）</span></span></code></pre></div>
+</div>
+</div>
 <ul>
 <li><strong>1 宣言 1 宣言子。初期化子はない</strong>(<code>int x = 42;</code> は書けない)。
 初期値は代入文で設定する。グローバル変数は 0 初期化が保証される
@@ -312,6 +351,8 @@ ISO C との重要な差異であり、<code>p != 0 &amp;&amp; p-&gt;val &gt; 0<
 <hr />
 <p><a id="statements"></a></p>
 <h2 id="文制御構造">文・制御構造</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span> <span class="op">...</span> <span class="op">}</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cond<span class="op">)</span> <span class="op">{</span> <span class="op">...</span> <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span> <span class="op">...</span> <span class="op">}</span>   <span class="co">// else は最も内側の if に結合</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -323,6 +364,8 @@ ISO C との重要な差異であり、<code>p != 0 &amp;&amp; p-&gt;val &gt; 0<
 <span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span><span class="op">;</span>            <span class="co">// void 関数</span></span>
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="cf">break</span><span class="op">;</span>             <span class="co">// ループ内のみ</span></span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="cf">continue</span><span class="op">;</span>          <span class="co">// ループ内のみ。step へ合流</span></span></code></pre></div>
+</div>
+</div>
 <ul>
 <li>条件式はスカラー型(int・char・ポインタ)。真偽は「0(ポインタなら null)と
 等しくないこと」。</li>
@@ -331,6 +374,8 @@ ISO C との重要な差異であり、<code>p != 0 &amp;&amp; p-&gt;val &gt; 0<
 <hr />
 <p><a id="functions"></a></p>
 <h2 id="関数">関数</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb8" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">// プロトタイプ（引数名必須）</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> add<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">);</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -341,12 +386,20 @@ ISO C との重要な差異であり、<code>p != 0 &amp;&amp; p-&gt;val &gt; 0<
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 可変長引数（外部プロトタイプ限定。固定引数 1 個以上の後にのみ書ける）</span></span>
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> printf<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span></span></code></pre></div>
+</div>
+</div>
 <ul>
+<li>関数の宣言・定義の固定仮引数は最大8個、呼出しの実引数も可変長部を含めて最大8個。
+9個以上はコンパイルエラーとする。<code>...</code>自体は固定仮引数の個数に数えない。</li>
 <li>引数なしは <code>()</code> と書く(<code>(void)</code> は受理しない)。<code>()</code> は「0 引数」の意味で、
-個数・型が合わない呼出しはコンパイルエラー。</li>
+個数が宣言と合わない呼出しはコンパイルエラー。固定部の実引数は仮引数への代入が許される型に限る。</li>
 <li>呼出しには事前の宣言(プロトタイプまたは定義)が必要。再帰可。</li>
+<li>呼出し式の型は、関数の宣言・定義に書かれた戻り値型である。
+ポインタを返す呼出しの結果には、その型に従って <code>*</code>・添字・ポインタ演算・<code>-&gt;</code> を使える。</li>
 <li>引数型は int / char / ポインタ。戻り値型はそれに <code>void</code> を加えた 4 種
 (struct 値の引数・戻り値はない。発展 L5 で追加する)。</li>
+<li>固定部の実引数と<code>return</code>式には、仮引数型と戻り値型への代入変換を行う。
+同じ型であることと、変換して受け渡せることを区別する。</li>
 <li>可変長 <code>...</code> の定義は書けない(宣言のみ)。可変部の実引数はスカラー型に限り、
 char は int へ昇格して渡される。</li>
 <li>エントリポイントは <code>int main()</code> または <code>int main(int argc, char **argv)</code>。</li>
@@ -354,8 +407,12 @@ char は int へ昇格して渡される。</li>
 <hr />
 <p><a id="preprocessor"></a></p>
 <h2 id="プリプロセッサ">プリプロセッサ</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb9" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;file.h&quot;</span><span class="pp">      </span><span class="co">// &quot;...&quot; 形式のみ。&lt;...&gt; はない</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#define NAME value     </span><span class="co">// オブジェクト形式マクロのみ（定数置換）</span></span></code></pre></div>
+</div>
+</div>
 <ul>
 <li>指令は行単位(行頭の <code>#</code> から改行まで)で、この 2 種のみ。</li>
 <li><code>#include</code> は入れ子可。<strong>循環取込みはエラー</strong>。同一ファイルの(非循環な)
@@ -375,6 +432,8 @@ char は int へ昇格して渡される。</li>
 <h2 id="標準ライブラリlib.h">標準ライブラリ（<code>lib.h</code>）</h2>
 <p>宣言のみ提供する。Linux/RV64(LP64)では全シンボルをそのまま libc に
 リンクして解決できる(追加実装なしで動く)。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb10" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> <span class="dt">FILE</span><span class="op">;</span>                                    <span class="co">// 不透明型。前方宣言のみで完全化しない</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span>  printf<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span>                    <span class="co">// stdout へ書式出力</span></span>
@@ -387,6 +446,8 @@ char は int へ昇格して渡される。</li>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> exit<span class="op">(</span><span class="dt">int</span> code<span class="op">);</span></span>
 <span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="pp">#define NULL </span><span class="dv">0</span></span></code></pre></div>
+</div>
+</div>
 <ul>
 <li>タグ <code>FILE</code> はこの仕様の名前であり(リンクは関数シンボル名だけで行われる)、
 libc 内部の型名には依存しない。</li>
@@ -398,12 +459,9 @@ libc 内部の型名には依存しない。</li>
 <hr />
 <p><a id="feature-map"></a></p>
 <h2 id="到達範囲-機能-導入コマ-検証テスト">到達範囲: 機能 → 導入コマ → 検証テスト</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>区分</th>
@@ -412,20 +470,21 @@ libc 内部の型名には依存しない。</li>
 </thead>
 <tbody>
 <tr class="odd">
-<td>標準トラック(コマ1〜15。final テストの判定範囲)</td>
-<td><strong>本仕様の全機能</strong></td>
+<td>標準トラック(コマ1〜15)</td>
+<td>正しい入力のコード生成。検証はfixed17と過去回の全テスト、診断範囲は<a href="#diagnostics">別節</a>に示す</td>
 </tr>
 <tr class="even">
 <td>発展トピック</td>
-<td>本仕様の外側の機能・意味論(例: L2 複合代入、S1 短絡評価)</td>
+<td>本仕様の外側の機能・意味論(例: L2 複合代入、S1 短絡評価)、型・宣言検査の拡充(例: Q1)</td>
 </tr>
 </tbody>
 </table>
 </div>
+</div>
 <ul>
-<li>標準トラックのコンパイラは本仕様のすべてを実装する。仕様にあって標準トラックが
-実装しない機能はない。</li>
-<li>発展トピックは本仕様を<strong>超える</strong>題材である。複合代入 <code>+= -= *= /= %=</code> は
+<li>標準トラックは以下の機能を段階的に学ぶ。不正入力の全診断は完成条件に含めず、
+<a href="#diagnostics">標準トラックの診断範囲</a>で保証する項目を区別する。</li>
+<li>発展トピックには本仕様を<strong>超える</strong>題材と、標準実装の検査を補う題材がある。複合代入 <code>+= -= *= /= %=</code> は
 発展 L2 が追加する構文であり(意味論は L2 の資料が定義する)、
 短絡する <code>&amp;&amp;</code> / <code>||</code> は発展 S1 が本仕様の意味論を C のそれへ寄せる題材である。</li>
 <li>セルフホスト(発展課題 P1)の自己記述ソースは本仕様の機能だけで書く。
@@ -449,15 +508,9 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 (判定基準は発展課題の索引の「S と L の判定基準」節)。</li>
 </ul>
 <h3 id="字句とリテラル">字句とリテラル</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -506,16 +559,11 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="型-1">型</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -592,16 +640,11 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="演算子-1">演算子</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -755,16 +798,11 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="宣言とスコープ">宣言とスコープ</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -813,16 +851,11 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="文と制御構造">文と制御構造</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -899,16 +932,11 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="関数-1">関数</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -925,6 +953,34 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 <td><code>sessions/06_functions_recursion/tests/call_add.c</code></td>
 <td>標準</td>
 <td>引数なしは <code>()</code></td>
+</tr>
+<tr class="even">
+<td>固定char引数・char戻り値の代入変換</td>
+<td>コマ8</td>
+<td><code>sessions/08_types/tests/char_argument.c</code> / <code>char_return.c</code></td>
+<td>標準</td>
+<td>可変長部を縮小しないことは <code>varargs_promotion.c</code></td>
+</tr>
+<tr class="odd">
+<td>条件式の共通型</td>
+<td>コマ8</td>
+<td><code>sessions/08_types/tests/cond_char_pointer.c</code></td>
+<td>標準</td>
+<td>尺度・多段参照はコマ9、structはコマ12</td>
+</tr>
+<tr class="even">
+<td>関数の引数上限8個</td>
+<td>コマ6</td>
+<td><code>sessions/06_functions_recursion/tests/eight_args.c</code></td>
+<td>標準</td>
+<td>超過入力の拒否は提供Parserの検査で確認</td>
+</tr>
+<tr class="odd">
+<td>呼出し式への戻り値型の伝播</td>
+<td>コマ8</td>
+<td><code>sessions/08_types/tests/call_ptr.c</code></td>
+<td>標準</td>
+<td>後続回の <code>call_ptr_arith.c</code> / <code>call_char_ptr.c</code> / <code>call_struct_ptr.c</code> / <code>multifile_return_ptr.c</code> でも検査</td>
 </tr>
 <tr class="even">
 <td>プロトタイプ宣言・相互再帰</td>
@@ -964,16 +1020,11 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="プリプロセッサ-1">プリプロセッサ</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -1015,16 +1066,11 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="標準ライブラリlib.h-1">標準ライブラリ（<code>lib.h</code>）</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -1080,16 +1126,11 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="実行時の意味">実行時の意味</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 15%" />
-<col style="width: 23%" />
-<col style="width: 28%" />
-<col style="width: 15%" />
-<col style="width: 15%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -1138,15 +1179,13 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="テストを持たない項目">テストを持たない項目</h3>
 <p>上の表で代表テストが <code>—</code> の行は、次のいずれかの理由による。
-標準トラックの実装対象からは外れない。</p>
-<div class="table-scroll">
+正しい入力の機能と、不正入力の診断を区別する。診断の実装範囲は次節に示す。</p>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -1173,15 +1212,74 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
+<p><a id="diagnostics"></a></p>
+<h3 id="標準トラックの診断範囲">標準トラックの診断範囲</h3>
+<p>この仕様の「コンパイル時エラー」「不可」は、Core処理系が拒否すべき入力を定める。
+一方、標準トラックは正しい入力のコード生成を中心に学び、以下の診断を実装する。
+<strong>fixed17とコマ2〜14の全テスト通過は、Coreの全診断要件を満たす証明ではない。</strong>
+検出しない入力も仕様上は不正なままで、コンパイルできたことを許可の根拠にしない。</p>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
+<table>
+<thead>
+<tr class="header">
+<th>検査</th>
+<th>標準トラックでの扱い</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>字句・構文の違反、整数リテラルの上限、使用できないエスケープ</td>
+<td>提供Lexer/Parserで検出する</td>
+</tr>
+<tr class="even">
+<td>循環取込み、未対応の前処理指令、マクロ多段参照、異なる本体でのマクロ再定義</td>
+<td>提供前処理で検出する</td>
+</tr>
+<tr class="odd">
+<td><code>void</code>変数、struct値の戻り値宣言、可変長引数の定義・固定引数なしの宣言</td>
+<td>提供Parserで検出する</td>
+</tr>
+<tr class="even">
+<td>未定義変数、左辺値でない代入先、存在しないstructメンバ</td>
+<td>コード生成側で検出する</td>
+</tr>
+<tr class="odd">
+<td>宣言・定義・呼出しの引数が9個以上（可変長部を含む）</td>
+<td>提供Parserで検出する</td>
+</tr>
+<tr class="even">
+<td>未宣言関数の呼出し、8個以内での宣言との引数個数・固定引数型の一致</td>
+<td>診断を保証しない</td>
+</tr>
+<tr class="odd">
+<td>同一スコープの重複宣言、仮引数とローカルの名前衝突、関数・タグ・メンバの再定義規則</td>
+<td>診断を保証しない</td>
+</tr>
+<tr class="even">
+<td>代入・戻り値・演算子に対する型規則の完全な検査、struct値の代入・実引数の禁止</td>
+<td>診断を保証しない</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>診断を保証しない項目は、アセンブラやリンカで偶然エラーになっても検査済みとはいえない。
+例えば <code>int main() { return missing(1); }</code> は未宣言呼出しなので、
+本来はコンパイラ自身が拒否すべき入力である。</p>
+<p>完全な診断実装は発展として扱う。
+<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/Q1_typecheck/README.md">発展Q1（型検査パス）</a>で独立した検査パスを学び、
+さらに関数シグネチャとスコープの宣言表を整え、
+上表の保証しない項目を検査し、不正入力ごとにコンパイラが非ゼロ終了する負テストを追加する。
+その検査では、単なるツール不足や内部例外と、意図した診断を区別する。
+標準の <code>test_runner.py</code> は実行結果を比較するための道具なので、負テストには別の検査経路を用意する。</p>
 <hr />
 <p><a id="excluded"></a></p>
 <h2 id="除外機能の一覧">除外機能の一覧</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>機能</th>
@@ -1268,6 +1366,7 @@ S1・S3 のように「本仕様の外側」かつ S 系という組み合わせ
 </tbody>
 </table>
 </div>
+</div>
 <hr />
 <p><a id="isoc"></a></p>
 <h2 id="iso-c-との関係と移行上の注意">ISO C との関係と移行上の注意</h2>
@@ -1304,7 +1403,8 @@ NULL 参照になる。この差を埋めるのが発展 S1 である。</p>
 <p><a id="semantics"></a></p>
 <h2 id="実行時の意味-1">実行時の意味</h2>
 <h3 id="サイズアラインメントレイアウト">サイズ・アラインメント・レイアウト</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -1337,6 +1437,7 @@ NULL 参照になる。この差を埋めるのが発展 S1 である。</p>
 </tbody>
 </table>
 </div>
+</div>
 <p>struct のフィールドは宣言順に配置し、各フィールドのオフセットはそのアラインメントへ
 切り上げる。struct 全体のサイズは struct のアラインメントの倍数へ切り上げる。
 <code>sizeof</code> はこの規則で定まる値を返す。null ポインタの表現は全ビット 0。</p>
@@ -1359,9 +1460,9 @@ ISO C との差異である(例外 E3)。短絡する版は発展 S1 で実装�
 <p>次はコンパイルエラーにならず、実行時の動作が未定義である:</p>
 <ol type="1">
 <li>符号付き整数のオーバーフロー</li>
-<li>0 による除算・剰余(<code>INT_MIN</code> はこの仕様の整数リテラル上限
-(2147483647)により単項 <code>-</code> とリテラルの組合せで書けないため、
-<code>INT_MIN / -1</code> は本仕様の範囲では到達不能である)</li>
+<li>0 による除算・剰余、および商が <code>int</code> の表現範囲に収まらない除算・剰余
+（<code>INT_MIN / -1</code>、<code>INT_MIN % -1</code>）。<code>INT_MIN</code> は単項 <code>-</code> と1個の整数リテラルでは
+書けないが、<code>-2147483647 - 1</code> のような式で表せる。</li>
 <li>不正なポインタ参照(null・未確保領域・確保領域外、ポインタ演算の範囲逸脱)</li>
 <li>文字列リテラルの内容の変更</li>
 <li>未初期化の局所変数の値の使用</li>
@@ -1380,6 +1481,8 @@ ISO C との差異である(例外 E3)。短絡する版は発展 S1 で実装�
 字句解析がシンボルテーブルを参照する必要はない。</p>
 <p>この節は最終形である。各コマの時点で書ける範囲だけを抜き出した累積スナップショットは、
 コマ1〜14 の各資料の「この回までの言語仕様（EBNF）」節にある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre><code>記法:
   rule ::= ...    定義
   A | B           選択（A または B）
@@ -1388,17 +1491,25 @@ ISO C との差異である(例外 E3)。短絡する版は発展 S1 で実装�
   ( A )           グループ化
   &#39;token&#39;         終端記号（キーワード・記号）
   UPPER           字句トークン（下部に定義）</code></pre>
+</div>
+</div>
 <p>二項演算子列(<code>binary_expr</code>)の構文木は「演算子」節の優先順位で構成する。
 右結合の規則(代入・条件)は再帰で直接表している。</p>
 <h3 id="前処理">前処理</h3>
 <p>指令行(行頭の <code>#</code> から改行まで)は構文解析より前に処理され、
 以下の構文には現れない。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>include_dir ::= &#39;#&#39; &#39;include&#39; &#39;&quot;&#39; FILENAME &#39;&quot;&#39; NEWLINE
 define_dir  ::= &#39;#&#39; &#39;define&#39; IDENT { TOKEN } NEWLINE</code></pre>
+</div>
+</div>
 <p><code>FILENAME</code> は <code>"</code> と改行を除く 1 文字以上の文字列。<code>{ TOKEN }</code> は改行までの
 トークン列(0 個以上)。</p>
 <h3 id="型-2">型</h3>
 <p>型は、書ける位置ごとに 4 つの非終端記号で表す。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>stars       ::= &#39;*&#39; { &#39;*&#39; }
 
 scalar_type ::= &#39;int&#39;  [ stars ]
@@ -1413,12 +1524,16 @@ ret_type    ::= scalar_type
               | &#39;void&#39;
 
 type_name   ::= obj_type</code></pre>
+</div>
+</div>
 <p>この構成により次の制約が構文レベルで決まる:
 <code>void</code> 単独の変数・引数・フィールドは書けない(<code>void</code> は <code>*</code> を伴うか
 戻り値型のみ)、struct 値の引数・戻り値・フィールドは書けない、
 <code>sizeof(void)</code> は書けない。
 struct 値の引数・戻り値は、この <code>param</code> と <code>ret_type</code> を拡張して発展 L5 が追加する。</p>
 <h3 id="トップレベル">トップレベル</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>program       ::= external_decl { external_decl }
 
 external_decl ::= struct_decl
@@ -1432,10 +1547,14 @@ struct_decl   ::= &#39;struct&#39; IDENT &#39;{&#39; field_decl { field_decl } &
 field_decl    ::= scalar_type IDENT &#39;;&#39;
 
 var_decl      ::= obj_type IDENT &#39;;&#39;</code></pre>
+</div>
+</div>
 <p>プログラムは 1 個以上の外部宣言からなる(空プログラムは不可)。
 struct 定義はファイルスコープのみ、タグ必須、フィールドは 1 個以上。
 初期化子は存在しない。</p>
 <h3 id="関数-2">関数</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>param       ::= scalar_type IDENT
 param_list  ::= param { &#39;,&#39; param }
 
@@ -1443,11 +1562,17 @@ func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list [ &#39;,&#39; &#39;...&#
 func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
 
 func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;</code></pre>
-<p>引数なしは <code>()</code>(<code>(void)</code> は受理しない)。仮引数は名前必須。
+</div>
+</div>
+<p>宣言・定義の固定仮引数は最大8個、呼出しの実引数も可変長部を含め最大8個である。
+この個数制限は上のEBNFに加えて検査する。
+引数なしは <code>()</code>(<code>(void)</code> は受理しない)。仮引数は名前必須。
 <code>...</code> はプロトタイプ限定で、1 個以上の固定引数の後にのみ書ける
 (<code>(...)</code> 単独形は導出できない)。局所変数の宣言は関数本体の先頭のみで、
 入れ子ブロックは宣言を含まない。</p>
 <h3 id="文">文</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>stmt        ::= expr_stmt
               | block
               | if_stmt
@@ -1466,8 +1591,12 @@ if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; 
 while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
 
 for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt</code></pre>
+</div>
+</div>
 <p><code>else</code> は最も内側の未対応 <code>if</code> へ結合する(dangling-else は最近傍優先)。</p>
 <h3 id="式">式</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>expr        ::= assign_expr     /* カンマ演算子はない */
 
 assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合。複合代入はない */
@@ -1506,6 +1635,8 @@ primary_expr ::= INT_LITERAL
                | &#39;(&#39; expr &#39;)&#39;
 
 arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+</div>
+</div>
 <ul>
 <li><code>binary_expr</code> は「単項式を二項演算子でつないだ列」だけを定め、木の形は定めない。
 木の形は<a href="#operators">「演算子」節</a>の優先順位で決まる: 優先順位の高い演算子ほど
@@ -1521,6 +1652,8 @@ lvalue 制約は意味解析で検査する。</li>
 <li>キャストは導出できない(<code>( expr )</code> の中に型は書けない)。</li>
 </ul>
 <h3 id="字句トークン">字句トークン</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>INT_LITERAL    ::= &#39;0&#39; | NONZERO { DIGIT }
 CHAR_LITERAL   ::= &quot;&#39;&quot; ( char_ch | escape ) &quot;&#39;&quot;
 STRING_LITERAL ::= &#39;&quot;&#39; { str_ch | escape } &#39;&quot;&#39;
@@ -1532,6 +1665,8 @@ IDENT          ::= ( ALPHA | &#39;_&#39; ) { ALPHA | DIGIT | &#39;_&#39; }
 ALPHA   = [a-zA-Z]
 DIGIT   = [0-9]
 NONZERO = [1-9]</code></pre>
+</div>
+</div>
 <p><code>char_ch</code> は <code>'</code>・<code>\</code>・改行を除く任意の文字、<code>str_ch</code> は <code>"</code>・<code>\</code>・改行を
 除く任意の文字。</p>
 <h3 id="実装の注記再帰下降">実装の注記（再帰下降）</h3>
@@ -1554,7 +1689,7 @@ NONZERO = [1-9]</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

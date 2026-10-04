@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>短絡評価 — &amp;&amp; と || の本当の意味 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,19 +92,22 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">短絡評価 — <code>&amp;&amp;</code> と <code>||</code> の本当の意味</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#いまのコンパイラは何をしているか" id="toc-いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</a></li>
-      <li><a href="#何が壊れるのか" id="toc-何が壊れるのか">何が壊れるのか</a></li>
-      <li><a href="#どう直すか-分岐で作る" id="toc-どう直すか-分岐で作る">どう直すか — 分岐で作る</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#いまのコンパイラは何をしているか" id="toc-いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</a></li>
+<li><a href="#何が壊れるのか" id="toc-何が壊れるのか">何が壊れるのか</a></li>
+<li><a href="#どう直すか-分岐で作る" id="toc-どう直すか-分岐で作る">どう直すか — 分岐で作る</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -109,12 +115,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <code>if (p != 0 &amp;&amp; p-&gt;val &gt; 0)</code> のような、いまは書けない書き方が書けるようになる。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -157,12 +160,15 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p><strong>この言語の仕様が本物の C とわざと違えている</strong>点を、C の側へ寄せる回である。
 <code>language_spec.md</code> は <code>&amp;&amp;</code> / <code>||</code> について「両辺を必ず評価する（短絡しない）」と
 明記している（例外 E3）。実装はそのとおりに動いており、バグではない。
 この回で書き換えるのは<strong>言語の意味論のほう</strong>である。</p>
 <h2 id="いまのコンパイラは何をしているか">いまのコンパイラは何をしているか</h2>
 <p><code>a &amp;&amp; b</code> に対して、いまのコード生成はこうなっている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 左辺を評価して a0 へ</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># a0 をスタックへ退避</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 右辺を評価して a0 へ</span></span>
@@ -170,6 +176,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  snez a1<span class="op">,</span> a1      <span class="co"># 左辺を 0/1 に</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  snez a0<span class="op">,</span> a0      <span class="co"># 右辺を 0/1 に</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">and</span>  a0<span class="op">,</span> a1<span class="op">,</span> a0</span></code></pre></div>
+</div>
+</div>
 <p><strong>両辺を必ず評価している。</strong> これは <code>language_spec.md</code> の演算子節・評価順序節が
 定めているとおりの動作で、実装のバグではない（例外 E3）。</p>
 <p>しかし本物の C では、<code>&amp;&amp;</code> と <code>||</code> は特別扱いされている。</p>
@@ -185,9 +193,13 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <figcaption aria-hidden="true">いまの生成と、短絡する生成</figcaption>
 </figure>
 <p>いまの実装で次を書くと、実際に落ちる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>p <span class="op">!=</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> p<span class="op">-&gt;</span>val <span class="op">&gt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="op">...</span> <span class="op">}</span>    <span class="co">// p が NULL でも p-&gt;val を読む → クラッシュ</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>i <span class="op">&lt;</span> n <span class="op">&amp;&amp;</span> p<span class="op">[</span>i<span class="op">]</span> <span class="op">==</span> x<span class="op">)</span>  <span class="op">{</span> <span class="op">...</span> <span class="op">}</span>     <span class="co">// 範囲外アクセス</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>x <span class="op">!=</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> <span class="dv">100</span> <span class="op">/</span> x <span class="op">&gt;</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span> <span class="op">...</span> <span class="op">}</span>   <span class="co">// x が 0 でも割る</span></span></code></pre></div>
+</div>
+</div>
 <p>1行目は、コマ12 の連結リストで自然に書きたくなる形である
 （実際、コマ12 の <code>list_sum</code> は <code>while (head != 0)</code> と <code>head-&gt;val</code> を
 <strong>2つの文に分けて</strong>書いてある。分けざるを得なかった、とも言える）。</p>
@@ -207,6 +219,8 @@ C のつもりで <code>p != 0 &amp;&amp; p-&gt;val</code> と書いた瞬間に
 <h2 id="どう直すか-分岐で作る">どう直すか — 分岐で作る</h2>
 <p>短絡評価は、算術ではなく<strong>制御フロー</strong>である。
 コマ4 の <code>if</code> と同じく、ラベルと <code>beqz</code> で作る。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>a &amp;&amp; b:
       左辺を評価         → a0
       beqz a0, Lfalse    ← 左が偽なら、右辺の命令を飛び越す
@@ -217,6 +231,8 @@ C のつもりで <code>p != 0 &amp;&amp; p-&gt;val</code> と書いた瞬間に
    Lfalse:
       li a0, 0
    Lend:</code></pre>
+</div>
+</div>
 <p><code>||</code> はこの裏返しで、<code>bnez</code>（0 以外なら飛ぶ）を使い、
 左辺が真なら <code>Ltrue</code> へ飛んで <code>1</code> にする。</p>
 <p>結果が 1 か 0 に正規化される点は、いままでと同じである
@@ -237,7 +253,8 @@ C のつもりで <code>p != 0 &amp;&amp; p-&gt;val</code> と書いた瞬間に
 <code>&amp;&amp;</code> / <code>||</code> だけが両辺を評価する形のまま取り残されていた、ということになる。</p>
 </div>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -260,12 +277,21 @@ C のつもりで <code>p != 0 &amp;&amp; p-&gt;val</code> と書いた瞬間に
 </tbody>
 </table>
 </div>
+</div>
 <p><code>cg.new_label()</code>（コマ4 で使ったラベル生成）で飛び先を2つ作る。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/null_guard.c          <span class="co"># 生成結果を見る</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> semcc.py tests/null_guard.c <span class="kw">|</span> <span class="fu">grep</span> beqz</span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 生成された命令列の構造を確認(未実装は SKIP)</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 短絡が要るテスト + fixed17</span></span></code></pre></div>
+</div>
+</div>
 <p><code>golden.py</code> は3つを続けて確認する。</p>
 <ol type="1">
 <li><strong>短絡なし（いまの mycc）</strong>では <code>tests/</code> が落ちること</li>
@@ -273,12 +299,9 @@ C のつもりで <code>p != 0 &amp;&amp; p-&gt;val</code> と書いた瞬間に
 <li><code>fixed17</code> が壊れていないこと</li>
 </ol>
 <p><code>tests/</code> の中身は次の4本である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 47%" />
-<col style="width: 52%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>テスト</th>
@@ -304,6 +327,7 @@ C のつもりで <code>p != 0 &amp;&amp; p-&gt;val</code> と書いた瞬間に
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><code>side_effect.c</code> が本質的である。「評価されないこと」は、
 副作用を観測してはじめて確かめられる。</p>
@@ -346,7 +370,7 @@ VB の <code>And</code> / <code>AndAlso</code>、Pascal の処理系オプショ
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

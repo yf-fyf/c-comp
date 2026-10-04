@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コマ6: 関数呼び出し・再帰 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,33 +92,38 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">コマ6: 関数呼び出し・再帰</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
-      <li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
-      <li><a href="#rv64の関数呼び出し規約" id="toc-rv64の関数呼び出し規約">RV64の関数呼び出し規約</a></li>
-      <li><a href="#引数を受け取る側" id="toc-引数を受け取る側">引数を受け取る側</a></li>
-      <li><a href="#codegen_call-の生成パターン" id="toc-codegen_call-の生成パターン">codegen_Call の生成パターン</a></li>
-      <li><a href="#call-前のスタックアラインメント" id="toc-call-前のスタックアラインメント">call 前のスタックアラインメント</a></li>
-      <li><a href="#再帰呼び出しで壊れやすい点" id="toc-再帰呼び出しで壊れやすい点">再帰呼び出しで壊れやすい点</a></li>
-      <li><a href="#関数プロトタイプ" id="toc-関数プロトタイプ">関数プロトタイプ</a></li>
-      <li><a href="#gen_func-の変更点" id="toc-gen_func-の変更点">gen_func の変更点</a></li>
-      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
-      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
-      <li><a href="#tests" id="toc-tests">tests/</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#注意" id="toc-注意">注意</a></li>
-      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation has-grammar">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+<li><a href="#ast-を確認する" id="toc-ast-を確認する">AST を確認する</a></li>
+<li><a href="#rv64の関数呼び出し規約" id="toc-rv64の関数呼び出し規約">RV64の関数呼び出し規約</a></li>
+<li><a href="#引数を受け取る側" id="toc-引数を受け取る側">引数を受け取る側</a></li>
+<li><a href="#codegen_call-の生成パターン" id="toc-codegen_call-の生成パターン">codegen_Call の生成パターン</a></li>
+<li><a href="#call-前のスタックアラインメント" id="toc-call-前のスタックアラインメント">call 前のスタックアラインメント</a></li>
+<li><a href="#再帰呼び出しで壊れやすい点" id="toc-再帰呼び出しで壊れやすい点">再帰呼び出しで壊れやすい点</a></li>
+<li><a href="#関数プロトタイプ" id="toc-関数プロトタイプ">関数プロトタイプ</a></li>
+<li><a href="#gen_func-の変更点" id="toc-gen_func-の変更点">gen_func の変更点</a></li>
+<li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+<li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+<li><a href="#tests" id="toc-tests">tests/</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#注意" id="toc-注意">注意</a></li>
+<li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+</ul></nav>
+      </details>
+      <a class="toc-grammar" href="#この回までの言語仕様ebnf">文法を参照</a>
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
 <p>ユーザー定義関数の定義・呼び出し・再帰呼び出しを実装する。</p>
 <p>コマ5までは、<code>main</code> 関数だけを扱ってきた。
 この回では、複数の関数を定義し、それらを呼び出せるようにする。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> fib<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">&lt;=</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> n<span class="op">;</span></span>
@@ -126,11 +134,14 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fib<span class="op">(</span><span class="dv">10</span><span class="op">);</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>目標は、引数の受け渡し、関数呼び出し <code>call</code>、戻り値の受け取り、再帰呼び出しを正しく生成できるようにすることである。</p>
 </section>
 <h2 id="この回で扱う範囲">この回で扱う範囲</h2>
 <p>対象にするプログラムは、<code>main</code> に加えてユーザー定義関数を含むものに限定する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" role="region" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -166,60 +177,65 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>これまでに扱ったすべての機能（変数、式、制御構文）を、<code>main</code> 以外の関数内でも使用できる。</p>
-<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<section id="この回までの言語仕様ebnf" class="grammar-section" data-grammar-heading="この回までの言語仕様ebnf">
+<h3>この回までの言語仕様（EBNF）</h3>
 <p>この回までに書けるプログラムの文法を、累積の形でまとめる。
 記法と最終形の全体像は
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
-<pre class="ebnf" data-lang="ebnf"><code>scalar_type ::= &#39;int&#39;            /* ポインタはコマ7、char はコマ8 */
-obj_type    ::= scalar_type
-ret_type    ::= scalar_type      /* void はコマ7 */
-
-program       ::= external_decl { external_decl }
-external_decl ::= func_proto
-                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
-var_decl      ::= obj_type IDENT &#39;;&#39;
-
-param       ::= scalar_type IDENT
-param_list  ::= param { &#39;,&#39; param }
-func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; &#39;;&#39;   /* &#39;...&#39; はコマ10 */
-func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
-func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
-
-stmt        ::= expr_stmt
-              | block
-              | if_stmt
-              | while_stmt
-              | for_stmt
-              | &#39;break&#39; &#39;;&#39;
-              | &#39;continue&#39; &#39;;&#39;
-              | &#39;return&#39; expr &#39;;&#39;
-expr_stmt   ::= [ expr ] &#39;;&#39;
-block       ::= &#39;{&#39; { stmt } &#39;}&#39;
-if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
-while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
-for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
-
-expr        ::= assign_expr
-assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
-              | cond_expr
-cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
-binary_expr ::= unary_expr { bin_op unary_expr }
-bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
-              | &#39;+&#39; | &#39;-&#39;
-              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
-              | &#39;==&#39; | &#39;!=&#39;
-unary_expr  ::= primary_expr
-              | &#39;-&#39;  unary_expr
-              | &#39;++&#39; unary_expr
-              | &#39;--&#39; unary_expr
-primary_expr ::= INT_LITERAL
-               | IDENT &#39;(&#39; [ arg_list ] &#39;)&#39;
-               | IDENT
-               | &#39;(&#39; expr &#39;)&#39;
-arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+<p class="grammar-legend"><span class="grammar-added">追加</span>は新しい規則・選択肢、<span class="grammar-changed">変更</span>は前回の形の置き換えです。ラベルのない行は既存です。</p>
+<details class="grammar-full" open><summary>この回までの文法全文（47行）</summary>
+<pre class="grammar-pre"><code class="grammar-code"><span id="grammar-line-64" class="grammar-line grammar-existing" data-label="">scalar_type ::= &#x27;int&#x27;            /* ポインタはコマ7、char はコマ8 */</span>
+<span id="grammar-line-65" class="grammar-line grammar-existing" data-label="">obj_type    ::= scalar_type</span>
+<span id="grammar-line-66" class="grammar-line grammar-added" data-label="追加">ret_type    ::= scalar_type      /* void はコマ7 */</span>
+<span id="grammar-line-67" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-68" class="grammar-line grammar-changed" data-label="変更">program       ::= <mark class="grammar-token">external_decl</mark> <mark class="grammar-token">{</mark> <mark class="grammar-token">external_decl</mark> <mark class="grammar-token">}</mark></span>
+<span id="grammar-line-69" class="grammar-line grammar-added" data-label="追加">external_decl ::= func_proto</span>
+<span id="grammar-line-70" class="grammar-line grammar-added" data-label="追加">                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */</span>
+<span id="grammar-line-71" class="grammar-line grammar-existing" data-label="">var_decl      ::= obj_type IDENT &#x27;;&#x27;</span>
+<span id="grammar-line-72" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-73" class="grammar-line grammar-added" data-label="追加">param       ::= scalar_type IDENT</span>
+<span id="grammar-line-74" class="grammar-line grammar-added" data-label="追加">param_list  ::= param { &#x27;,&#x27; param }</span>
+<span id="grammar-line-75" class="grammar-line grammar-added" data-label="追加">func_proto  ::= ret_type IDENT &#x27;(&#x27; [ param_list ] &#x27;)&#x27; &#x27;;&#x27;   /* &#x27;...&#x27; はコマ10 */</span>
+<span id="grammar-line-76" class="grammar-line grammar-changed" data-label="変更">func_def    ::= <mark class="grammar-token">ret_type</mark> <mark class="grammar-token">IDENT</mark> &#x27;(&#x27; <mark class="grammar-token">[</mark> <mark class="grammar-token">param_list</mark> <mark class="grammar-token">]</mark> &#x27;)&#x27; func_body</span>
+<span id="grammar-line-77" class="grammar-line grammar-existing" data-label="">func_body   ::= &#x27;{&#x27; { var_decl } { stmt } &#x27;}&#x27;</span>
+<span id="grammar-line-78" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-79" class="grammar-line grammar-existing" data-label="">stmt        ::= expr_stmt</span>
+<span id="grammar-line-80" class="grammar-line grammar-existing" data-label="">              | block</span>
+<span id="grammar-line-81" class="grammar-line grammar-existing" data-label="">              | if_stmt</span>
+<span id="grammar-line-82" class="grammar-line grammar-existing" data-label="">              | while_stmt</span>
+<span id="grammar-line-83" class="grammar-line grammar-existing" data-label="">              | for_stmt</span>
+<span id="grammar-line-84" class="grammar-line grammar-existing" data-label="">              | &#x27;break&#x27; &#x27;;&#x27;</span>
+<span id="grammar-line-85" class="grammar-line grammar-existing" data-label="">              | &#x27;continue&#x27; &#x27;;&#x27;</span>
+<span id="grammar-line-86" class="grammar-line grammar-existing" data-label="">              | &#x27;return&#x27; expr &#x27;;&#x27;</span>
+<span id="grammar-line-87" class="grammar-line grammar-existing" data-label="">expr_stmt   ::= [ expr ] &#x27;;&#x27;</span>
+<span id="grammar-line-88" class="grammar-line grammar-existing" data-label="">block       ::= &#x27;{&#x27; { stmt } &#x27;}&#x27;</span>
+<span id="grammar-line-89" class="grammar-line grammar-existing" data-label="">if_stmt     ::= &#x27;if&#x27; &#x27;(&#x27; expr &#x27;)&#x27; stmt [ &#x27;else&#x27; stmt ]</span>
+<span id="grammar-line-90" class="grammar-line grammar-existing" data-label="">while_stmt  ::= &#x27;while&#x27; &#x27;(&#x27; expr &#x27;)&#x27; stmt</span>
+<span id="grammar-line-91" class="grammar-line grammar-existing" data-label="">for_stmt    ::= &#x27;for&#x27; &#x27;(&#x27; [ expr ] &#x27;;&#x27; [ expr ] &#x27;;&#x27; [ expr ] &#x27;)&#x27; stmt</span>
+<span id="grammar-line-92" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-93" class="grammar-line grammar-existing" data-label="">expr        ::= assign_expr</span>
+<span id="grammar-line-94" class="grammar-line grammar-existing" data-label="">assign_expr ::= unary_expr &#x27;=&#x27; assign_expr   /* 右結合 */</span>
+<span id="grammar-line-95" class="grammar-line grammar-existing" data-label="">              | cond_expr</span>
+<span id="grammar-line-96" class="grammar-line grammar-existing" data-label="">cond_expr   ::= binary_expr [ &#x27;?&#x27; expr &#x27;:&#x27; cond_expr ]   /* 右結合 */</span>
+<span id="grammar-line-97" class="grammar-line grammar-existing" data-label="">binary_expr ::= unary_expr { bin_op unary_expr }</span>
+<span id="grammar-line-98" class="grammar-line grammar-existing" data-label="">bin_op      ::= &#x27;*&#x27; | &#x27;/&#x27; | &#x27;%&#x27;  /* 論理 &amp;&amp; || はコマ13 */</span>
+<span id="grammar-line-99" class="grammar-line grammar-existing" data-label="">              | &#x27;+&#x27; | &#x27;-&#x27;</span>
+<span id="grammar-line-100" class="grammar-line grammar-existing" data-label="">              | &#x27;&lt;&#x27; | &#x27;&gt;&#x27; | &#x27;&lt;=&#x27; | &#x27;&gt;=&#x27;</span>
+<span id="grammar-line-101" class="grammar-line grammar-existing" data-label="">              | &#x27;==&#x27; | &#x27;!=&#x27;</span>
+<span id="grammar-line-102" class="grammar-line grammar-existing" data-label="">unary_expr  ::= primary_expr</span>
+<span id="grammar-line-103" class="grammar-line grammar-existing" data-label="">              | &#x27;-&#x27;  unary_expr</span>
+<span id="grammar-line-104" class="grammar-line grammar-existing" data-label="">              | &#x27;++&#x27; unary_expr</span>
+<span id="grammar-line-105" class="grammar-line grammar-existing" data-label="">              | &#x27;--&#x27; unary_expr</span>
+<span id="grammar-line-106" class="grammar-line grammar-existing" data-label="">primary_expr ::= INT_LITERAL</span>
+<span id="grammar-line-107" class="grammar-line grammar-added" data-label="追加">               | IDENT &#x27;(&#x27; [ arg_list ] &#x27;)&#x27;</span>
+<span id="grammar-line-108" class="grammar-line grammar-existing" data-label="">               | IDENT</span>
+<span id="grammar-line-109" class="grammar-line grammar-existing" data-label="">               | &#x27;(&#x27; expr &#x27;)&#x27;</span>
+<span id="grammar-line-110" class="grammar-line grammar-added" data-label="追加">arg_list    ::= assign_expr { &#x27;,&#x27; assign_expr }</span></code></pre>
 <p>この回までの二項演算子の優先順位（高い順）:</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" role="region" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -229,22 +245,22 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr class="odd grammar-existing">
 <td>1（高）</td>
 <td><code>*</code> <code>/</code> <code>%</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
+<tr class="even grammar-existing">
 <td>2</td>
 <td><code>+</code> <code>-</code></td>
 <td>左</td>
 </tr>
-<tr class="odd">
+<tr class="odd grammar-existing">
 <td>3</td>
 <td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
+<tr class="even grammar-existing">
 <td>4</td>
 <td><code>==</code> <code>!=</code></td>
 <td>左</td>
@@ -252,51 +268,58 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>表の読み方はコマ1の「木の形は規則で決まっている」と
 <a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
 <p><code>main</code> だけを書いていたこれまでと違い、<code>program</code> が複数の外部宣言を持てるようになった。
 引数なしは <code>()</code> と書く（<code>(void)</code> は受理しない）。
 字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+</details>
+</section>
 <h2 id="ast-を確認する">AST を確認する</h2>
 <h3 id="関数定義">関数定義</h3>
-<div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/06_functions_recursion/tests/target.c</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/06_functions_recursion/tests/target.c</span></code></pre></div>
+</div>
+</div>
 <p><code>target.c</code> の中身は、冒頭に挙げた <code>fib</code> のプログラムと同じである。</p>
-<div class="sourceCode" id="cb4" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(program</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;fib&quot;</span> <span class="bu">:type</span> int</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> int))</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">if</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">cond</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>          (le (var <span class="st">&quot;n&quot;</span>) (num <span class="dv">1</span>)))</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        (then</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">return</span> (var <span class="st">&quot;n&quot;</span>)))))</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        (add</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>          (call <span class="st">&quot;fib&quot;</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>            (args</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;n&quot;</span>) (num <span class="dv">1</span>))))</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>          (call <span class="st">&quot;fib&quot;</span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            (args</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;n&quot;</span>) (num <span class="dv">2</span>))))))))</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        (call <span class="st">&quot;fib&quot;</span></span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>          (args (num <span class="dv">10</span>)))))))</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb3" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;fib&quot;</span> <span class="bu">:type</span> int</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> int))</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">if</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">cond</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>          (le (var <span class="st">&quot;n&quot;</span>) (num <span class="dv">1</span>)))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        (then</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>          (<span class="kw">block</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>            (<span class="kw">return</span> (var <span class="st">&quot;n&quot;</span>)))))</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        (add</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>          (call <span class="st">&quot;fib&quot;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>            (args</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;n&quot;</span>) (num <span class="dv">1</span>))))</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>          (call <span class="st">&quot;fib&quot;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            (args</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>              (sub (var <span class="st">&quot;n&quot;</span>) (num <span class="dv">2</span>))))))))</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> <span class="bu">:type</span> int (params)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    (<span class="kw">block</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>      (<span class="kw">return</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        (call <span class="st">&quot;fib&quot;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>          (args (num <span class="dv">10</span>)))))))</span></code></pre></div>
+</div>
+</div>
 <figure>
 <img src="../../figures/ast/06_fib_ast.svg" alt="関数定義の AST" />
 <figcaption aria-hidden="true">関数定義の AST</figcaption>
 </figure>
 <p>新しく登場するノードは次の通り。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" role="region" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 17%" />
-<col style="width: 60%" />
-<col style="width: 21%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>S式</th>
@@ -323,39 +346,54 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p><code>ND_CALL</code> は式である。
 <code>codegen()</code> で処理し、結果は <code>a0</code> に置く。</p>
 <h3 id="相互再帰のast">相互再帰のAST</h3>
-<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/06_functions_recursion/tests/mutual_rec.c</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/parse_viewer.py sessions/06_functions_recursion/tests/mutual_rec.c</span></code></pre></div>
+</div>
+</div>
 <p>このプログラムは、冒頭に宣言だけを2つ置き、そのあとに定義が続く（以下は本体を1行に詰めて示す）。</p>
-<div class="sourceCode" id="cb6" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_even<span class="op">(</span><span class="dt">int</span> n<span class="op">);</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_odd<span class="op">(</span><span class="dt">int</span> n<span class="op">);</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_even<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span> <span class="cf">if</span> <span class="op">(</span>n <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span> <span class="op">}</span> <span class="cf">return</span> is_odd<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">);</span> <span class="op">}</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_odd<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span>  <span class="op">{</span> <span class="cf">if</span> <span class="op">(</span>n <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span> <span class="op">}</span> <span class="cf">return</span> is_even<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">);</span> <span class="op">}</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span> <span class="cf">return</span> is_even<span class="op">(</span><span class="dv">10</span><span class="op">)</span> <span class="op">+</span> is_odd<span class="op">(</span><span class="dv">7</span><span class="op">)</span> <span class="op">*</span> <span class="dv">10</span><span class="op">;</span> <span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb5" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_even<span class="op">(</span><span class="dt">int</span> n<span class="op">);</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_odd<span class="op">(</span><span class="dt">int</span> n<span class="op">);</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_even<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span> <span class="cf">if</span> <span class="op">(</span>n <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span> <span class="op">}</span> <span class="cf">return</span> is_odd<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">);</span> <span class="op">}</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_odd<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span>  <span class="op">{</span> <span class="cf">if</span> <span class="op">(</span>n <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span> <span class="op">}</span> <span class="cf">return</span> is_even<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">);</span> <span class="op">}</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span> <span class="cf">return</span> is_even<span class="op">(</span><span class="dv">10</span><span class="op">)</span> <span class="op">+</span> is_odd<span class="op">(</span><span class="dv">7</span><span class="op">)</span> <span class="op">*</span> <span class="dv">10</span><span class="op">;</span> <span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>S式の全文は上の <code>parse_viewer.py</code> で確認できる。見どころは冒頭で、
 定義より先に宣言が <code>funcproto</code> として現れる点である。</p>
-<div class="sourceCode" id="cb7" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>(program</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  (funcproto <span class="st">&quot;is_even&quot;</span> <span class="bu">:type</span> int</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> int)))</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  (funcproto <span class="st">&quot;is_odd&quot;</span> <span class="bu">:type</span> int</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> int)))</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;is_even&quot;</span> ...)   <span class="co">; 中身は fib と同じ形（if と call）</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;is_odd&quot;</span> ...)</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> ...))</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb6" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(program</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  (funcproto <span class="st">&quot;is_even&quot;</span> <span class="bu">:type</span> int</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> int)))</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  (funcproto <span class="st">&quot;is_odd&quot;</span> <span class="bu">:type</span> int</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    (params (param <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> int)))</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;is_even&quot;</span> ...)   <span class="co">; 中身は fib と同じ形（if と call）</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;is_odd&quot;</span> ...)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  (funcdef <span class="st">&quot;main&quot;</span> ...))</span></code></pre></div>
+</div>
+</div>
 <figure>
 <img src="../../figures/ast/06_mutual_rec_ast.svg" alt="相互再帰の AST" />
 <figcaption aria-hidden="true">相互再帰の AST</figcaption>
 </figure>
-<p>相互に呼び合う関数では、先に <code>funcproto</code> が出る。
-これは、宣言より前に関数定義を書く必要がある場合に、Parserが宣言を前方に移動するためである。</p>
+<p>この例では、ソースの先頭に書いた関数プロトタイプが先に <code>funcproto</code> として現れる。
+Parser は宣言を前方へ移動せず、ソースに書かれた外部宣言の順序を保存する。
+相互に呼び合う関数は、呼び出しより前に相手のプロトタイプを宣言しておく。</p>
 <h2 id="rv64の関数呼び出し規約">RV64の関数呼び出し規約</h2>
 <p>関数呼び出しでは、呼び出す側と呼び出される側の間で、どのレジスタを何に使うかを決めておく必要がある。
 この取り決めを ABI の一部として扱う。</p>
 <p>この回で使う主な約束は次の通り。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" role="region" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -403,8 +441,13 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>関数を呼び出すとき、<code>call f</code> という命令を使う。</p>
-<div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">call</span> fib</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb7" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cf">call</span> fib</span></code></pre></div>
+</div>
+</div>
 <p>この命令は、次の2つのことを行う。</p>
 <ol type="1">
 <li>次の命令のアドレスを <code>ra</code> に保存する</li>
@@ -422,11 +465,16 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 各呼び出しが自分専用の引数スロットを持つため、再帰しても <code>n</code> の値が混ざらない。</p>
 <h2 id="引数を受け取る側">引数を受け取る側</h2>
 <p>関数が呼ばれた直後、引数は <code>a0</code>, <code>a1</code>, … に入っている。</p>
-<div class="sourceCode" id="cb9" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> add<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b<span class="op">;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb8" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> add<span class="op">(</span><span class="dt">int</span> a<span class="op">,</span> <span class="dt">int</span> b<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a <span class="op">+</span> b<span class="op">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>この関数が <code>add(3, 5)</code> と呼ばれた場合、関数に入った直後は次の状態になる。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" role="region" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -446,16 +494,25 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>ただし、以後の計算で <code>a0</code> や <code>a1</code> はすぐ上書きされる。
 そのため、関数の先頭で引数をローカル変数と同じようにスタックへ保存する。</p>
 <p><code>gen_func()</code> では、ローカル変数を集める前に、まず <code>funcdef.params</code> を <code>self.alloc_local()</code> で登録する
 （全体の手順は後述の「gen_func の変更点」にまとめてある）。</p>
 <p>たとえば <code>int add(int a, int b)</code> なら、次のように配置できる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>s0 - 24   param a
 s0 - 32   param b</code></pre>
+</div>
+</div>
 <p>プロローグ後に、引数レジスタを保存する。</p>
-<div class="sourceCode" id="cb11" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>sd a1<span class="op">,</span> <span class="op">-</span><span class="dv">32</span><span class="op">(</span>s0<span class="op">)</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb10" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>sd a1<span class="op">,</span> <span class="op">-</span><span class="dv">32</span><span class="op">(</span>s0<span class="op">)</span></span></code></pre></div>
+</div>
+</div>
 <p>これ以降、引数 <code>a</code>, <code>b</code> は通常のローカル変数と同じように <code>codegen_lval()</code> でアドレスを取り、<code>ld</code> で値を読める。</p>
 <h2 id="codegen_call-の生成パターン">codegen_Call の生成パターン</h2>
 <p>呼び出す側は、<code>call f</code> を出す直前に第1引数を <code>a0</code>、第2引数を <code>a1</code>、…（最大 <code>a7</code>）へ置く。
@@ -464,42 +521,30 @@ s0 - 32   param b</code></pre>
 そのままだと、次の引数を評価したときに前の引数が上書きされる。
 そのため、各引数を評価したら一度スタックに保存する。</p>
 <p><code>codegen_Call(node)</code> は次の流れで実装する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>1. 引数を左から順に self.codegen する
 2. 各引数の結果をスタックに積む（_push_a0）
-3. スタックから a0, a1, ... にロードする（積んだ逆順）
-4. 引数個数 * 8 でスタックを戻す
+3. 積んだ逆順に _pop_into で引数レジスタへ戻す（最後の引数から a0 まで）
+4. _pop_into が sp と _depth を戻すため、引数分の sp の調整は追加しない
 5. sp を16バイト境界へ揃える（次節。積んでいる一時値が奇数個なら 8 詰める）
 6. call 関数名 を出す
 7. 5 で詰めた分を戻す</code></pre>
+</div>
+</div>
 <p>引数を <code>arg0</code>, <code>arg1</code>, <code>arg2</code> の順にpushすると、最後にpushしたものが一番上に来る。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>sp + 0   arg2
 sp + 8   arg1
 sp + 16  arg0</code></pre>
-<p>そのため、レジスタへ戻すときは次のように読む。</p>
-<div class="table-scroll">
-<table>
-<thead>
-<tr class="header">
-<th>レジスタ</th>
-<th>読む位置</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>a0</code></td>
-<td><code>sp + (N - 1) * 8</code></td>
-</tr>
-<tr class="even">
-<td><code>a1</code></td>
-<td><code>sp + (N - 2) * 8</code></td>
-</tr>
-<tr class="odd">
-<td>…</td>
-<td>…</td>
-</tr>
-</tbody>
-</table>
 </div>
+</div>
+<p>そのため、3引数なら <code>_pop_into('a2')</code>、<code>_pop_into('a1')</code>、
+<code>_pop_into('a0')</code> の順に戻す。各呼び出しは <code>0(sp)</code> の値を読み、
+<code>sp</code> を8バイト戻すと同時に <code>_depth</code> を1減らす。
+一般には <code>for i in reversed(range(len(node.args)))</code> の順に
+<code>self._pop_into(f'a{i}')</code> を呼ぶ。</p>
 <figure>
 <img src="../../figures/06_arg_stack.svg" alt="3引数の呼び出しで、push した引数をレジスタへ戻す対応" />
 <figcaption aria-hidden="true">3引数の呼び出しで、push した引数をレジスタへ戻す対応</figcaption>
@@ -509,12 +554,9 @@ sp + 16  arg0</code></pre>
 <p>RV64の呼び出し規約では、<code>call</code> する時点で <code>sp</code> が16バイト境界に揃っている必要がある。
 違反すると <code>Illegal instruction</code> や <code>Bus error</code> になり、原因の特定が難しい。</p>
 <p><code>sp</code> を動かしているのは次の2つだけである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" role="region" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 70%" />
-<col style="width: 29%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>動かす場所</th>
@@ -533,15 +575,26 @@ sp + 16  arg0</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>プロローグは常に16の倍数なので、<code>call</code> の時点で <code>sp</code> がずれるかどうかは
 <strong>そのとき何個の一時値を積んでいるか</strong>だけで決まる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>call 時の sp のずれ = 積んでいる一時値の個数 × 8
 → 奇数個なら 8 バイトずれている</code></pre>
+</div>
+</div>
 <p>ここで注意したいのは、<strong>引数の個数ではなく、呼び出しを囲む式が積んだ一時値</strong>が効くという点である。
 <code>codegen_Call()</code> は積んだ引数をレジスタへ戻して <code>sp</code> も戻すので、
 引数のpushは <code>call</code> の時点では消えている。残るのは外側の式の分である。</p>
-<div class="sourceCode" id="cb15" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> n <span class="op">*</span> fact<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">);</span>   <span class="co">// * の左辺 n を1個積んだまま fact を呼ぶ → 8 ずれる</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb14" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> n <span class="op">*</span> fact<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">);</span>   <span class="co">// * の左辺 n を1個積んだまま fact を呼ぶ → 8 ずれる</span></span></code></pre></div>
+</div>
+</div>
 <p>そこで、積んでいる個数を数えておき、<code>call</code> の直前で判定する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>_push_a0()  で depth += 1
 _pop_into() で depth -= 1
 
@@ -550,6 +603,8 @@ pad = 8 if depth is odd else 0
 self.emit(f&quot;  addi sp, sp, -{pad}&quot;)   ← 奇数のときだけ
 self.emit(f&quot;  call {name}&quot;)
 self.emit(f&quot;  addi sp, sp, {pad}&quot;)    ← 呼び出しから戻ったら元へ</code></pre>
+</div>
+</div>
 <figure>
 <img src="../../figures/06_call_alignment.svg" alt="一時値が1個のまま call を出すときに sp が16バイト境界からずれ、調整で戻るまでの4場面" />
 <figcaption aria-hidden="true">一時値が1個のまま <code>call</code> を出すときに sp が16バイト境界からずれ、調整で戻るまでの4場面</figcaption>
@@ -560,31 +615,49 @@ self.emit(f&quot;  addi sp, sp, {pad}&quot;)    ← 呼び出しから戻った�
 pushとpopの数が合っていないので、その場で気づける。</p>
 <h2 id="再帰呼び出しで壊れやすい点">再帰呼び出しで壊れやすい点</h2>
 <p>次の式を考える。</p>
-<div class="sourceCode" id="cb17" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">)</span> <span class="op">+</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">2</span><span class="op">);</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb16" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">)</span> <span class="op">+</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">2</span><span class="op">);</span></span></code></pre></div>
+</div>
+</div>
 <p>左側の <code>fib(n - 1)</code> を呼ぶと、戻り値は <code>a0</code> に入る。
 しかし、右側の <code>fib(n - 2)</code> を呼ぶと、その呼び出しでも <code>a0</code> が使われる。
 つまり、左側の結果は右側の呼び出しで上書きされる。</p>
 <p>これはコマ2から使っている二項演算の退避パターンで解決する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>左辺を codegen する  → a0 に fib(n-1) の結果
 左辺の結果 a0 をスタックに退避する
 右辺を codegen する  → a0 に fib(n-2) の結果
 退避していた左辺を a1 に戻す
 add a0, a1, a0       → a0 = fib(n-1) + fib(n-2)</code></pre>
+</div>
+</div>
 <p><code>ND_CALL</code> も普通の式と同じように結果を <code>a0</code> に残すため、既存の二項演算パターンがそのまま再帰呼び出しにも効く。</p>
 <p>なお、右辺の <code>fib(n - 2)</code> を呼ぶ時点では左辺の結果を1個積んだままである。
 前節のアラインメント調整が要るのは、まさにこの状態で <code>call</code> を出すときである。</p>
 <h2 id="関数プロトタイプ">関数プロトタイプ</h2>
 <p>相互再帰では、関数定義の前に関数宣言が現れることがある。</p>
-<div class="sourceCode" id="cb19" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_even<span class="op">(</span><span class="dt">int</span> n<span class="op">);</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_odd<span class="op">(</span><span class="dt">int</span> n<span class="op">);</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb18" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_even<span class="op">(</span><span class="dt">int</span> n<span class="op">);</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> is_odd<span class="op">(</span><span class="dt">int</span> n<span class="op">);</span></span></code></pre></div>
+</div>
+</div>
 <p>Parser はこれを <code>ND_FUNCPROTO</code> として返す。</p>
-<div class="sourceCode" id="cb20" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>(funcproto <span class="st">&quot;is_even&quot;</span> <span class="bu">:type</span> int</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  (params (param <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> int)))</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb19" data-lang="lisp"><pre class="sourceCode commonlisp"><code class="sourceCode commonlisp"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>(funcproto <span class="st">&quot;is_even&quot;</span> <span class="bu">:type</span> int</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  (params (param <span class="st">&quot;n&quot;</span> <span class="bu">:type</span> int)))</span></code></pre></div>
+</div>
+</div>
 <p>コマ6では、関数プロトタイプに対してアセンブリを出す必要はない。
 <code>main()</code> の最後のループでは、<code>ND_FUNCDEF</code> だけを <code>gen_func()</code> すればよい。</p>
 <h2 id="gen_func-の変更点">gen_func の変更点</h2>
 <p><code>gen_func(node)</code> に、引数関連の処理を追加する。
 新しいスキャフォールドでは、<code>gen_func</code> の流れは <code>_reset_func_state</code> → <code>_emit_func_prologue</code> → <code>_emit_func_body</code> → <code>_emit_func_epilogue</code> のフックメソッドで構成されている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>1. _reset_func_state() で self._locals と self._stack_offset を初期化する
 2. return用の共通ラベルを作る
 3. _alloc_params() で funcdef.params を self.alloc_local() する  ← コマ6で追加
@@ -595,18 +668,17 @@ add a0, a1, a0       → a0 = fib(n-1) + fib(n-2)</code></pre>
 8. 関数本体の各文を self.gen_stmt(node) で出力する
 9. return用ラベルを出力する
 10. エピローグを出力する</code></pre>
+</div>
+</div>
 <h2 id="編集するファイル">編集するファイル</h2>
 <ul>
 <li><code>mycc.py</code></li>
 </ul>
 <p><code>importlib</code> でコマ5 の <code>Codegen05</code> を継承した <code>Codegen06</code> に、以下の機能を追加する（スケルトンにあらかじめ書かれている）。</p>
 <p>主な追加・変更点は次の通り。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" role="region" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 64%" />
-<col style="width: 35%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ハンドラメソッド</th>
@@ -637,6 +709,7 @@ add a0, a1, a0       → a0 = fib(n-1) + fib(n-2)</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="実装手順">実装手順</h2>
 <ol type="1">
 <li>スケルトンの <code>Codegen06</code> がコマ5 の <code>Codegen</code> を <code>importlib</code> で継承していることを確認する。コマ2〜5 で埋めた <code>codegen_Num</code> / <code>codegen_Var</code> / <code>codegen_Assign</code> / <code>codegen_Neg</code> / <code>_binary_value</code> / <code>codegen_Add</code>〜<code>codegen_Le</code> と、<code>codegen()</code> のディスパッチ・<code>_reset_func_state()</code>・<code>gen_func()</code> はコマ6 のスケルトンに完成形として書かれている。この回で書き直すものは無い</li>
@@ -652,14 +725,9 @@ add a0, a1, a0       → a0 = fib(n-1) + fib(n-2)</code></pre>
 <p><code>call_add.c</code> だけが通って他が落ちるときは、手順6 のアラインメントを疑う。
 <code>call_add.c</code> の <code>add(3, 4)</code> は <code>return</code> 直下にあり、<code>self._depth</code> が 0 なので
 padding を出さなくても偶然通ってしまうからである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" role="region" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 29%" />
-<col style="width: 17%" />
-<col style="width: 29%" />
-<col style="width: 23%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
@@ -706,42 +774,48 @@ padding を出さなくても偶然通ってしまうからである。</p>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
 <tr class="odd">
+<td><code>eight_args.c</code></td>
+<td>8レジスタ全てで引数を受け渡す</td>
+<td>手順6</td>
+<td><code>36</code></td>
+</tr>
+<tr class="even">
 <td><code>three_args.c</code></td>
 <td>3引数関数の呼び出し</td>
 <td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>fib_rec.c</code></td>
 <td>再帰フィボナッチ</td>
 <td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>fact_rec.c</code></td>
 <td>再帰階乗</td>
 <td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>mutual_rec.c</code></td>
 <td>相互再帰</td>
 <td>手順6</td>
 <td>対応する <code>.ans</code> を参照</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>call_nested_temp.c</code></td>
 <td>一時値を積んだ途中での呼び出し（padding の判定が <code>self._depth</code> 依存であること）</td>
 <td>手順6</td>
 <td>52</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>call_in_cond.c</code></td>
 <td>三項演算子の枝と条件の中での呼び出し</td>
 <td>手順6</td>
 <td>25</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>call_preinc.c</code></td>
 <td>前置 <code>++</code>/<code>--</code> を引数に使う呼び出し</td>
 <td>手順6</td>
@@ -750,17 +824,28 @@ padding を出さなくても偶然通ってしまうからである。</p>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="テスト">テスト</h2>
-<div class="sourceCode" id="cb22" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/06_functions_recursion</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb21" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/06_functions_recursion</span></code></pre></div>
+</div>
+</div>
 <p><code>tests/target.c</code> がコンパイルでき、終了コード <code>55</code> になれば基本形は成功。</p>
 <p>個別に動かす場合は、次のようにする。</p>
-<div class="sourceCode" id="cb23" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/06_functions_recursion/mycc.py sessions/06_functions_recursion/tests/target.c <span class="dt">\</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" role="region" aria-label="コード（左右にスクロールできます）">
+<div class="sourceCode" id="cb22" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/06_functions_recursion/mycc.py sessions/06_functions_recursion/tests/target.c <span class="dt">\</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="注意">注意</h2>
-<p>この回では、引数は最大8個まで扱う。
+<p>Core仕様では、宣言・定義の固定仮引数と呼出しの実引数は最大8個である。
+提供Parserが9個以上を診断するため、<code>a8</code>やスタック渡しを生成する必要はない。
+この回では、引数は最大8個まで扱う。
 9個以上のスタック渡し・可変長引数・型チェック・末尾呼び出し最適化などは扱わない。
 この回の外にある話題の一覧は
 <a href="../../docs/rv64_reference/"><code>rv64_reference.md</code> の「呼び出し規約」</a>にまとめてある。</p>
@@ -775,7 +860,10 @@ padding を出さなくても偶然通ってしまうからである。</p>
 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/B1_fold_peephole/README.md">B1</a>・<a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/B2_regalloc/README.md">B2</a>・
 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/B3_tailcall/README.md">B3</a>と、<code>&amp;&amp;</code>/<code>||</code> の短絡評価を仕様へ寄せる
 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/S1_shortcircuit/README.md">S1</a> に着手できる。</p>
-<p>関数呼び出し前後で <code>ra</code> や引数レジスタがどう退避されるかを1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>S1の概念の学習と <code>check.py</code> による単体検査は、この回から始められる。
+構造体・<code>malloc</code> を使う実行テストにはコマ12までの実装が必要で、
+<code>golden.py</code> の完走にはコマ15で完成させた <code>final/mycc.py</code> が必要になる。</p>
+<p>関数呼び出し前後で <code>ra</code> や引数レジスタがどう退避されるかを1命令ずつ確認したいときは、<a href="../../tools/app.html?view=run">学習ツールの実行表示</a> に貼り付ける。</p>
 <p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
 
     
@@ -789,7 +877,7 @@ padding を出さなくても偶然通ってしまうからである。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

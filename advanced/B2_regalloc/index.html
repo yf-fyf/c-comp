@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>レジスタ割り当て入門 — スタックマシンを卒業する — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,19 +92,22 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">レジスタ割り当て入門 — スタックマシンを卒業する</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#いまのコンパイラはスタックマシン" id="toc-いまのコンパイラはスタックマシン">いまのコンパイラは「スタックマシン」</a></li>
-      <li><a href="#depth-何段目かはコンパイル時に分かる" id="toc-depth-何段目かはコンパイル時に分かる">depth — 何段目かはコンパイル時に分かる</a></li>
-      <li><a href="#落とし穴-t-レジスタは-call-で壊れる" id="toc-落とし穴-t-レジスタは-call-で壊れる">落とし穴: t レジスタは call で壊れる</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#いまのコンパイラはスタックマシン" id="toc-いまのコンパイラはスタックマシン">いまのコンパイラは「スタックマシン」</a></li>
+<li><a href="#depth-何段目かはコンパイル時に分かる" id="toc-depth-何段目かはコンパイル時に分かる">depth — 何段目かはコンパイル時に分かる</a></li>
+<li><a href="#落とし穴-t-レジスタは-call-で壊れる" id="toc-落とし穴-t-レジスタは-call-で壊れる">落とし穴: t レジスタは call で壊れる</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -109,12 +115,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <a href="../../advanced/#fixed17"><code>fixed17</code></a> を全通させたまま、生成命令数をさらに減らす。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -153,20 +156,16 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <div class="adm adm-note">
 <div class="adm-title">
 補足
 </div>
 <p><strong>この回と O4 の関係。</strong>
 名前は同じ「レジスタ割り当て」だが、レジスタに載せる対象が違う。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 7%" />
-<col style="width: 28%" />
-<col style="width: 34%" />
-<col style="width: 28%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th></th>
@@ -191,6 +190,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>別の無駄を消しているので、両方かけても効果はほとんど重ならない
 （O4 の発展課題5 が、実際に両方かけて確かめる課題である）。</p>
 <p><strong>どちらを先にやるか。</strong>
@@ -200,6 +200,8 @@ O1 → O4 の順に進んで「測ってから直す」流れを体験したほ�
 </div>
 <h2 id="いまのコンパイラはスタックマシン">いまのコンパイラは「スタックマシン」</h2>
 <p>コマ2 以来、二項演算はこう生成されてきた。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb1" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 左辺を計算して a0 へ</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>        ← メモリへ退避</span>
@@ -207,6 +209,8 @@ O1 → O4 の順に進んで「測ってから直す」流れを体験したほ�
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>        ← メモリから復元</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  add a0<span class="op">,</span> a1<span class="op">,</span> a0</span></code></pre></div>
+</div>
+</div>
 <p>この方式は<strong>単純で常に正しい</strong>という大きな長所がある。
 式がどれだけ深くネストしても、スタックが深くなるだけで破綻しない。
 だからこそ講義の最初に採用した。</p>
@@ -221,11 +225,15 @@ O1 → O4 の順に進んで「測ってから直す」流れを体験したほ�
 <h2 id="depth-何段目かはコンパイル時に分かる">depth — 何段目かはコンパイル時に分かる</h2>
 <p>鍵になるのは、push と pop が<strong>必ず対になっている</strong>ことである。
 <code>codegen</code> は式を再帰的にたどるので、退避の深さはコンパイル時に静的に決まる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>(a + b) * (c + d)
   深さ0: (a+b) の結果を退避 → t0
      深さ1: c の結果を退避  → t1     ← (c+d) を計算中
      深さ1: t1 を復元して c+d
   深さ0: t0 を復元して掛け算</code></pre>
+</div>
+</div>
 <p>そこで、コード生成器に <code>depth</code>（いま何段退避しているか）を持たせ、
 <code>push_a0</code> で1増やし、<code>pop_into</code> で1減らす。
 <code>depth</code> 段目の値は <code>REGS[depth]</code> に置く、と決めればよい。</p>
@@ -235,7 +243,11 @@ O1 → O4 の順に進んで「測ってから直す」流れを体験したほ�
 <h2 id="落とし穴-t-レジスタは-call-で壊れる">落とし穴: t レジスタは call で壊れる</h2>
 <p>RV64 の呼び出し規約では、<code>t0</code>〜<code>t6</code> は <strong>caller-saved</strong>（一時レジスタ）である。
 つまり「呼ばれた関数は自由に壊してよい。必要なら呼ぶ側が守れ」という約束になっている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb3" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">)</span> <span class="op">+</span> fib<span class="op">(</span>n <span class="op">-</span> <span class="dv">2</span><span class="op">);</span></span></code></pre></div>
+</div>
+</div>
 <p><code>fib(n-1)</code> の結果を <code>t0</code> に退避してから <code>fib(n-2)</code> を呼ぶと、
 その中の <code>fib</code> が同じ <code>t0</code> を退避に使うので、値が壊れる。
 コマ6 の資料で「callee-saved / caller-saved」を
@@ -256,13 +268,9 @@ O1 → O4 の順に進んで「測ってから直す」流れを体験したほ�
 「呼び出しをまたぐ値は s、またがない値は t」と使い分けている。</p>
 </div>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 45%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>Step</th>
@@ -284,6 +292,7 @@ O1 → O4 の順に進んで「測ってから直す」流れを体験したほ�
 </tbody>
 </table>
 </div>
+</div>
 <p>関数は <code>cg</code>（コード生成器のインスタンス）を受け取り、
 <code>cg.emit(行)</code> で命令を出し、<code>cg.depth</code> を読み書きする。</p>
 <h3 id="sp-のアラインメントに注意">sp のアラインメントに注意</h3>
@@ -292,14 +301,22 @@ O1 → O4 の順に進んで「測ってから直す」流れを体験したほ�
 その状態で <code>call</code> すると ABI 違反になる（コマ6 のアラインメント問題の再来）。
 spill も同じ理由で、16 の倍数に切り上げて確保する。</p>
 <h3 id="動かし方">動かし方</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> regcc.py ../../final/tests/f09_recur.c</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> regcc.py ../../final/tests/f09_recur.c <span class="kw">|</span> <span class="ex">python3</span> ../count_insns.py</span></code></pre></div>
+</div>
+</div>
 <p><code>regcc.py</code> は <code>mycc.py</code> の <code>_push_a0</code> / <code>_pop_into</code> / <code>_gen_call</code> を
 自分の <code>regstack.py</code> の実装に差し替えて実行する
 （<code>_gen_call</code> は引数の受け渡しに push/pop を使うので、あわせて差し替えている）。</p>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># fixed17 全通 + 命令数の before/after</span></span></code></pre></div>
+</div>
+</div>
 <p><code>check.py</code> は <code>emit</code> と <code>depth</code> だけを持つ「コード生成器もどき」に対して
 関数を呼び、出力される行を直接確かめる。</p>
 <p><strong>全テスト PASS かつ命令数が減っている</strong>ことが完了条件である。
@@ -360,7 +377,7 @@ spill も同じ理由で、16 の倍数に切り上げて確保する。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

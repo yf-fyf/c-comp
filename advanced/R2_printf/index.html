@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>自前 printf — 数を文字に変える — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,20 +92,23 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">自前 printf — 数を文字に変える</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#可変長引数は定義できない-どう設計するか" id="toc-可変長引数は定義できない-どう設計するか">可変長引数は定義できない — どう設計するか</a></li>
-      <li><a href="#数を文字に変えるということ" id="toc-数を文字に変えるということ">数を文字に変えるということ</a></li>
-      <li><a href="#書式の解釈" id="toc-書式の解釈">書式の解釈</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      <li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#可変長引数は定義できない-どう設計するか" id="toc-可変長引数は定義できない-どう設計するか">可変長引数は定義できない — どう設計するか</a></li>
+<li><a href="#数を文字に変えるということ" id="toc-数を文字に変えるということ">数を文字に変えるということ</a></li>
+<li><a href="#書式の解釈" id="toc-書式の解釈">書式の解釈</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+<li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -110,12 +116,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <strong>自作コンパイラでコンパイルした自前の出力ライブラリ</strong>で、libc なしのプログラムを動かす。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -154,16 +157,22 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>コマ10 で「<code>printf</code> 自体は実装しない」と言った、その中身を作る。</p>
 <h2 id="可変長引数は定義できない-どう設計するか">可変長引数は定義できない — どう設計するか</h2>
 <p>本物の <code>printf</code> は可変長引数関数である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> printf<span class="op">(</span><span class="dt">char</span> <span class="op">*</span>fmt<span class="op">,</span> <span class="op">...);</span></span></code></pre></div>
+</div>
+</div>
 <p>しかし Core プロファイルでは、<code>...</code> は<strong>外部関数の宣言だけ</strong>に許され、
 <strong>自分で定義することはできない</strong>（<code>language_spec.md</code> の「関数」節）。
 可変長引数の実装には、スタック上の引数を型情報なしに読み出す仕組み（<code>va_arg</code> 相当）が必要で、
 コンパイラ側の対応も要るからである。</p>
 <p>そこで、引数が固定の関数を組み合わせる設計にする。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -191,10 +200,15 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p><code>printf1</code> は「整数の引数」と「文字列の引数」を両方受け取り、
 書式指定子に応じてどちらかを使う。使わない方には 0 を渡す。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>printf1<span class="op">(</span><span class="st">&quot;n=</span><span class="sc">%d\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>printf1<span class="op">(</span><span class="st">&quot;s=</span><span class="sc">%s\n</span><span class="st">&quot;</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="st">&quot;hello&quot;</span><span class="op">);</span></span></code></pre></div>
+</div>
+</div>
 <p>不格好に見えるが、<strong>言語の制約の中で目的を達する</strong>のは実装の常である。</p>
 <h2 id="数を文字に変えるということ">数を文字に変えるということ</h2>
 <p><code>print_int</code> がこの回の中心である。
@@ -202,6 +216,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <p><code>n % 10</code> で取れるのは<strong>最後に表示したい桁</strong>（一の位）である。
 配列が使えないこの言語では、桁をバッファに詰めて後から並べ直す方式は取れない。
 そこで、<strong>上位の桁を先に、再帰で出す</strong>方式にする。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>print_int(1234):
   1234 &gt;= 10 なので、まず上位の桁を再帰で出す
     print_int(123):
@@ -215,10 +231,14 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
   最後に 1234 % 10 = 4 → &#39;4&#39; を出す
 
 出力順: &#39;1&#39; &#39;2&#39; &#39;3&#39; &#39;4&#39;</code></pre>
+</div>
+</div>
 <p>「まず上位を再帰で出してから、自分の一の位を出す」という順序が、
 そのまま<strong>上の桁から下の桁への出力順</strong>になる。</p>
 <p>数字を文字にするのは <code>'0' + 桁</code> である（<code>'0'</code> は 48）。
 コマ10 で文字が小さな整数であることを見たが、ここではその逆向きの変換をしている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb4" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> print_int<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">&lt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        print_char<span class="op">(</span><span class="dv">45</span><span class="op">);</span>      <span class="co">// &#39;-&#39;</span></span>
@@ -230,6 +250,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    print_char<span class="op">(</span><span class="dv">48</span> <span class="op">+</span> n <span class="op">%</span> <span class="dv">10</span><span class="op">);</span> <span class="co">// 自分の一の位</span></span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p><code>n == 0</code> は <code>n &gt;= 10</code> が成り立たないのでそのまま <code>print_char(48 + 0)</code> に落ちる。
 「末尾から詰める」方式で必要だった <strong><code>n == 0</code> の特別扱いが不要</strong>になっている
 （<code>while (n &gt; 0)</code> のループが1度も回らない、という事故が原理的に起きない）。</p>
@@ -244,7 +266,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <h2 id="書式の解釈">書式の解釈</h2>
 <p><code>printf1</code> は <code>fmt</code> を1文字ずつ見て、<code>'%'</code>（37）が来たら次の1文字で分岐する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -277,12 +300,14 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>Core プロファイルには文字リテラルがあるので <code>fmt[i] == '%'</code> とも書けるが、
 参照実装では数値で書いてある（どちらでもよい）。</p>
 <p>これが、コマ10 で <code>printf("x=%d\n", 42)</code> を呼んだときに
 libc の中で起きていたことである。<strong>書式文字列は、実行時に解釈されている</strong>。</p>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -310,22 +335,28 @@ libc の中で起きていたことである。<strong>書式文字列は、実�
 </tbody>
 </table>
 </div>
+</div>
 <p><code>sys_write</code> と <code>_start</code> は R1 の <code>syscall.s</code>（配布済み）から来る。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 手で動かす場合</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../../final/mycc.py myprintf.c <span class="op">&gt;</span> impl.s</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../../final/mycc.py tests/fmt.c <span class="op">&gt;</span> main.s</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-nostdlib</span> <span class="at">-static</span> main.s impl.s syscall.s <span class="at">-o</span> prog</span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./prog</span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py</span></code></pre></div>
+</div>
+</div>
 <p><code>tests/*.c</code> を自作コンパイラでコンパイルし、<code>myprintf.c</code> と <code>syscall.s</code> と
 リンクして実行し、標準出力と終了コードを確認する。<strong>libc は一切使わない。</strong></p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 47%" />
-<col style="width: 52%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>テスト</th>
@@ -343,6 +374,7 @@ libc の中で起きていたことである。<strong>書式文字列は、実�
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p>この回の編集対象は C なので、未実装は <code>NotImplementedError</code> ではなく
 <code>myprintf.c</code> の <code>TODO(...)</code> コメントで表してある。<code>check.py</code> は TODO が残っている間、
@@ -386,7 +418,7 @@ libc の中で起きていたことである。<strong>書式文字列は、実�
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

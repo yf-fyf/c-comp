@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コマ8: 型検査の導入 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,21 +92,24 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">コマ8: 型検査の導入</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
-      <li><a href="#型の扱い" id="toc-型の扱い">型の扱い</a></li>
-      <li><a href="#load_ty-_store_ty" id="toc-load_ty-_store_ty"><code>_load_ty</code> / <code>_store_ty</code></a></li>
-      <li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
-      <li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
-      <li><a href="#tests" id="toc-tests">tests/</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#注意" id="toc-注意">注意</a></li>
-      <li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation has-grammar">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回で扱う範囲" id="toc-この回で扱う範囲">この回で扱う範囲</a></li>
+<li><a href="#型の扱い" id="toc-型の扱い">型の扱い</a></li>
+<li><a href="#load_ty-_store_ty" id="toc-load_ty-_store_ty"><code>_load_ty</code> / <code>_store_ty</code></a></li>
+<li><a href="#編集するファイル" id="toc-編集するファイル">編集するファイル</a></li>
+<li><a href="#実装手順" id="toc-実装手順">実装手順</a></li>
+<li><a href="#tests" id="toc-tests">tests/</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#注意" id="toc-注意">注意</a></li>
+<li><a href="#ここまでで着手できる発展課題" id="toc-ここまでで着手できる発展課題">ここまでで着手できる発展課題</a></li>
+</ul></nav>
+      </details>
+      <a class="toc-grammar" href="#この回までの言語仕様ebnf">文法を参照</a>
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -112,17 +118,18 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 変数表が覚えていたのはスタック上のオフセットだけで、<code>ld</code> / <code>sd</code> だけで読み書きできた。</p>
 <p>しかしこの先に進むには、変数の型そのものを覚えておく必要がある。
 <code>char</code> は1バイト、<code>int</code> は4バイト、ポインタは8バイトで、読み書きに使う命令が変わる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span> c<span class="op">;</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> n<span class="op">;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> <span class="ch">&#39;A&#39;</span><span class="op">;</span>   <span class="co">// 1バイト書く   → sb</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="dv">4</span><span class="op">;</span>     <span class="co">// 4バイト書く   → sw</span></span></code></pre></div>
+</div>
+</div>
 <p>この回では、次の3つを導入する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 70%" />
-<col style="width: 30%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>導入するもの</th>
@@ -140,17 +147,19 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tr>
 <tr class="odd">
 <td><code>char</code> の昇格と縮小</td>
-<td>読むと int へ昇格し、代入では下位8ビットへ縮小する</td>
+<td>読むと int へ昇格し、代入・固定引数・returnでは下位8ビットへ縮小する</td>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p>ポインタ演算・添字 <code>p[i]</code>・<code>sizeof(型名)</code> は、この型の仕組みの上に載る。
 そちらはコマ9 で実装する。</p>
 </section>
 <h2 id="この回で扱う範囲">この回で扱う範囲</h2>
 <p>対象にする型は、<code>int</code>、<code>char</code>、ポインタである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -174,68 +183,73 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>この言語に配列はない。連続した領域を扱う話（<code>malloc</code> と添字）はコマ9 で扱う。
 構造体、グローバル変数はさらに後の回で扱う。</p>
-<h3 id="この回までの言語仕様ebnf">この回までの言語仕様（EBNF）</h3>
+<section id="この回までの言語仕様ebnf" class="grammar-section" data-grammar-heading="この回までの言語仕様ebnf">
+<h3>この回までの言語仕様（EBNF）</h3>
 <p>この回までに書けるプログラムの文法を、累積の形でまとめる。
 記法と最終形の全体像は
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「形式文法（EBNF）」</a>を参照。</p>
-<pre class="ebnf" data-lang="ebnf"><code>stars       ::= &#39;*&#39;              /* 多段ポインタ int ** はコマ9 */
-
-scalar_type ::= &#39;int&#39;  [ stars ]
-              | &#39;char&#39; [ stars ] /* struct タグ * (不透明ポインタ) はコマ11、struct 定義・void * はコマ12 */
-obj_type    ::= scalar_type
-ret_type    ::= scalar_type
-              | &#39;void&#39;
-
-program       ::= external_decl { external_decl }
-external_decl ::= func_proto
-                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */
-var_decl      ::= obj_type IDENT &#39;;&#39;
-
-param       ::= scalar_type IDENT
-param_list  ::= param { &#39;,&#39; param }
-func_proto  ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; &#39;;&#39;   /* &#39;...&#39; はコマ10 */
-func_def    ::= ret_type IDENT &#39;(&#39; [ param_list ] &#39;)&#39; func_body
-func_body   ::= &#39;{&#39; { var_decl } { stmt } &#39;}&#39;
-
-stmt        ::= expr_stmt
-              | block
-              | if_stmt
-              | while_stmt
-              | for_stmt
-              | &#39;break&#39; &#39;;&#39;
-              | &#39;continue&#39; &#39;;&#39;
-              | &#39;return&#39; [ expr ] &#39;;&#39;
-expr_stmt   ::= [ expr ] &#39;;&#39;
-block       ::= &#39;{&#39; { stmt } &#39;}&#39;
-if_stmt     ::= &#39;if&#39; &#39;(&#39; expr &#39;)&#39; stmt [ &#39;else&#39; stmt ]
-while_stmt  ::= &#39;while&#39; &#39;(&#39; expr &#39;)&#39; stmt
-for_stmt    ::= &#39;for&#39; &#39;(&#39; [ expr ] &#39;;&#39; [ expr ] &#39;;&#39; [ expr ] &#39;)&#39; stmt
-
-expr        ::= assign_expr
-assign_expr ::= unary_expr &#39;=&#39; assign_expr   /* 右結合 */
-              | cond_expr
-cond_expr   ::= binary_expr [ &#39;?&#39; expr &#39;:&#39; cond_expr ]   /* 右結合 */
-binary_expr ::= unary_expr { bin_op unary_expr }
-bin_op      ::= &#39;*&#39; | &#39;/&#39; | &#39;%&#39;  /* 論理 &amp;&amp; || はコマ13 */
-              | &#39;+&#39; | &#39;-&#39;
-              | &#39;&lt;&#39; | &#39;&gt;&#39; | &#39;&lt;=&#39; | &#39;&gt;=&#39;
-              | &#39;==&#39; | &#39;!=&#39;
-unary_expr  ::= primary_expr     /* 添字 [ ] と sizeof はコマ9、. -&gt; はコマ12 */
-              | &#39;-&#39;  unary_expr
-              | &#39;*&#39;  unary_expr
-              | &#39;&amp;&#39;  unary_expr
-              | &#39;++&#39; unary_expr
-              | &#39;--&#39; unary_expr
-primary_expr ::= INT_LITERAL
-               | CHAR_LITERAL
-               | IDENT &#39;(&#39; [ arg_list ] &#39;)&#39;
-               | IDENT
-               | &#39;(&#39; expr &#39;)&#39;
-arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
+<p class="grammar-legend"><span class="grammar-added">追加</span>は新しい規則・選択肢、<span class="grammar-changed">変更</span>は前回の形の置き換えです。ラベルのない行は既存です。</p>
+<details class="grammar-full" open><summary>この回までの文法全文（54行）</summary>
+<pre class="grammar-pre"><code class="grammar-code"><span id="grammar-line-67" class="grammar-line grammar-existing" data-label="">stars       ::= &#x27;*&#x27;              /* 多段ポインタ int ** はコマ9 */</span>
+<span id="grammar-line-68" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-69" class="grammar-line grammar-existing" data-label="">scalar_type ::= &#x27;int&#x27;  [ stars ]</span>
+<span id="grammar-line-70" class="grammar-line grammar-added" data-label="追加">              | &#x27;char&#x27; [ stars ] /* struct タグ * (不透明ポインタ) はコマ11、struct 定義・void * はコマ12 */</span>
+<span id="grammar-line-71" class="grammar-line grammar-existing" data-label="">obj_type    ::= scalar_type</span>
+<span id="grammar-line-72" class="grammar-line grammar-existing" data-label="">ret_type    ::= scalar_type</span>
+<span id="grammar-line-73" class="grammar-line grammar-existing" data-label="">              | &#x27;void&#x27;</span>
+<span id="grammar-line-74" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-75" class="grammar-line grammar-existing" data-label="">program       ::= external_decl { external_decl }</span>
+<span id="grammar-line-76" class="grammar-line grammar-existing" data-label="">external_decl ::= func_proto</span>
+<span id="grammar-line-77" class="grammar-line grammar-existing" data-label="">                | func_def       /* struct 定義はコマ12、グローバル変数はコマ13 */</span>
+<span id="grammar-line-78" class="grammar-line grammar-existing" data-label="">var_decl      ::= obj_type IDENT &#x27;;&#x27;</span>
+<span id="grammar-line-79" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-80" class="grammar-line grammar-existing" data-label="">param       ::= scalar_type IDENT</span>
+<span id="grammar-line-81" class="grammar-line grammar-existing" data-label="">param_list  ::= param { &#x27;,&#x27; param }</span>
+<span id="grammar-line-82" class="grammar-line grammar-existing" data-label="">func_proto  ::= ret_type IDENT &#x27;(&#x27; [ param_list ] &#x27;)&#x27; &#x27;;&#x27;   /* &#x27;...&#x27; はコマ10 */</span>
+<span id="grammar-line-83" class="grammar-line grammar-existing" data-label="">func_def    ::= ret_type IDENT &#x27;(&#x27; [ param_list ] &#x27;)&#x27; func_body</span>
+<span id="grammar-line-84" class="grammar-line grammar-existing" data-label="">func_body   ::= &#x27;{&#x27; { var_decl } { stmt } &#x27;}&#x27;</span>
+<span id="grammar-line-85" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-86" class="grammar-line grammar-existing" data-label="">stmt        ::= expr_stmt</span>
+<span id="grammar-line-87" class="grammar-line grammar-existing" data-label="">              | block</span>
+<span id="grammar-line-88" class="grammar-line grammar-existing" data-label="">              | if_stmt</span>
+<span id="grammar-line-89" class="grammar-line grammar-existing" data-label="">              | while_stmt</span>
+<span id="grammar-line-90" class="grammar-line grammar-existing" data-label="">              | for_stmt</span>
+<span id="grammar-line-91" class="grammar-line grammar-existing" data-label="">              | &#x27;break&#x27; &#x27;;&#x27;</span>
+<span id="grammar-line-92" class="grammar-line grammar-existing" data-label="">              | &#x27;continue&#x27; &#x27;;&#x27;</span>
+<span id="grammar-line-93" class="grammar-line grammar-existing" data-label="">              | &#x27;return&#x27; [ expr ] &#x27;;&#x27;</span>
+<span id="grammar-line-94" class="grammar-line grammar-existing" data-label="">expr_stmt   ::= [ expr ] &#x27;;&#x27;</span>
+<span id="grammar-line-95" class="grammar-line grammar-existing" data-label="">block       ::= &#x27;{&#x27; { stmt } &#x27;}&#x27;</span>
+<span id="grammar-line-96" class="grammar-line grammar-existing" data-label="">if_stmt     ::= &#x27;if&#x27; &#x27;(&#x27; expr &#x27;)&#x27; stmt [ &#x27;else&#x27; stmt ]</span>
+<span id="grammar-line-97" class="grammar-line grammar-existing" data-label="">while_stmt  ::= &#x27;while&#x27; &#x27;(&#x27; expr &#x27;)&#x27; stmt</span>
+<span id="grammar-line-98" class="grammar-line grammar-existing" data-label="">for_stmt    ::= &#x27;for&#x27; &#x27;(&#x27; [ expr ] &#x27;;&#x27; [ expr ] &#x27;;&#x27; [ expr ] &#x27;)&#x27; stmt</span>
+<span id="grammar-line-99" class="grammar-line grammar-existing" data-label=""></span>
+<span id="grammar-line-100" class="grammar-line grammar-existing" data-label="">expr        ::= assign_expr</span>
+<span id="grammar-line-101" class="grammar-line grammar-existing" data-label="">assign_expr ::= unary_expr &#x27;=&#x27; assign_expr   /* 右結合 */</span>
+<span id="grammar-line-102" class="grammar-line grammar-existing" data-label="">              | cond_expr</span>
+<span id="grammar-line-103" class="grammar-line grammar-existing" data-label="">cond_expr   ::= binary_expr [ &#x27;?&#x27; expr &#x27;:&#x27; cond_expr ]   /* 右結合 */</span>
+<span id="grammar-line-104" class="grammar-line grammar-existing" data-label="">binary_expr ::= unary_expr { bin_op unary_expr }</span>
+<span id="grammar-line-105" class="grammar-line grammar-existing" data-label="">bin_op      ::= &#x27;*&#x27; | &#x27;/&#x27; | &#x27;%&#x27;  /* 論理 &amp;&amp; || はコマ13 */</span>
+<span id="grammar-line-106" class="grammar-line grammar-existing" data-label="">              | &#x27;+&#x27; | &#x27;-&#x27;</span>
+<span id="grammar-line-107" class="grammar-line grammar-existing" data-label="">              | &#x27;&lt;&#x27; | &#x27;&gt;&#x27; | &#x27;&lt;=&#x27; | &#x27;&gt;=&#x27;</span>
+<span id="grammar-line-108" class="grammar-line grammar-existing" data-label="">              | &#x27;==&#x27; | &#x27;!=&#x27;</span>
+<span id="grammar-line-109" class="grammar-line grammar-existing" data-label="">unary_expr  ::= primary_expr     /* 添字 [ ] と sizeof はコマ9、. -&gt; はコマ12 */</span>
+<span id="grammar-line-110" class="grammar-line grammar-existing" data-label="">              | &#x27;-&#x27;  unary_expr</span>
+<span id="grammar-line-111" class="grammar-line grammar-existing" data-label="">              | &#x27;*&#x27;  unary_expr</span>
+<span id="grammar-line-112" class="grammar-line grammar-existing" data-label="">              | &#x27;&amp;&#x27;  unary_expr</span>
+<span id="grammar-line-113" class="grammar-line grammar-existing" data-label="">              | &#x27;++&#x27; unary_expr</span>
+<span id="grammar-line-114" class="grammar-line grammar-existing" data-label="">              | &#x27;--&#x27; unary_expr</span>
+<span id="grammar-line-115" class="grammar-line grammar-existing" data-label="">primary_expr ::= INT_LITERAL</span>
+<span id="grammar-line-116" class="grammar-line grammar-added" data-label="追加">               | CHAR_LITERAL</span>
+<span id="grammar-line-117" class="grammar-line grammar-existing" data-label="">               | IDENT &#x27;(&#x27; [ arg_list ] &#x27;)&#x27;</span>
+<span id="grammar-line-118" class="grammar-line grammar-existing" data-label="">               | IDENT</span>
+<span id="grammar-line-119" class="grammar-line grammar-existing" data-label="">               | &#x27;(&#x27; expr &#x27;)&#x27;</span>
+<span id="grammar-line-120" class="grammar-line grammar-existing" data-label="">arg_list    ::= assign_expr { &#x27;,&#x27; assign_expr }</span></code></pre>
 <p>この回までの二項演算子の優先順位（高い順）:</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -245,22 +259,22 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr class="odd grammar-existing">
 <td>1（高）</td>
 <td><code>*</code> <code>/</code> <code>%</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
+<tr class="even grammar-existing">
 <td>2</td>
 <td><code>+</code> <code>-</code></td>
 <td>左</td>
 </tr>
-<tr class="odd">
+<tr class="odd grammar-existing">
 <td>3</td>
 <td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
 <td>左</td>
 </tr>
-<tr class="even">
+<tr class="even grammar-existing">
 <td>4</td>
 <td><code>==</code> <code>!=</code></td>
 <td>左</td>
@@ -268,21 +282,21 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p>表の読み方はコマ1の「木の形は規則で決まっている」と
 <a href="../../docs/language_spec/#operators"><code>language_spec.md</code> の「演算子」</a>を参照。</p>
 <p>この回で増えたのは <code>scalar_type</code> の <code>char</code> と <code>primary_expr</code> の <code>CHAR_LITERAL</code> の2行だけである。
 型が増えても構文の形は変わらず、変わるのはサイズと命令の選択である。
 字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
 <a href="../../docs/language_spec/#grammar"><code>language_spec.md</code> の「字句トークン」</a>を参照。</p>
+</details>
+</section>
 <h2 id="型の扱い">型の扱い</h2>
 <p>新しいスキャフォールドでは、<code>Type</code> クラスを使わず、<code>ty_str</code> 文字列で型を扱う。</p>
 <p>型サイズが必要なときは、次のヘルパーメソッドを使う。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 62%" />
-<col style="width: 37%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>メソッド</th>
@@ -305,8 +319,10 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p><code>ty_str</code> の例:</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -334,14 +350,19 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p><code>self.alloc_local()</code> では、<code>ty_str</code> から <code>self.size_of_ty_str()</code> を使って必要なスタック領域を計算する。</p>
 <h3 id="ローカル変数表に型を持たせる">ローカル変数表に型を持たせる</h3>
 <p>型ごとにサイズと命令が変わるため、この回で <code>self._locals</code> の中身を変える。</p>
-<div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># コマ3〜コマ7</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._locals: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">int</span>]                 <span class="co"># name → offset</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># コマ8 以降</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._locals: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">tuple</span>[<span class="bu">int</span>, <span class="bu">str</span>]]     <span class="co"># name → (offset, ty_str)</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb2" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># コマ3〜コマ7</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._locals: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">int</span>]                 <span class="co"># name → offset</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># コマ8 以降</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>._locals: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">tuple</span>[<span class="bu">int</span>, <span class="bu">str</span>]]     <span class="co"># name → (offset, ty_str)</span></span></code></pre></div>
+</div>
+</div>
 <p>コマ7 まではオフセットだけを覚えていればよかったが、
 <code>*p</code> で <code>lb</code> / <code>lw</code> / <code>ld</code> を選ぶには、変数の型も覚えておく必要がある。</p>
 <p>値の取り出し方も変わる。オフセットは <code>self._locals[name][0]</code>、
@@ -351,7 +372,8 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <h3 id="式の型を求める">式の型を求める</h3>
 <p>変数の型が分かっても、<code>*p</code> や <code>p = &amp;n</code> のような式の型は、そこから計算しないと分からない。
 そのための関数が <code>type_of_expr_*</code> と <code>type_of_lval_*</code> である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -380,8 +402,13 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <td><code>n = 3</code></td>
 <td>左辺値の型</td>
 </tr>
+<tr class="even">
+<td><code>f(...)</code></td>
+<td>関数の宣言・定義に書かれた戻り値型</td>
+</tr>
 </tbody>
 </table>
+</div>
 </div>
 <p>左辺値としての型（<code>_type_of_lval</code>）と、値としての型（<code>_type_of_expr</code>）を分けるのは、
 コマ7 で <code>codegen_lval</code> と <code>codegen</code> を分けたのと同じ理由である。
@@ -392,37 +419,60 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </figure>
 <p>コマ1 の <code>eval_ast</code> が子の<strong>値</strong>を親へ返したのと同じ再帰で、ここでは子の<strong>型</strong>が親へ上がる。
 根まで上がった型が、次節で見るロード・ストア命令の幅を選ぶ。</p>
+<h3 id="関数呼出しの型を引く">関数呼出しの型を引く</h3>
+<p>関数呼出しも式なので、宣言・定義に書かれた戻り値型を使う。
+例えば <code>int *identity(int *p)</code> の呼出しは <code>int *</code> 型であり、
+<code>*identity(&amp;n)</code> の値の型は、そこから <code>*</code> を1つ剥がした <code>int</code> になる。
+同じ仕組みで、<code>char *</code> を返す呼出しから値を読むときは <code>lb</code> を選べる。</p>
+<p>Parserは関数宣言・定義の戻り値型を <code>node.ty_str</code> に残している。
+提供済みの <code>collect_function_returns(prog)</code> が、コード生成の前に
+<code>self._function_returns</code>（関数名 → 戻り値の <code>ty_str</code>）へ集める。
+<code>main()</code> からの呼出しも用意してあるので、収集処理を実装し直す必要はない。
+受講者が実装するのは、呼出しノードの <code>node.name</code> を使って
+この表から型を取得する <code>type_of_expr_Call</code> である。
+変数の型を変数表から引く処理と同じ考え方でよい。</p>
+<p>収集時には<code>self._function_params</code>（関数名 → 固定仮引数の型の列）も用意する。
+固定char引数を渡す前の変換に使うが、宣言との引数個数・型や再宣言の完全な診断は行わない。
+最大8個の上限は提供Parserが検査する。
+宣言がない名前の診断も標準トラックでは保証せず、表にない場合は従来どおり
+<code>int</code> として扱う。これは未宣言呼出しを許すという仕様変更ではなく、
+<a href="../../docs/language_spec/#diagnostics">標準トラックの診断範囲</a>の限定である。</p>
+<p>戻り値型の表は関数ごとのローカル変数表と異なり、次の関数を生成するときも保持する。
+コマ9以降のポインタ演算と、コマ12の <code>identity(&amp;s)-&gt;field</code> も、
+この呼出し式の型をそのまま使う。</p>
 <h2 id="load_ty-_store_ty"><code>_load_ty</code> / <code>_store_ty</code></h2>
 <p>型サイズに応じて、読み書きする命令を変える。</p>
-<div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _load_ty(<span class="va">self</span>, ty):</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    size <span class="op">=</span> <span class="va">self</span>.size_of_ty_str(ty)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> size <span class="op">==</span> <span class="dv">1</span>:</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  lb a0, 0(a0)&quot;</span>)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> size <span class="op">==</span> <span class="dv">4</span>:</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  lw a0, 0(a0)&quot;</span>)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  ld a0, 0(a0)&quot;</span>)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _store_ty(<span class="va">self</span>, ty):</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    size <span class="op">=</span> <span class="va">self</span>.size_of_ty_str(ty)</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> size <span class="op">==</span> <span class="dv">1</span>:</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  sb a0, 0(a1)&quot;</span>)</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> size <span class="op">==</span> <span class="dv">4</span>:</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  sw a0, 0(a1)&quot;</span>)</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  sd a0, 0(a1)&quot;</span>)</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _load_ty(<span class="va">self</span>, ty):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    size <span class="op">=</span> <span class="va">self</span>.size_of_ty_str(ty)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> size <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  lb a0, 0(a0)&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> size <span class="op">==</span> <span class="dv">4</span>:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  lw a0, 0(a0)&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  ld a0, 0(a0)&quot;</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _store_ty(<span class="va">self</span>, ty):</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    size <span class="op">=</span> <span class="va">self</span>.size_of_ty_str(ty)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> size <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  sb a0, 0(a1)&quot;</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  slli a0, a0, 56&quot;</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  srai a0, a0, 56&quot;</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> size <span class="op">==</span> <span class="dv">4</span>:</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  sw a0, 0(a1)&quot;</span>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.emit(<span class="st">&quot;  sd a0, 0(a1)&quot;</span>)</span></code></pre></div>
+</div>
+</div>
 <p>コマ7では常に <code>ld</code> / <code>sd</code> でよかったが、この回からは型サイズを見て命令を選ぶ。
 <code>codegen_Var</code> / <code>codegen_Assign</code> / <code>codegen_Deref</code> は、この2つを呼ぶ形に書き換える。</p>
 <h3 id="char-の昇格と縮小"><code>char</code> の昇格と縮小</h3>
 <p><code>char</code> 変数は、この <code>_load_ty</code> / <code>_store_ty</code> を型サイズ 1 で通せばそのまま動く。
-言語仕様上の約束は次の 2 つで、どちらも命令の選択だけで自然に満たされる。</p>
-<div class="table-scroll">
+言語仕様上の約束は次の通りである。</p>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>場面</th>
@@ -441,19 +491,47 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <td>int から下位 8 ビットへ縮小する</td>
 <td><code>sb</code>（下位 1 バイトだけを書く）</td>
 </tr>
+<tr class="odd">
+<td><code>char</code> への代入式の値を使う</td>
+<td>縮小後のsigned char値を返す</td>
+<td>提供済み<code>_convert_to(ty)</code>で<code>a0</code>を縮小・符号拡張する</td>
+</tr>
+<tr class="even">
+<td>固定char引数を渡す</td>
+<td>仮引数型へ縮小してから受け渡す</td>
+<td>実引数の評価後、退避する前に<code>_convert_to(ty)</code></td>
+</tr>
+<tr class="odd">
+<td>char関数からreturnする</td>
+<td>戻り値型へ縮小して返す</td>
+<td>return式の評価後に<code>_convert_to(self._return_ty)</code></td>
+</tr>
 </tbody>
 </table>
+</div>
 </div>
 <p>算術そのものは常に int で行うので、<code>d = c + 2</code> のような式に特別な処理は要らない。
 <code>c + 2</code> を int として計算し、代入のところで <code>sb</code> を出せばよい。</p>
 <p><code>c = 300;</code> のように <code>char</code> に収まらない値を入れると、下位 8 ビットだけが残って <code>44</code> になる。
 <code>c = 200;</code> なら下位 8 ビットは <code>0xC8</code> で、読み出すと符号拡張されて <code>-56</code> になる。</p>
+<p><code>sb</code> は <code>a0</code> 自体を変えないため、格納した後に <code>a0</code> の下位8ビットを符号拡張する。
+これにより、<code>n = (c = 300)</code> では <code>n</code> も <code>44</code>、<code>n = (c = 255)</code> では <code>n</code> も <code>-1</code> になる。
+代入式の値を使わない場合でも同じ処理を通してよい。</p>
 <figure>
 <img src="../../figures/08_char_promotion.svg" alt="sb による縮小と lb による昇格で、64ビットレジスタと1バイトのメモリの間を行き来するバイト列" />
 <figcaption aria-hidden="true"><code>sb</code> による縮小と <code>lb</code> による昇格で、64ビットレジスタと1バイトのメモリの間を行き来するバイト列</figcaption>
 </figure>
 <p><code>sb</code> が書くのはレジスタの下位 1 バイトだけで、<code>lb</code> はその 1 バイトの最上位ビットを
 上位 56 ビットへ写して読み戻す。<code>char_narrow.c</code> が突くのはこの往復の境界である。</p>
+<h3 id="関数境界と条件式で型を使う">関数境界と条件式で型を使う</h3>
+<p><code>char f() { return 300; }</code> の呼出し値は<code>44</code>である。<code>int f(char c)</code>へ<code>255</code>を渡すと、
+仮引数の値は<code>-1</code>になる。呼出し先のロードに任せず、呼出し側で固定仮引数の型へ変換する。
+外部のコンパイラで作った関数も、正しく変換した値を受け取ることを前提にしている。
+可変長部はcharからintへの昇格だけで、int値<code>300</code>を縮小してはいけない。</p>
+<p><code>a ? b : c</code>の型は、選ばれた腕ではなく両腕から決める。char/int同士はint、
+同型ポインタはその型、ポインタと<code>0</code>はポインタ型、<code>T *</code>と<code>void *</code>は<code>void *</code>になる。
+この小さな共通型の処理は<code>type_of_expr_Cond</code>として提供する。
+コマ4で実装した「選ばれた腕だけを実行する」処理はそのまま使う。</p>
 <h2 id="編集するファイル">編集するファイル</h2>
 <ul>
 <li><code>mycc.py</code></li>
@@ -461,12 +539,9 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <p><code>importlib</code> でコマ7 の <code>Codegen07</code> を継承した <code>Codegen08</code> に、以下の機能を追加する。</p>
 <p>スケルトンに<strong>あらかじめ書かれている</strong>ものは次の通りで、実装対象ではない。
 呼び出して使うだけでよい。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 62%" />
-<col style="width: 37%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>提供済み</th>
@@ -495,23 +570,33 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <td><code>self._locals</code> からオフセットと型を引く</td>
 </tr>
 <tr class="even">
+<td><code>collect_function_returns(prog)</code></td>
+<td>関数宣言・定義から戻り値型と固定仮引数型の表を作る。<code>main()</code> から呼出し済み</td>
+</tr>
+<tr class="odd">
+<td><code>_convert_to(ty)</code></td>
+<td><code>a0</code>をcharへ縮小・符号拡張する。char以外では値を変えない</td>
+</tr>
+<tr class="even">
+<td><code>type_of_expr_Cond(node)</code></td>
+<td>両腕から条件式の共通型を決める</td>
+</tr>
+<tr class="odd">
 <td><code>_push_a0()</code> / <code>_pop_into(reg)</code></td>
 <td>一時値の退避と復帰</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>_type_of_expr</code> / <code>_type_of_lval</code> / <code>codegen</code> / <code>codegen_lval</code> の <code>match</code></td>
 <td>各ハンドラへの振り分け</td>
 </tr>
 </tbody>
 </table>
 </div>
+</div>
 <p>実装対象は次の通りである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 62%" />
-<col style="width: 37%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>実装対象</th>
@@ -520,7 +605,7 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>type_of_expr_*</code>（<code>Num</code> / <code>Var</code> / <code>Addr</code> / <code>Deref</code> / <code>Assign</code>）</td>
+<td><code>type_of_expr_*</code>（<code>Num</code> / <code>Var</code> / <code>Addr</code> / <code>Deref</code> / <code>Assign</code> / <code>Call</code>）</td>
 <td>各ノードの値としての型を求める</td>
 </tr>
 <tr class="even">
@@ -543,30 +628,34 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <td><code>_alloc_params(node)</code> / <code>_emit_func_prologue</code></td>
 <td>パラメータも型付きで確保・保存する</td>
 </tr>
+<tr class="odd">
+<td><code>_gen_call(name, args)</code> / <code>gen_stmt_Return(node)</code></td>
+<td>コマ6・4の処理を再利用し、固定仮引数型と戻り値型への変換を加える</td>
+</tr>
 </tbody>
 </table>
+</div>
 </div>
 <h2 id="実装手順">実装手順</h2>
 <ol type="1">
 <li>スケルトンの <code>Codegen08</code> が <code>Codegen07</code> を <code>importlib</code> で継承していることを確認する</li>
 <li><code>collect_decls_Decl</code> / <code>_alloc_params</code> / 関数プロローグの退避を型付きにする（どのテストでも必要）</li>
-<li><code>type_of_expr_*</code> / <code>type_of_lval_*</code> を埋めて、式の型を引けるようにする</li>
+<li><code>type_of_expr_*</code> / <code>type_of_lval_*</code> を埋めて、式の型を引けるようにする。<code>Call</code> は提供済みの戻り値型の表を参照する</li>
 <li><code>_load_ty</code> / <code>_store_ty</code> を型サイズ対応にする（提供済みの <code>size_of_ty_str</code> を使う）</li>
 <li><code>codegen_Var</code> / <code>codegen_Assign</code> / <code>codegen_Deref</code> を <code>_load_ty</code> / <code>_store_ty</code> 経由に書き換える</li>
-<li><code>char</code> の境界（<code>char_narrow.c</code>）と <code>char</code> へのポインタ（<code>char_ptr.c</code>）で取りこぼしを検出する</li>
+<li><code>_store_ty</code>ではcharの格納後に提供済み<code>_convert_to(ty)</code>を呼ぶ。<code>char_narrow.c</code>・<code>char_ptr.c</code>を確認する</li>
+<li>自分のコマ6の<code>_gen_call</code>を再利用し、各実引数の評価後・退避前に固定部の型へ変換する。可変長部は縮小しない</li>
+<li>自分のコマ4の<code>gen_stmt_Return</code>を再利用し、return式の評価後に<code>self._return_ty</code>へ変換する。<code>return;</code>は値を評価しない</li>
 </ol>
+<p>スケルトンは、固定char引数のない呼出しとchar以外のreturnを前の回へ委譲する。
+そのため、手順7〜8より前でも基本のint・ポインタの検査を進められる。
+char引数のある呼出しは手順7、char戻り値は手順8を終えてから検査する。</p>
 <h2 id="tests">tests/</h2>
 <p>機能単位で切ったテストを先に置いてある。上から順に通していくと、
 どこで詰まっているかが1機能ぶんに絞られる。「通る目安」は実装手順の番号である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 12%" />
-<col style="width: 29%" />
-<col style="width: 20%" />
-<col style="width: 16%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>ファイル</th>
@@ -587,8 +676,8 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <tr class="even">
 <td><code>typed_params.c</code></td>
 <td><code>char</code>/<code>int</code>/ポインタの引数が各幅で退避・読み戻しできること</td>
-<td><code>_alloc_params</code> / 関数プロローグ</td>
-<td>手順3〜5</td>
+<td><code>_alloc_params</code> / 関数プロローグ / <code>_gen_call</code></td>
+<td>手順7</td>
 <td><code>75</code></td>
 </tr>
 <tr class="odd">
@@ -600,8 +689,8 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 </tr>
 <tr class="even">
 <td><code>char_narrow.c</code></td>
-<td>縮小の境界（<code>127</code> / <code>128</code> / <code>255</code> / <code>-1</code> / <code>256</code> / <code>300</code>）</td>
-<td><code>_store_ty</code> の <code>sb</code> と <code>_load_ty</code> の <code>lb</code></td>
+<td>縮小の境界（<code>127</code> / <code>128</code> / <code>255</code> / <code>-1</code> / <code>256</code> / <code>300</code>）と代入式の値</td>
+<td><code>_store_ty</code> の縮小・符号拡張と <code>_load_ty</code> の <code>lb</code></td>
 <td>手順6</td>
 <td><code>45</code></td>
 </tr>
@@ -612,24 +701,69 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <td>手順6</td>
 <td><code>50</code></td>
 </tr>
+<tr class="even">
+<td><code>char_return.c</code></td>
+<td>戻り値を格納せず、比較・演算へ直接使う</td>
+<td><code>gen_stmt_Return</code></td>
+<td>手順8</td>
+<td><code>4</code></td>
+</tr>
+<tr class="odd">
+<td><code>char_argument.c</code></td>
+<td>固定char引数の変換と、int引数の値の保持</td>
+<td><code>_gen_call</code> / <code>gen_stmt_Return</code></td>
+<td>手順7〜8</td>
+<td><code>3</code></td>
+</tr>
+<tr class="even">
+<td><code>cond_char_pointer.c</code></td>
+<td>ポインタと<code>0</code>の両方向で1バイトを読む</td>
+<td>提供済み<code>type_of_expr_Cond</code></td>
+<td>手順5</td>
+<td><code>2</code></td>
+</tr>
+<tr class="odd">
+<td><code>cond_single_arm.c</code></td>
+<td>選んだ腕だけの実行を維持</td>
+<td>コマ4の<code>codegen_Cond</code>を継承</td>
+<td>手順5</td>
+<td><code>1</code></td>
+</tr>
+<tr class="even">
+<td><code>call_ptr.c</code></td>
+<td>プロトタイプから戻り値型を引き、関数が返した <code>int *</code> を参照する</td>
+<td><code>type_of_expr_Call</code> / <code>codegen_Deref</code></td>
+<td>手順3〜5</td>
+<td><code>42</code></td>
+</tr>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="テスト">テスト</h2>
-<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/08_types</span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scaffold/test_runner.py sessions/08_types</span></code></pre></div>
+</div>
+</div>
 <p><code>tests/load_store_ty.c</code> がコンパイルでき、終了コード <code>30</code> になれば基本形は成功。</p>
 <p>個別に動かす場合は、次のようにする。</p>
-<div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/08_types/mycc.py sessions/08_types/tests/load_store_ty.c <span class="dt">\</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
+<div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> sessions/08_types/mycc.py sessions/08_types/tests/load_store_ty.c <span class="dt">\</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="ex">riscv64-linux-gnu-gcc</span> <span class="at">-x</span> assembler <span class="at">-static</span> <span class="at">-</span> <span class="at">-o</span> out</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> ./out</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$?</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="注意">注意</h2>
 <p><code>_load_ty</code> / <code>_store_ty</code> の判定は型サイズだけで行う。
 ポインタはどの型を指していても 8 バイトなので、<code>ld</code> / <code>sd</code> になる。</p>
 <p><code>char</code> は 1 バイトだが、読み出すと int へ昇格する。
 <code>lb</code> は符号拡張して 64 ビットレジスタに載せるので、負の値を入れた <code>char</code> は負のまま読める。
-<code>char</code> への代入は <code>sb</code> で下位 8 ビットだけを書く（縮小）。
+<code>char</code> への代入は <code>sb</code> で下位 8 ビットだけを書き（縮小）、
+<code>a0</code> にも縮小後の符号拡張した値を残す。
 算術そのものは常に int で行うため、<code>d = c + 2</code> に特別な処理は要らない。</p>
 <p>書き込み幅は、左辺値の型で決める。<code>*p = 30</code> の幅を決めるのは <code>p</code> の指し先型であって、
 右辺の型ではない。ここを <code>_type_of_expr</code> で引くと、<code>char *</code> への代入が 4 バイト書きになる。</p>
@@ -640,7 +774,10 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
 <h2 id="ここまでで着手できる発展課題">ここまでで着手できる発展課題</h2>
 <p>型サイズを扱えるようになったので、<code>int</code> の演算が32bitで折り返さない点を仕様へ寄せる
 <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/advanced/S2_int32/README.md">S2</a> に着手できる。</p>
-<p>生成したアセンブリで <code>lb</code> / <code>lw</code> / <code>ld</code> の選択を1命令ずつ確認したいときは、<a href="../../tools/app.html?mode=run">RV64 シミュレータ</a> に貼り付ける。</p>
+<p>S2の概念の学習と <code>check.py</code> による単体検査は、この回から始められる。
+構造体・<code>malloc</code> を使う実行テストにはコマ12までの実装が必要で、
+<code>golden.py</code> の完走にはコマ15で完成させた <code>final/mycc.py</code> が必要になる。</p>
+<p>生成したアセンブリで <code>lb</code> / <code>lw</code> / <code>ld</code> の選択を1命令ずつ確認したいときは、<a href="../../tools/app.html?view=run">学習ツールの実行表示</a> に貼り付ける。</p>
 <p>この回の完成形に相当する OCaml 版参考実装が <a href="https://github.com/yf-fyf/c-comp/blob/dev/workbook/ocaml/README.md"><code>../../workbook/ocaml/README.md</code></a> にある。完成相当の実装なので、まず自分の実装方針を検討してから確認すること。</p>
 
     
@@ -654,7 +791,7 @@ arg_list    ::= assign_expr { &#39;,&#39; assign_expr }</code></pre>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>最適化の測り方 — 静的と動的は別物 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,23 +92,26 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">最適化の測り方 — 静的と動的は別物</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#なぜ測るのか" id="toc-なぜ測るのか">なぜ測るのか</a></li>
-      <li><a href="#つの物差し" id="toc-つの物差し">2つの物差し</a></li>
-      <li><a href="#動的命令数の測り方" id="toc-動的命令数の測り方">動的命令数の測り方</a></li>
-      <li><a href="#落とし穴-libc-が混ざる" id="toc-落とし穴-libc-が混ざる">落とし穴: libc が混ざる</a></li>
-      <li><a href="#ベンチマーク集" id="toc-ベンチマーク集">ベンチマーク集</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#測ってみると" id="toc-測ってみると">測ってみると</a></li>
-      <li><a href="#全構成の基準表-o-系列の命令数はすべてここから読む" id="toc-全構成の基準表-o-系列の命令数はすべてここから読む">全構成の基準表 — O 系列の命令数はすべてここから読む</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#なぜ測るのか" id="toc-なぜ測るのか">なぜ測るのか</a></li>
+<li><a href="#つの物差し" id="toc-つの物差し">2つの物差し</a></li>
+<li><a href="#動的命令数の測り方" id="toc-動的命令数の測り方">動的命令数の測り方</a></li>
+<li><a href="#落とし穴-libc-が混ざる" id="toc-落とし穴-libc-が混ざる">落とし穴: libc が混ざる</a></li>
+<li><a href="#ベンチマーク集" id="toc-ベンチマーク集">ベンチマーク集</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#測ってみると" id="toc-測ってみると">測ってみると</a></li>
+<li><a href="#全構成の基準表-o-系列の命令数はすべてここから読む" id="toc-全構成の基準表-o-系列の命令数はすべてここから読む">全構成の基準表 — O 系列の命令数はすべてここから読む</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -114,12 +120,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 この2つが桁違いに食い違うことを、自分のコンパイラの出力で確かめる。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -158,29 +161,30 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p><strong>以降のすべての最適化の回が、この回で作った物差しを使う。</strong> 最初に作る理由がこれである。</p>
 <h2 id="なぜ測るのか">なぜ測るのか</h2>
 <p>B1（定数畳み込みとピープホール）では「命令数が16%減った」と報告した。
 しかし、その16%は<strong>本当に速くなった</strong>のだろうか。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span> <span class="dt">int</span> s<span class="op">;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    s <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span>i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">200</span><span class="op">;</span> i <span class="op">=</span> i <span class="op">+</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span> s <span class="op">=</span> s <span class="op">+</span> i<span class="op">;</span> <span class="op">}</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> s <span class="op">%</span> <span class="dv">256</span><span class="op">;</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>このプログラムが出力するアセンブリは70命令ほどである。
 しかし、実行される命令は <strong>7,840個</strong>ある。ループ本体が200回繰り返されるからである。</p>
 <p>つまり、<strong>ループの外にある命令を1個消しても、ほとんど速くならない</strong>。
 逆に、ループの中の1命令を消すと200命令分速くなる。
 「命令数が減った」だけでは、どちらの話をしているのか分からない。</p>
 <h2 id="つの物差し">2つの物差し</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th></th>
@@ -212,23 +216,36 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>どちらも意味がある。組み込み機器ではコードサイズ（静的）が制約になるし、
 実行速度が問題なら動的を見る必要がある。</p>
 <h2 id="動的命令数の測り方">動的命令数の測り方</h2>
 <p>qemu には、実行した命令を記録する仕組みがある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">qemu-riscv64</span> <span class="at">-one-insn-per-tb</span> <span class="at">-d</span> exec,nochain ./prog</span></code></pre></div>
+</div>
+</div>
 <ul>
 <li><code>-d exec</code> は、実行のたびに <code>Trace ...</code> という行を出す</li>
 <li>既定では複数命令をまとめた単位（トランスレーションブロック）ごとに出るので、
 <code>-one-insn-per-tb</code> で<strong>1命令 = 1行</strong>にそろえる</li>
 </ul>
 <p>出てくる行はこの形をしている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>Trace 0: 0x7fe594000100 [003411ef/000000000001038c/0202c078/00000201] _start
                                   ↑ 実行した命令のアドレス(PC)</code></pre>
+</div>
+</div>
 <h2 id="落とし穴-libc-が混ざる">落とし穴: libc が混ざる</h2>
 <p>そのまま数えると、<code>loop_sum</code> は <strong>144,220命令</strong>になる。
 自分のプログラムは7,840命令なので、<strong>95%が libc の起動処理</strong>である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>_start(libc) → 環境変数の準備 → ロケール初期化 → ... → main → ...</code></pre>
+</div>
+</div>
 <p>これでは自分の最適化の効果が埋もれてしまう。そこで、
 <strong>自作した関数のアドレス範囲だけを数える</strong>。</p>
 <ol type="1">
@@ -249,7 +266,8 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <h2 id="ベンチマーク集">ベンチマーク集</h2>
 <p><code>bench/</code> に5本用意した。以降の回でも同じものを使う。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -281,16 +299,13 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>いずれも <code>.ans</code> を持ち、<code>test_runner.py</code> で正しさを確認できる。
 <strong>最適化した結果が正しいこと</strong>の確認にも、そのまま使う。</p>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 45%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>Step</th>
@@ -312,12 +327,21 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p><code>nm</code> の呼び出し（<code>our_symbol_ranges</code>）と範囲判定（<code>in_ranges</code>）、
 qemu の起動はスケルトンで用意してある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py       <span class="co"># 5本のベンチマークを両方の物差しで測る</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb6" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># 数え上げの単体テスト(未実装は SKIP)</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># ベンチマークの正しさ + 静的/動的の表</span></span></code></pre></div>
+</div>
+</div>
 <p><code>check.py</code> の後半は、<strong>同じプログラムの反復回数だけを変えて</strong>測り、</p>
 <ul>
 <li>動的命令数はほぼ2倍になる</li>
@@ -326,12 +350,16 @@ qemu の起動はスケルトンで用意してある。</p>
 <p>ことを確かめる。物差しが正しく機能していることの検証である。</p>
 <h2 id="測ってみると">測ってみると</h2>
 <p>教員の実装で <code>golden.py</code> を走らせると、こうなる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>ベンチマーク       静的      動的    増幅率
 bubble             340     24023      71x
 fib_rec             77     73993     961x
 loop_sum            70      7840     112x
 matmul             453     27958      62x
 strops             243     77108     317x</code></pre>
+</div>
+</div>
 <p><code>fib_rec</code> は<strong>静的にはいちばん小さい</strong>（77命令）のに、
 <strong>動的にはいちばん大きい</strong>（73,993命令）。再帰が深く展開されるからである。
 静的命令数だけを見ていたら、ここが重いとは分からない。</p>
@@ -340,14 +368,9 @@ strops             243     77108     317x</code></pre>
 <p>O3 以降の各回は「前」と「後」の表を出すが、その<strong>「前」がどの構成なのかは回ごとに違う</strong>。
 そこで、5つの構成の実測値をここに1つだけ置く。
 <strong>以降の回は、この表からの差分だけを語る。</strong></p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 5%" />
-<col style="width: 24%" />
-<col style="width: 15%" />
-<col style="width: 54%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>列</th>
@@ -390,9 +413,12 @@ strops             243     77108     317x</code></pre>
 </tbody>
 </table>
 </div>
+</div>
 <p><strong>列は累積である</strong>（右の列は左の列に1つ足したもの）。
 O2（フローグラフ）と O5（生存解析）は解析だけを行い命令を減らさないので、列を持たない。</p>
 <p>静的命令数。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>ベンチマーク       素   +isel  +regalloc  +copyprop,dce  +layout
 bubble            340    301        264            234      233
 fib_rec            77     73         73             72       70
@@ -400,7 +426,11 @@ loop_sum           70     65         49             44       43
 matmul            453    411        344            309      308
 strops            243    225        192            176      173
 合計             1183   1075        922            835      827</code></pre>
+</div>
+</div>
 <p>動的命令数。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>ベンチマーク       素   +isel  +regalloc  +copyprop,dce  +layout
 bubble          24023  20566      18824          16161    15952
 fib_rec         73993  69061      69061          69060    68073
@@ -408,6 +438,8 @@ loop_sum         7840   7038       5032           4230     4030
 matmul          27958  24606      21589          18814    18563
 strops          77108  69066      59877          51875    50135
 合計           210922 190337     174383         160140   156753</code></pre>
+</div>
+</div>
 <p>素から <code>+layout</code> まで通すと、静的 30.1%減・動的 25.7%減である。</p>
 <h3 id="素の出力は何でできているか">素の出力は何でできているか</h3>
 <p>素の 1,183命令のうち <strong>587命令（49.6%）</strong>が、コマ2 以来の push/pop の往復
@@ -415,9 +447,13 @@ strops          77108  69066      59877          51875    50135
 式の途中結果をメモリに逃がすたびに4命令を払っている勘定で、
 <strong>出力のおよそ半分が値の往復に消えている</strong>。
 これを減らすのが O4（変数をレジスタへ）と B2（式の途中結果をレジスタへ）の主題である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 自分の出力でも数えてみる（matmul は 242/453）</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> optcc.py <span class="at">--passes</span> <span class="st">&#39;&#39;</span> O1_measure/bench/matmul.c <span class="dt">\</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-cE</span> <span class="st">&#39;addi sp, sp, -?8$|(sd|ld) a[0-9]+, 0\(sp\)$&#39;</span></span></code></pre></div>
+</div>
+</div>
 <div class="adm adm-note">
 <div class="adm-title">
 補足
@@ -463,7 +499,7 @@ strops          77108  69066      59877          51875    50135
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

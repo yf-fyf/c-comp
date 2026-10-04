@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>構造体の値渡し・値返し — 呼び出し規約を自分で決める — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,21 +92,24 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">構造体の値渡し・値返し — 呼び出し規約を自分で決める</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#l5-が追加する仕様" id="toc-l5-が追加する仕様">L5 が追加する仕様</a></li>
-      <li><a href="#呼び出し規約-この回の中心" id="toc-呼び出し規約-この回の中心">呼び出し規約 —— この回の中心</a></li>
-      <li><a href="#いまのコンパイラに食わせるとどうなるか" id="toc-いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</a></li>
-      <li><a href="#値渡し-単一コピーの実装" id="toc-値渡し-単一コピーの実装">値渡し —— 単一コピーの実装</a></li>
-      <li><a href="#値返し-隠しポインタの実装" id="toc-値返し-隠しポインタの実装">値返し —— 隠しポインタの実装</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#l5-が追加する仕様" id="toc-l5-が追加する仕様">L5 が追加する仕様</a></li>
+<li><a href="#呼び出し規約-この回の中心" id="toc-呼び出し規約-この回の中心">呼び出し規約 —— この回の中心</a></li>
+<li><a href="#いまのコンパイラに食わせるとどうなるか" id="toc-いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</a></li>
+<li><a href="#値渡し-単一コピーの実装" id="toc-値渡し-単一コピーの実装">値渡し —— 単一コピーの実装</a></li>
+<li><a href="#値返し-隠しポインタの実装" id="toc-値返し-隠しポインタの実装">値返し —— 隠しポインタの実装</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -116,12 +122,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 これが<strong>呼び出し規約</strong>であり、この回で自分で決めるものである。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -164,6 +167,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <div class="adm adm-warning">
 <div class="adm-title">
 注意
@@ -177,8 +181,12 @@ S3 を終えてから来ること —— コピーの部品はそこで書いた
 </div>
 <h3 id="なぜ-l-系なのか">なぜ L 系なのか</h3>
 <p><code>language_spec.md</code> は struct 値の実引数・戻り値を、意味論ではなく<strong>構文で</strong>禁じている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>param       ::= scalar_type IDENT              /* struct 値は書けない */
 ret_type    ::= scalar_type | &#39;void&#39;           /* struct 値は書けない */</code></pre>
+</div>
+</div>
 <p><code>scalar_type</code> の <code>'struct' IDENT stars</code> は <code>stars</code> を必須にしているので、
 <code>struct Point *p</code> は書けても <code>struct Point p</code> は仮引数に書けない。
 仕様はこれを「この構成により次の制約が構文レベルで決まる」と明記している ——
@@ -201,8 +209,12 @@ ret_type    ::= scalar_type | &#39;void&#39;           /* struct 値は書けな
 <h2 id="l5-が追加する仕様">L5 が追加する仕様</h2>
 <h3 id="構文">構文</h3>
 <p><code>language_spec.md</code> の EBNF を 2 か所だけ広げる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>param       ::= obj_type IDENT                          /* L5: scalar_type → obj_type */
 ret_type    ::= scalar_type | &#39;void&#39; | &#39;struct&#39; IDENT   /* L5: 最後の1本を追加 */</code></pre>
+</div>
+</div>
 <p><code>obj_type</code> は「変数宣言に書ける型」で、すでに <code>struct Point</code>（<code>*</code> なし）を含んでいる。
 つまり <code>param</code> は <code>var_decl</code> と同じ型の書き方になる ——
 <strong>仮引数は局所変数と同じものが書ける</strong>、という自然な形にそろう。
@@ -228,12 +240,9 @@ struct 値の実引数も 1 回しか評価されない。</li>
 <strong>あなたのコンパイラが受理する言語</strong>のほうである。</p>
 <h2 id="呼び出し規約-この回の中心">呼び出し規約 —— この回の中心</h2>
 <p>決めることは 2 つしかない。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 57%" />
-<col style="width: 42%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>決めること</th>
@@ -252,12 +261,17 @@ struct 値の実引数も 1 回しか評価されない。</li>
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="実引数-アドレスを渡し呼ばれ側だけがコピーする">実引数 —— アドレスを渡し、呼ばれ側だけがコピーする</h3>
 <p>この教材では<strong>呼び出し側はコピーしない</strong>。渡す式の<strong>アドレス</strong>を、
 引数スロット 1 個にそのまま載せて渡す（<code>&amp;p</code> と同じ機構の流用）。
 呼ばれ側が入口で、そのアドレスの中身を自分のフレームへ写す。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>呼び出し側:  sum(a)  →  a0 = &amp;a          (コピー 0 回)
 呼ばれ側:    入口で &amp;a の中身を自分のフレームへ写す  (コピー 1 回)</code></pre>
+</div>
+</div>
 <p>コピーは<strong>全体で 1 回</strong>である。「呼び出し側がコピーして、その複製のアドレスを渡す」
 という素朴な案だと、呼ばれ側から見て「仮引数は自分専用の領域か？」が
 呼び出し側の実装に依存してしまう。呼ばれ側だけがコピーすると、
@@ -277,11 +291,15 @@ struct 値の実引数も 1 回しか評価されない。</li>
 <p>戻り値はレジスタ 1 本には載らない。そこで<strong>呼び出し側が受け取る領域を自分のフレームに用意し、
 そのアドレスを追加の引数として渡す</strong>。呼ばれ側は <code>return 式;</code> で
 a0 に値を積む代わりに、そのポインタの指す先へ写す。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>呼び出し側:  q = make(5, 6)
                a0 = 5, a1 = 6, a2 = &amp;(自分のフレーム内の一時領域)
                call make
                → 一時領域に戻り値が入っている
 呼ばれ側:    return p;  →  a2 で渡されたポインタの先へ p を写す</code></pre>
+</div>
+</div>
 <p>この隠しポインタ（<strong>sret</strong> と呼ばれる）を、実 ABI は a0 = <strong>先頭</strong>に置く。
 この教材では<strong>末尾</strong>に置く。理由は単純で、
 「仮引数 i ↔︎ 引数レジスタ a<em>i</em>」という既存の対応表を 1 文字も変えずに済むからである。</p>
@@ -291,13 +309,9 @@ a0 に値を積む代わりに、そのポインタの指す先へ写す。</p>
 内側の <code>return</code> が外側の領域を踏み潰して壊れる。<code>tests/recurse.c</code> がそこを直接突く。</p>
 <h3 id="実-abi-との非互換-隠さずに書いておく">実 ABI との非互換 —— 隠さずに書いておく</h3>
 <p>gcc が RV64 で使う本物の呼び出し規約とは、次の 2 点で<strong>非互換</strong>である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th></th>
@@ -318,6 +332,7 @@ a0 に値を積む代わりに、そのポインタの指す先へ写す。</p>
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p>これは手抜きではなく、<strong>境界を跨がないから許される単純化</strong>である。
 <code>lib.h</code> が宣言する標準ライブラリ関数のうち、struct 値を引数または戻り値に取るものは
@@ -343,24 +358,28 @@ a0 に値を積む代わりに、そのポインタの指す先へ写す。</p>
 <p>引数レジスタは a0〜a7 の 8 本しかない（この教材は引数をスタック経由で渡さない）。
 struct 値を返す関数は隠しポインタで 1 本使うので、<strong>ユーザが書ける引数は 7 個まで</strong>になる。
 8 個目を書くと、ラッパーがこう止める。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>RuntimeError: 引数が多すぎます(9 個 &gt; 8 個): &#39;f&#39; — struct 値を返す関数は
 隠しポインタで 1 個使うので、ユーザ引数は 7 個まで</code></pre>
+</div>
+</div>
 <p><code>tests/args7.c</code> がちょうど上限の 7 個を使っている。
 struct 値を返さない関数は従来どおり 8 個まで書ける。</p>
 <h2 id="いまのコンパイラに食わせるとどうなるか">いまのコンパイラに食わせるとどうなるか</h2>
 <p><code>tests/byval.c</code> と <code>tests/retval.c</code> を標準トラックのコンパイラに渡すと、
 どちらも構文解析で止まる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>構文解析エラー: [line 4] struct 値はここでは使えません（ポインタにする）
 構文解析エラー: [line 4] struct 値の戻り値は使えません（ポインタにする）</code></pre>
+</div>
+</div>
 <p>前者は <code>parse_scalar_type</code> が、後者は <code>parse_program</code> の戻り値型の判定が出している。
 どちらも「うっかり」ではなく、仕様どおりに<strong>明示的に</strong>弾いている。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 24%" />
-<col style="width: 52%" />
-<col style="width: 24%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>段階</th>
@@ -397,16 +416,13 @@ struct 値を返さない関数は従来どおり 8 個まで書ける。</p>
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="値渡し-単一コピーの実装">値渡し —— 単一コピーの実装</h2>
 <h3 id="呼び出し側step-2">呼び出し側（Step 2）</h3>
 <p>やることは分岐 1 つである。実引数の<strong>型</strong>を見て、どちらを呼ぶかを決める。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 35%" />
-<col style="width: 19%" />
-<col style="width: 45%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>実引数の型</th>
@@ -428,20 +444,29 @@ struct 値を返さない関数は従来どおり 8 個まで書ける。</p>
 </tbody>
 </table>
 </div>
+</div>
 <p><code>struct Point *ptr</code> は<strong>ポインタ</strong>なので下の段に落ちる
 （<code>cg.struct_size('struct Point*')</code> は <code>None</code> を返す）。
 「値そのものがアドレス」と「値がレジスタに載らないのでアドレスで代用する」は
 生成コードが似ていても意味がまったく違う。ここを取り違えないこと。</p>
 <h3 id="呼ばれ側step-3">呼ばれ側（Step 3）</h3>
 <p>土台の <code>gen_func</code> は、関数の入口で仮引数レジスタをフレームへ書き出している。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb7" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>        <span class="co">;; 仮引数 p のスロット</span></span></code></pre></div>
+</div>
+</div>
 <p>struct 値の仮引数では、このスロットに入っているのは
 <strong>呼び出し側の構造体のアドレス</strong>である。そこで、それを読んでから
 <strong>同じスロットへ</strong>中身を写し直す。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>  ld a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>        <span class="co">;; 呼び出し側が渡したアドレス</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  addi a1<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span>      <span class="co">;; 自分のフレーム内のスロット</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span>          <span class="co">;; ← copy_struct(8 バイト)</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  sd a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span></span></code></pre></div>
+</div>
+</div>
 <p>写し終えるとスロットは本物の構造体になっている。
 同じ場所を上書きしているのに壊れないのは、<strong>アドレスを先にレジスタへ読んである</strong>からである。
 スロットの大きさも足りる —— <code>alloc_local</code> はスロットを 8 バイト境界に切り上げるので、
@@ -465,6 +490,8 @@ struct 値を返す関数では隠しポインタも a レジスタに載って�
 <h3 id="呼び出し側step-4">呼び出し側（Step 4）</h3>
 <p>ユーザ引数を左から順に積み、<strong>最後に</strong>戻り先のアドレスを積んでから呼ぶ。
 <code>q = make(5, 6);</code> の生成コードはこうなる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb9" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">5</span>              <span class="co">;; 第1引数</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  ...push...</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  li a0<span class="op">,</span> <span class="dv">6</span>              <span class="co">;; 第2引数</span></span>
@@ -476,14 +503,20 @@ struct 値を返す関数では隠しポインタも a レジスタに載って�
 <span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          <span class="co">;; ← a2 が隠しポインタ</span></span>
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">call</span> make</span>
 <span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span>      <span class="co">;; この式の値は .sret0 のアドレス。もう一度載せ直す</span></span></code></pre></div>
+</div>
+</div>
 <p>引数の配置（<code>ld a0, …</code> から <code>call</code> まで）はラッパーの <code>cg.emit_call()</code> がやる。
 Step 4 が決めるのは「<strong>何を、どの順で積むか</strong>」だけである。</p>
 <p>最後の <code>addi</code> が要る理由に注意したい。呼び出しから戻ると a0 は壊れている。
 一方この式の「値」は構造体、すなわち<strong>その一時領域のアドレス</strong>なので、
 もう一度 a0 に載せ直す必要がある。これがあるおかげで</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb10" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>sum<span class="op">(</span>make<span class="op">(</span><span class="dv">3</span><span class="op">,</span> <span class="dv">4</span><span class="op">))</span>          <span class="co">// 戻り値をそのまま実引数に</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>make<span class="op">(</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">).</span>x             <span class="co">// 戻り値のメンバを直接読む</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> make<span class="op">(</span><span class="dv">5</span><span class="op">,</span> <span class="dv">6</span><span class="op">);</span>          <span class="co">// 戻り値を代入</span></span></code></pre></div>
+</div>
+</div>
 <p>がどれも「構造体の式はアドレスが a0 に載る」という 1 つの規則で扱える。</p>
 <h3 id="呼ばれ側step-5">呼ばれ側（Step 5）</h3>
 <p><code>return 式;</code> は、a0 に値を積む代わりに次の 4 つをこの順でやる。</p>
@@ -499,20 +532,20 @@ Step 4 が決めるのは「<strong>何を、どの順で積むか</strong>」�
 「レジスタは呼び出しをまたいで生き残らない、フレームの中は生き残る」という、
 コマ7 以来ずっと使ってきた原則がここでも効く。</p>
 <p><code>make</code> の生成コードを実際に見ると、末尾はこうなっている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb11" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">48</span>      <span class="co">;; 返す局所変数 p のアドレス</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="op">-</span><span class="dv">40</span><span class="op">(</span>s0<span class="op">)</span>        <span class="co">;; .sretp から隠しポインタを読む</span></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  ld a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a0<span class="op">)</span>          <span class="co">;; copy_struct</span></span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  sd a2<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span></span>
 <span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  mv a0<span class="op">,</span> a1</span>
 <span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  j .L1</span></code></pre></div>
+</div>
+</div>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 45%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>Step</th>
@@ -549,23 +582,29 @@ Step 4 が決めるのは「<strong>何を、どの順で積むか</strong>」�
 </tbody>
 </table>
 </div>
+</div>
 <p><strong>Step 1〜3 まで書けば値渡しが、Step 4〜5 まで書けば値返しが動く。</strong>
 <code>tests/byval.c</code> は Step 3 の時点で通る。区切りがはっきりしているので、
 一度に全部を相手にせず、まず値渡しを通してから値返しへ進むとよい。</p>
 <p><code>copy_struct</code> は S3 で書いたものと同じロジックだが、
 呼び出し規約が「a0 = 元、a1 = 先、a2 だけ壊す」に切り出してある。
 この 1 つを、値渡し・値返し・（ラッパーが持っている）struct 代入の 3 か所から使う。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb12" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/byval.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A8</span> <span class="st">&quot;^sum:&quot;</span>    <span class="co"># 呼ばれ側の複製が見える</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/retval.c <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;ld a1, -40&quot;</span>  <span class="co"># 隠しポインタを読む行</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 値渡し・値返しのテスト + fixed17</span></span></code></pre></div>
-<div class="table-scroll">
+</div>
+</div>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 47%" />
-<col style="width: 52%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>テスト</th>
@@ -599,6 +638,7 @@ Step 4 が決めるのは「<strong>何を、どの順で積むか</strong>」�
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><code>check.py</code> は他の回と違い、<strong>出た命令列を小さな RV64 シミュレータで実際に走らせる</strong>。
 値渡し・値返しの正しさは「コピーが本当に起きたか」「元が無傷か」という
@@ -653,7 +693,7 @@ Step 4 が決めるのは「<strong>何を、どの順で積むか</strong>」�
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>末尾呼び出し最適化 — 再帰をループに変える — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,19 +92,22 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">末尾呼び出し最適化 — 再帰をループに変える</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#末尾呼び出しとは" id="toc-末尾呼び出しとは">末尾呼び出しとは</a></li>
-      <li><a href="#なぜジャンプに変えられるのか" id="toc-なぜジャンプに変えられるのか">なぜジャンプに変えられるのか</a></li>
-      <li><a href="#実装の3つの注意点" id="toc-実装の3つの注意点">実装の3つの注意点</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#末尾呼び出しとは" id="toc-末尾呼び出しとは">末尾呼び出しとは</a></li>
+<li><a href="#なぜジャンプに変えられるのか" id="toc-なぜジャンプに変えられるのか">なぜジャンプに変えられるのか</a></li>
+<li><a href="#実装の3つの注意点" id="toc-実装の3つの注意点">実装の3つの注意点</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -109,12 +115,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 100万回の再帰でもスタックがあふれないコンパイラにする。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -153,37 +156,54 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>コマ6 の資料で「扱わない」とした<strong>末尾呼び出し最適化</strong>の回収である。
 B1 は O7・O3 と、B2 は O4 と題材が重なるが、
 末尾呼び出し最適化は O1〜O7 のどれにも出てこない。この回だけの題材である。
 効果を命令数で見たいときは、O1 の物差し（静的／動的命令数）をそのまま使える。</p>
 <h2 id="末尾呼び出しとは">末尾呼び出しとは</h2>
 <p>関数の<strong>最後の仕事</strong>が別の関数の呼び出しであるとき、それを末尾呼び出しという。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> sum_to<span class="op">(</span><span class="dt">int</span> n<span class="op">,</span> <span class="dt">int</span> acc<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> acc<span class="op">;</span> <span class="op">}</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sum_to<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">,</span> acc <span class="op">+</span> n<span class="op">);</span>   <span class="co">// 末尾呼び出し</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>対して、次は末尾呼び出しでは<strong>ない</strong>。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> fact<span class="op">(</span><span class="dt">int</span> n<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>n <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span> <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span> <span class="op">}</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> n <span class="op">*</span> fact<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">);</span>   <span class="co">// 呼び出しの後に掛け算が残っている</span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</div>
+</div>
 <p>違いは「呼び出しから戻ってきた後に、まだやることがあるか」である。
 やることが残っていないなら、<strong>呼び出し元のフレームはもう用済み</strong>である。</p>
 <h2 id="なぜジャンプに変えられるのか">なぜジャンプに変えられるのか</h2>
 <p><code>sum_to</code> が <code>sum_to</code> を呼ぶとき、いまのコンパイラは新しいフレームを積む。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>sum_to(1000000, 0) のフレーム
   sum_to(999999, 1000000) のフレーム
     sum_to(999998, 1999999) のフレーム
       ...  100万段  →  スタックがあふれる</code></pre>
+</div>
+</div>
 <p>しかし各フレームは、呼び出しから戻った瞬間に「戻り値をそのまま返す」だけである。
 つまり<strong>フレームを積む意味がない</strong>。引数だけ新しい値に書き換えて、
 関数の先頭に戻れば、同じ計算ができる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb4" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># return sum_to(n - 1, acc + n);</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 新しい引数を計算して、引数スロットに書き戻し…</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># n  ← n - 1</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  sd a1<span class="op">,</span> <span class="op">-</span><span class="dv">32</span><span class="op">(</span>s0<span class="op">)</span>      <span class="co"># acc ← acc + n</span></span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  j .Ltc_sum_to       <span class="co"># フレームを積まずに先頭へ戻る</span></span></code></pre></div>
+</div>
+</div>
 <p><code>call</code> が <code>j</code> になり、フレームが1つも増えない。<strong>再帰がループになった</strong>。</p>
 <div class="adm adm-note">
 <div class="adm-title">
@@ -199,6 +219,8 @@ gcc や clang は <code>-O2</code> で同じ最適化を行う。</p>
 <h3 id="どこへ戻るか-プロローグの後">1. どこへ戻るか — プロローグの後</h3>
 <p>戻り先は関数の<strong>先頭ラベルではない</strong>。プロローグ（フレーム確保）と
 引数の保存を飛ばした、<strong>本体の直前</strong>である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb5" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum_to:</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="op">-</span><span class="dv">32</span>       ┐ プロローグ</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  sd ra<span class="op">,</span> <span class="dv">24</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          │  ここに戻ると</span>
@@ -206,15 +228,22 @@ gcc や clang は <code>-O2</code> で同じ最適化を行う。</p>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  sd a0<span class="op">,</span> <span class="op">-</span><span class="dv">24</span><span class="op">(</span>s0<span class="op">)</span>         ┘ 引数の保存</span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">.Ltc_sum_to:</span>             ← ここへ戻る</span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 本体</span></span></code></pre></div>
+</div>
+</div>
 <p>ラッパー <code>tccc.py</code> が、この位置にラベルを置いて <code>cg.tc_label</code> に入れてくれる。</p>
 <h3 id="引数は全部評価してから書き戻す">2. 引数は「全部評価してから」書き戻す</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb6" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> sum_to<span class="op">(</span>n <span class="op">-</span> <span class="dv">1</span><span class="op">,</span> acc <span class="op">+</span> n<span class="op">);</span></span></code></pre></div>
+</div>
+</div>
 <p>第1引数を先に <code>n</code> のスロットへ書き込んでしまうと、
 第2引数の <code>acc + n</code> が<strong>新しい <code>n</code></strong> を読んでしまう。
 コマ2 以来の退避パターンと同じ理由で、
 <strong>すべて評価して退避 → まとめて書き戻す</strong>の順にする。</p>
 <h3 id="変換してよい形を厳しく判定する">3. 変換してよい形を厳しく判定する</h3>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -247,10 +276,12 @@ gcc や clang は <code>-O2</code> で同じ最適化を行う。</p>
 </tbody>
 </table>
 </div>
+</div>
 <p>「怪しいものは変換しない」— B1 と同じく、最適化の基本姿勢である。
 判定が広すぎると <a href="../../advanced/#fixed17"><code>fixed17</code></a> が壊れるので、そこで気づける。</p>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -273,11 +304,20 @@ gcc や clang は <code>-O2</code> で同じ最適化を行う。</p>
 </tbody>
 </table>
 </div>
+</div>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb7" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> tccc.py tests/deep_sum.c            <span class="co"># 生成結果を見る</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> tccc.py tests/deep_sum.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> call   <span class="co"># call が減っているか</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb8" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 深い末尾再帰 + fixed17</span></span></code></pre></div>
+</div>
+</div>
 <p><code>golden.py</code> は3つを続けて確認する。</p>
 <ol type="1">
 <li><strong>最適化なし</strong>で <code>tests/deep_sum.c</code>（100万回の末尾再帰）が<strong>落ちる</strong>こと</li>
@@ -323,7 +363,7 @@ gcc や clang は <code>-O2</code> で同じ最適化を行う。</p>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

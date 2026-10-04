@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>学習者向けドキュメント — 索引 — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../assets/style.css">
 <script defer src="../assets/lightbox.js"></script>
+<script defer src="../assets/grammar.js"></script>
+<script defer src="../assets/navigation.js"></script>
+<script defer src="../assets/overflow.js"></script>
 
+<link rel="stylesheet" href="../assets/style.css">
 
 
 </head>
@@ -26,26 +29,25 @@
       <h1 class="page-title">学習者向けドキュメント — 索引</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#文書の一覧" id="toc-文書の一覧">文書の一覧</a></li>
-      <li><a href="#知りたいことから引く" id="toc-知りたいことから引く">知りたいことから引く</a></li>
-      <li><a href="#この外にあるもの" id="toc-この外にあるもの">この外にあるもの</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#文書の一覧" id="toc-文書の一覧">文書の一覧</a></li>
+<li><a href="#知りたいことから引く" id="toc-知りたいことから引く">知りたいことから引く</a></li>
+<li><a href="#この外にあるもの" id="toc-この外にあるもの">この外にあるもの</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <p><strong>始めるときは <a href="../docs/getting_started/"><code>getting_started.md</code></a> から。</strong> ここは入口ではなく、
 どの文書に何があるか・知りたいことがどこにあるかを引くための索引である。</p>
 <h2 id="文書の一覧">文書の一覧</h2>
 <p>上の3つが「読むもの」、下の3つが「引くもの」である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 28%" />
-<col style="width: 28%" />
-<col style="width: 42%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>文書</th>
@@ -87,13 +89,11 @@
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="知りたいことから引く">知りたいことから引く</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 75%" />
-<col style="width: 25%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>知りたいこと・キーワード</th>
@@ -172,13 +172,11 @@
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="この外にあるもの">この外にあるもの</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>場所</th>
@@ -205,6 +203,7 @@
 </tbody>
 </table>
 </div>
+</div>
 
     
     <nav class="pager" aria-label="前後のページ"><a class="next" href="../docs/getting_started/"><span class="label">次へ</span>進め方ガイド</a></nav>
@@ -217,7 +216,7 @@
      (<a href="../LICENSE">code: MIT</a>) ·
      <a href="../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

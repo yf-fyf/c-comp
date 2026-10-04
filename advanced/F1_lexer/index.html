@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>字句解析器を作る — ブラックボックスを開ける（前編） — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,23 +92,26 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">字句解析器を作る — ブラックボックスを開ける（前編）</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#core-プロファイルのトークン" id="toc-core-プロファイルのトークン">Core プロファイルのトークン</a></li>
-      <li><a href="#scaffoldlexer.py-を読む" id="toc-scaffoldlexer.py-を読む">scaffold/lexer.py を読む</a></li>
-      <li><a href="#分岐の順序に意味がある" id="toc-分岐の順序に意味がある">分岐の順序に意味がある</a></li>
-      <li><a href="#キーワードは読み切ってから決める" id="toc-キーワードは読み切ってから決める">キーワードは「読み切ってから」決める</a></li>
-      <li><a href="#リテラルとエスケープ" id="toc-リテラルとエスケープ">リテラルとエスケープ</a></li>
-      <li><a href="#行番号-エラー報告の生命線" id="toc-行番号-エラー報告の生命線">行番号 — エラー報告の生命線</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      <li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#core-プロファイルのトークン" id="toc-core-プロファイルのトークン">Core プロファイルのトークン</a></li>
+<li><a href="#scaffoldlexer.py-を読む" id="toc-scaffoldlexer.py-を読む">scaffold/lexer.py を読む</a></li>
+<li><a href="#分岐の順序に意味がある" id="toc-分岐の順序に意味がある">分岐の順序に意味がある</a></li>
+<li><a href="#キーワードは読み切ってから決める" id="toc-キーワードは読み切ってから決める">キーワードは「読み切ってから」決める</a></li>
+<li><a href="#リテラルとエスケープ" id="toc-リテラルとエスケープ">リテラルとエスケープ</a></li>
+<li><a href="#行番号-エラー報告の生命線" id="toc-行番号-エラー報告の生命線">行番号 — エラー報告の生命線</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+<li><a href="#次回予告" id="toc-次回予告">次回予告</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -114,12 +120,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 自作 lexer のトークン列が スキャフォールド と<strong>完全一致</strong>することを golden test で確認する。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -158,9 +161,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="core-プロファイルのトークン">Core プロファイルのトークン</h2>
 <p><code>scaffold/lexer.py</code> は、トークンを次の7種類に分類している。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -216,9 +221,11 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>トークンは <code>Token</code> dataclass で表され、<code>kind</code> / <code>val</code> / <code>sval</code> / <code>line</code>（行番号）を持つ。</p>
 <p>たとえば <code>if (x &lt;= 42)</code> は次のトークン列になる。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -261,17 +268,19 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="scaffoldlexer.py-を読む">scaffold/lexer.py を読む</h2>
 <p>まず本物を読む。<code>scaffold/lexer.py</code> は約230行で、前処理器（<code>preprocess</code>）と
 字句解析器（<code>tokenize</code>）の2つからなる。この回で読むのは <code>tokenize</code> 側である。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb1" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">less</span> ../../scaffold/lexer.py</span></code></pre></div>
+</div>
+</div>
 <p>読解の手がかりとして、<code>tokenize()</code> の構造を対応表にしておく。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>場所</th>
@@ -322,13 +331,15 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <figure>
 <img src="../../figures/F1_dispatch.svg" alt="メインループのディスパッチ（判定は上から順に試す）" />
 <figcaption aria-hidden="true">メインループのディスパッチ（判定は上から順に試す）</figcaption>
 </figure>
 <h2 id="分岐の順序に意味がある">分岐の順序に意味がある</h2>
 <p>この図の判定の並び順は、入れ替えられない。代表例が <code>/</code> である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -347,6 +358,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><code>/</code> で始まる2つを区別するには、<strong>コメントの判定を記号の判定より先に</strong>行うしかない。
 順序を逆にすると、<code>// comment</code> が「割り算・割り算・識別子 comment」に化けてしまう
@@ -372,14 +384,19 @@ Core プロファイルにある。§「記号どうしにも順序がある」�
 <p><code>if</code> はキーワードだが、<code>ifx</code> は識別子である。
 1文字ずつ見ながら「<code>i</code> の次が <code>f</code> だからキーワードだ」と早合点すると <code>ifx</code> を壊してしまう。</p>
 <p>正しい手順は次の通り。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <pre data-lang="text"><code>1. 英数字と _ が続く限り読み切る(最長一致)
 2. 読んだ単語がキーワード表(KEYWORDS)にあれば TK_KW、なければ TK_IDENT</code></pre>
+</div>
+</div>
 <p>「まず貪欲に読み、あとで分類する」— これも最長一致の応用である。</p>
 <h2 id="リテラルとエスケープ">リテラルとエスケープ</h2>
 <p>文字リテラル <code>'a'</code> は、<strong>文字コードを値に持つ</strong> <code>TK_CHAR</code> になる（<code>val=97</code>）。
 コマ10 で見たとおり、C では文字は小さな整数だからである。</p>
 <p>エスケープは表引きで文字コードに変換する。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -417,6 +434,7 @@ Core プロファイルにある。§「記号どうしにも順序がある」�
 </tbody>
 </table>
 </div>
+</div>
 <p>文字列リテラル <code>"x=%d\n"</code> は、<strong>エスケープを解決した実体</strong>を <code>sval</code> に持つ。
 <code>sval</code> の中身は6文字（<code>x</code> <code>=</code> <code>%</code> <code>d</code> 改行）であり、ソース上の <code>\</code> と <code>n</code> の2文字は
 この時点で1文字に畳まれている。コマ10 の <code>.data</code> 出力で <code>.byte 10</code> を出せたのは、
@@ -424,7 +442,8 @@ Lexer がここで変換を済ませていたからである。</p>
 <h2 id="行番号-エラー報告の生命線">行番号 — エラー報告の生命線</h2>
 <p>Token の <code>line</code> は、エラーメッセージの「<code>main.c:12:</code>」の材料になる。
 改行を数える場所は1箇所ではない。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
 <thead>
 <tr class="header">
@@ -448,19 +467,16 @@ Lexer がここで変換を済ませていたからである。</p>
 </tbody>
 </table>
 </div>
+</div>
 <p>どれか1つでも数え忘れると、それ以降の全トークンの行番号がずれる。
 golden test は行番号まで比較するので、ずれがあれば検出できる。</p>
 <h2 id="実装">実装</h2>
 <p><code>mylexer.py</code> のスケルトンは <code>Lexer</code> クラスになっている。
 メインループ（ディスパッチ）と共通部品（<code>error</code> / <code>startswith</code> / <code>add</code> / <code>escape_char</code>）は
 完成済みで、読み取りメソッド7つが TODO である。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" role="region" tabindex="0" aria-label="表（左右にスクロールできます）">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 45%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>Step</th>
@@ -497,18 +513,31 @@ golden test は行番号まで比較するので、ずれがあれば検出で�
 </tbody>
 </table>
 </div>
+</div>
 <p>各メソッドの方針は docstring に書いてある。
 スキャフォールド との違いは1点だけ: エラーは <code>exit</code> ではなく <code>SyntaxError</code> 例外にしている
 （テストしやすくするため）。</p>
 <p>途中経過は <code>main()</code> で目視できる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> mylexer.py ../../sessions/02_arithmetic_codegen/tests/add.c</span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
 <h3 id="単体テストstep-ごと">単体テスト（Step ごと）</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb4" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py</span></code></pre></div>
+</div>
+</div>
 <p>Step 1〜4 は <code>(kind, val, sval)</code> を比べ、Step 5 で行番号まで比べる。
 未実装の Step は SKIP と表示される。</p>
 <h3 id="golden-testスキャフォールド-との突き合わせ">golden test（スキャフォールド との突き合わせ）</h3>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" role="region" tabindex="0" aria-label="コード（左右にスクロールできます）">
 <div class="sourceCode" id="cb5" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py</span></code></pre></div>
+</div>
+</div>
 <p><code>sessions/*/tests/*.c</code> と <code>final/tests/*.c</code> の全ファイル（約100本）について、
 スキャフォールド と自作 lexer のトークン列を <code>(kind, val, sval, line)</code> で完全比較する。
 <code>#include</code> / <code>#define</code> を含むファイルは、スキャフォールド の <code>preprocess</code> を両者に通して
@@ -566,7 +595,7 @@ golden test は対象外にして単体テストで確認する）</li>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

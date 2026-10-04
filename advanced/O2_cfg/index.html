@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>基本ブロックとフローグラフ — 最適化の地図を作る — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,22 +92,25 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">基本ブロックとフローグラフ — 最適化の地図を作る</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#なぜブロックが要るのか" id="toc-なぜブロックが要るのか">なぜ「ブロック」が要るのか</a></li>
-      <li><a href="#基本ブロックとは" id="toc-基本ブロックとは">基本ブロックとは</a></li>
-      <li><a href="#リーダを見つける" id="toc-リーダを見つける">リーダを見つける</a></li>
-      <li><a href="#辺を張る" id="toc-辺を張る">辺を張る</a></li>
-      <li><a href="#後方辺-ループの正体" id="toc-後方辺-ループの正体">後方辺 — ループの正体</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#測ってみると" id="toc-測ってみると">測ってみると</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#なぜブロックが要るのか" id="toc-なぜブロックが要るのか">なぜ「ブロック」が要るのか</a></li>
+<li><a href="#基本ブロックとは" id="toc-基本ブロックとは">基本ブロックとは</a></li>
+<li><a href="#リーダを見つける" id="toc-リーダを見つける">リーダを見つける</a></li>
+<li><a href="#辺を張る" id="toc-辺を張る">辺を張る</a></li>
+<li><a href="#後方辺-ループの正体" id="toc-後方辺-ループの正体">後方辺 — ループの正体</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#測ってみると" id="toc-測ってみると">測ってみると</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -112,12 +118,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 Graphviz で図にして、自分のコンパイラが出したコードの形を目で確かめる。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -156,8 +159,10 @@ Graphviz で図にして、自分のコンパイラが出したコードの形�
 </tbody>
 </table>
 </div>
+</div>
 <p>作ったフローグラフを、以降の回がそのまま使う。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -181,14 +186,12 @@ Graphviz で図にして、自分のコンパイラが出したコードの形�
 </tbody>
 </table>
 </div>
+</div>
 <h2 id="なぜブロックが要るのか">なぜ「ブロック」が要るのか</h2>
 <p>O3（命令選択）の <code>is_dead_after</code> で、こういう妥協をした。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 70%" />
-<col style="width: 30%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>見つけたもの</th>
@@ -211,6 +214,7 @@ Graphviz で図にして、自分のコンパイラが出したコードの形�
 </tbody>
 </table>
 </div>
+</div>
 <p><code>is_dead_after</code> は前向きに1行ずつ見るだけなので、ラベルに出会うと止まる。
 ラベルの先は<strong>別の経路から飛んでくるかもしれない</strong>ので、
 単純な走査では「このレジスタが後で使われるか」を答えられない。</p>
@@ -222,7 +226,8 @@ Graphviz で図にして、自分のコンパイラが出したコードの形�
 考えるべき経路が減るので、解析がぐっと簡単になる。</p>
 <h2 id="リーダを見つける">リーダを見つける</h2>
 <p>ブロックの先頭になる命令を<strong>リーダ</strong>という。規則は3つだけである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -246,6 +251,7 @@ Graphviz で図にして、自分のコンパイラが出したコードの形�
 </tbody>
 </table>
 </div>
+</div>
 <figure>
 <img src="../../figures/O2_cfg.svg" alt="リーダを見つけて基本ブロックに切り、辺を張る" />
 <figcaption aria-hidden="true">リーダを見つけて基本ブロックに切り、辺を張る</figcaption>
@@ -262,12 +268,9 @@ Graphviz で図にして、自分のコンパイラが出したコードの形�
 </div>
 <h2 id="辺を張る">辺を張る</h2>
 <p>各ブロックの<strong>最後の命令</strong>だけを見れば、次に何が起きるかが決まる。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
-<colgroup>
-<col style="width: 64%" />
-<col style="width: 35%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>最後の命令</th>
@@ -294,21 +297,27 @@ Graphviz で図にして、自分のコンパイラが出したコードの形�
 </tbody>
 </table>
 </div>
+</div>
 <p>条件分岐で辺が2本になるところが要点である。
 プログラムの「分かれ道」が、そのままグラフの分岐になる。</p>
 <h2 id="後方辺-ループの正体">後方辺 — ループの正体</h2>
 <p>自分より<strong>前</strong>のブロックへ戻る辺を<strong>後方辺</strong>という。これがループである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>.L2:  条件            ← ここへ戻ってくる
       beqz a0, .L4
       本体
 .L3:  更新
       j .L2           ← 後方辺
 .L4:</code></pre>
+</div>
+</div>
 <p>グラフの上では、<code>.L3</code> のブロックから <code>.L2</code> のブロックへ戻る辺として現れる。
 <strong>ループを「ソースコードの <code>while</code>」ではなく「グラフの後方辺」として見つけられる</strong>ことが、
 この回のいちばんの収穫である。O7 のループ回転は、ここを狙う。</p>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" role="region" tabindex="0">
 <table>
 <thead>
 <tr class="header">
@@ -336,17 +345,28 @@ Graphviz で図にして、自分のコンパイラが出したコードの形�
 </tbody>
 </table>
 </div>
+</div>
 <p><code>Block</code> クラス、前処理の <code>strip_asm</code>（命令だけ取り出してラベルの飛び先を表にする）、
 <code>to_dot</code>（Graphviz 出力）はスケルトンで用意してある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb2" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ../optcc.py <span class="at">--passes</span> <span class="st">&#39;&#39;</span> ../O1_measure/bench/loop_sum.c   <span class="co"># 素の出力を見る</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py                                                <span class="co"># 図を書き出す</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <div class="sourceCode" id="cb3" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># リーダ・ブロック・辺の単体テスト(未実装は SKIP)</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># bench/*.c のフローグラフを検証して図にする</span></span></code></pre></div>
+</div>
+</div>
 <p><code>golden.py</code> は数を数えるだけでなく、<strong>構造の辻褄</strong>も確かめる。
 「<code>ret</code> に後続がある」「条件分岐の辺が1本しかない」といった間違いは、ここで落ちる。</p>
 <h2 id="測ってみると">測ってみると</h2>
 <p>教員の実装ではこうなる（最適化なしの出力に対して）。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" role="region" tabindex="0">
 <pre data-lang="text"><code>ベンチマーク    関数  ブロック    辺  後方辺  最大ブロック
 bubble             1      14    17      3        76
 fib_rec            2       6     5      0        34
@@ -354,6 +374,8 @@ loop_sum           1       6     6      1        18
 matmul             1      20    24      5       106
 strops             3      18    19      3        36
 合計                      64    71     12</code></pre>
+</div>
+</div>
 <p><code>fib_rec</code> だけ<strong>後方辺が0</strong>である。ループを1つも使っておらず、再帰だけで書かれているからである。
 O7 のループ回転が <code>fib_rec</code> に効かないのは、この時点で予言できる。</p>
 <p><code>matmul</code> の最大ブロックは <strong>106命令</strong>もある。3重ループの本体が
@@ -398,7 +420,7 @@ O3 の畳み込みが正確な解析でどれだけ増えるかは、O6 の
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

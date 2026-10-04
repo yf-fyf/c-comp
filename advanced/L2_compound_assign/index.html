@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>複合代入 — 左辺を1回しか評価しない — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,20 +92,23 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">複合代入 — 左辺を1回しか評価しない</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#l2-が追加する仕様" id="toc-l2-が追加する仕様">L2 が追加する仕様</a></li>
-      <li><a href="#x-x-3-に書き換えればいいではない" id="toc-x-x-3-に書き換えればいいではない"><code>x = x + 3</code> に書き換えればいい、ではない</a></li>
-      <li><a href="#段すべてに手を入れる" id="toc-段すべてに手を入れる">3段すべてに手を入れる</a></li>
-      <li><a href="#コード生成-アドレスは1回値は往復" id="toc-コード生成-アドレスは1回値は往復">コード生成 — アドレスは1回、値は往復</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#l2-が追加する仕様" id="toc-l2-が追加する仕様">L2 が追加する仕様</a></li>
+<li><a href="#x-x-3-に書き換えればいいではない" id="toc-x-x-3-に書き換えればいいではない"><code>x = x + 3</code> に書き換えればいい、ではない</a></li>
+<li><a href="#段すべてに手を入れる" id="toc-段すべてに手を入れる">3段すべてに手を入れる</a></li>
+<li><a href="#コード生成-アドレスは1回値は往復" id="toc-コード生成-アドレスは1回値は往復">コード生成 — アドレスは1回、値は往復</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -110,12 +116,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 （<code>+=</code> <code>-=</code> <code>*=</code> <code>/=</code> <code>%=</code>）を、字句・構文・コード生成の3段すべてで実装する。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -158,6 +161,7 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </div>
+</div>
 <p>複合代入は <code>language_spec.md</code> の<strong>外側</strong>にある機能である
 （仕様の「除外機能の一覧」に載っている）。
 この回は言語そのものを 1 つ広げる回で、追加する構文と意味論は<strong>この資料が定義する</strong>（次節）。
@@ -171,9 +175,13 @@ F2 の発展課題2「複合代入を追加する」を構文で止めた人は�
 判定はこの定義に従う。</p>
 <h3 id="構文">構文</h3>
 <p><code>language_spec.md</code> の EBNF の <code>assign_expr</code> を次で置き換える。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre class="ebnf" data-lang="ebnf"><code>assign_expr ::= unary_expr assign_op assign_expr   /* 右結合 */
               | cond_expr
 assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;/=&#39; | &#39;%=&#39;</code></pre>
+</div>
+</div>
 <p>優先順位・結合の向きは <code>=</code> と同じ（最も低い段、右結合）。
 左辺は <code>unary_expr</code> 由来の lvalue でなければならない。
 字句では <code>+=</code> <code>-=</code> <code>*=</code> <code>/=</code> <code>%=</code> を 2 文字の 1 トークンとして読む。</p>
@@ -207,7 +215,11 @@ L2 を実装しても <code>language_spec.md</code> は変わらない — 変�
 <strong><code>x += 3</code> を <code>x = x + 3</code> に展開してしまう</strong>ことである（脱糖、desugaring）。
 実際 <code>x</code> がただの変数なら、これで正しい答えになる。</p>
 <p>しかし左辺が副作用を持つとき、この方法は壊れる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb2" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">*</span>bump<span class="op">()</span> <span class="op">+=</span> <span class="dv">10</span><span class="op">;</span>          <span class="co">// bump() は呼ばれるたびにカウンタを増やす</span></span></code></pre></div>
+</div>
+</div>
 <p>これを <code>*bump() = *bump() + 10;</code> に展開すると、<strong><code>bump()</code> が2回呼ばれる</strong>。
 前節で定めたとおりである。</p>
 <blockquote>
@@ -231,10 +243,15 @@ L2 を実装しても <code>language_spec.md</code> は変わらない — 変�
 <h2 id="段すべてに手を入れる">3段すべてに手を入れる</h2>
 <p>いまのコンパイラに <code>x += 3;</code> を含むソース（<code>tests/basic.c</code>）を食わせると、
 <strong>字句解析の時点で</strong>話が終わっている。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>構文解析エラー: [line 6] 式が期待されましたが &#39;=&#39; がありました</code></pre>
+</div>
+</div>
 <p><code>+</code> と <code>=</code> が別々のトークンとして読まれ、<code>x + (=) 3</code> を読もうとして失敗している。
 <code>+=</code> というトークンがそもそも存在しないからである。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -262,11 +279,16 @@ L2 を実装しても <code>language_spec.md</code> は変わらない — 変�
 </tbody>
 </table>
 </div>
+</div>
 <h3 id="字句-2文字演算子を足す">字句 — 2文字演算子を足す</h3>
 <p>スキャフォールド の <code>lexer.py</code> は、1文字ずつ切り出す前に
 <strong>2文字演算子の表 <code>TWO_CHAR_PUNCTS</code> を先に試す</strong>という順序になっている。
 表に <code>'+='</code> を足すだけで <code>+=</code> が1つのトークンになる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>TWO_CHAR_PUNCTS <span class="op">=</span> [<span class="st">&#39;==&#39;</span>, <span class="st">&#39;!=&#39;</span>, <span class="st">&#39;&lt;=&#39;</span>, <span class="st">&#39;&gt;=&#39;</span>, <span class="st">&#39;&amp;&amp;&#39;</span>, <span class="st">&#39;||&#39;</span>, <span class="st">&#39;-&gt;&#39;</span>, <span class="st">&#39;++&#39;</span>, <span class="st">&#39;--&#39;</span>]</span></code></pre></div>
+</div>
+</div>
 <p><code>++</code> と <code>+=</code> が取り違えられないのは、2文字まるごとを比較しているからである。
 順序を気にする必要があるのは「片方がもう片方の先頭になっている」場合
 （<code>&lt;</code> と <code>&lt;=</code> のような1文字と2文字の関係）だけで、
@@ -285,24 +307,38 @@ web の golden テストでは <strong>skip として数えられる</strong>。
 <h3 id="構文-代入と同じ段右結合">構文 — 代入と同じ段、右結合</h3>
 <p>複合代入は代入と同じ優先順位・同じ結合の向きで読む
 （「L2 が追加する仕様」で置き換えた <code>assign_expr</code> は右結合）。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>assign_expr ::= unary_expr assign_op assign_expr
               | cond_expr
 assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;/=&#39; | &#39;%=&#39;</code></pre>
+</div>
+</div>
 <p><code>_parse_assign</code> は「まず <code>cond_expr</code> として読み、直後が代入演算子かを見る」形なので、
 <code>'='</code> の判定を5つの演算子にも広げるだけでよい（F2 の発展課題2 と同じ手である）。
 右辺で自分自身を呼ぶので、<code>a += b += c</code> は <code>a += (b += c)</code> と読まれる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>kind=&#39;CompoundAssign&#39;、sval=&#39;+=&#39;、lhs=Var(a)、rhs=CompoundAssign(&#39;+=&#39;, Var(b), Var(c))</code></pre>
+</div>
+</div>
 <p>この部分はラッパーが用意する。演算子を <code>sval</code> に入れて<strong>種類を1ノードで持つ</strong>のは、
 <code>Add</code> / <code>Sub</code> / … と5種類のノードを作るより、コード生成で表を引くほうが素直だからである。</p>
 <h2 id="コード生成-アドレスは1回値は往復">コード生成 — アドレスは1回、値は往復</h2>
 <p><code>x += 3</code> がやることを分解すると、次の4つになる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <pre data-lang="text"><code>1. 左辺のアドレスを求める      ← ここを1回だけにするのが主題
 2. そのアドレスから値を読む
 3. 右辺と演算する
 4. 同じアドレスへ書き戻す</code></pre>
+</div>
+</div>
 <p>アドレスは 1 で求めたものを 4 で使い回す。
 その間に右辺の評価が挟まる（右辺も <code>a0</code> を使う）ので、
 アドレスと途中の値はスタックへ退避する。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb8" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; x += 3   (x は int、s0-8 にある)</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 左辺のアドレス          ← codegen_lval は1回だけ</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  addi a0<span class="op">,</span> s0<span class="op">,</span> <span class="op">-</span><span class="dv">8</span></span>
@@ -318,11 +354,14 @@ assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;
 <span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  ld a1<span class="op">,</span> <span class="dv">0</span><span class="op">(</span><span class="kw">sp</span><span class="op">)</span>          <span class="co">;; a1 = 左辺のアドレス</span></span>
 <span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  addi <span class="kw">sp</span><span class="op">,</span> <span class="kw">sp</span><span class="op">,</span> <span class="dv">8</span></span>
 <span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  sw a0<span class="op">,</span> <span class="dv">0</span><span class="op">(</span>a1<span class="op">)</span>          <span class="co">;; 書き戻す</span></span></code></pre></div>
+</div>
+</div>
 <p>コマ5 の <code>codegen_PreInc</code> と見比べてほしい。
 <code>addi a0, a0, 1</code> が「右辺を評価して演算する」に置き換わっただけで、
 <strong>骨格は同じ</strong>である。<code>++e</code> を <code>e += 1</code> の特別な場合とみなせるのは、
 <strong>L2 がそう定義した</strong>からであり、コードの上でもそのとおりになっている。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -354,6 +393,7 @@ assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;
 </tbody>
 </table>
 </div>
+</div>
 <p>書き戻したあと <code>a0</code> には結果が残るので、<code>y += x += 3</code> のように
 <strong>式としての値</strong>も自然に手に入る。</p>
 <div class="adm adm-note">
@@ -369,15 +409,20 @@ assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;
 <h3 id="ポインタへの-は要素サイズぶん進む">ポインタへの <code>+=</code> は要素サイズぶん進む</h3>
 <p><code>p += 2</code> は「2バイト進める」ではなく「2要素ぶん進める」である。
 コマ9 の <code>p + 2</code> と同じスケーリングを、複合代入でも行う必要がある。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb9" data-lang="asm"><pre class="sourceCode gnuassembler"><code class="sourceCode gnuassembler"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">;; p += 2   (p は int*)</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  li a1<span class="op">,</span> <span class="dv">4</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">mul</span> a0<span class="op">,</span> a0<span class="op">,</span> a1        <span class="co">;; 右辺 2 → 8 バイト</span></span></code></pre></div>
+</div>
+</div>
 <p>スケーリングは<strong>右辺を評価した直後</strong>に入れる。
 このとき「いまの値」はスタックの上にいるので、<code>a1</code> を作業に使ってよい。</p>
 <p>なお、ポインタに使えるのは <code>+=</code> と <code>-=</code> だけである
 （<code>p *= 2</code> は仕様の「ポインタ演算はポインタ ± int のみ」に反する）。</p>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -405,14 +450,24 @@ assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;
 </tbody>
 </table>
 </div>
+</div>
 <p>Step 2 の間はポインタを忘れて <code>int</code> だけ動かし、Step 3 で足すとよい。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb10" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/basic.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A8</span> <span class="st">&quot;addi a0, s0&quot;</span>   <span class="co"># 往復の形を見る</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/once.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&quot;call bump&quot;</span>       <span class="co"># 2 のはず(実行時に2回呼ぶ)</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> langcc.py tests/ptr.c <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-B1</span> <span class="st">&quot;mul a0, a0, a1&quot;</span>  <span class="co"># スケーリング</span></span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" aria-label="コード（左右にスクロールできます）" tabindex="0" role="region">
 <div class="sourceCode" id="cb11" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト(未実装は SKIP)</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 複合代入のテスト + fixed17</span></span></code></pre></div>
-<div class="table-scroll">
+</div>
+</div>
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" aria-label="表（左右にスクロールできます）" tabindex="0" role="region">
 <table>
 <thead>
 <tr class="header">
@@ -435,6 +490,7 @@ assign_op   ::= &#39;=&#39; | &#39;+=&#39; | &#39;-=&#39; | &#39;*=&#39; | &#39;
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p><code>once.c</code> が本質である。脱糖で実装すると、答えは合っているのに
 カウンタが2になって落ちる。<strong>答えが合うことと、意味が正しいことは別</strong>だと
@@ -483,7 +539,7 @@ S1 で作ったジャンプの形から考える</li>
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>

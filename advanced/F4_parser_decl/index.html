@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>再帰下降パーサ③ — 宣言・型・プログラム全体（最終回） — 実践・C コンパイラ演習</title>
 
-<link rel="stylesheet" href="../../assets/style.css">
 <script defer src="../../assets/lightbox.js"></script>
+<script defer src="../../assets/grammar.js"></script>
+<script defer src="../../assets/navigation.js"></script>
+<script defer src="../../assets/overflow.js"></script>
 <style>
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { line-height: 1.25; }
@@ -71,6 +73,7 @@ code span.va { color: #000000; } /* Variable */
 code span.vs { color: #4e9a06; } /* VerbatimString */
 code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
 </style>
+<link rel="stylesheet" href="../../assets/style.css">
 
 
 </head>
@@ -89,25 +92,28 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
       <h1 class="page-title">再帰下降パーサ③ — 宣言・型・プログラム全体（最終回）</h1>
       
     </div>
-        <nav class="toc" aria-label="このページの目次">
-      <p class="toc-head">このページの内容</p>
-      <ul>
-      <li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
-      <li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
-      <li><a href="#宣言か文か-判定は4語の照合で終わる" id="toc-宣言か文か-判定は4語の照合で終わる">宣言か、文か — 判定は4語の照合で終わる</a></li>
-      <li><a href="#型を読む-どこに書かれた型かで許される型が違う" id="toc-型を読む-どこに書かれた型かで許される型が違う">型を読む — 「どこに書かれた型か」で許される型が違う</a></li>
-      <li><a href="#局所宣言と関数本体-宣言を置ける場所は1箇所だけ" id="toc-局所宣言と関数本体-宣言を置ける場所は1箇所だけ">局所宣言と関数本体 — 宣言を置ける場所は1箇所だけ</a></li>
-      <li><a href="#struct-定義-検証はするがast-には残さない" id="toc-struct-定義-検証はするがast-には残さない">struct 定義 — 検証はするが、AST には残さない</a></li>
-      <li><a href="#sizeof-f2-で先送りした最後のピース" id="toc-sizeof-f2-で先送りした最後のピース">sizeof — F2 で先送りした最後のピース</a></li>
-      <li><a href="#関数-宣言か定義かは読み進めた結果で分かる" id="toc-関数-宣言か定義かは読み進めた結果で分かる">関数 — 宣言か定義かは「読み進めた結果」で分かる</a></li>
-      <li><a href="#parse_program-全体を組み立てる" id="toc-parse_program-全体を組み立てる">parse_program — 全体を組み立てる</a></li>
-      <li><a href="#実装" id="toc-実装">実装</a></li>
-      <li><a href="#テスト" id="toc-テスト">テスト</a></li>
-      <li><a href="#総仕上げ任意-mycc.py-に差し替えて-fixed17-を回す" id="toc-総仕上げ任意-mycc.py-に差し替えて-fixed17-を回す">総仕上げ（任意）— mycc.py に差し替えて fixed17 を回す</a></li>
-      <li><a href="#シリーズのまとめ" id="toc-シリーズのまとめ">シリーズのまとめ</a></li>
-      <li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
-      </ul>
-    </nav>
+        <div class="page-navigation">
+      <details class="toc">
+        <summary>このページの内容</summary>
+        <nav aria-label="このページの目次"><ul>
+<li><a href="#今日のゴール" id="toc-今日のゴール">今日のゴール</a></li>
+<li><a href="#この回の位置づけ" id="toc-この回の位置づけ">この回の位置づけ</a></li>
+<li><a href="#宣言か文か-判定は4語の照合で終わる" id="toc-宣言か文か-判定は4語の照合で終わる">宣言か、文か — 判定は4語の照合で終わる</a></li>
+<li><a href="#型を読む-どこに書かれた型かで許される型が違う" id="toc-型を読む-どこに書かれた型かで許される型が違う">型を読む — 「どこに書かれた型か」で許される型が違う</a></li>
+<li><a href="#局所宣言と関数本体-宣言を置ける場所は1箇所だけ" id="toc-局所宣言と関数本体-宣言を置ける場所は1箇所だけ">局所宣言と関数本体 — 宣言を置ける場所は1箇所だけ</a></li>
+<li><a href="#struct-定義-検証はするがast-には残さない" id="toc-struct-定義-検証はするがast-には残さない">struct 定義 — 検証はするが、AST には残さない</a></li>
+<li><a href="#sizeof-f2-で先送りした最後のピース" id="toc-sizeof-f2-で先送りした最後のピース">sizeof — F2 で先送りした最後のピース</a></li>
+<li><a href="#関数-宣言か定義かは読み進めた結果で分かる" id="toc-関数-宣言か定義かは読み進めた結果で分かる">関数 — 宣言か定義かは「読み進めた結果」で分かる</a></li>
+<li><a href="#parse_program-全体を組み立てる" id="toc-parse_program-全体を組み立てる">parse_program — 全体を組み立てる</a></li>
+<li><a href="#実装" id="toc-実装">実装</a></li>
+<li><a href="#テスト" id="toc-テスト">テスト</a></li>
+<li><a href="#総仕上げ任意-mycc.py-に差し替えて-fixed17-を回す" id="toc-総仕上げ任意-mycc.py-に差し替えて-fixed17-を回す">総仕上げ（任意）— mycc.py に差し替えて fixed17 を回す</a></li>
+<li><a href="#シリーズのまとめ" id="toc-シリーズのまとめ">シリーズのまとめ</a></li>
+<li><a href="#発展課題" id="toc-発展課題">発展課題</a></li>
+</ul></nav>
+      </details>
+      
+    </div>
     
 <section id="今日のゴール" class="goal">
 <h2>今日のゴール</h2>
@@ -116,12 +122,9 @@ code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warni
 Lexer（F1）とあわせて<strong>ブラックボックスの完全な置き換え</strong>を宣言する。</p>
 </section>
 <h2 id="この回の位置づけ">この回の位置づけ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>項目</th>
@@ -160,16 +163,25 @@ Lexer（F1）とあわせて<strong>ブラックボックスの完全な置き�
 </tbody>
 </table>
 </div>
+</div>
 <p><code>ProgramParser</code> は自分の F3 <code>StmtParser</code> を継承する。継承の連鎖は
 F2（式）→ F3（文）→ F4（宣言・型）で完結する。
 F2 で先送りした <code>sizeof</code> も、この回で最後のピースとして埋める。</p>
 <h2 id="宣言か文か-判定は4語の照合で終わる">宣言か、文か — 判定は4語の照合で終わる</h2>
 <p>F3 のコラムで予告した問題から始める。関数本体の先頭の2行を考える。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb1" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Point p<span class="op">;</span>   <span class="co">// 宣言</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="dv">1</span><span class="op">;</span>            <span class="co">// 式文</span></span></code></pre></div>
+</div>
+</div>
 <p>宣言と式文を見分ける必要がある。この言語では、その判定は次の1行で終わる。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb2" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> is_type_start(<span class="va">self</span>):</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">self</span>.cur.kind <span class="op">==</span> TK_KW <span class="kw">and</span> <span class="va">self</span>.cur.sval <span class="kw">in</span> TYPE_KEYWORDS</span></code></pre></div>
+</div>
+</div>
 <p><code>TYPE_KEYWORDS</code> は <code>('int', 'char', 'void', 'struct')</code> の4語である。
 型を書き始められるトークンはこの4語だけで、<strong>解析中に増えることがない</strong>。
 だから表もいらず、字句解析器へ情報を戻す必要もない。</p>
@@ -201,20 +213,19 @@ C には <code>typedef</code> があるので、<code>Point p;</code> の <code>
 <h2 id="型を読む-どこに書かれた型かで許される型が違う">型を読む — 「どこに書かれた型か」で許される型が違う</h2>
 <p>型そのものの読み方は単純である。基底（<code>int</code> / <code>char</code> / <code>void</code> / <code>struct タグ</code>）を
 読み、続く <code>*</code> を数えるだけ。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb3" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_base_and_stars(<span class="va">self</span>):</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;(&#39;int&#39;, &#39;**&#39;) のような組を返す&quot;&quot;&quot;</span></span></code></pre></div>
+</div>
+</div>
 <p><code>ty_str</code> 文字列（<code>'int'</code> <code>'char*'</code> <code>'struct Node*'</code>）は、この組をつないで作る。
 コマ8 からずっと使ってきた表記の出所がここである。</p>
 <p>問題は<strong>その型がどこに書かれたか</strong>である。<code>language_spec.md</code> の型の EBNF は、
 1つではなく<strong>位置ごとに3つ</strong>の非終端記号に分かれている。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 16%" />
-<col style="width: 27%" />
-<col style="width: 27%" />
-<col style="width: 29%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>位置</th>
@@ -245,12 +256,15 @@ C には <code>typedef</code> があるので、<code>Point p;</code> の <code>
 </tbody>
 </table>
 </div>
+</div>
 <figure>
 <img src="../../figures/F4_type_positions.svg" alt="位置ごとに許される型 — scalar / obj / ret" />
 <figcaption aria-hidden="true">位置ごとに許される型 — scalar / obj / ret</figcaption>
 </figure>
 <p>同じ「基底 + <code>*</code>」の文法を読んでいるのに、通る型が位置ごとに違う。
 スキャフォールド はこれを<strong>読んでから検証する</strong>形で実装している。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb4" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_scalar_type(<span class="va">self</span>):</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    base, stars <span class="op">=</span> <span class="va">self</span>.parse_base_and_stars()</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> base <span class="op">==</span> <span class="st">&#39;void&#39;</span> <span class="kw">and</span> <span class="kw">not</span> stars:</span>
@@ -258,6 +272,8 @@ C には <code>typedef</code> があるので、<code>Point p;</code> の <code>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> base.startswith(<span class="st">&#39;struct&#39;</span>) <span class="kw">and</span> <span class="kw">not</span> stars:</span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.error(<span class="st">&quot;struct 値はここでは使えません(ポインタにする)&quot;</span>)</span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> base <span class="op">+</span> stars</span></code></pre></div>
+</div>
+</div>
 <p>弾かれる2つには、それぞれ理由がある。</p>
 <ul>
 <li><strong><code>void</code> 単独</strong>は「サイズを持たない型」である。スタックにも <code>.bss</code> にも
@@ -287,9 +303,15 @@ C には <code>typedef</code> があるので、<code>Point p;</code> の <code>
 </div>
 <h2 id="局所宣言と関数本体-宣言を置ける場所は1箇所だけ">局所宣言と関数本体 — 宣言を置ける場所は1箇所だけ</h2>
 <p>局所宣言は初期化子を持たない（<code>int a;</code> と書いて、値は次の行で代入する）。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>local_decl ::= obj_type IDENT &#39;;&#39;</code></pre>
+</div>
+</div>
 <p>宣言を書けるのは<strong>関数本体の先頭だけ</strong>である。そこで F4 が新設するのは
 <code>parse_func_body</code> で、F3 の <code>parse_block</code> は<strong>上書きしない</strong>。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb6" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_func_body(<span class="va">self</span>):</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.expect(<span class="st">&#39;{&#39;</span>)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    stmts <span class="op">=</span> []</span>
@@ -298,6 +320,8 @@ C には <code>typedef</code> があるので、<code>Point p;</code> の <code>
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="kw">not</span> <span class="va">self</span>.consume_if(<span class="st">&#39;}&#39;</span>):      <span class="co"># ← ここから先は F3 の parse_block と同じ</span></span>
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        stmts.append(<span class="va">self</span>.parse_stmt())</span>
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Node(ND_BLOCK, stmts<span class="op">=</span>stmts)</span></code></pre></div>
+</div>
+</div>
 <p>同じ <code>{ ... }</code> の見た目でも、関数本体と入れ子ブロックは<strong>別の規則</strong>である。
 <code>if</code> の中の <code>{ ... }</code> は <code>parse_stmt</code> 経由で F3 の <code>parse_block</code> に届き、
 そこには <code>is_type_start</code> のループがない。だから入れ子ブロックの中の
@@ -306,14 +330,22 @@ C には <code>typedef</code> があるので、<code>Point p;</code> の <code>
 <strong>2つの関数を分けた</strong>という形でコードに刻まれている。</p>
 <h2 id="struct-定義-検証はするがast-には残さない">struct 定義 — 検証はするが、AST には残さない</h2>
 <p>トップレベルには <code>struct</code> で始まる形が3つ並ぶ。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb7" data-lang="c"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">{</span> <span class="dt">int</span> val<span class="op">;</span> <span class="kw">struct</span> Node <span class="op">*</span>next<span class="op">;</span> <span class="op">};</span>   <span class="co">// 定義</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node<span class="op">;</span>                                   <span class="co">// 前方宣言</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Node <span class="op">*</span>head<span class="op">;</span>                             <span class="co">// グローバル変数</span></span></code></pre></div>
+</div>
+</div>
 <p>先頭トークンはどれも <code>struct</code>、次はどれもタグ名である。
 分かれるのは<strong>その次</strong>なので、判定には2トークン先読みが要る。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb8" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">self</span>.cur.sval <span class="op">==</span> <span class="st">&#39;struct&#39;</span> <span class="kw">and</span> <span class="va">self</span>.peek(<span class="dv">2</span>).sval <span class="kw">in</span> (<span class="st">&#39;{&#39;</span>, <span class="st">&#39;;&#39;</span>):</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.parse_struct_decl()</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">continue</span></span></code></pre></div>
+</div>
+</div>
 <p><code>parse_struct_decl</code> はフィールドを1個以上読み、それぞれを
 <code>parse_scalar_type</code>（= <code>struct</code> 値と <code>void</code> 単独を弾く）で検証する。
 そして——<strong>Node を1つも作らずに戻る</strong>。</p>
@@ -324,14 +356,22 @@ Parser が意図的にフィールドを AST に残していないからだっ�
 「コード生成に必要な最小限」に絞る側に倒している（発展課題で逆の設計も試せる）。</p>
 <h2 id="sizeof-f2-で先送りした最後のピース">sizeof — F2 で先送りした最後のピース</h2>
 <p><code>sizeof</code> の形は1つだけである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>&#39;sizeof&#39; &#39;(&#39; obj_type &#39;)&#39;    →  ND_SIZEOF_TYPE（ty_str を持つ）</code></pre>
+</div>
+</div>
 <p>式に対する <code>sizeof</code> はこの言語にはない。<code>sizeof(x)</code> は構文エラーになる。
 <code>(</code> の次が型キーワードなら型名形式、そうでなければ——<strong>そうでない場合はない</strong>。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb10" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_sizeof(<span class="va">self</span>):</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span>.pos <span class="op">+=</span> <span class="dv">1</span>  <span class="co"># &#39;sizeof&#39;</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> (<span class="va">self</span>.cur.sval <span class="op">==</span> <span class="st">&#39;(&#39;</span> <span class="kw">and</span> <span class="va">self</span>.peek_is_type()):</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.error(<span class="st">&quot;sizeof は sizeof(型名) 形式のみ使えます&quot;</span>)</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    ...</span></code></pre></div>
+</div>
+</div>
 <p>F2 の LL(1) のコラムで「唯一きわどいのは <code>sizeof(x)</code> の <code>(</code> の次が型か式かの判定だ」
 と書いた。その曖昧さは、<code>sizeof</code> を型名形式に絞った時点で<strong>消えている</strong>。
 <code>peek_is_type</code> が残っているのは判定のためではなく、
@@ -340,18 +380,19 @@ Parser が意図的にフィールドを AST に残していないからだっ�
 <p>先読みが本当に必要だったのは、むしろ1つ上の節の <code>struct</code> 定義の判定
 （<code>peek(2)</code>）のほうだった。<strong>きわどい箇所は、思っていたのと別の場所にある</strong>。</p>
 <h2 id="関数-宣言か定義かは読み進めた結果で分かる">関数 — 宣言か定義かは「読み進めた結果」で分かる</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>func_proto ::= ret_type IDENT &#39;(&#39; [ params [ &#39;,&#39; &#39;...&#39; ] ] &#39;)&#39; &#39;;&#39;
 func_def   ::= ret_type IDENT &#39;(&#39; [ params ] &#39;)&#39; func_body</code></pre>
+</div>
+</div>
 <p>引数リストを読み終えるまで、宣言（<code>ND_FUNCPROTO</code>）か定義（<code>ND_FUNCDEF</code>）かは
 分からなくてよい。<strong>閉じカッコの次が <code>;</code> なら宣言、<code>{</code> なら定義</strong>と、
 読み進めた結果で決めればよい（先読み不要）。</p>
 <p>引数リストの規則は4つ。</p>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 40%" />
-<col style="width: 60%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>形</th>
@@ -378,13 +419,18 @@ func_def   ::= ret_type IDENT &#39;(&#39; [ params ] &#39;)&#39; func_body</code
 </tbody>
 </table>
 </div>
+</div>
 <p>下2つは、F2 までの「多めに受理して後段で弾く」方針とは逆の判断である。
 <code>(void)</code> も引数名の省略も、<strong>書けても意味が増えない</strong>（本物の C では
 <code>()</code> と <code>(void)</code> に意味の差があるが、この言語の <code>()</code> は常に「0引数」である）。
 受理する形を1つに絞れば、後段が場合分けを持たずに済む。</p>
 <h2 id="parse_program-全体を組み立てる">parse_program — 全体を組み立てる</h2>
 <p>トップレベルは3種類だけである。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <pre data-lang="text"><code>program ::= { struct 定義/前方宣言 | グローバル変数宣言 | 関数宣言/定義 }+</code></pre>
+</div>
+</div>
 <ol type="1">
 <li><code>struct</code> + タグ名 + <code>{</code> または <code>;</code> なら <code>parse_struct_decl()</code>。<strong>AST には何も足さない</strong></li>
 <li>それ以外は基底と <code>*</code> を読み、名前を読む。次が <code>(</code> なら関数、そうでなければ
@@ -399,13 +445,9 @@ func_def   ::= ret_type IDENT &#39;(&#39; [ params ] &#39;)&#39; func_body</code
 トップレベルにあるか関数の中にあるかでコード生成側が <code>.bss</code> かスタックかを
 決めていた（コマ13）。</p>
 <h2 id="実装">実装</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 45%" />
-<col style="width: 27%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>Step</th>
@@ -442,11 +484,20 @@ func_def   ::= ret_type IDENT &#39;(&#39; [ params ] &#39;)&#39; func_body</code
 </tbody>
 </table>
 </div>
+</div>
 <p><code>expect_ident</code> / <code>parse_unary</code> の上書き（<code>sizeof</code> への分岐）/ 入口 <code>parse()</code> は完成済み。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb13" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> myparser.py ../../sessions/12_struct_malloc_list/tests/list_min.c</span></code></pre></div>
+</div>
+</div>
 <h2 id="テスト">テスト</h2>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb14" data-lang="bash"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> check.py     <span class="co"># Step ごとの単体テスト</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> golden.py    <span class="co"># 全テスト入力(約100本)で scaffold と突き合わせ</span></span></code></pre></div>
+</div>
+</div>
 <p>check.py の Step 2 以降は、同じ入力を スキャフォールド にも解析させて構造比較する。
 各 Step には「弾かれるべき入力」の確認（<code>void v;</code> / <code>f(struct Point p)</code> /
 <code>sizeof x</code> など）も入っている。<strong>通す</strong>だけでなく<strong>弾く</strong>のもパーサの仕事だからである。</p>
@@ -459,8 +510,14 @@ func_def   ::= ret_type IDENT &#39;(&#39; [ params ] &#39;)&#39; func_body</code
 <p>golden test は「同じ AST が出る」ことの証明なので、理屈の上では
 自作フロントエンドで <a href="../../advanced/#fixed17"><code>fixed17</code></a> も通るはずである。実際に確かめたい場合は、
 <code>final/mycc.py</code> の先頭にある</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb15" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> parser <span class="im">import</span> parse</span></code></pre></div>
+</div>
+</div>
 <p>を、自作パーサを読み込む形に差し替える。</p>
+<div class="code-example scroll-frame">
+<div class="code-scroll scroll-pane" tabindex="0" aria-label="コード（左右にスクロールできます）" role="region">
 <div class="sourceCode" id="cb16" data-lang="python"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> importlib.util <span class="im">as</span> _il</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>_spec <span class="op">=</span> _il.spec_from_file_location(</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;myparser&quot;</span>,</span>
@@ -469,15 +526,14 @@ func_def   ::= ret_type IDENT &#39;(&#39; [ params ] &#39;)&#39; func_body</code
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>_mod <span class="op">=</span> _il.module_from_spec(_spec)</span>
 <span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>_spec.loader.exec_module(_mod)</span>
 <span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>parse <span class="op">=</span> _mod.parse</span></code></pre></div>
+</div>
+</div>
 <p>そのまま <code>python3 scaffold/test_runner.py</code> を実行して全 PASS すれば、
 <strong>自作の Lexer/Parser + 自作のコード生成器</strong>でコンパイラ一式が動いたことになる。</p>
 <h2 id="シリーズのまとめ">シリーズのまとめ</h2>
-<div class="table-scroll">
+<div class="table-example scroll-frame">
+<div class="table-scroll scroll-pane" tabindex="0" aria-label="表（左右にスクロールできます）" role="region">
 <table>
-<colgroup>
-<col style="width: 26%" />
-<col style="width: 73%" />
-</colgroup>
 <thead>
 <tr class="header">
 <th>回</th>
@@ -507,6 +563,7 @@ func_def   ::= ret_type IDENT &#39;(&#39; [ params ] &#39;)&#39; func_body</code
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 <p>出発点の CYK は汎用だが遅く、到達点の再帰下降は
 「文法を LL(1) に設計しておけば、先読み1〜2トークン・線形時間・手書き可能」だった。
@@ -549,7 +606,7 @@ golden は通らなくなるが、コラムで述べた文脈依存性を自分�
      (<a href="../../LICENSE">code: MIT</a>) ·
      <a href="../../THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
      <a href="https://github.com/yf-fyf/c-comp">GitHub</a></p>
-  <p class="release">Release v0.1.3 / source 630cf043dbfbd94a518a38f680136eae524b37cc / 2026-09-29 03:52 UTC</p>
+  <p class="release">Release v0.1.4 / source c228a070b30aa60ba2d68e92a403410f3f38e9ba / 2026-10-04 13:01 UTC</p>
 </footer>
 </body>
 </html>
