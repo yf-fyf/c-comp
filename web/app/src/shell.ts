@@ -46,7 +46,9 @@ export function mountShell(currentHref: string): void {
 function applyFont(size: string): void {
   document.documentElement.dataset.font = size;
   for (const btn of document.querySelectorAll<HTMLButtonElement>("#font-buttons button")) {
-    btn.classList.toggle("active", btn.dataset.size === size);
+    const active = btn.dataset.size === size;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", String(active));
   }
 }
 

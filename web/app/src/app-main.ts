@@ -91,7 +91,7 @@ function markDirty(): void {
     $("source-context").textContent = "変更未反映：表示中の命令・実行状態は編集前のCの結果です。";
     status("pending", "変更未反映 — 実行を停止しました。［コンパイル］で命令と実行準備を更新します。");
   } else if (origin === "empty" && ready) {
-    status("pending", "Cを編集し、［コンパイル］で命令生成と実行準備へ進めます。");
+    status("pending", "［コンパイル］で、このCの命令を生成できます。");
   }
 }
 onSourceChange(markDirty);
@@ -121,11 +121,11 @@ async function runCompile(): Promise<void> {
   artifact = result;
   astView.setCompiled(result);
   const ok = runView.setAsmSource(result.text ?? "");
-  $("asm-hint").textContent = "行番号でブレークポイント／命令を選ぶとCの対応箇所";
+  $("asm-hint").textContent = "行番号でブレークポイント · 命令を選ぶとCに対応";
   button.classList.remove("dirty");
-  $("source-context").textContent = "このCから生成した命令です。実行時は次の命令に対応する箇所を緑で示します。";
+  $("source-context").textContent = "命令はこのCから生成しています。実行箇所は緑で表示します。";
   status(ok ? "ok" : "err", ok
-    ? "参照実装でコンパイル成功・実行準備完了 — ［実行を追う］で1命令ずつ確かめられます。"
+    ? "コンパイル済み · 実行準備完了。「実行を追う」で命令を進められます。"
     : "命令生成は成功しましたが、実行準備に失敗しました。命令欄のエラーを確認してください。");
   syncUrl();
 }
@@ -159,6 +159,23 @@ function syncUrl(): void {
   else url.searchParams.delete("asm");
   history.replaceState(null, "", url);
 }
+// 補助説明は操作の近くで開き、外側の操作やEscapeで作業へ戻れる。
+const popovers = [...document.querySelectorAll<HTMLDetailsElement>("#compile-options, .tree-guide")];
+document.addEventListener("pointerdown", e => {
+  for (const popover of popovers) {
+    if (popover.open && !popover.contains(e.target as Node)) popover.open = false;
+  }
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || $<HTMLDialogElement>("asm-editor").open) return;
+  const open = popovers.find(p => p.open);
+  if (open) {
+    e.preventDefault();
+    open.open = false;
+    open.querySelector("summary")?.focus();
+  }
+});
+
 const tabs = [...document.querySelectorAll<HTMLButtonElement>("#tabs button")];
 for (const btn of tabs) {
   btn.addEventListener("click", () => { applyView(btn.dataset.tab as View); syncUrl(); });
@@ -203,7 +220,7 @@ void Promise.all([
   button.disabled = false;
   syncUrl();
   await astView.runParse();
-  if (origin === "empty") status("pending", "Cを編集し、［コンパイル］で命令生成と実行準備へ進めます。");
+  if (origin === "empty") status("pending", "［コンパイル］で、このCの命令を生成できます。");
 }).catch(e => {
   status("err", `読み込めません：${String(e)}。ページを再読み込みしてください。`);
 });

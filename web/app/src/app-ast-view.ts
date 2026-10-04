@@ -285,6 +285,7 @@ export function initAstView(opts: AstViewOptions): AstView {
     stripOpen = false;
     strip.hidden = true;
     stripToggle.checked = false;
+    stripToggle.focus();
     void renderActive();
   }
 
@@ -301,7 +302,10 @@ export function initAstView(opts: AstViewOptions): AstView {
       activeTab = btn.dataset.astTab ?? "tree";
       document
         .querySelectorAll("#ast-tabs button[data-ast-tab]")
-        .forEach((b) => b.classList.toggle("active", b === btn));
+        .forEach((b) => {
+          b.classList.toggle("active", b === btn);
+          b.setAttribute("aria-pressed", String(b === btn));
+        });
       document
         .querySelectorAll<HTMLElement>(".ast-pane")
         .forEach((p) => p.classList.toggle("active", p.id === `ast-pane-${activeTab}`));

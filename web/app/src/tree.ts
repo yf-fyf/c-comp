@@ -115,7 +115,7 @@ export function renderTree(svg: SVGSVGElement, ast: AstNode[], opts: TreeOptions
   root.descendants = root.children.reduce((a, c) => a + 1 + c.descendants, 0);
 
   const h = hierarchy(root, (d) => (opts.collapsed.has(d.id) ? [] : d.children));
-  const layout = tree<TNode>().nodeSize([150, 96]);
+  const layout = tree<TNode>().nodeSize([150, 80]);
   const laid = layout(h);
 
   svg.textContent = "";
@@ -257,10 +257,11 @@ export function renderTree(svg: SVGSVGElement, ast: AstNode[], opts: TreeOptions
     interacted: false,
   };
   // 比較表示で高さが減っても、木全体を収めるために文字を極端に縮めない。
-  // はみ出す部分はパンと拡縮で確認できる。
+  // 標準文字でラベル約13pxを下限にし、基本例は全体を見渡せるようにする。
+  // はみ出す大きな木はパンと拡縮で確認できる。
   const rect = svg.getBoundingClientRect();
   const fontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 15;
-  const minScale = fontSize / 15;
+  const minScale = fontSize / 16;
   if (rect.width > 0 && rect.height > 0 && Math.min(rect.width / fit.w, rect.height / fit.h) < minScale) {
     const center = fit.x + fit.w / 2;
     fit.w = rect.width / minScale;

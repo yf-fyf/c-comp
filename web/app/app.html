@@ -8,9 +8,9 @@
   </head>
   <body class="workspace">
     <header id="topbar">
-      <h1>Cコンパイラ学習ツール</h1>
+      <h1><span class="brand-mark" aria-hidden="true">{ }</span>Cコンパイラ学習ツール</h1>
       <nav id="app-nav" aria-label="資料へのリンク"></nav>
-      <span id="font-buttons">文字:
+      <span id="font-buttons" role="group" aria-label="文字サイズ">文字:
         <button type="button" data-size="m" class="active">標準</button>
         <button type="button" data-size="l">大</button>
         <button type="button" data-size="xl">特大</button>
@@ -18,42 +18,57 @@
     </header>
     <main id="layout">
       <section id="left" aria-label="Cソース">
-        <div class="source-head"><h2>Cソース</h2><span class="pane-note">構造は入力に合わせて更新</span></div>
-        <label class="source-picker">教材のテスト（C）:
+        <div class="source-head">
+          <h2>Cソース</h2>
+          <span class="pane-note">構造は入力に合わせて更新</span>
+        </div>
+        <label class="source-picker"><span>教材のテスト（C）</span>
           <select id="build-example-select" class="example-select"></select>
         </label>
         <div id="editor"></div>
-        <p id="source-context">Cを編集し、構造を確かめてからコンパイルできます。</p>
-        <div id="status" aria-live="polite"></div>
+        <footer class="source-footer">
+          <div id="status" aria-live="polite"></div>
+          <p id="source-context">Cを編集し、構造を確かめてからコンパイルできます。</p>
+        </footer>
       </section>
       <section id="right" aria-label="構造・命令・実行の観察">
-        <nav id="tabs" role="tablist" aria-label="観察する内容">
-          <button type="button" role="tab" id="tab-ast" data-tab="ast" aria-controls="pane-ast" aria-selected="true">構造を見る</button>
-          <button type="button" role="tab" id="tab-asm" data-tab="asm" aria-controls="pane-machine" aria-selected="false">命令を読む</button>
-          <button type="button" role="tab" id="tab-run" data-tab="run" aria-controls="pane-machine" aria-selected="false">実行を追う</button>
-        </nav>
-        <div id="compile-bar" role="group" aria-label="命令の生成と読み込み">
-          <button id="btn-compile" type="button" title="教材の参照実装で命令生成と実行準備を更新する。実行位置は最初に戻る（Ctrl+Enter）">コンパイル</button>
-          <span class="key-hint">Ctrl+Enter</span>
-          <details id="compile-options"><summary>注記の設定</summary>
-            <label><input type="checkbox" id="opt-comments" checked /> 命令の注記コメント</label>
-          </details>
-          <button id="btn-edit" type="button">アセンブリを読み込む</button>
-        </div>
+        <header class="observation-head">
+          <nav id="tabs" role="tablist" aria-label="観察する内容">
+            <button type="button" role="tab" id="tab-ast" data-tab="ast" aria-controls="pane-ast" aria-selected="true">構造を見る</button>
+            <button type="button" role="tab" id="tab-asm" data-tab="asm" aria-controls="pane-machine" aria-selected="false">命令を読む</button>
+            <button type="button" role="tab" id="tab-run" data-tab="run" aria-controls="pane-machine" aria-selected="false">実行を追う</button>
+          </nav>
+          <div id="compile-bar" role="group" aria-label="命令の生成と読み込み">
+            <button id="btn-compile" type="button" title="命令生成と実行準備を更新する。実行位置は最初に戻る（Ctrl+Enter）">コンパイル</button>
+            <button id="btn-edit" type="button" title="自分のコンパイラの出力を読み込む">アセンブリを読み込む</button>
+            <details id="compile-options">
+              <summary aria-label="コンパイルの設定" title="コンパイルの設定">設定</summary>
+              <div class="options-popover">
+                <label><input type="checkbox" id="opt-comments" checked /> 命令の注記コメント</label>
+                <p>生成する命令に、処理の意味を示すコメントを付けます。</p>
+                <span class="shortcut-note">コンパイル: Ctrl+Enter / ⌘+Enter</span>
+              </div>
+            </details>
+          </div>
+        </header>
         <div id="asm-status" class="pending" role="status" aria-live="polite"></div>
-          <div id="pane-ast" class="pane active" role="tabpanel" aria-labelledby="tab-ast">
-            <p id="ast-error" hidden role="status"></p>
+        <div id="pane-ast" class="pane active" role="tabpanel" aria-labelledby="tab-ast">
+          <p id="ast-error" hidden role="status"></p>
+          <div class="ast-toolbar">
             <nav id="ast-tabs" aria-label="構造の表示形式">
-              <span class="pane-note">表示形式</span>
-              <button type="button" data-ast-tab="tree" class="active">AST 木</button>
-              <button type="button" data-ast-tab="tokens">トークン</button>
-              <button type="button" data-ast-tab="sexp">S 式</button>
+              <button type="button" data-ast-tab="tree" class="active" aria-pressed="true">AST 木</button>
+              <button type="button" data-ast-tab="tokens" aria-pressed="false">トークン</button>
+              <button type="button" data-ast-tab="sexp" aria-pressed="false">S 式</button>
             </nav>
             <div id="ast-display-options">
-              <label class="ast-asm-option"><input type="checkbox" id="opt-ast-asm" aria-controls="ast-asm-strip" aria-describedby="ast-asm-help" /> 対応する命令を表示</label>
+              <label class="ast-asm-option">
+                <input type="checkbox" id="opt-ast-asm" aria-controls="ast-asm-strip" aria-describedby="ast-asm-help" />
+                <span><span class="option-name">対応する命令を表示</span><span id="ast-asm-help">ノードと生成命令を見比べる</span></span>
+              </label>
               <label id="opt-line-label"><input type="checkbox" id="opt-show-line" /> 行番号</label>
-              <p id="ast-asm-help">選んだASTノードが生成した命令を、下に並べて確認できます。</p>
             </div>
+          </div>
+          <div id="ast-content">
             <div id="ast-pane-tree" class="ast-pane active">
               <div class="tree-controls" aria-label="木の表示サイズ">
                 <button id="btn-tree-out" type="button" aria-label="木を縮小">−</button>
@@ -61,7 +76,14 @@
                 <button id="btn-tree-reset" type="button">初期表示</button>
               </div>
               <svg id="tree-svg" role="tree" aria-label="抽象構文木"></svg>
-              <p class="hint">ノードに触れるとCの対応箇所を表示、クリックで固定。ノード左上の + / − で部分木を開閉。⇄ は比較演算子の正規化（&gt; / &gt;= は lt / le に入れ替え）</p>
+              <details class="tree-guide">
+                <summary>ASTの操作</summary>
+                <div>
+                  <p>ノードに触れるとCの対応箇所を表示し、クリックで固定します。命令を並べると、その式・文が生成した命令も光ります。</p>
+                  <p>木をドラッグして移動、＋ / − で拡大・縮小。ノード左上の＋ / − は部分木の開閉です。</p>
+                  <p>⇄ は比較演算子の正規化（&gt; / &gt;= を lt / le に入れ替え）を示します。</p>
+                </div>
+              </details>
             </div>
             <div id="ast-pane-tokens" class="ast-pane">
               <table id="token-table">
@@ -70,74 +92,61 @@
               </table>
             </div>
             <div id="ast-pane-sexp" class="ast-pane"><pre id="sexp-pre"></pre></div>
-
-            <!-- A3: AST ノード ↔ 命令のクロスハイライト。［対応する命令を表示］で開く -->
-            <div id="ast-asm-strip" hidden>
+            <section id="ast-asm-strip" hidden aria-label="ASTに対応する命令">
               <div class="strip-head">
-                <span>対応する命令（式単位）</span>
-                <span id="ast-asm-status" class="pane-note" aria-live="polite"></span>
-                <button id="btn-ast-asm-refresh" type="button" title="共通のコンパイル結果と実行準備を更新する">
-                  コンパイル
-                </button>
+                <span>対応する命令</span>
+                <button id="btn-ast-asm-refresh" type="button" title="命令と実行準備を更新する">再コンパイル</button>
                 <button id="btn-ast-asm-close" type="button">閉じる</button>
               </div>
+              <p id="ast-asm-status" class="pane-note" aria-live="polite"></p>
               <div id="ast-asm-lines"></div>
-            </div>
+            </section>
           </div>
-
-
+        </div>
         <div id="pane-machine" class="pane" data-view="asm" role="tabpanel" aria-labelledby="tab-asm">
-          <div id="toolbar">
-            <button id="btn-reset" type="button" title="最初から">⟲ 最初へ</button>
-            <button id="btn-back" type="button" title="1命令もどる（F9）">◀ もどる</button>
-            <button id="btn-step" type="button" title="1命令すすむ（F10）">▶ すすむ</button>
+          <div id="toolbar" role="group" aria-label="命令の実行操作">
+            <div class="step-controls">
+              <button id="btn-back" type="button" title="1命令もどる（F9）">◀ もどる</button>
+              <button id="btn-step" type="button" title="1命令すすむ（F10）">▶ すすむ</button>
+            </div>
             <button id="btn-run" type="button" title="停止するまで実行">▶▶ 実行</button>
             <button id="btn-stop" type="button" hidden>■ 停止</button>
-            <span class="spacer"></span>
+            <button id="btn-reset" type="button" title="最初から">⟲ 最初へ</button>
             <span id="counters">実行した命令 <b id="step-count">0</b>
               <span id="exit-box" hidden>／ 終了コード <b id="exit-code">-</b></span>
             </span>
           </div>
-          <p id="run-context" class="pane-note">［コンパイル］またはアセンブリの読み込みで実行を準備します。</p>
           <div id="sim-layout">
             <section id="asm-pane" aria-label="アセンブリ">
               <div class="pane-head"><span>アセンブリ</span><span id="asm-hint" class="pane-note">行番号でブレークポイント</span></div>
               <div id="asm-view" tabindex="0" aria-label="アセンブリの命令列"></div>
               <div id="asm-error" hidden role="alert"></div>
             </section>
-        <section id="state-pane">
-          <div id="warnings" hidden>
-            <h3>気づいたこと</h3>
-            <ul id="warning-list"></ul>
-            <p class="pane-note">
-              症状の意味は
-              <a href="../docs/testing/#症状から当たりをつける" target="_blank" rel="noreferrer">デバッグ手順</a>
-              にある
-            </p>
+            <section id="state-pane" aria-label="実行状態">
+              <div id="warnings" hidden>
+                <h3>気づいたこと</h3>
+                <ul id="warning-list"></ul>
+                <p class="pane-note">症状の意味は <a href="../docs/testing/#症状から当たりをつける" target="_blank" rel="noreferrer">デバッグ手順</a> にあります。</p>
+              </div>
+              <div class="state-block">
+                <h3>レジスタ</h3>
+                <table id="reg-table"><tbody id="reg-body"></tbody></table>
+              </div>
+              <div class="state-block">
+                <h3>スタック <span class="pane-note">上が高いアドレス</span></h3>
+                <table id="stack-table"><tbody id="stack-body"></tbody></table>
+              </div>
+              <div class="state-block" id="data-block">
+                <h3>データ領域</h3>
+                <table id="data-table"><tbody id="data-body"></tbody></table>
+              </div>
+              <div class="state-block">
+                <h3>標準出力</h3>
+                <pre id="stdout-pre"></pre>
+              </div>
+            </section>
           </div>
-
-          <div class="state-block">
-            <h3>レジスタ</h3>
-            <table id="reg-table"><tbody id="reg-body"></tbody></table>
-          </div>
-
-          <div class="state-block">
-            <h3>スタック <span class="pane-note">上が高いアドレス</span></h3>
-            <table id="stack-table"><tbody id="stack-body"></tbody></table>
-          </div>
-
-          <div class="state-block" id="data-block">
-            <h3>データ領域</h3>
-            <table id="data-table"><tbody id="data-body"></tbody></table>
-          </div>
-
-          <div class="state-block">
-            <h3>標準出力</h3>
-            <pre id="stdout-pre"></pre>
-          </div>
-        </section>
-
-          </div>
+          <p id="run-context" class="pane-note">［コンパイル］またはアセンブリの読み込みで実行を準備します。</p>
         </div>
       </section>
     </main>
