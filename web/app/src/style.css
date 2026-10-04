@@ -111,8 +111,7 @@ body {
 
 /* ================= C コンパイラ ================= */
 
-/* 主操作（コンパイル）はエディタの直上に置く。ヘッダに混ぜると
-   文字「特大」でヘッダが折り返し、教員デモ時に操作列が画面外へ流れる */
+/* コンパイル操作は生成結果の直上に置き、観察中に使える位置へまとめる。 */
 #compile-bar {
   flex: none;
   display: flex;
@@ -431,11 +430,10 @@ tr.below-sp { opacity: 0.45; }
 .workspace { font-size: 1rem; }
 .workspace #topbar { padding: .6rem 1rem; background: #eef4fb; }
 .workspace #font-buttons { margin-left: auto; white-space: nowrap; }
-#workspace-bar { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; padding: .6rem 1rem; border-bottom: 1px solid var(--border); }
-#workspace-bar .key-hint { font-size: .78rem; color: #57606a; }
-#workspace-bar #btn-edit { margin-left: auto; }
-#workspace-bar button, #compile-options summary, .editor-actions button { min-height: 2rem; }
-#workspace-bar #btn-edit { border: 1px solid var(--border); border-radius: 5px; background: var(--bg); padding: .3rem .7rem; font-size: .85rem; cursor: pointer; }
+.workspace #compile-bar { flex-wrap: wrap; gap: .6rem; padding: .6rem .8rem; }
+#compile-bar #btn-edit { margin-left: auto; }
+#compile-bar button, #compile-options summary, .editor-actions button { min-height: 2rem; }
+#compile-bar #btn-edit { border: 1px solid var(--border); border-radius: 5px; background: var(--bg); padding: .3rem .7rem; font-size: .85rem; cursor: pointer; }
 #compile-options { position: relative; font-size: .85rem; }
 #compile-options label { display: block; position: absolute; z-index: 10; top: 2.1rem; right: 0; width: 16rem; padding: .7rem; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; box-shadow: 0 4px 12px #24292f22; }
 #asm-status { flex: none; padding: .45rem 1rem; font-size: .85rem; line-height: 1.5; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
@@ -445,6 +443,8 @@ tr.below-sp { opacity: 0.45; }
 .workspace #layout { grid-template-columns: minmax(16rem, 3fr) minmax(0, 7fr); }
 .source-head { display: flex; align-items: center; gap: .6rem; padding: .5rem .8rem; border-bottom: 1px solid var(--border); background: var(--panel); flex: none; }
 .source-head h2 { font-size: .9rem; margin: 0; }
+.source-picker { display: flex; flex-direction: column; gap: .3rem; padding: .5rem .8rem; border-bottom: 1px solid var(--border); font-size: .85rem; flex: none; }
+.source-picker .example-select { width: 100%; min-width: 0; max-width: none; min-height: 2rem; font-size: .85rem; }
 .workspace .cm-editor { font-size: 1rem; }
 .workspace .cm-scroller { line-height: 1.65; }
 #source-context { margin: 0; padding: .5rem .8rem; font-size: .78rem; line-height: 1.5; color: #57606a; border-top: 1px solid var(--border); }
@@ -454,7 +454,11 @@ tr.below-sp { opacity: 0.45; }
 .workspace #tabs button[aria-selected="true"] { background: var(--accent); color: white; border-color: var(--accent); }
 #ast-tabs { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; padding: .4rem .8rem; border-bottom: 1px solid var(--border); flex: none; }
 #ast-tabs button { font-size: .85rem; padding: .3rem .6rem; min-height: 2rem; border: 1px solid var(--border); background: var(--bg); border-radius: 4px; cursor: pointer; }
-#ast-tabs button.active, #ast-tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: white; }
+#ast-tabs button.active { background: var(--accent); border-color: var(--accent); color: white; }
+#ast-display-options { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem .8rem; padding: .45rem .8rem; border-bottom: 1px solid var(--border); background: var(--panel); flex: none; }
+#ast-display-options label { display: flex; align-items: center; gap: .3rem; min-height: 2rem; cursor: pointer; font-size: .85rem; }
+#ast-display-options input { accent-color: var(--accent); }
+#ast-asm-help { margin: 0; flex-basis: 100%; color: #57606a; font-size: .78rem; line-height: 1.5; }
 .ast-pane { flex: 1; min-height: 0; display: none; overflow: auto; }
 .ast-pane.active { display: flex; flex-direction: column; }
 #ast-pane-tree { position: relative; }
@@ -498,22 +502,21 @@ tr.below-sp { opacity: 0.45; }
 .workspace #asm-input { flex: 1; width: 100%; min-height: 10rem; height: 40vh; font: 1rem/1.6 monospace; }
 .workspace .editor-actions { justify-content: flex-end; }
 .workspace button:disabled { opacity: .45; cursor: default; }
-.workspace :is(button, summary, select, textarea, a):focus-visible { outline: 3px solid #54aeff; outline-offset: 2px; }
+.workspace :is(button, input, summary, select, textarea, a):focus-visible { outline: 3px solid #54aeff; outline-offset: 2px; }
 @media (max-width: 80rem) {
   .workspace #sim-layout { grid-template-columns: 1fr; grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
   .workspace #asm-pane { border-right: 0; border-bottom: 1px solid var(--border); }
 }
 @media (max-width: 55rem) {
-  .workspace #layout { grid-template-columns: 1fr; grid-template-rows: minmax(8rem, 1fr) minmax(0, 3fr); }
+  .workspace #layout { grid-template-columns: 1fr; grid-template-rows: minmax(14rem, 1fr) minmax(0, 3fr); }
   .workspace #left { border-right: 0; border-bottom: 1px solid var(--border); }
   .workspace #source-context { padding: .2rem .8rem; }
   .workspace #status { padding: .2rem .8rem; min-height: 1.3rem; }
   .source-head { padding: .25rem .8rem; }
   .workspace #topbar { gap: .4rem .8rem; }
-  #workspace-bar { gap: .4rem; padding: .4rem .8rem; }
-  #workspace-bar .example-select { max-width: 12rem; }
-  #workspace-bar #btn-edit { margin-left: 0; }
-  #workspace-bar .key-hint { display: none; }
+  .workspace #compile-bar { gap: .4rem; padding: .4rem .8rem; }
+  #compile-bar #btn-edit { margin-left: 0; }
+  #compile-bar .key-hint { display: none; }
 }
 @media (max-width: 30rem), (max-height: 35rem) {
   .workspace { height: auto; min-height: 100dvh; }

@@ -186,14 +186,14 @@ export function initAstView(opts: AstViewOptions): AstView {
   }
 
   // ---- A3: 命令との対応（明示操作で開く） ----
-  // 常時2ペインにはしない。［命令と対応］を押したときだけ AST の下に命令列を出し、
+  // ［対応する命令を表示］を選んだときだけ AST の下に命令列を出し、
   // 選んだノードが出した命令を光らせる。対応の粒度は式（compile_json の exprMap。
   // 式として引けないノードは stmtMap へ落とす。ast-highlight.ts の照合規則を参照）。
   // アセンブリペインと同じく、開く／更新はすべて明示操作にそろえる（T38 B6）。
 
   const strip = $("ast-asm-strip");
   const stripLines = $("ast-asm-lines");
-  const stripToggle = $<HTMLButtonElement>("btn-ast-asm");
+  const stripToggle = $<HTMLInputElement>("opt-ast-asm");
   let stripOpen = false;
   let stmtMap: SpanEntry[] = [];
   let exprMap: SpanEntry[] = [];
@@ -276,7 +276,7 @@ export function initAstView(opts: AstViewOptions): AstView {
   function openStrip(): void {
     stripOpen = true;
     strip.hidden = false;
-    stripToggle.setAttribute("aria-pressed", "true");
+    stripToggle.checked = true;
     if (stripStale) setStripStatus("［コンパイル］で、このCに対応する命令を生成します。");
     else highlightStrip();
   }
@@ -284,16 +284,16 @@ export function initAstView(opts: AstViewOptions): AstView {
   function closeStrip(): void {
     stripOpen = false;
     strip.hidden = true;
-    stripToggle.setAttribute("aria-pressed", "false");
+    stripToggle.checked = false;
     void renderActive();
   }
 
-  stripToggle.addEventListener("click", () => (stripOpen ? closeStrip() : openStrip()));
+  stripToggle.addEventListener("change", () => (stripToggle.checked ? openStrip() : closeStrip()));
   $("btn-ast-asm-refresh").addEventListener("click", opts.onCompile);
   $("btn-ast-asm-close").addEventListener("click", closeStrip);
 
   // ---- サブタブ（AST 木 / トークン / S 式） ----
-  // ［命令と対応］も #ast-tabs の中にあるので、サブタブは data-ast-tab を持つものだけを見る
+  // 表示形式の切替は、追加の命令表示の開閉とは独立して扱う。
 
   for (const btn of document.querySelectorAll<HTMLButtonElement>("#ast-tabs button[data-ast-tab]")) {
     btn.addEventListener("click", () => {

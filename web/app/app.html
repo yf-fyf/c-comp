@@ -16,21 +16,12 @@
         <button type="button" data-size="xl">特大</button>
       </span>
     </header>
-    <div id="workspace-bar">
-      <label class="example-label">教材のテスト（C）:
-        <select id="build-example-select" class="example-select"></select>
-      </label>
-      <button id="btn-compile" type="button" title="教材の参照実装で命令生成と実行準備を更新する。実行位置は最初に戻る（Ctrl+Enter）">コンパイル</button>
-      <span class="key-hint">Ctrl+Enter</span>
-      <details id="compile-options"><summary>注記の設定</summary>
-        <label><input type="checkbox" id="opt-comments" checked /> 命令の注記コメント</label>
-      </details>
-      <button id="btn-edit" type="button">アセンブリを読み込む</button>
-    </div>
-    <div id="asm-status" class="pending" role="status" aria-live="polite"></div>
     <main id="layout">
       <section id="left" aria-label="Cソース">
         <div class="source-head"><h2>Cソース</h2><span class="pane-note">構造は入力に合わせて更新</span></div>
+        <label class="source-picker">教材のテスト（C）:
+          <select id="build-example-select" class="example-select"></select>
+        </label>
         <div id="editor"></div>
         <p id="source-context">Cを編集し、構造を確かめてからコンパイルできます。</p>
         <div id="status" aria-live="polite"></div>
@@ -41,24 +32,28 @@
           <button type="button" role="tab" id="tab-asm" data-tab="asm" aria-controls="pane-machine" aria-selected="false">命令を読む</button>
           <button type="button" role="tab" id="tab-run" data-tab="run" aria-controls="pane-machine" aria-selected="false">実行を追う</button>
         </nav>
+        <div id="compile-bar" role="group" aria-label="命令の生成と読み込み">
+          <button id="btn-compile" type="button" title="教材の参照実装で命令生成と実行準備を更新する。実行位置は最初に戻る（Ctrl+Enter）">コンパイル</button>
+          <span class="key-hint">Ctrl+Enter</span>
+          <details id="compile-options"><summary>注記の設定</summary>
+            <label><input type="checkbox" id="opt-comments" checked /> 命令の注記コメント</label>
+          </details>
+          <button id="btn-edit" type="button">アセンブリを読み込む</button>
+        </div>
+        <div id="asm-status" class="pending" role="status" aria-live="polite"></div>
           <div id="pane-ast" class="pane active" role="tabpanel" aria-labelledby="tab-ast">
             <p id="ast-error" hidden role="status"></p>
-            <nav id="ast-tabs">
+            <nav id="ast-tabs" aria-label="構造の表示形式">
+              <span class="pane-note">表示形式</span>
               <button type="button" data-ast-tab="tree" class="active">AST 木</button>
               <button type="button" data-ast-tab="tokens">トークン</button>
               <button type="button" data-ast-tab="sexp">S 式</button>
-              <!-- A3: 命令との対応。常時並置はせず、この操作で開いたときだけ下に出す -->
-              <button
-                type="button"
-                id="btn-ast-asm"
-                aria-pressed="false"
-                title="選んだノードが出した命令を下に並べる"
-              >
-                命令と対応
-              </button>
-              <span class="pane-note">入力に追随して自動更新されます</span>
-              <label id="opt-line-label"><input type="checkbox" id="opt-show-line" /> 行番号</label>
             </nav>
+            <div id="ast-display-options">
+              <label class="ast-asm-option"><input type="checkbox" id="opt-ast-asm" aria-controls="ast-asm-strip" aria-describedby="ast-asm-help" /> 対応する命令を表示</label>
+              <label id="opt-line-label"><input type="checkbox" id="opt-show-line" /> 行番号</label>
+              <p id="ast-asm-help">選んだASTノードが生成した命令を、下に並べて確認できます。</p>
+            </div>
             <div id="ast-pane-tree" class="ast-pane active">
               <div class="tree-controls" aria-label="木の表示サイズ">
                 <button id="btn-tree-out" type="button" aria-label="木を縮小">−</button>
@@ -76,7 +71,7 @@
             </div>
             <div id="ast-pane-sexp" class="ast-pane"><pre id="sexp-pre"></pre></div>
 
-            <!-- A3: AST ノード ↔ 命令のクロスハイライト。［命令と対応］で開く -->
+            <!-- A3: AST ノード ↔ 命令のクロスハイライト。［対応する命令を表示］で開く -->
             <div id="ast-asm-strip" hidden>
               <div class="strip-head">
                 <span>対応する命令（式単位）</span>

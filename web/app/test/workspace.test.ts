@@ -63,6 +63,43 @@ describe("共通の作業画面", () => {
     expect(editor.state.doc.toString()).toContain("return 7");
     expect(el("editor").closest("[hidden]")).toBe(null);
   });
+  it("命令の追加表示は構造の表示形式と独立し、実行位置を保つ", async () => {
+    click("tab-run"); click("btn-step");
+    const held = observation();
+    click("tab-ast");
+    const toggle = el<HTMLInputElement>("opt-ast-asm");
+    if (toggle.checked) click("btn-ast-asm-close");
+    toggle.click();
+    expect(toggle.checked).toBe(true);
+    expect(el("ast-asm-strip").hidden).toBe(false);
+    expect(el("ast-asm-lines").children.length).toBeGreaterThan(0);
+    const tokens = document.querySelector<HTMLButtonElement>('[data-ast-tab="tokens"]')!;
+    tokens.click();
+    await vi.waitFor(() => expect(el("token-body").children.length).toBeGreaterThan(0));
+    expect(toggle.checked).toBe(true);
+    expect(el("ast-asm-strip").hidden).toBe(false);
+    click("btn-ast-asm-close");
+    expect(toggle.checked).toBe(false);
+    expect(el("ast-asm-strip").hidden).toBe(true);
+    expect(tokens.classList.contains("active")).toBe(true);
+    document.querySelector<HTMLButtonElement>('[data-ast-tab="tree"]')!.click();
+    click("tab-run");
+    expect(observation()).toBe(held);
+  });
+  it("追加表示を開いたまま編集すると対応を消し、再コンパイルで更新する", async () => {
+    click("tab-ast");
+    const toggle = el<HTMLInputElement>("opt-ast-asm");
+    if (!toggle.checked) toggle.click();
+    source("int main() { return 9; }");
+    expect(el("ast-asm-lines").children.length).toBe(0);
+    expect(toggle.checked).toBe(true);
+    expect(el("ast-asm-strip").hidden).toBe(false);
+    await compile();
+    expect(el("ast-asm-lines").textContent).toContain("li a0, 9");
+    expect(el("step-count").textContent).toBe("0");
+    toggle.click();
+    expect(el("ast-asm-strip").hidden).toBe(true);
+  });
   it("編集とコンパイル失敗では観察結果を残し、旧プログラムを再開できない", async () => {
     click("tab-run"); click("btn-step");
     const held = observation();
