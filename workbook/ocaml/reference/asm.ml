@@ -80,6 +80,8 @@ type insn =
   | Store of int * reg * addr
   | Addi of reg * reg * int
   | Xori of reg * reg * int
+  | Slli of reg * reg * int
+  | Srai of reg * reg * int
   | Binop of binop * reg * reg * reg
   | Unop of unop * reg * reg
   | Beqz of reg * label
@@ -99,6 +101,7 @@ type directive =
   | Globl of string
   | Byte of int
   | Zero of int
+  | Balign of int
 
 (* ── 出力の 1 行 ── *)
 
@@ -119,6 +122,8 @@ let insn_string = function
       Printf.sprintf "%s %s, %s" (store_mnemonic size) (reg_name rs) (addr_string a)
   | Addi (rd, rs, imm) -> Printf.sprintf "addi %s, %s, %d" (reg_name rd) (reg_name rs) imm
   | Xori (rd, rs, imm) -> Printf.sprintf "xori %s, %s, %d" (reg_name rd) (reg_name rs) imm
+  | Slli (rd, rs, n) -> Printf.sprintf "slli %s, %s, %d" (reg_name rd) (reg_name rs) n
+  | Srai (rd, rs, n) -> Printf.sprintf "srai %s, %s, %d" (reg_name rd) (reg_name rs) n
   | Binop (op, rd, rs1, rs2) ->
       Printf.sprintf "%s %s, %s, %s" (binop_mnemonic op) (reg_name rd) (reg_name rs1)
         (reg_name rs2)
@@ -135,6 +140,7 @@ let directive_string = function
   | Globl name -> ".globl " ^ name
   | Byte n -> Printf.sprintf ".byte %d" n
   | Zero n -> Printf.sprintf ".zero %d" n
+  | Balign n -> Printf.sprintf ".balign %d" n
 
 let print_line = function
   | Insn i -> "  " ^ insn_string i
@@ -171,3 +177,7 @@ let bss = Directive Bss
 let globl name = Directive (Globl name)
 let byte n = Directive (Byte n)
 let zero n = Directive (Zero n)
+
+let slli rd rs n = Insn (Slli (rd, rs, n))
+let srai rd rs n = Insn (Srai (rd, rs, n))
+let balign n = Directive (Balign n)

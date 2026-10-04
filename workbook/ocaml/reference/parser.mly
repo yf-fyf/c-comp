@@ -18,6 +18,11 @@ type item = Sdef of struct_def | Tdef of top | Nothing
 
 let parse_error pos fmt =
   Diag.error ~phase:Diag.Parse ~line:(Loc.line_of pos) ~col:(Loc.col_of pos) fmt
+let check_argument_count pos xs =
+  let n = List.length xs in
+  if n > Layout.max_args then parse_error pos
+    "引数は最大%d個です（%d個指定されています）" Layout.max_args n
+
 let loc = Loc.of_positions
 let mk_expr desc startpos endpos = { e_desc = desc; e_loc = loc startpos endpos }
 let mk_stmt desc startpos endpos = { s_desc = desc; s_loc = loc startpos endpos }
@@ -98,6 +103,7 @@ top_item:
 | KW_STRUCT IDENT SEMI { Nothing }
 | decl_type IDENT LPAREN param_clause RPAREN SEMI {
     let params, variadic = $4 in
+    check_argument_count $startpos($2) params;
     Tdef
       (Proto
          {
@@ -110,6 +116,7 @@ top_item:
   }
 | decl_type IDENT LPAREN param_clause RPAREN func_body {
     let params, variadic = $4 in
+    check_argument_count $startpos($2) params;
     if variadic then
       parse_error $startpos($2) "可変長 '...' はプロトタイプ宣言でのみ使える";
     let locals, body = $6 in
@@ -320,6 +327,7 @@ primary:
 | STR { mk_expr (Str $1) $startpos $endpos }
 | IDENT { mk_expr (Var $1) $startpos $endpos }
 | IDENT LPAREN arg_list_opt RPAREN {
+    check_argument_count $startpos($1) $3;
     mk_expr (Call { name = $1; args = $3 }) $startpos $endpos
   }
 (* 括弧つきの式は、位置だけ括弧の外側まで広げて中身をそのまま返す *)

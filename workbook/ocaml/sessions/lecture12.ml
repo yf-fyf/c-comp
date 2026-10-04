@@ -16,15 +16,22 @@ let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
 (* 関数宣言・定義の戻り値型を生成前に集める。
-   完全な引数型・再宣言・宣言順の検査は行わない。 *)
+   固定引数型も集めるが、再宣言・宣言順の完全な検査は行わない。 *)
 let function_returns : (string, ty) Hashtbl.t = Hashtbl.create 32
+let function_params : (string, ty list) Hashtbl.t = Hashtbl.create 32
+let return_ty = ref TyInt
 
 let collect_function_returns prog =
   Hashtbl.clear function_returns;
+  Hashtbl.clear function_params;
   List.iter
     (function
-      | FuncDef { name; ty; _ } -> Hashtbl.replace function_returns name ty
-      | FuncProto { name; ty; _ } -> Hashtbl.replace function_returns name ty
+      | FuncDef { name; ty; params; _ } ->
+          Hashtbl.replace function_returns name ty;
+          Hashtbl.replace function_params name (List.map (fun (p : param) -> p.ty) params)
+      | FuncProto { name; ty; params; _ } ->
+          Hashtbl.replace function_returns name ty;
+          Hashtbl.replace function_params name (List.map (fun (p : param) -> p.ty) params)
       | GlobalDecl _ -> ())
     prog
 
@@ -67,7 +74,7 @@ let rec collect_decls = function
   | _ -> ()
 
 let load ty = match size_of_ty ty with 1 -> emit "  lb a0, 0(a0)" | 4 -> emit "  lw a0, 0(a0)" | _ -> emit "  ld a0, 0(a0)"
-let store ty = match size_of_ty ty with 1 -> emit "  sb a0, 0(a1)" | 4 -> emit "  sw a0, 0(a1)" | _ -> emit "  sd a0, 0(a1)"
+let store ty = match size_of_ty ty with 1 -> emit "  sb a0, 0(a1)"; Type_rules.convert_to emit ty | 4 -> emit "  sw a0, 0(a1)" | _ -> emit "  sd a0, 0(a1)"
 let scale_index elem_ty = let sz = size_of_ty elem_ty in if sz <> 1 then (emit (Printf.sprintf "  li a1, %d" sz); emit "  mul a0, a0, a1")
 
 let intern_string s = match Hashtbl.find_opt string_literals s with Some label -> label | None -> incr string_label_count; let label = Printf.sprintf ".LC%d" !string_label_count in Hashtbl.replace string_literals s label; label
@@ -108,6 +115,12 @@ let emit_data_section () =
   if Hashtbl.length string_literals > 0 then emit "  .data";
   Hashtbl.iter (fun s label -> emit (label ^ ":"); String.iter (fun ch -> emit (Printf.sprintf "  .byte %d" (Char.code ch))) s; emit "  .byte 0") string_literals
 
+let prepare_argument name i =
+  let params = Option.value (Hashtbl.find_opt function_params name) ~default:[] in
+  match List.nth_opt params i with
+  | Some ty -> Type_rules.convert_to emit ty
+  | None -> ()
+
 let rec codegen_lval = function
   | Var { name; line; _ } -> emit (Printf.sprintf "  addi a0, s0, %d" (lookup_var name line))
   | Unary { op = Deref; operand; _ } -> codegen operand
@@ -133,7 +146,8 @@ and type_of_expr = function
   | SizeofType _ -> TyInt
   | Unary { op = Neg | Not; _ } -> TyInt
   | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } -> type_of_lval operand
-  | Cond { then_; _ } -> type_of_expr then_
+  | Cond { then_; else_; _ } ->
+      Type_rules.conditional_type then_ (type_of_expr then_) else_ (type_of_expr else_)
   | Binary { op = Add; lhs; rhs; _ } -> let lt = type_of_expr lhs and rt = type_of_expr rhs in (match lt, rt with TyPtr _, _ -> lt | _, TyPtr _ -> rt | _ -> TyInt)
   | Binary { op = Sub; lhs; _ } -> let lt = type_of_expr lhs in (match lt with TyPtr _ -> lt | _ -> TyInt)
   | Binary _ -> TyInt
@@ -165,7 +179,7 @@ and codegen = function
       pop_into "a1"; store ty
   | Call { name; args; _ } ->
       let n = List.length args in
-      List.iter (fun arg -> codegen arg; push_a0 ()) args;
+      List.iteri (fun i arg -> codegen arg; prepare_argument name i; push_a0 ()) args;
       for i = 0 to n - 1 do emit (Printf.sprintf "  ld a%d, %d(sp)" i ((n - 1 - i) * 8)) done;
       if n > 0 then (
         emit (Printf.sprintf "  addi sp, sp, %d" (n * 8));
@@ -204,7 +218,7 @@ and codegen = function
 
 let rec gen_stmt = function
   | Decl _ -> () | ExprStmt { expr = Some e; _ } -> codegen e | ExprStmt _ -> ()
-  | Return { expr; _ } -> Option.iter codegen expr; emit (Printf.sprintf "  j %s" !ret_label)
+  | Return { expr; _ } -> Option.iter (fun e -> codegen e; Type_rules.convert_to emit !return_ty) expr; emit (Printf.sprintf "  j %s" !ret_label)
   | Block { stmts; _ } -> List.iter gen_stmt stmts
   | If { cond; then_; else_; _ } -> let label_else = new_label () in codegen cond; emit (Printf.sprintf "  beqz a0, %s" label_else); gen_stmt then_; (match else_ with Some else_stmt -> let label_end = new_label () in emit (Printf.sprintf "  j %s" label_end); emit (label_else ^ ":"); gen_stmt else_stmt; emit (label_end ^ ":") | None -> emit (label_else ^ ":"))
   | While { cond; body; _ } -> let label_cond = new_label () in let label_end = new_label () in push break_stack label_end; push cont_stack label_cond; emit (label_cond ^ ":"); codegen cond; emit (Printf.sprintf "  beqz a0, %s" label_end); gen_stmt body; emit (Printf.sprintf "  j %s" label_cond); emit (label_end ^ ":"); pop break_stack; pop cont_stack
@@ -213,7 +227,8 @@ let rec gen_stmt = function
   | Continue _ -> emit (Printf.sprintf "  j %s" (peek cont_stack))
 
 let gen_func = function
-  | FuncDef { name; params; body; _ } ->
+  | FuncDef { name; ty; params; body; _ } ->
+      return_ty := ty;
       Hashtbl.clear locals; stack_offset := 0; depth := 0; ret_label := new_label (); break_stack := []; cont_stack := [];
       List.iter (fun (p : param) -> Option.iter (fun name -> alloc_local name p.ty) p.name) params;
       collect_decls body;

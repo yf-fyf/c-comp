@@ -13,7 +13,7 @@
 この連鎖をたどって全ハンドラを1つのクラスへ展開する必要がある。
 
 1. コマ1からコマ14までの `Codegen` クラスをたどり、全ハンドラ(メソッド)を洗い出す
-2. `final/mycc.py` に単一の `Codegen` クラスとして展開する(`importlib` による継承は使わない)
+2. `final/mycc.py` に単一の `Codegen` クラスとして展開する(`importlib` による継承は使わない)。型表・char変換・条件式の共通型・大域の整列補助も引き継ぐ
 3. `python3 scaffold/test_runner.py` を実行する
 4. 落ちたテストを1つずつ切り分ける(対応するコマの小さいテストへ降りて原因を絞る)
 5. `final/mycc.py` でコマ2〜14の全テストも通し、コードを読み直して完成チェックを行う
@@ -39,6 +39,9 @@ for tests in sessions/0[2-9]_*/tests sessions/1[0-4]_*/tests; do
   python3 scaffold/test_runner.py --compiler final/mycc.py --tests "$tests" || exit 1
 done
 ```
+
+文字列収集の二項走査には`And`・`Or`も含める。`logic_string_and.c` / `logic_string_or.c`と、
+子の関数呼出しに文字列がある`logic_string_call_and.c` / `logic_string_call_or.c`を最終版でも確認する。
 
 全回 `FAIL: 0` を確認する。コマ14の補助ソースの `SKIP` は正常である。
 詳しくは [`../docs/testing.md`](../docs/testing.md#最終コンパイラで過去回の全テストを確認する)を参照。

@@ -18,6 +18,9 @@
 
 - `mycc.py`
 
+整列指令を出す`_emit_global_alignment(ty)`は提供済み。
+`emit_bss_section()`では各変数のラベルの前に呼ぶ。領域のサイズと番地の整列を区別する。
+
 ## テスト
 
 > - `workbook/` から実行する。

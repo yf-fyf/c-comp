@@ -199,3 +199,18 @@ python3 run_tests.py -q        # PASS を伏せて失敗だけ見る
 | `sessions/lecture13.ml` | 13_globals_scope | グローバル変数・スコープ |
 | `sessions/lecture14.ml` | 14_preprocess_multifile | 前処理・複数ファイル |
 | `sessions/lecture15.ml` | 15_integrate_mycc | 統合版（全機能） |
+
+## 型変換・配置・引数上限の確認
+
+コマ8以降は固定仮引数型と戻り値型へのchar変換を行い、条件式の型は両腕から決める。
+`support/type_rules.ml`は通常回の共通補助で、`reference/`は型付き木に必要な型を保持する。
+大域変数はラベルの前で型ごとの`.balign`を出す。領域サイズの丸めと整列は区別する。
+support/referenceの両Parserが宣言・定義・呼出しの引数上限8個を検査する。
+
+実行値で差が出ない条件式の型も、構文解析から型付き木まで通して確認する。
+
+```bash
+dune runtest
+```
+
+`make ocaml-test`は、この型の確認と通常の実行・等価性・拒否側の検査を行う。

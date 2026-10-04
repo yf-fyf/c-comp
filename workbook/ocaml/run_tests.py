@@ -282,6 +282,11 @@ REJECT_SOURCES = [
     ("void 単独のフィールド", "struct S { void v; };\nint main() { return 0; }"),
     ("6 種以外のエスケープ", "int main() { char c = '\\a'; return 0; }"),
     ("INT_MAX を超える整数リテラル", "int main() { return 2147483648; }"),
+    ("9個の固定仮引数を持つ定義", "int f(int a,int b,int c,int d,int e,int f,int g,int h,int i) { return 0; }"),
+    ("9個の固定仮引数を持つ宣言", "int f(int a,int b,int c,int d,int e,int f,int g,int h,int i);"),
+    ("9個の実引数を渡す呼出し", "int f(int a,int b,int c,int d,int e,int f,int g,int h); int main() { return f(1,2,3,4,5,6,7,8,9); }"),
+    ("9個の固定仮引数を持つ可変長宣言", "int f(int a,int b,int c,int d,int e,int f,int g,int h,int i, ...);"),
+    ("可変長部を含む9個の呼出し", "int f(int a, ...); int main() { return f(1,2,3,4,5,6,7,8,9); }"),
 ]
 
 

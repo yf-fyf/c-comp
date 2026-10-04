@@ -99,7 +99,7 @@ class Codegen13(prev.Codegen12):
             case 'PreInc' | 'PreDec':
                 return self._type_of_lval(node.operand)
             case 'Cond':
-                return self._type_of_expr(node.then)
+                return self.type_of_expr_Cond(node)
             case _:
                 raise RuntimeError(f'type_of_expr: コマ13で未対応の式です (kind={node.kind!r})')
 
@@ -255,8 +255,15 @@ class Codegen13(prev.Codegen12):
 
     # emit_data_section() はコマ10 で実装したものを継承して使う（この回では書き直さない）。
 
+    def _emit_global_alignment(self, ty_str: str) -> None:
+        # 提供済み: 領域サイズと別に、ラベルの先頭番地を型の整列へ揃える。
+        align = (self._struct_defs[ty_str]['align'] if self.is_struct_ty_str(ty_str, self._struct_defs)
+                 else self.align_of_ty_str(ty_str))
+        self.emit(f'  .balign {align}')
+
     def emit_bss_section(self) -> None:
         # TODO: すべてのグローバル変数を .bss に出力する（.zero で 0 初期化）。
+        # 各ラベルの前で、提供済みself._emit_global_alignment(ty)を呼ぶ。
         raise NotImplementedError("emit_bss_section を実装してください")
 
     def gen_program(self, prog: list[Node]) -> None:

@@ -204,7 +204,7 @@ class Codegen12(prev.Codegen11):
             case 'PreInc' | 'PreDec':
                 return self._type_of_lval(node.operand)
             case 'Cond':
-                return self._type_of_expr(node.then)
+                return self.type_of_expr_Cond(node)
             case 'Neg':
                 return self.type_of_expr_Neg(node)
             case _:

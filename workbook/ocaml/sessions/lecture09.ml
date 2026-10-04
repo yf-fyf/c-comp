@@ -20,15 +20,22 @@ let locals : (string, int * ty) Hashtbl.t = Hashtbl.create 64
 let stack_offset = ref 0
 
 (* 関数宣言・定義の戻り値型を生成前に集める。
-   完全な引数型・再宣言・宣言順の検査は行わない。 *)
+   固定引数型も集めるが、再宣言・宣言順の完全な検査は行わない。 *)
 let function_returns : (string, ty) Hashtbl.t = Hashtbl.create 32
+let function_params : (string, ty list) Hashtbl.t = Hashtbl.create 32
+let return_ty = ref TyInt
 
 let collect_function_returns prog =
   Hashtbl.clear function_returns;
+  Hashtbl.clear function_params;
   List.iter
     (function
-      | FuncDef { name; ty; _ } -> Hashtbl.replace function_returns name ty
-      | FuncProto { name; ty; _ } -> Hashtbl.replace function_returns name ty
+      | FuncDef { name; ty; params; _ } ->
+          Hashtbl.replace function_returns name ty;
+          Hashtbl.replace function_params name (List.map (fun (p : param) -> p.ty) params)
+      | FuncProto { name; ty; params; _ } ->
+          Hashtbl.replace function_returns name ty;
+          Hashtbl.replace function_params name (List.map (fun (p : param) -> p.ty) params)
       | GlobalDecl _ -> ())
     prog
 
@@ -80,7 +87,7 @@ let load ty =
 
 let store ty =
   match size_of_ty ty with
-  | 1 -> emit "  sb a0, 0(a1)"; emit "  lb a0, 0(a1)"
+  | 1 -> emit "  sb a0, 0(a1)"; Type_rules.convert_to emit ty
   | 4 -> emit "  sw a0, 0(a1)"
   | _ -> emit "  sd a0, 0(a1)"
 
@@ -92,6 +99,12 @@ let scale_index elem_ty =
 
 let push_a0 () = emit "  addi sp, sp, -8"; emit "  sd a0, 0(sp)"; incr depth
 let pop_into reg = emit (Printf.sprintf "  ld %s, 0(sp)" reg); emit "  addi sp, sp, 8"; decr depth
+
+let prepare_argument name i =
+  let params = Option.value (Hashtbl.find_opt function_params name) ~default:[] in
+  match List.nth_opt params i with
+  | Some ty -> Type_rules.convert_to emit ty
+  | None -> ()
 
 let rec codegen_lval = function
   | Var { name; line; _ } ->
@@ -132,7 +145,8 @@ and type_of_expr = function
   | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
       type_of_lval operand
   | Call { name; _ } -> function_return_ty name
-  | Cond { then_; _ } -> type_of_expr then_
+  | Cond { then_; else_; _ } ->
+      Type_rules.conditional_type then_ (type_of_expr then_) else_ (type_of_expr else_)
   | Index _ as e -> type_of_lval e
   | Binary { op = Add; lhs; rhs; _ } ->
       let lt = type_of_expr lhs in
@@ -205,7 +219,7 @@ and codegen = function
       store ty
   | Call { name; args; _ } ->
       let n = List.length args in
-      List.iter (fun arg -> codegen arg; push_a0 ()) args;
+      List.iteri (fun i arg -> codegen arg; prepare_argument name i; push_a0 ()) args;
       for i = 0 to n - 1 do
         emit (Printf.sprintf "  ld a%d, %d(sp)" i ((n - 1 - i) * 8))
       done;
@@ -268,13 +282,13 @@ and codegen = function
       | _ -> error "コマ9で未対応の二項演算です")
   | e -> error ~line:(line_of_expr e) "コマ9で未対応の式です"
 
-(* gen_stmt: コマ7 から変更なし *)
+(* gen_stmt: return式を宣言された戻り値型へ変換する。 *)
 let rec gen_stmt = function
   | Decl _ -> ()
   | ExprStmt { expr = Some e; _ } -> codegen e
   | ExprStmt _ -> ()
   | Return { expr; _ } ->
-      Option.iter codegen expr;
+      Option.iter (fun e -> codegen e; Type_rules.convert_to emit !return_ty) expr;
       emit (Printf.sprintf "  j %s" !ret_label)
   | Block { stmts; _ } -> List.iter gen_stmt stmts
   | If { cond; then_; else_; _ } ->
@@ -323,7 +337,8 @@ let rec gen_stmt = function
   | Continue _ -> emit (Printf.sprintf "  j %s" (peek cont_stack))
 
 let gen_func = function
-  | FuncDef { name; params; body; _ } ->
+  | FuncDef { name; ty; params; body; _ } ->
+      return_ty := ty;
       Hashtbl.clear locals;
       stack_offset := 0;
       depth := 0;

@@ -74,7 +74,7 @@ sim-test:
 
 # OCaml 参考実装の回帰テスト（依存: riscv64-linux-gnu-gcc + qemu-riscv64）
 ocaml-test:
-	cd workbook/ocaml && dune build && python3 run_tests.py -q
+	cd workbook/ocaml && dune build && dune runtest && python3 run_tests.py -q
 
 # 生成物のうちコミットしないものだけ消す。
 # 図の SVG はコミット対象なので触らない（作り直すなら make figures）。

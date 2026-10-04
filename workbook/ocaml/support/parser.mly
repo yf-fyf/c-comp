@@ -7,6 +7,11 @@ let ln (pos : Lexing.position) = pos.Lexing.pos_lnum
 let span (start_pos : Lexing.position) (end_pos : Lexing.position) =
   Some { start_offset = start_pos.pos_cnum; end_offset = end_pos.pos_cnum }
 
+let check_argument_count pos xs =
+  let n = List.length xs in
+  if n > 8 then failwith (Printf.sprintf
+    "構文解析エラー: [line %d] 引数は最大8個です（%d個指定されています）" (ln pos) n)
+
 let rec wrap_ptrs base n =
   if n <= 0 then base else TyPtr (wrap_ptrs base (n - 1))
 
@@ -84,10 +89,12 @@ top_opt:
 | KW_STRUCT IDENT SEMI { None }
 | decl_type IDENT LPAREN param_clause RPAREN SEMI {
     let params, _variadic = $4 in
+    check_argument_count $startpos($2) params;
     Some (FuncProto { name = $2; ty = mk_ret_ty $1; params; line = ln $startpos($2); span = span $startpos $endpos })
   }
 | decl_type IDENT LPAREN param_clause RPAREN func_body {
     let params, variadic = $4 in
+    check_argument_count $startpos($2) params;
     if variadic then failwith "構文解析エラー: 可変長 '...' はプロトタイプ宣言でのみ使える";
     Some (FuncDef { name = $2; ty = mk_ret_ty $1; params; body = $6; line = ln $startpos($2); span = span $startpos $endpos })
   }
@@ -350,6 +357,7 @@ primary:
     Var { name = $1; line = ln $startpos($1); span = span $startpos $endpos }
   }
 | IDENT LPAREN arg_list_opt RPAREN {
+    check_argument_count $startpos($1) $3;
     Call { name = $1; args = $3; line = ln $startpos($1); span = span $startpos $endpos }
   }
 | LPAREN expr RPAREN { with_expr_span $2 (span $startpos $endpos) }

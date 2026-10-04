@@ -331,6 +331,8 @@ export class Machine {
       // 即値
       case "addi": this.set(insn.rd, rs1 + insn.imm); break;
       case "xori": this.set(insn.rd, rs1 ^ insn.imm); break;
+      case "slli": this.set(insn.rd, rs1 << insn.imm); break;
+      case "srai": this.set(insn.rd, rs1 >> insn.imm); break;
       case "li": this.set(insn.rd, insn.imm); break;
       case "la": this.set(insn.rd, BigInt(insn.offset)); break;
 

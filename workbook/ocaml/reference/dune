@@ -28,6 +28,11 @@
 
 (ocamllex lexer)
 
+(test
+ (name type_contract_test)
+ (modules type_contract_test)
+ (libraries refcomp support))
+
 ; --table は menhir の incremental API（Parser.MenhirInterpreter）を出すために要る。
 ; compile.ml がこの API 経由で構文解析し、エラー状態番号から parser.messages の
 ; 日本語メッセージを引く。

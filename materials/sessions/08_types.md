@@ -39,7 +39,7 @@ n = 4;     // 4バイト書く   → sw
 |--------------|------|
 | 型表 | ローカル変数表に型（`ty_str`）を持たせる |
 | 型別の命令選択 | 型サイズで `lb`/`lw`/`ld`・`sb`/`sw`/`sd` を選ぶ |
-| `char` の昇格と縮小 | 読むと int へ昇格し、代入では下位8ビットへ縮小する |
+| `char` の昇格と縮小 | 読むと int へ昇格し、代入・固定引数・returnでは下位8ビットへ縮小する |
 
 ポインタ演算・添字 `p[i]`・`sizeof(型名)` は、この型の仕組みの上に載る。
 そちらはコマ9 で実装する。
@@ -218,7 +218,9 @@ Parserは関数宣言・定義の戻り値型を `node.ty_str` に残してい�
 この表から型を取得する `type_of_expr_Call` である。
 変数の型を変数表から引く処理と同じ考え方でよい。
 
-この表は型の伝播に使う。引数の個数・型や再宣言の整合性を検査する表ではない。
+収集時には`self._function_params`（関数名 → 固定仮引数の型の列）も用意する。
+固定char引数を渡す前の変換に使うが、宣言との引数個数・型や再宣言の完全な診断は行わない。
+最大8個の上限は提供Parserが検査する。
 宣言がない名前の診断も標準トラックでは保証せず、表にない場合は従来どおり
 `int` として扱う。これは未宣言呼出しを許すという仕様変更ではなく、
 [標準トラックの診断範囲](../../workbook/docs/language_spec.md#diagnostics)の限定である。
@@ -265,7 +267,9 @@ def _store_ty(self, ty):
 |------|------|------|
 | `char` を読む | int へ昇格する（値を保存する） | `lb`（符号拡張して 64 ビットに載る） |
 | `char` へ代入する | int から下位 8 ビットへ縮小する | `sb`（下位 1 バイトだけを書く） |
-| `char` への代入式の値を使う | 縮小後のsigned char値を返す | `slli` / `srai` で `a0` を符号拡張する |
+| `char` への代入式の値を使う | 縮小後のsigned char値を返す | 提供済み`_convert_to(ty)`で`a0`を縮小・符号拡張する |
+| 固定char引数を渡す | 仮引数型へ縮小してから受け渡す | 実引数の評価後、退避する前に`_convert_to(ty)` |
+| char関数からreturnする | 戻り値型へ縮小して返す | return式の評価後に`_convert_to(self._return_ty)` |
 
 算術そのものは常に int で行うので、`d = c + 2` のような式に特別な処理は要らない。
 `c + 2` を int として計算し、代入のところで `sb` を出せばよい。
@@ -281,6 +285,18 @@ def _store_ty(self, ty):
 
 `sb` が書くのはレジスタの下位 1 バイトだけで、`lb` はその 1 バイトの最上位ビットを
 上位 56 ビットへ写して読み戻す。`char_narrow.c` が突くのはこの往復の境界である。
+
+### 関数境界と条件式で型を使う
+
+`char f() { return 300; }` の呼出し値は`44`である。`int f(char c)`へ`255`を渡すと、
+仮引数の値は`-1`になる。呼出し先のロードに任せず、呼出し側で固定仮引数の型へ変換する。
+外部のコンパイラで作った関数も、正しく変換した値を受け取ることを前提にしている。
+可変長部はcharからintへの昇格だけで、int値`300`を縮小してはいけない。
+
+`a ? b : c`の型は、選ばれた腕ではなく両腕から決める。char/int同士はint、
+同型ポインタはその型、ポインタと`0`はポインタ型、`T *`と`void *`は`void *`になる。
+この小さな共通型の処理は`type_of_expr_Cond`として提供する。
+コマ4で実装した「選ばれた腕だけを実行する」処理はそのまま使う。
 
 ## 編集するファイル
 
@@ -298,7 +314,9 @@ def _store_ty(self, ty):
 | `is_ptr_ty_str(ty)` | ポインタ型かどうかを返す |
 | `alloc_local(name, ty_str)` | `size_of_ty_str` を使って型付きで領域を確保する |
 | `lookup_var(name, line)` / `lookup_local_ty(name, line)` | `self._locals` からオフセットと型を引く |
-| `collect_function_returns(prog)` | 関数宣言・定義から戻り値型の表を作る。`main()` から呼出し済み |
+| `collect_function_returns(prog)` | 関数宣言・定義から戻り値型と固定仮引数型の表を作る。`main()` から呼出し済み |
+| `_convert_to(ty)` | `a0`をcharへ縮小・符号拡張する。char以外では値を変えない |
+| `type_of_expr_Cond(node)` | 両腕から条件式の共通型を決める |
 | `_push_a0()` / `_pop_into(reg)` | 一時値の退避と復帰 |
 | `_type_of_expr` / `_type_of_lval` / `codegen` / `codegen_lval` の `match` | 各ハンドラへの振り分け |
 
@@ -312,6 +330,7 @@ def _store_ty(self, ty):
 | `codegen_Var` / `codegen_Assign` / `codegen_Deref` | 型に応じたロード・ストアに置き換える |
 | `collect_decls_Decl(node)` | `node.ty_str` を渡して型付きで `alloc_local` する |
 | `_alloc_params(node)` / `_emit_func_prologue` | パラメータも型付きで確保・保存する |
+| `_gen_call(name, args)` / `gen_stmt_Return(node)` | コマ6・4の処理を再利用し、固定仮引数型と戻り値型への変換を加える |
 
 ## 実装手順
 
@@ -320,7 +339,13 @@ def _store_ty(self, ty):
 3. `type_of_expr_*` / `type_of_lval_*` を埋めて、式の型を引けるようにする。`Call` は提供済みの戻り値型の表を参照する
 4. `_load_ty` / `_store_ty` を型サイズ対応にする（提供済みの `size_of_ty_str` を使う）
 5. `codegen_Var` / `codegen_Assign` / `codegen_Deref` を `_load_ty` / `_store_ty` 経由に書き換える
-6. `char` の境界（`char_narrow.c`）と `char` へのポインタ（`char_ptr.c`）で取りこぼしを検出する
+6. `_store_ty`ではcharの格納後に提供済み`_convert_to(ty)`を呼ぶ。`char_narrow.c`・`char_ptr.c`を確認する
+7. 自分のコマ6の`_gen_call`を再利用し、各実引数の評価後・退避前に固定部の型へ変換する。可変長部は縮小しない
+8. 自分のコマ4の`gen_stmt_Return`を再利用し、return式の評価後に`self._return_ty`へ変換する。`return;`は値を評価しない
+
+スケルトンは、固定char引数のない呼出しとchar以外のreturnを前の回へ委譲する。
+そのため、手順7〜8より前でも基本のint・ポインタの検査を進められる。
+char引数のある呼出しは手順7、char戻り値は手順8を終えてから検査する。
 
 ## tests/
 
@@ -330,10 +355,14 @@ def _store_ty(self, ty):
 | ファイル | 内容 | 主に見る実装 | 通る目安 | 期待値 |
 |----------|------|--------------|----------|--------|
 | `load_store_ty.c` | `char`/`int`/ポインタの読み書きだけ | `_load_ty` / `_store_ty` / `type_of_*` | 手順3〜5 | `30` |
-| `typed_params.c` | `char`/`int`/ポインタの引数が各幅で退避・読み戻しできること | `_alloc_params` / 関数プロローグ | 手順3〜5 | `75` |
+| `typed_params.c` | `char`/`int`/ポインタの引数が各幅で退避・読み戻しできること | `_alloc_params` / 関数プロローグ / `_gen_call` | 手順7 | `75` |
 | `char_var.c` | `char` 変数の読み書き（`lb`/`sb`）・int への昇格・代入時の縮小 | `char` の昇格と縮小 | 手順5 | `67` |
 | `char_narrow.c` | 縮小の境界（`127` / `128` / `255` / `-1` / `256` / `300`）と代入式の値 | `_store_ty` の縮小・符号拡張と `_load_ty` の `lb` | 手順6 | `45` |
 | `char_ptr.c` | `char *` 経由の読み書きが 1 バイト幅になること | `type_of_lval_Deref` / `codegen_Deref` | 手順6 | `50` |
+| `char_return.c` | 戻り値を格納せず、比較・演算へ直接使う | `gen_stmt_Return` | 手順8 | `4` |
+| `char_argument.c` | 固定char引数の変換と、int引数の値の保持 | `_gen_call` / `gen_stmt_Return` | 手順7〜8 | `3` |
+| `cond_char_pointer.c` | ポインタと`0`の両方向で1バイトを読む | 提供済み`type_of_expr_Cond` | 手順5 | `2` |
+| `cond_single_arm.c` | 選んだ腕だけの実行を維持 | コマ4の`codegen_Cond`を継承 | 手順5 | `1` |
 | `call_ptr.c` | プロトタイプから戻り値型を引き、関数が返した `int *` を参照する | `type_of_expr_Call` / `codegen_Deref` | 手順3〜5 | `42` |
 
 ## テスト

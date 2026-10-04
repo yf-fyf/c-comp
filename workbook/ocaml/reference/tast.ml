@@ -35,7 +35,7 @@ and expr_desc =
   | PtrArith of { op : ptr_op; ptr : expr; index : expr; elem_size : int }
   | Binary of { op : Ast.binop; lhs : expr; rhs : expr } (* 整数演算のみ *)
   | Unary of { op : unop; operand : expr }
-  | Call of { name : string; args : expr list }
+  | Call of { name : string; args : expr list; fixed_params : Ctype.t list }
 
 and lval = { l_desc : lval_desc; l_ty : Ctype.t }
 
@@ -59,6 +59,7 @@ and stmt_desc =
 
 type func = {
   fn_name : string;
+  fn_return : Ctype.t;
   (* 仮引数の置き場。i 番目が i 番目の引数レジスタに対応する。
      同名の局所宣言に隠された仮引数は、そちらの変位を指す（元の実装と同じ） *)
   fn_params : int list;

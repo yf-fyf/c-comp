@@ -3,6 +3,13 @@
    前処理 → 字句解析（ocamllex） → 構文解析（menhir） をまとめる。
 *)
 
+(* native実行時にも、構文診断をUTF-8のバイト列のエスケープではなく文章で出す。
+   例外のまま返すので、ウェブAPI側は従来どおりFailureを捕捉できる。 *)
+let () =
+  Printexc.register_printer (function
+    | Failure msg when String.starts_with ~prefix:"構文解析エラー:" msg -> Some msg
+    | _ -> None)
+
 let init_lexbuf filename source =
   let lexbuf = Lexing.from_string source in
   lexbuf.lex_curr_p <-

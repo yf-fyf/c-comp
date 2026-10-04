@@ -453,3 +453,35 @@ describe("暴走と異常", () => {
     expect(m.get(2)).toBe(BigInt(STACK_TOP));
   });
 });
+
+
+describe("型変換と大域配置の命令", () => {
+  it.each([[127, 127], [128, -128], [255, -1], [300, 44], [-129, 127]])(
+    "下位8bitを符号拡張する: %d -> %d", (value, expected) => {
+      const m = run(main(`li a0, ${value}\nslli a0, a0, 56\nsrai a0, a0, 56\nret`));
+      expect(m.regs[10]).toBe(BigInt(expected));
+    },
+  );
+  it(".balignがデータのラベル番地を揃える", () => {
+    const p = assemble(`.data
+leading: .byte 1
+.bss
+c: .zero 1
+.balign 4
+n: .zero 4
+.balign 8
+ptr: .zero 8
+.text
+main: li a0, 0
+ret`);
+    expect(p.labels.get("n")! - p.dataBase).toBe(4);
+    expect(p.labels.get("ptr")! - p.dataBase).toBe(8);
+    expect(p.dataImage).toEqual(Uint8Array.from([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+    expect(p.dataSymbols.find(s => s.name === "c")!.size).toBe(1);
+    expect(p.dataSymbols.find(s => s.name === "n")!.size).toBe(4);
+  });
+  it.each(["slli", "srai"])("%sの範囲外のシフト幅を拒否する", (op) => {
+    expect(() => assemble(main(`${op} a0, a0, 64`))).toThrow(AssembleError);
+    expect(() => assemble(main(`${op} a0, a0, -1`))).toThrow(AssembleError);
+  });
+});

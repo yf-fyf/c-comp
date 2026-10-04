@@ -26,6 +26,7 @@ type genv = {
   globals : binding Env.t;
   strings : Strings.t;
   function_returns : Ctype.t Env.t;
+  function_params : Ctype.t list Env.t;
 }
 type fenv = { locals : binding Env.t; in_loop : bool }
 
@@ -82,7 +83,11 @@ let rec type_expr g f (e : Ast.expr) : Tast.expr =
       let cond = type_expr g f cond in
       let then_ = type_expr g f then_ in
       let else_ = type_expr g f else_ in
-      mk (Tast.Cond { cond; then_; else_ }) then_.e_ty
+      let is_null e = match e.Tast.e_desc with Tast.Const 0 -> true | _ -> false in
+      let ty = Ctype.conditional_type ~line:e.e_loc.line ~col:e.e_loc.col
+          ~then_ty:then_.e_ty ~else_ty:else_.e_ty
+          ~then_null:(is_null then_) ~else_null:(is_null else_) in
+      mk (Tast.Cond { cond; then_; else_ }) ty
   | Ast.Call { name; args } ->
       let n = List.length args in
       if n > Layout.max_args then
@@ -93,7 +98,8 @@ let rec type_expr g f (e : Ast.expr) : Tast.expr =
         | Some ty -> ty
         | None -> Ctype.Int (* 未宣言関数の診断は標準トラックの保証範囲外。 *)
       in
-      mk (Tast.Call { name; args = List.map (type_expr g f) args }) ret_ty
+      let fixed_params = Option.value (Env.find_opt name g.function_params) ~default:[] in
+      mk (Tast.Call { name; args = List.map (type_expr g f) args; fixed_params }) ret_ty
   (* ポインタが絡む + と - はポインタ演算になる。ポインタ側を ptr に寄せるので、
      コード生成は左右を見比べずに「ptr を先に評価する」だけでよい *)
   | Ast.Binary { op = Ast.Add; lhs; rhs } -> (
@@ -225,6 +231,7 @@ let type_func g (fn : Ast.func) : Tast.func =
   in
   {
     Tast.fn_name = fn.fn_name;
+    fn_return = fn.fn_ret;
     fn_params = param_offsets;
     fn_frame_size = Layout.frame_size stack;
     fn_body = List.map (type_stmt g { locals = env; in_loop = false }) fn.fn_body;
@@ -256,7 +263,7 @@ let collect_globals programs =
   in
   List.map (fun name -> (name, Env.find name tys)) order
 
-(* 戻り値型のみを集める。引数型・再宣言・宣言順の完全な検査は別の課題。 *)
+(* 戻り値型を集める。再宣言・宣言順の完全な検査は別の課題。 *)
 let collect_function_returns programs =
   List.fold_left
     (fun env (p : Ast.program) ->
@@ -264,6 +271,18 @@ let collect_function_returns programs =
         (fun env -> function
           | Ast.Func fn -> Env.add fn.fn_name fn.fn_ret env
           | Ast.Proto pt -> Env.add pt.pt_name pt.pt_ret env
+          | Ast.Global _ -> env)
+        env p.tops)
+    Env.empty programs
+
+(* 固定部の型だけを収集する。可変長部には縮小を行わない。 *)
+let collect_function_params programs =
+  List.fold_left
+    (fun env (p : Ast.program) ->
+      List.fold_left
+        (fun env -> function
+          | Ast.Func fn -> Env.add fn.fn_name (List.map (fun (p : Ast.param) -> p.p_ty) fn.fn_params) env
+          | Ast.Proto pt -> Env.add pt.pt_name (List.map (fun (p : Ast.param) -> p.p_ty) pt.pt_params) env
           | Ast.Global _ -> env)
         env p.tops)
     Env.empty programs
@@ -285,6 +304,7 @@ let type_program (units : (string * Ast.program) list) : Tast.program =
           Env.empty globals;
       strings = Strings.collect programs;
       function_returns = collect_function_returns programs;
+      function_params = collect_function_params programs;
     }
   in
   {

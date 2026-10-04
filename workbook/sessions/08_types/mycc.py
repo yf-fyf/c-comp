@@ -41,14 +41,18 @@ class Codegen08(prev.Codegen07):
         super().__init__()
         self._locals: dict[str, tuple[int, str]] = {}
         self._function_returns: dict[str, str] = {}
+        self._function_params: dict[str, list[str]] = {}
+        self._return_ty = 'int'
 
     def collect_function_returns(self, prog: list[Node]) -> None:
-        # 提供済み: 宣言・定義の戻り値型をコード生成前に集める。
-        # 引数型や再宣言の整合性、宣言の出現順を検査する処理ではない。
+        # 提供済み: 宣言・定義の戻り値型と固定引数型をコード生成前に集める。
+        # 再宣言の整合性や宣言の出現順を完全に検査する処理ではない。
         self._function_returns.clear()
+        self._function_params.clear()
         for node in prog:
             if node.kind in ('FuncProto', 'FuncDef'):
                 self._function_returns[node.name] = node.ty_str or 'int'
+                self._function_params[node.name] = [p.ty_str or 'int' for p in node.params]
 
     def alloc_local(self, name: str, ty_str: str = 'int') -> None:
         sz = self.align_to(self.size_of_ty_str(ty_str), 8)
@@ -80,7 +84,7 @@ class Codegen08(prev.Codegen07):
             case 'Call':
                 return self.type_of_expr_Call(node)
             case 'Cond':
-                return self._type_of_expr(node.then)
+                return self.type_of_expr_Cond(node)
             case _:
                 return 'int'
 
@@ -109,6 +113,23 @@ class Codegen08(prev.Codegen07):
         # 表にない名前は従来どおり int とする（未宣言関数の診断は保証範囲外）。
         raise NotImplementedError("type_of_expr_Call を実装してください")
 
+    def type_of_expr_Cond(self, node: Node) -> str:
+        # 提供済み: 条件式は、実行時に選ぶ腕ではなく両腕の型から決める。
+        lt = self._type_of_expr(node.then)
+        rt = self._type_of_expr(node.else_)
+        if lt in ('int', 'char') and rt in ('int', 'char'):
+            return 'int'
+        if lt == rt:
+            return lt
+        if lt.endswith('*') and rt.endswith('*') and 'void*' in (lt, rt):
+            return 'void*'
+        if lt.endswith('*') and node.else_.kind == 'Num' and node.else_.val == 0:
+            return lt
+        if rt.endswith('*') and node.then.kind == 'Num' and node.then.val == 0:
+            return rt
+        # 型規則全体の診断は発展Q1。ここでは共通型を決められない組合せだけ拒否する。
+        raise RuntimeError(f"[line {node.line}] 条件式の両腕の型が対応しません: {lt}, {rt}")
+
     def _type_of_lval(self, node: Node) -> str:
         match node.kind:
             case 'Var':
@@ -130,8 +151,15 @@ class Codegen08(prev.Codegen07):
         # TODO: char/int/pointer のサイズに応じて lb/lw/ld を emit する。
         raise NotImplementedError("_load_ty を実装してください")
 
+    def _convert_to(self, ty_str: str) -> None:
+        # 提供済み: a0を代入先・固定仮引数・戻り値の型へ変換する。
+        # char以外はここでレジスタの値を変えない。
+        if ty_str == 'char':
+            self.emit('  slli a0, a0, 56')
+            self.emit('  srai a0, a0, 56')
+
     def _store_ty(self, ty_str: str) -> None:
-        # char は sb で格納した後、a0 の下位8ビットを符号拡張する。
+        # char は sb で格納した後、self._convert_to(ty_str)で式の値も縮小する。
         # 代入式の結果にも縮小後の値を残す（例: c = 300 の値は44）。
         # TODO: char/int/pointer のサイズに応じて sb/sw/sd を emit する。
         raise NotImplementedError("_store_ty を実装してください")
@@ -180,6 +208,26 @@ class Codegen08(prev.Codegen07):
             case _:
                 pass
 
+    def _gen_call(self, name: str, args: list[Node]) -> None:
+        # char固定引数がなければ、自分のコマ6の処理をそのまま使える。
+        if 'char' not in self._function_params.get(name, []):
+            super()._gen_call(name, args)
+            return
+        # TODO: 自分のコマ6の呼出し処理を再利用する。
+        # 各実引数の評価後・退避前に、固定部ならself._function_params[name][i]へ
+        # self._convert_to()で変換する。可変長部は縮小しない。
+        # _depthとcall直前の16バイト整列を引き継ぐ。
+        raise NotImplementedError("_gen_call を型対応で実装してください")
+
+    def gen_stmt_Return(self, node: Node) -> None:
+        # int・ポインタ・return;は、自分のコマ4の処理をそのまま使える。
+        if self._return_ty != 'char' or node.operand is None:
+            super().gen_stmt_Return(node)
+            return
+        # TODO: operandがあれば評価し、self._return_tyへself._convert_to()で変換する。
+        # 共通エピローグへ飛ぶ。return;は値を評価・変換しない。
+        raise NotImplementedError("gen_stmt_Return を型対応で実装してください")
+
     def _alloc_params(self, node: Node) -> None:
         # TODO: パラメータを p.ty_str or 'int' で型付き alloc_local する。
         raise NotImplementedError("_alloc_params（型対応版）を実装してください")
@@ -193,6 +241,7 @@ class Codegen08(prev.Codegen07):
         self._alloc_params(node)
         self.collect_decls(node.body)
         self._current_params = node.params
+        self._return_ty = node.ty_str or 'int'
         return self.align_to(self._stack_offset, 16)
 
     def _emit_func_prologue(self, name: str, frame_size: int) -> None:

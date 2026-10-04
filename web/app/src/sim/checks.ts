@@ -62,7 +62,7 @@ function readRegisters(insn: Insn): number[] {
     case "add": case "sub": case "mul": case "div": case "rem":
     case "and": case "or": case "xor": case "sll": case "sra": case "slt":
       return [insn.rs1, insn.rs2];
-    case "addi": case "xori": case "mv": case "neg": case "not":
+    case "addi": case "xori": case "slli": case "srai": case "mv": case "neg": case "not":
     case "seqz": case "snez":
       return [insn.rs1];
     case "lb": case "lw": case "ld":

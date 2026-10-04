@@ -18,7 +18,7 @@ REG_NAMES.forEach((name, i) => {
 REG_INDEX.set("fp", 8); // s0 の別名
 
 /** レジスタ2つと即値を取る算術（rd, rs1, imm） */
-const OP_IMM = new Set(["addi", "xori"]);
+const OP_IMM = new Set(["addi", "xori", "slli", "srai"]);
 /** レジスタ3つを取る算術（rd, rs1, rs2） */
 const OP_REG = new Set(["add", "sub", "mul", "div", "rem", "and", "or", "xor", "sll", "sra", "slt"]);
 /** rd, rs1 の2引数（単項） */
@@ -194,9 +194,19 @@ export function assemble(source: string): Program {
           for (let k = 0; k < n; k++) dataBytes.push(0);
           continue;
         }
-        // アセンブラ向けの飾りは読み飛ばす（意味論に影響しない）
+        case ".balign": {
+          const boundary = Number(parseImm(rest, lineNo));
+          if (!Number.isSafeInteger(boundary) || boundary < 1) {
+            throw new AssembleError(".balign は正の整列幅をとる", lineNo);
+          }
+          if (section !== "text") {
+            closeSymbol();
+            while (dataAddr() % boundary !== 0) dataBytes.push(0);
+          }
+          continue;
+        }
+        // 以下の指令は、この簡易アセンブラでは読み飛ばす。
         case ".align":
-        case ".balign":
         case ".p2align":
         case ".size":
         case ".type":
@@ -269,6 +279,9 @@ function parseInsn(text: string, line: number): Insn {
     insn.rd = parseReg(ops[0]!, line);
     insn.rs1 = parseReg(ops[1]!, line);
     insn.imm = parseImm(ops[2]!, line);
+    if ((op === "slli" || op === "srai") && (insn.imm < 0n || insn.imm > 63n)) {
+      throw new AssembleError(`${op} のシフト幅は0〜63`, line);
+    }
     return insn;
   }
   if (OP_UNARY.has(op)) {

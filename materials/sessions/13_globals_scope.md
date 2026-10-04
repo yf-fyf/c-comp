@@ -423,6 +423,13 @@ int main() {
 この回で書き直す必要はない（スケルトンにも再宣言は無い）。
 グローバル変数のための `.bss` は `emit_bss_section()` として新しく書く。
 
+領域のサイズと先頭番地の整列は別の条件である。charの直後へintを詰めると、
+intの番地が4の倍数にならないことがある。コマ12で学んだ型の整列を、
+大域変数のラベルにも適用する。提供済み`_emit_global_alignment(ty)`は、
+charなら1、intなら4、ポインタなら8、structなら最大フィールド整列の`.balign`を出す。
+各変数のラベルを出す前に呼ぶ。領域を8バイト単位に丸めるだけでは、別ファイルとのリンク時に
+先頭番地がずれる場合を防げない。
+
 もう1つ、`collect_strings_expr()` のディスパッチをこの回で整理する。
 `!` `&&` `||` が増えて二項演算のハンドラがさらに2つ必要になるが、
 `Assign` / `Add` / … / `Index` / `And` / `Or` の走査はどれも
@@ -470,7 +477,7 @@ int main() {
 | 6 | `collect_globals(prog)` | トップレベルの `'Decl'` の名前と型を `self._globals` に登録する |
 | 7 | `collect_all_strings(prog)` | 各 `FuncDef` の本体から文字列を集める |
 | 8 | `_collect_strings_binary_expr(node)` | 二項演算の `node.lhs` / `node.rhs` を走査する |
-| 9 | `emit_bss_section()` | グローバル変数を `.bss` に出力する（`.zero` で 0 初期化） |
+| 9 | `emit_bss_section()` | 各ラベルの前に提供済みの整列補助を呼び、`.bss`へ出力する（`.zero`で0初期化） |
 | 10 | `gen_program(prog)` | `.data` → `.bss` → `.text` の順に出し、`FuncDef` だけ `gen_func()` する |
 | 11 | `main()` | `parse_file()` で AST を作り、6・7・10 を呼ぶ |
 
@@ -480,6 +487,7 @@ int main() {
 |----------|------|
 | `parse_file(filename)` | 前処理・構造体定義の収集・字句解析・構文解析をまとめて行う |
 | `_is_local(name)` | 変数がローカルかどうかの判定 |
+| `_emit_global_alignment(ty)` | 型の整列幅を求めて`.balign`を出す。ラベルの前で使う |
 | `type_of_expr_Var` / `type_of_lval_Var` / `type_of_expr_Not` / `_And` / `_Or` | 型は `lookup_var_ty` に任せるか `int` を返すだけなので提供済み |
 | `collect_strings_expr_Not` / `_And` / `_Or` | 8 番のハンドラ等へ振り分けるだけ |
 | `_type_of_expr()` / `_type_of_lval()` / `codegen_lval()` / `codegen()` / `collect_strings_expr()` のディスパッチ | 新しいノード種別の分岐は既に書かれている |
@@ -492,7 +500,7 @@ int main() {
 3. トップレベルの `'Decl'` ノードを `collect_globals()` で集める（覚えるのは名前と型だけでよい）
 4. `lookup_var_ty()` を `self._locals` → `self._globals` の順にする
 5. `codegen_lval_Var()` で `self._is_local()` を使って分岐し、グローバル変数なら `la a0, name` を出す
-6. `emit_bss_section()` でグローバル変数を `.bss` に出力する（全て 0 初期化）
+6. `emit_bss_section()`でグローバル変数を`.bss`へ出す。各ラベルの前に`_emit_global_alignment(ty)`を呼び、`.zero`で0初期化する
 7. `collect_all_strings()` と `_collect_strings_binary_expr()` を実装する（文字列収集の入口と、二項演算の走査）
 8. `gen_program()` で `.data` → `.bss` → `.text` の順に出力する（`.data` は継承した `emit_data_section()` を呼ぶだけでよい）。冒頭の提供済み `collect_function_returns(prog)` は残し、コマ8から使う戻り値型の表を準備する
 9. `main()` から `parse_file()` → `collect_globals()` → `collect_all_strings()` → `gen_program()` を呼ぶ

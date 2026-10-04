@@ -83,9 +83,10 @@ make web
 
 参照コンパイラが実際に出すものに合わせてある。
 
-- 命令 29 種（`add addi and beqz call div j la lb ld li lw mul neg not or rem ret
-  sb sd seqz sll slt snez sra sub sw xor xori`）と `mv` `bnez`
-- ディレクティブ 8 種（`.text .globl .data .bss .byte .word .dword .zero`）
+- 命令（`add addi and beqz call div j la lb ld li lw mul neg not or rem ret
+  sb sd seqz sll slli slt snez sra srai sub sw xor xori`）と `mv` `bnez`
+- ディレクティブ（`.text .globl .data .bss .byte .word .dword .zero .balign`）。
+  `.balign`はデータのラベル番地を揃える。`slli` / `srai`でcharへの縮小・符号拡張も実行できる
 - libc シム: `printf`（`%d %u %x %c %s %%`）/ `malloc` / `exit` / `strlen` / `strcmp` / `strchr`。
   **プログラム側が同名の関数を定義していればそちらが優先される**ので、
   発展課題 R2_printf・R3_malloc の自前実装もそのまま動く

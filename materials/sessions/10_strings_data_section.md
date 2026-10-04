@@ -393,6 +393,10 @@ return 0;
 Hello, World!
 ```
 
+可変長部のcharはintへ昇格する。固定部と違い、intの値をcharへ縮小しない。
+`printf`の書式文字列も1個に数え、可変長部を含む実引数の総数は最大8個である。
+`varargs_promotion.c`と`printf_eight_args.c`で確認する。
+
 ## 編集するファイル
 
 - `mycc.py`

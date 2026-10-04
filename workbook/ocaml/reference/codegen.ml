@@ -27,7 +27,7 @@ type genv = {
   mutable source : string;
 }
 
-type fenv = { ret_label : Asm.label; mutable depth : int; mutable loops : loop list }
+type fenv = { ret_label : Asm.label; return_ty : Ctype.t; mutable depth : int; mutable loops : loop list }
 
 let create_genv em layout = { em; layout; label_count = 0; source = "" }
 
@@ -35,7 +35,7 @@ let new_label g =
   g.label_count <- g.label_count + 1;
   Asm.L g.label_count
 
-let create_fenv g = { ret_label = new_label g; depth = 0; loops = [] }
+let create_fenv g return_ty = { ret_label = new_label g; return_ty; depth = 0; loops = [] }
 
 (* Typing がループの外の break / continue を弾いているので、空になることはない *)
 let innermost_loop f = match f.loops with loop :: _ -> loop | [] -> assert false
@@ -156,6 +156,7 @@ let emit_bss_section g globals =
   List.iter
     (fun (name, ty) ->
       emit g (Asm.globl name);
+      emit g (Asm.balign (Layout.align_of g.layout ty));
       emit g (Asm.defsym name);
       emit g Asm.(zero (Layout.slot_size g.layout ty)))
     globals
@@ -166,10 +167,14 @@ let load g ty =
   with_note g (Printf.sprintf "load: a0 のアドレスから%sを読む" (ty_note g ty)) (fun () ->
       emit g Asm.(load (size_of g ty) a0 (at a0 0)))
 
+let convert_to g = function
+  | Ctype.Char -> emit g Asm.(slli a0 a0 56); emit g Asm.(srai a0 a0 56)
+  | _ -> ()
+
 let store g ty =
   with_note g (Printf.sprintf "store: a1 のアドレスへ%sを書く" (ty_note g ty)) (fun () ->
       emit g Asm.(store (size_of g ty) a0 (at a1 0));
-      if size_of g ty = 1 then emit g Asm.(load 1 a0 (at a1 0)))
+      convert_to g ty)
 
 let scale_index g elem_size =
   if elem_size <> 1 then
@@ -210,12 +215,13 @@ and codegen_lval_body g f (lv : Tast.lval) =
 
 (* ── 関数呼び出しのコード生成 ── *)
 
-and gen_call g f name args =
+and gen_call g f name args fixed_params =
   let n = List.length args in
   assert (n <= Layout.max_args);
-  List.iter
-    (fun arg ->
+  List.iteri
+    (fun i arg ->
       codegen g f arg;
+      Option.iter (convert_to g) (List.nth_opt fixed_params i);
       push_a0 g f)
     args;
   if n > 0 then begin
@@ -279,7 +285,7 @@ and codegen_body g f (e : Tast.expr) =
       emit g (Asm.deflabel label_else);
       codegen g f else_;
       emit g (Asm.deflabel label_end)
-  | Call { name; args } -> gen_call g f name args
+  | Call { name; args; fixed_params } -> gen_call g f name args fixed_params
   | Unary { op = Neg; operand } ->
       codegen g f operand;
       emit g Asm.(unop Neg a0 a0)
@@ -353,7 +359,7 @@ and gen_stmt_body g f : Tast.stmt_desc -> unit = function
   | Empty -> ()
   | Expr e -> codegen g f e
   | Return e ->
-      Option.iter (codegen g f) e;
+      Option.iter (fun e -> codegen g f e; convert_to g f.return_ty) e;
       emit g ~note:"return: エピローグへ飛ぶ" (Asm.j f.ret_label)
   | Block stmts -> List.iter (gen_stmt g f) stmts
   | If { cond; then_; else_ } ->
@@ -406,7 +412,7 @@ and gen_stmt_body g f : Tast.stmt_desc -> unit = function
 
 let gen_func g (fn : Tast.func) =
   (* 関数ごとに状態を作り直すので、前の関数の後片付けは要らない *)
-  let f = create_fenv g in
+  let f = create_fenv g fn.fn_return in
   let frame_size = fn.fn_frame_size in
   emit g (Asm.globl fn.fn_name);
   emit g

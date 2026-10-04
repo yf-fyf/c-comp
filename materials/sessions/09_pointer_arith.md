@@ -394,6 +394,10 @@ rvalue としての `p[i]` は、このアドレスから値を読む。読む�
 7. `codegen_PreInc` / `codegen_PreDec` を型対応にする
 8. `ptr_to_ptr.c`（多段ポインタ）・`main_argv.c`（`main(int argc, char **argv)`）を通す<br>（2〜7 が正しくできていれば新しく書く処理はない。取りこぼしの検出用である。）
 
+コマ8の`type_of_expr_Cond`・固定引数型の表・char変換を引き継ぐ。
+型判定を上書きするときも、条件式はthen側だけの型に戻さない。
+今回の型と配置での回帰は`cond_pointer_scale.c`・`cond_pointer_pointer.c`・`cond_void_pointer.c`で確認する。
+
 ## tests/
 
 機能単位で切ったテストを先に置いてある。上から順に通していくと、

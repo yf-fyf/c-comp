@@ -2,7 +2,7 @@
 // スキーマを二重管理しない代わりに、代表入力でキーと型を全数チェックする。
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { assemble } from "../src/sim/assembler";
 import { Machine, runToEnd } from "../src/sim/machine";
 import type { AstNode, CompileResult, ParseResult, TextResult, Token } from "../src/types";
@@ -274,4 +274,54 @@ describe("myccCore", () => {
     expect(includedProto.sourceRanges).toBeUndefined();
     expect(sourceText(source, main)).toBe("int main() { return 0; }");
   });
+});
+
+
+describe("Coreの境界と配置の回帰", () => {
+  it.each(["06_functions_recursion/tests/eight_args", "08_types/tests/char_argument", "08_types/tests/char_return", "08_types/tests/cond_char_pointer", "08_types/tests/cond_single_arm", "09_pointer_arith/tests/cond_pointer_pointer", "09_pointer_arith/tests/cond_pointer_scale", "09_pointer_arith/tests/cond_void_pointer", "10_strings_data_section/tests/printf_eight_args", "10_strings_data_section/tests/varargs_promotion", "12_struct_malloc_list/tests/char_assign_value", "12_struct_malloc_list/tests/cond_struct_pointer", "13_globals_scope/tests/global_mixed_types", "13_globals_scope/tests/logic_string_and", "13_globals_scope/tests/logic_string_call_and", "13_globals_scope/tests/logic_string_call_or", "13_globals_scope/tests/logic_string_or"])("%sを実行する", (path) => {
+    const base = new URL(`../../../workbook/sessions/${path}`, import.meta.url);
+    const result = JSON.parse(core.compile(readFileSync(new URL(`${base}.c`), "utf8"), false)) as CompileResult;
+    expect(result.ok, JSON.stringify(result.errors)).toBe(true);
+    const program = assemble(result.text!);
+    const machine = new Machine(program);
+    runToEnd(machine, 5000);
+    expect(machine.halted).toBe(true);
+    expect(machine.exitCode).toBe(Number(readFileSync(new URL(`${base}.ans`), "utf8")));
+    if (existsSync(new URL(`${base}.stdout`))) {
+      expect(machine.stdout).toBe(readFileSync(new URL(`${base}.stdout`), "utf8"));
+    }
+    expect(machine.warnings).toEqual([]);
+    if (path.endsWith("global_mixed_types")) {
+      for (const [name, alignment] of [["gi", 4], ["gp", 8], ["gs", 8]] as const) {
+        expect(program.labels.get(name)! % alignment).toBe(0);
+      }
+    }
+  });
+});
+
+describe("Coreの引数上限", () => {
+  const params = (n: number) => Array.from({length: n}, (_, i) => `int p${i}`).join(", ");
+  const args = (n: number) => Array.from({length: n}, () => "1").join(", ");
+  const boundaries = [
+    ["definition", (n: number) => `int f(${params(n)}) { return 0; }`],
+    ["prototype", (n: number) => `int f(${params(n)});`],
+    ["call", (n: number) => `int f(${params(Math.min(n, 8))}); int main() { return f(${args(n)}); }`],
+    ["variadic prototype", (n: number) => `int f(${params(n)}, ...);`],
+    ["variadic call", (n: number) => `int f(int first, ...); int main() { return f(${args(n)}); }`],
+  ] as const;
+  for (const [name, source] of boundaries) {
+    for (const count of [0, 8, 9]) {
+      if (count === 0 && name.startsWith("variadic")) continue;
+      it(`${name}: ${count}個を両パーサで検査する`, () => {
+        for (const result of [JSON.parse(core.parse(source(count))) as ParseResult,
+                             JSON.parse(core.compile(source(count), false)) as CompileResult]) {
+          expect(result.ok).toBe(count <= 8);
+          if (count > 8) {
+            expect(result.errors![0]!.message).toMatch(/8/);
+            expect(result.errors![0]!.line).toBeGreaterThan(0);
+          }
+        }
+      });
+    }
+  }
 });

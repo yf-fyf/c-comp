@@ -19,15 +19,22 @@ let locals : (string, var_info) Hashtbl.t = Hashtbl.create 128
 let stack_offset = ref 0
 
 (* 関数宣言・定義の戻り値型を生成前に集める。
-   完全な引数型・再宣言・宣言順の検査は行わない。 *)
+   固定引数型も集めるが、再宣言・宣言順の完全な検査は行わない。 *)
 let function_returns : (string, ty) Hashtbl.t = Hashtbl.create 32
+let function_params : (string, ty list) Hashtbl.t = Hashtbl.create 32
+let return_ty = ref TyInt
 
 let collect_function_returns prog =
   Hashtbl.clear function_returns;
+  Hashtbl.clear function_params;
   List.iter
     (function
-      | FuncDef { name; ty; _ } -> Hashtbl.replace function_returns name ty
-      | FuncProto { name; ty; _ } -> Hashtbl.replace function_returns name ty
+      | FuncDef { name; ty; params; _ } ->
+          Hashtbl.replace function_returns name ty;
+          Hashtbl.replace function_params name (List.map (fun (p : param) -> p.ty) params)
+      | FuncProto { name; ty; params; _ } ->
+          Hashtbl.replace function_returns name ty;
+          Hashtbl.replace function_params name (List.map (fun (p : param) -> p.ty) params)
       | GlobalDecl _ -> ())
     prog
 
@@ -139,6 +146,7 @@ let emit_bss_section () =
     (fun name -> function
       | Global { ty } ->
           emit (Printf.sprintf "  .globl %s" name);
+          emit (Printf.sprintf "  .balign %d" (Struct_env.align_of_ty ty));
           emit (name ^ ":");
           emit (Printf.sprintf "  .zero %d" (align_to (size_of_ty ty) 8))
       | _ -> ())
@@ -225,7 +233,8 @@ and type_of = function
   | Unary { op = Neg | Not; _ } -> TyInt
   | Unary { op = PreInc; operand; _ } | Unary { op = PreDec; operand; _ } ->
       type_of_lval operand
-  | Cond { then_; _ } -> type_of then_
+  | Cond { then_; else_; _ } ->
+      Type_rules.conditional_type then_ (type_of then_) else_ (type_of else_)
   | Binary { op = Add; lhs; rhs; _ } ->
       let lt = type_of lhs and rt = type_of rhs in
       (match lt, rt with TyPtr _, _ -> lt | _, TyPtr _ -> rt | _ -> TyInt)
@@ -244,7 +253,7 @@ let load ty =
 
 let store ty =
   match size_of_ty ty with
-  | 1 -> emit "  sb a0, 0(a1)"; emit "  lb a0, 0(a1)"
+  | 1 -> emit "  sb a0, 0(a1)"; Type_rules.convert_to emit ty
   | 4 -> emit "  sw a0, 0(a1)"
   | _ -> emit "  sd a0, 0(a1)"
 
@@ -256,6 +265,12 @@ let scale_index elem_ty =
 
 let push_a0 () = emit "  addi sp, sp, -8"; emit "  sd a0, 0(sp)"; incr depth
 let pop_into reg = emit (Printf.sprintf "  ld %s, 0(sp)" reg); emit "  addi sp, sp, 8"; decr depth
+
+let prepare_argument name i =
+  let params = Option.value (Hashtbl.find_opt function_params name) ~default:[] in
+  match List.nth_opt params i with
+  | Some ty -> Type_rules.convert_to emit ty
+  | None -> ()
 
 (* ── 左辺値のコード生成 ── *)
 
@@ -297,9 +312,10 @@ let rec codegen_lval = function
 
 and gen_call name args _line =
   let n = List.length args in
-  List.iter
-    (fun arg ->
+  List.iteri
+    (fun i arg ->
       codegen arg;
+      prepare_argument name i;
       push_a0 ())
     args;
   for i = 0 to n - 1 do
@@ -434,7 +450,7 @@ and codegen_binary op lhs rhs =
 let rec gen_stmt = function
   | Decl _ -> ()
   | ExprStmt { expr; _ } -> Option.iter codegen expr
-  | Return { expr; _ } -> Option.iter codegen expr; emit (Printf.sprintf "  j %s" !ret_label)
+  | Return { expr; _ } -> Option.iter (fun e -> codegen e; Type_rules.convert_to emit !return_ty) expr; emit (Printf.sprintf "  j %s" !ret_label)
   | Block { stmts; _ } -> List.iter gen_stmt stmts
   | If { cond; then_; else_; _ } ->
       let label_else = new_label () in
@@ -484,7 +500,8 @@ let rec gen_stmt = function
 (* ── 関数のコード生成 ── *)
 
 let gen_func = function
-  | FuncDef { name; params; body; _ } ->
+  | FuncDef { name; ty; params; body; _ } ->
+      return_ty := ty;
       Hashtbl.clear locals;
       stack_offset := 0;
       depth := 0;

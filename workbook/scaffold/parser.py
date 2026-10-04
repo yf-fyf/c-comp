@@ -23,6 +23,14 @@ def _parse_error(msg: str, line: int = 0) -> None:
     sys.exit(1)
 
 
+MAX_ARGUMENTS = 8
+
+
+def _check_argument_count(count: int, line: int) -> None:
+    if count > MAX_ARGUMENTS:
+        _parse_error(f"引数は最大{MAX_ARGUMENTS}個です（{count}個指定されています）", line)
+
+
 class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
@@ -178,6 +186,7 @@ class Parser:
         return Node(ND_DECL, name=name, ty_str=ty_str, line=line)
 
     def _parse_func(self, ty_str: str, name: str) -> Node:
+        line = self.cur.line
         self.expect('(')
         params: List[Node] = []
         variadic = False
@@ -197,6 +206,8 @@ class Parser:
                 if not self.consume_if(','):
                     break
             self.expect(')')
+
+        _check_argument_count(len(params), line)
 
         # 関数宣言（; で終わり）
         if self.consume_if(';'):
@@ -458,6 +469,7 @@ class Parser:
                     while self.consume_if(','):
                         args.append(self.parse_expr())
                     self.expect(')')
+                _check_argument_count(len(args), tok.line)
                 return Node(ND_CALL, name=tok.sval, args=args, line=tok.line)
             return Node(ND_VAR, name=tok.sval, line=tok.line)
 
