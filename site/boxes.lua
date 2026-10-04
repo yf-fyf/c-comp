@@ -114,7 +114,9 @@ local function scrollable_code(el)
     class = "code-scroll scroll-pane", tabindex = "0", role = "region",
     ["aria-label"] = "コード（左右にスクロールできます）",
   })
-  return pandoc.Div({pane}, {class = "code-example scroll-frame"})
+  return pandoc.Div({pane}, {
+    class = "code-example scroll-frame", ["data-lang"] = el.attributes["data-lang"],
+  })
 end
 
 function Image(el)

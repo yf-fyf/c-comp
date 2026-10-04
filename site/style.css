@@ -257,6 +257,7 @@ pre {
   line-height: 1.7;
 }
 pre code {
+  display: block;
   background: none;
   padding: 0;
   font-size: inherit;
@@ -281,21 +282,17 @@ pre > code.sourceCode > span { line-height: inherit; }
 }
 .scroll-hint[hidden] { display: none; }
 
-/* 言語ラベル。boxes.lua が原稿の綴りを data-lang に残す */
-div.sourceCode { position: relative; }
-/* 大きくした言語ラベルが長い先頭行と重ならないよう、上端に余白を取る。 */
-div.sourceCode[data-lang] pre { padding-top: 2.1rem; }
-div.sourceCode[data-lang]::before {
+/* 言語名はコード枠の外に置き、本文の先頭に空行のような余白を作らない。 */
+.code-example[data-lang]::before {
   content: attr(data-lang);
-  position: absolute;
-  top: 0;
-  right: 0;
-  padding: 0.05rem 0.5rem;
+  display: block;
+  margin-bottom: 0.25rem;
   font-family: var(--mono);
   font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: right;
   color: var(--gray-text);
-  background: var(--gray-bg);
-  border-radius: 0 0.35rem 0 0.35rem;
+  user-select: none;
 }
 
 /* Pandocの構文色を共通CSSで管理する。このCSSは生成されたテーマの後に読む。 */
