@@ -49,44 +49,22 @@ def grammar_metadata(path: Path) -> dict:
         code.append(f'<span id="grammar-line-{line.number}" class="grammar-line grammar-{kind}"'
                     f' data-label="{label}">{render_line(line, change)}</span>')
     html = '<pre class="grammar-pre"><code class="grammar-code">' + "\n".join(code) + '</code></pre>'
-    label = ("この回の文法" if current.session == 1 else
-             "前処理指令の差分" if current.session == 14 else "この回までの文法全文")
     return {
         # Pandoc parses metadata strings as Markdown, which would remove HTML
         # tags and normalise grammar whitespace. Hex preserves literal UTF-8.
         "code": html.encode("utf-8").hex(),
-        "overview": overview_html(delta).encode("utf-8").hex(),
-        "label": f"{label}（{len(current.lines)}行）",
-        "expanded": current.session in {1, 14},
+        "legend": legend_html(delta).encode("utf-8").hex(),
+        "label": f"この回までの文法全文（{len(current.lines)}行）",
+        "expanded": True,
         "precedence": delta.precedence_states,
     }
 
 
-def overview_html(delta: Delta) -> str:
+def legend_html(delta: Delta) -> str:
     if delta.snapshot.session == 1:
-        return '<p class="grammar-status">最初の文法です。以降の回では、前回からの追加・変更を示します。</p>'
+        return '<p class="grammar-legend">最初の文法です。以降の回では、全文中で追加・変更を示します。</p>'
     if not delta.changes and all(s == "existing" for s in delta.precedence_states):
-        return '<p class="grammar-status">前回から文法・優先順位の追加や変更はありません。</p>'
-    rows = []
-    for change in delta.changes:
-        label = "変更" if change.before is not None else "追加"
-        line = change.line
-        before = ('<small class="grammar-before">前回: <code>' + escape(change.before) + '</code></small>'
-                  if change.before is not None else "")
-        rows.append(f'<li class="grammar-update grammar-{change.kind}">'
-                    f'<span class="grammar-badge">{label}</span> '
-                    f'<a href="#grammar-line-{line.number}"><code>{escape(line.rule)}</code></a>'
-                    f'<code class="grammar-rhs"> ::= {escape(line.rhs)}</code>{before}</li>')
-    for index, state in enumerate(delta.precedence_states):
-        if state not in {"added", "changed"}:
-            continue
-        ops, assoc = delta.snapshot.precedence[index]
-        label = "変更" if state == "changed" else "追加"
-        rows.append(f'<li class="grammar-update grammar-{state}">'
-                    f'<span class="grammar-badge">{label}</span> 優先順位表: '
-                    f'<code>{escape(" ".join(ops))}</code>（{assoc}結合）</li>')
-    return ('<div class="grammar-overview"><p class="grammar-overview-title">前回からの追加・変更</p>'
-            '<p class="grammar-legend"><span class="grammar-added">追加</span>は新しい規則・選択肢、'
+        return '<p class="grammar-legend">前回から文法・優先順位の追加や変更はありません。</p>'
+    return ('<p class="grammar-legend"><span class="grammar-added">追加</span>は新しい規則・選択肢、'
             '<span class="grammar-changed">変更</span>は前回の形の置き換えです。'
-            '全文でも同じラベルを付けています。ラベルのない行は既存です。</p><ul class="grammar-updates">'
-            + "".join(rows) + '</ul></div>')
+            'ラベルのない行は既存です。</p>')

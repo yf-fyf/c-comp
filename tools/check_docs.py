@@ -56,12 +56,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_site import ROOT, load_nav  # noqa: E402  (site/nav.yaml を共通で読む)
 from grammar_snapshots import (  # noqa: E402
     GRAMMAR_HEADING, GRAMMAR_SPEC_HEADING, GRAMMAR_SPEC_SKIP_SUBHEADINGS,
-    GRAMMAR_LAST_SESSION, GRAMMAR_DIFF_SESSIONS, GRAMMAR_REFINEMENTS,
+    GRAMMAR_LAST_SESSION, GRAMMAR_REFINEMENTS,
     GRAMMAR_QUOTED_RE, PREC_TABLE, PREC_INTRO, PREC_LAST_SESSION,
     parse_ebnf_block, extract_ebnf_after as _extract_ebnf_after,
     nonterminals as _grammar_nonterminals,
     expected_precedence as _prec_expected,
-    parse_precedence_table as _prec_parse_table, merge_alternatives, classify_transition,
+    parse_precedence_table as _prec_parse_table, classify_transition,
 )
 
 ALLOWLIST_PATH = Path(__file__).resolve().parent / "doc_check_allowlist.yaml"
@@ -1037,16 +1037,11 @@ def check_identifiers() -> list[Violation]:
 #                  （消えてよいのは GRAMMAR_REFINEMENTS に記録した箇所のみ）
 #   (b) 最終形一致 コマ14 の集合が language_spec.md「## 形式文法（EBNF）」節と
 #                  一致する（字句トークン節は各コマが省略するため対象外）。
-#                  T156 分割書は前処理指令 include_dir / define_dir の差分を
-#                  許容してよいとしたが、実際にはコマ13 の全文＋コマ14 の差分が
-#                  前処理指令まで含めて最終形と完全一致するため、例外を設けず
-#                  厳密一致で検査する（例外を設けるとコマ14 の差分ブロックが
-#                  丸ごと検査対象外になってしまう）
+#                  コマ14 も前処理指令まで含めた累積全文として厳密一致を検査する。
 #   (c) 参照閉包   スナップショットの右辺に現れる非終端記号（小文字始まり）が
 #                  すべて同じスナップショット内で定義されている
 #
-# コマ14 は差分だけを載せる（前処理指令のみ）ため、コマ13 の集合に対して
-# コマ14 のブロックが定義する規則を差し替えたものを「コマ14 の集合」とする。
+# コマ1〜14 のすべてで、当該原稿のブロックを累積スナップショットとして扱う。
 
 
 def _grammar_session_paths() -> dict[int, Path]:
@@ -1137,23 +1132,13 @@ def check_grammar_snapshots() -> list[Violation]:
     if len(blocks) != GRAMMAR_LAST_SESSION:
         return violations
 
-    # 累積集合を作る（コマ14 は差分掲載なのでコマ13 の集合へ重ねる）。
-    # 規則の定義位置は (ファイル, 行) で持つ。コマ14 が引き継いだ規則の違反を
-    # コマ14 の原稿の無関係な行に貼り付けないため。
+    # 各原稿に掲載された累積集合と、規則の定義位置 (ファイル, 行) を作る。
     cumulative: dict[int, set[tuple[str, str]]] = {}
     cum_defined: dict[int, dict[str, tuple[Path, int]]] = {}
     for n in range(1, GRAMMAR_LAST_SESSION + 1):
         alts, defined = blocks[n]
-        own = {rule: (paths[n], lineno) for rule, lineno in defined.items()}
-        if n in GRAMMAR_DIFF_SESSIONS and n - 1 in cumulative:
-            merged = merge_alternatives(cumulative[n - 1], set(alts), defined)
-            merged_defined = dict(cum_defined[n - 1])
-            merged_defined.update(own)
-        else:
-            merged = set(alts)
-            merged_defined = own
-        cumulative[n] = merged
-        cum_defined[n] = merged_defined
+        cumulative[n] = set(alts)
+        cum_defined[n] = {rule: (paths[n], lineno) for rule, lineno in defined.items()}
 
     def where(n: int, rule: str) -> tuple[Path, int]:
         return cum_defined[n].get(rule, (paths[n], 1))
@@ -1237,7 +1222,7 @@ def check_grammar_snapshots() -> list[Violation]:
 # 「### この回までの言語仕様（EBNF）」節の ```ebnf ブロック直後に置いた
 # 優先順位表が担う。表は Markdown 表なのでチェック9 の視野に入らないため、
 # ここで別に検査する。検査する3点:
-#   (a) 表の存在   コマ1〜13 に PREC_INTRO で始まる表がある（コマ14 は差分掲載）
+#   (a) 表の存在   コマ1〜14 に PREC_INTRO で始まる表がある
 #   (b) 表の内容   行が PREC_TABLE の「その回までに導入済み」の並びと
 #                  （演算子の集合・結合・順序まで）一致する
 #   (c) bin_op 整合 同じスナップショットの `bin_op` の選択肢行が、表の同じ位置の

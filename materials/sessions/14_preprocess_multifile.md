@@ -68,22 +68,113 @@ int main() {
 
 ### この回までの言語仕様（EBNF）
 
-構文（型・トップレベル・関数・文・式・字句トークン）はコマ13 で最終形に到達しており、
-この回で増えるのは前処理指令だけである。したがってここでは差分だけを示す。
-最終形の全体は
+この回までに書けるプログラムの文法を、前処理指令も含めた累積の形でまとめる。
+構文（型・トップレベル・関数・文・式）はコマ13から変わらず、この回では `define_dir` が増える。
+記法と最終形の全体像は
 [`language_spec.md` の「形式文法（EBNF）」](../../workbook/docs/language_spec.md#grammar)を参照。
 
 ```ebnf
 include_dir ::= '#' 'include' '"' FILENAME '"' NEWLINE
 define_dir  ::= '#' 'define' IDENT { TOKEN } NEWLINE
+
+stars       ::= '*' { '*' }
+
+scalar_type ::= 'int'  [ stars ]
+              | 'char' [ stars ]
+              | 'void' stars
+              | 'struct' IDENT stars
+obj_type    ::= scalar_type
+              | 'struct' IDENT
+ret_type    ::= scalar_type
+              | 'void'
+type_name   ::= obj_type
+
+program       ::= external_decl { external_decl }
+external_decl ::= struct_decl
+                | var_decl
+                | func_proto
+                | func_def
+struct_decl   ::= 'struct' IDENT '{' field_decl { field_decl } '}' ';'
+                | 'struct' IDENT ';'
+field_decl    ::= scalar_type IDENT ';'
+var_decl      ::= obj_type IDENT ';'
+
+param       ::= scalar_type IDENT
+param_list  ::= param { ',' param }
+func_proto  ::= ret_type IDENT '(' [ param_list [ ',' '...' ] ] ')' ';'
+func_def    ::= ret_type IDENT '(' [ param_list ] ')' func_body
+func_body   ::= '{' { var_decl } { stmt } '}'
+
+stmt        ::= expr_stmt
+              | block
+              | if_stmt
+              | while_stmt
+              | for_stmt
+              | 'break' ';'
+              | 'continue' ';'
+              | 'return' [ expr ] ';'
+expr_stmt   ::= [ expr ] ';'
+block       ::= '{' { stmt } '}'
+if_stmt     ::= 'if' '(' expr ')' stmt [ 'else' stmt ]
+while_stmt  ::= 'while' '(' expr ')' stmt
+for_stmt    ::= 'for' '(' [ expr ] ';' [ expr ] ';' [ expr ] ')' stmt
+
+expr        ::= assign_expr
+assign_expr ::= unary_expr '=' assign_expr   /* 右結合 */
+              | cond_expr
+cond_expr   ::= binary_expr [ '?' expr ':' cond_expr ]
+binary_expr ::= unary_expr { bin_op unary_expr }
+bin_op      ::= '*' | '/' | '%'
+              | '+' | '-'
+              | '<' | '>' | '<=' | '>='
+              | '==' | '!='
+              | '&&'
+              | '||'
+unary_expr  ::= postfix_expr
+              | '-'  unary_expr
+              | '!'  unary_expr
+              | '*'  unary_expr
+              | '&'  unary_expr
+              | '++' unary_expr
+              | '--' unary_expr
+              | 'sizeof' '(' type_name ')'
+
+postfix_expr   ::= primary_expr { postfix_suffix }
+postfix_suffix ::= '[' expr ']'
+                 | '.'  IDENT
+                 | '->' IDENT
+
+primary_expr ::= INT_LITERAL
+               | CHAR_LITERAL
+               | STRING_LITERAL
+               | IDENT '(' [ arg_list ] ')'
+               | IDENT
+               | '(' expr ')'
+arg_list    ::= assign_expr { ',' assign_expr }
 ```
 
-`include_dir` の形そのものはコマ9 から変わっていない。変わったのは対象で、
+この回までの二項演算子の優先順位（高い順）:
+
+| 優先順位 | 演算子 | 結合 |
+|---|---|---|
+| 1（高） | `*` `/` `%` | 左 |
+| 2 | `+` `-` | 左 |
+| 3 | `<` `>` `<=` `>=` | 左 |
+| 4 | `==` `!=` | 左 |
+| 5 | `&&` | 左 |
+| 6 | `\|\|` | 左 |
+
+表の読み方はコマ1の「木の形は規則で決まっている」と
+[`language_spec.md` の「演算子」](../../workbook/docs/language_spec.md#operators)を参照。
+
+`include_dir` の形そのものはコマ9から変わっていない。変わったのは対象で、
 提供物の `lib.h` だけでなく自作ヘッダも書けるようになり、取込みの入れ子も許される。
 `define_dir` がこの回の新規である。
 `FILENAME` は `"` と改行を除く1文字以上の文字列、`{ TOKEN }` は改行までのトークン列（0個以上）である。
 
-指令行（行頭の `#` から改行まで）は構文解析より前に処理されるため、上の2規則以外には現れない。
+指令行（行頭の `#` から改行まで）は構文解析より前に処理されるため、`include_dir`・`define_dir` は
+`program` には現れない。字句トークンの定義はどの回でも同じであるため、ここでは繰り返さない。
+[`language_spec.md` の「字句トークン」](../../workbook/docs/language_spec.md#grammar)を参照。
 **これで、この講義で作るコンパイラが受理する言語は最終形と一致する。**
 
 ## 前処理とは何か

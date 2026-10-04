@@ -70,7 +70,7 @@ function Meta(meta)
     local value = meta["grammar-view"]
     grammar = {
       code = literal_html(value.code),
-      overview = literal_html(value.overview),
+      legend = literal_html(value.legend),
       label = pandoc.utils.stringify(value.label),
       expanded = value.expanded,
       precedence = {},
@@ -164,7 +164,7 @@ local function grammar_section(content)
   for i = 2, #content do
     local block = content[i]
     if not started and block.t == "CodeBlock" and block.classes:includes("ebnf") then
-      inner:insert(pandoc.RawBlock("html", grammar.overview))
+      inner:insert(pandoc.RawBlock("html", grammar.legend))
       local expanded = grammar.expanded and " open" or ""
       inner:insert(pandoc.RawBlock("html",
         '<details class="grammar-full"' .. expanded .. '><summary>' .. grammar.label .. '</summary>'))

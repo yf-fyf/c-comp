@@ -119,17 +119,18 @@ class GrammarTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unapproved removal"):
             compare_snapshots(read_snapshot(second, 3), read_snapshot(first, 2))
 
-    def test_partial_snapshot_keeps_unlisted_rules_and_does_not_readd_include(self):
+    def test_final_snapshot_cannot_hide_missing_rules_in_a_partial_block(self):
         include = "'#' 'include' '\"' FILENAME '\"' NEWLINE"
         previous = Snapshot(13, self.directory / "13_fixture.md", [
             GrammarLine("", 1, "include_dir", include),
             GrammarLine("", 2, "program", "INT_LITERAL"),
         ], {"include_dir": 1, "program": 2}, [])
-        path = self.source(14, "include_dir ::= " + include
-                           + "\ndefine_dir ::= '#' 'define' IDENT { TOKEN } NEWLINE")
-        delta = compare_snapshots(read_snapshot(path, 14), previous)
-        self.assertIn(("program", "INT_LITERAL"), delta.cumulative)
-        self.assertEqual([c.line.rule for c in delta.changes], ["define_dir"])
+        current = Snapshot(14, self.directory / "14_fixture.md", [
+            GrammarLine("", 1, "include_dir", include),
+            GrammarLine("", 2, "define_dir", "'#' 'define' IDENT { TOKEN } NEWLINE"),
+        ], {"include_dir": 1, "define_dir": 2}, [])
+        with self.assertRaisesRegex(ValueError, "unapproved removal of program"):
+            compare_snapshots(current, previous)
 
     def test_precedence_additions_are_scoped_to_the_grammar_table(self):
         for number, expected in [(2, 0), (4, 2), (13, 2), (14, 0)]:
@@ -154,7 +155,7 @@ class GrammarTest(unittest.TestCase):
             parser.feed(code)
             snapshot = read_snapshot(path, number)
             self.assertEqual("".join(parser.parts), "\n".join(l.raw for l in snapshot.lines))
-            self.assertEqual(view["expanded"], number in {1, 14})
+            self.assertTrue(view["expanded"])
         path = self.source(1, "program ::= '<script>'")
         code = bytes.fromhex(grammar_metadata(path)["code"]).decode()
         self.assertIn("&lt;script&gt;", code)
@@ -163,7 +164,7 @@ class GrammarTest(unittest.TestCase):
     def test_initial_and_unchanged_sessions_are_explicitly_different(self):
         for number, expected in [(1, "最初の文法"), (2, "追加や変更はありません")]:
             path = next((ROOT / "materials/sessions").glob(f"{number:02}_*.md"))
-            self.assertIn(expected, bytes.fromhex(grammar_metadata(path)["overview"]).decode())
+            self.assertIn(expected, bytes.fromhex(grammar_metadata(path)["legend"]).decode())
 
     def test_live_rebuild_includes_next_session_without_spilling_into_docs(self):
         root = self.directory
@@ -190,7 +191,10 @@ class GrammarTest(unittest.TestCase):
                 probe.feed(html)
                 snapshot = read_snapshot(page.source, number)
                 self.assertEqual("".join(probe.code), "\n".join(l.raw for l in snapshot.lines))
-                self.assertEqual(probe.full, [number in {1, 14}])
+                self.assertEqual(probe.full, [True])
+                self.assertNotIn('grammar-overview', html)
+                self.assertNotIn('grammar-updates', html)
+                self.assertNotIn('前回からの追加・変更', html)
                 self.assertEqual(len(probe.ids), len(set(probe.ids)))
                 self.assertIn("この回までの言語仕様ebnf", probe.ids)
                 delta = delta_for_path(page.source)

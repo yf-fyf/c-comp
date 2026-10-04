@@ -13,8 +13,6 @@ GRAMMAR_HEADING = "### この回までの言語仕様（EBNF）"
 GRAMMAR_SPEC_HEADING = "## 形式文法（EBNF）"
 GRAMMAR_SPEC_SKIP_SUBHEADINGS = {"### 字句トークン"}
 GRAMMAR_LAST_SESSION = 14
-# コマ14 は差分掲載（下記コマの番号は「ブロックが全文ではない回」）
-GRAMMAR_DIFF_SESSIONS = {14}
 
 # 回をまたいで右辺が「置き換わる」箇所。素朴な部分集合判定では削除と
 # 誤検知されるため、(消える回, 規則名, 精密化前, 精密化後) を許可リストに置く。
@@ -117,7 +115,7 @@ PREC_TABLE: tuple[tuple[tuple[str, ...], str, int], ...] = (
     (("||",), "左", 13),
 )
 PREC_INTRO = "この回までの二項演算子の優先順位（高い順）:"
-PREC_LAST_SESSION = 13  # コマ14 は差分掲載なので表を持たない
+PREC_LAST_SESSION = GRAMMAR_LAST_SESSION
 PREC_CELL_CODE_RE = re.compile(r"`([^`]+)`")
 
 
@@ -148,12 +146,6 @@ def parse_precedence_table(lines: list[str], start: int) -> tuple[
             rows.append((ops, cells[2]))
         i += 1
     return rows, header_lineno
-
-
-def merge_alternatives(previous: set[tuple[str, str]], own: set[tuple[str, str]],
-                       defined: dict) -> set[tuple[str, str]]:
-    """Overlay a partial snapshot by replacing every rule it defines."""
-    return {(rule, alt) for rule, alt in previous if rule not in defined} | own
 
 
 @dataclass(frozen=True)
@@ -271,8 +263,7 @@ def compare_snapshots(current: Snapshot, previous: Snapshot | None = None,
     if previous.session + 1 != current.session:
         raise ValueError("Grammar comparison requires consecutive sessions")
     prior = previous.alternatives if previous_cumulative is None else previous_cumulative
-    now = (merge_alternatives(prior, current.alternatives, current.defined)
-           if current.session in GRAMMAR_DIFF_SESSIONS else current.alternatives)
+    now = current.alternatives
     transition = classify_transition(prior, now, previous.session)
     if transition.invalid:
         rule, before, _after = transition.invalid[0]

@@ -26,7 +26,6 @@
     + '<img alt="">';
   document.body.appendChild(dialog);
   var view = dialog.querySelector('img');
-  var triggers = new WeakMap();
   var returnFocus = null;
   var previousOverflow = '';
 
@@ -37,15 +36,6 @@
     img.setAttribute('role', 'button');
     img.setAttribute('aria-label', (img.alt || '図') + ' を拡大表示');
     img.setAttribute('aria-haspopup', 'dialog');
-    var button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'figure-expand';
-    button.textContent = '図を拡大';
-    button.setAttribute('aria-label', (img.alt || '図') + ' を拡大表示');
-    button.setAttribute('aria-haspopup', 'dialog');
-    var figure = img.closest('figure');
-    figure.insertBefore(button, figure.querySelector('figcaption'));
-    triggers.set(button, img);
   }
 
   // padding は CSS 側（.lightbox img）と揃える。border-box にしてあるので
@@ -72,8 +62,8 @@
     view.style.height = (nh * scale + pad * 2) + 'px';
   }
 
-  function open(img, trigger) {
-    returnFocus = trigger || img;
+  function open(img) {
+    returnFocus = img;
     view.classList.remove('actual');
     view.classList.remove('oversized');
     view.style.width = '';
@@ -91,11 +81,6 @@
 
   document.addEventListener('click', function (e) {
     if (!e.target.closest) return;
-    var button = e.target.closest('.figure-expand');
-    if (button && triggers.has(button)) {
-      open(triggers.get(button), button);
-      return;
-    }
     var img = e.target.closest('.content figure img.zoomable');
     if (img) open(img);
   });

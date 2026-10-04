@@ -316,23 +316,9 @@ code span.al, code span.er { color: var(--code-error); }
 
 .grammar-section { margin: 2rem 0; }
 .grammar-section { scroll-margin-top: var(--anchor-offset); }
-.grammar-status, .grammar-overview {
-  padding: 0.7rem 1rem;
-  border: 1px solid var(--accent-light);
-  border-radius: 0.35rem;
-  background: var(--accent-lighter);
-}
-.grammar-overview .grammar-overview-title { margin: 0 0 0.3rem; font-weight: 700; }
-.grammar-overview .grammar-legend { margin: 0; font-size: 0.9rem; }
-.grammar-overview .grammar-updates { margin: 0.65rem 0 0; padding: 0; list-style: none; }
-.grammar-update { padding: 0.3rem 0.5rem; border-left: 3px solid; }
-.grammar-update code { overflow-wrap: anywhere; }
+.grammar-legend { margin: 0.7rem 0; font-size: 0.9rem; }
 .grammar-added { --grammar-tone: #2C6035; --grammar-fill: #EEF7EF; }
 .grammar-changed { --grammar-tone: #583B66; --grammar-fill: #EEE6F2; }
-.grammar-update.grammar-added, .grammar-update.grammar-changed {
-  background: var(--grammar-fill); border-color: var(--grammar-tone);
-}
-.grammar-update.grammar-changed { border-left-style: double; border-left-width: 4px; }
 .grammar-badge, .grammar-legend > span {
   display: inline-block;
   padding: 0.03em 0.35em;
@@ -344,9 +330,6 @@ code span.al, code span.er { color: var(--code-error); }
   font-weight: 700;
   white-space: nowrap;
 }
-.grammar-before { display: block; color: #525252; font-size: 0.9rem; }
-.grammar-before code { background: transparent; }
-.grammar-rhs { background: transparent; padding-left: 0; }
 .grammar-full {
   margin: 1rem 0;
   border: 1px solid var(--code-frame);
@@ -433,21 +416,6 @@ figcaption {
   color: var(--gray-text);
   line-height: 1.7;
 }
-
-.figure-expand {
-  display: block;
-  margin: 0.5rem auto 0;
-  padding: 0.45rem 0.85rem;
-  min-height: 44px;
-  font: inherit;
-  font-size: 0.9rem;
-  color: var(--accent-dark);
-  background: var(--accent-lighter);
-  border: 1px solid var(--accent-light);
-  border-radius: 0.35rem;
-  cursor: pointer;
-}
-.figure-expand:hover { background: var(--accent-light); }
 
 /* ── 図の拡大表示（lightbox.js が出す） ── */
 
@@ -651,7 +619,7 @@ figcaption {
   .content { padding: 0; }
   .table-scroll { overflow-x: visible; }
   .code-scroll { overflow: visible; border: 0; }
-  .scroll-hint, .figure-expand { display: none; }
+  .scroll-hint { display: none; }
   /* 印刷だけは長い行・コードセルを折り返し、紙面外へ内容を落とさない。 */
   .code-scroll pre, .code-scroll pre code, .code-scroll pre code > span {
     white-space: pre-wrap;
@@ -661,7 +629,6 @@ figcaption {
   body { font-size: 10.5pt; line-height: 1.7; }
   pre, .adm, .goal, figure, table { break-inside: avoid; }
   a { color: var(--text); text-decoration: none; }
-  .grammar-overview, .grammar-status { display: none; }
   .grammar-full { border: 0; padding: 0; }
   .grammar-full > summary { display: none; }
   .grammar-full::details-content { content-visibility: visible; }
